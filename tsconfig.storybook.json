@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.storybook.tsbuildinfo",
+    "types": ["vite/client"]
+  },
+  "include": [".storybook", "storybook", "src/**/*.tsx", "src/**/*.ts"],
+  "exclude": ["tests"]
+}

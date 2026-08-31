@@ -1,0 +1,17 @@
+# Local Pi runtime state
+.atl/
+
+# Local design and agent tooling
+.openpencil/
+/op
+.mcp.json
+.pi/
+
+# Generated and local-only project output
+node_modules/
+dist/
+storybook-static/
+coverage/
+test-results/
+.codegraph/
+pnpm-workspace.yaml
