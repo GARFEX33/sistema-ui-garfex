@@ -1,0 +1,20 @@
+:root {
+  color-scheme: light;
+  --color-background: #f7f6f3;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f1f0ec;
+  --color-text-primary: #1f1f1d;
+  --color-text-secondary: #5f5d58;
+  --color-text-muted: #6d6a64;
+  --color-border: #d9d6cf;
+  --color-border-strong: #b8b4ab;
+  --color-primary: #7c0000;
+  --color-primary-hover: #680000;
+  --color-primary-active: #540000;
+  --color-primary-subtle: #f7eaea;
+  --color-accent: #f2d031;
+  --color-on-accent: #2b2500;
+  --color-focus: #8a6800;
+  /* Nexa y RNS Sanz no están verificadas; se usa fallback Inter, Arial, sans-serif. */
+  --font-sans: Inter, Arial, sans-serif;
+}

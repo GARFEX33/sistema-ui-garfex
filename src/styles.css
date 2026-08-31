@@ -1,0 +1,164 @@
+@import 'tailwindcss' source('./');
+@import './shared/design-system/tokens.css';
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-background);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 1440px;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+button,
+a {
+  font: inherit;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+.app-rail {
+  width: 216px;
+  flex: 0 0 216px;
+  min-height: 100vh;
+  padding: 32px 20px;
+  color: white;
+  background: #1f1f1d;
+}
+.brand-lockup {
+  padding: 8px 12px 48px;
+}
+.garfex-logo {
+  display: block;
+  width: 152px;
+  height: auto;
+  object-fit: contain;
+}
+.primary-navigation {
+  display: grid;
+  gap: 8px;
+}
+.navigation-link {
+  display: block;
+  padding: 12px 14px;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.navigation-link.is-active {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+.app-workspace {
+  min-width: 984px;
+  flex: 1;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  padding: 0 40px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.command-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 360px;
+  padding: 9px 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+.command-trigger kbd {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: start center;
+  padding-top: 120px;
+  background: rgb(31 31 29 / 45%);
+}
+.command-modal {
+  width: 560px;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 18px 50px rgb(31 31 29 / 25%);
+}
+.command-dialog {
+  padding: 28px;
+}
+.command-dialog h2 {
+  margin: 0 0 24px;
+  font-size: 1.25rem;
+}
+.command-field {
+  display: grid;
+  gap: 8px;
+}
+.command-field label {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+.command-field input {
+  width: 100%;
+  padding: 12px;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 5px;
+}
+.command-help {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.command-close {
+  margin-top: 12px;
+  padding: 9px 12px;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.workspace-main {
+  min-height: calc(100vh - 64px);
+  padding: 56px 64px;
+}
+.operations-inbox-entry {
+  max-width: 960px;
+}
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+h1 {
+  margin: 0;
+  font-size: 2.25rem;
+  line-height: 1.1;
+}
