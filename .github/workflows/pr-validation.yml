@@ -1,0 +1,82 @@
+name: PR validation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  issues: read
+  pull-requests: read
+
+jobs:
+  validate-governance:
+    name: Check issue and PR governance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate linked issue and type label
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 100, after: $cursor) {
+                      nodes {
+                        number
+                        repository { nameWithOwner }
+                        labels(first: 100) { nodes { name } }
+                      }
+                      pageInfo { hasNextPage endCursor }
+                    }
+                  }
+                }
+              }
+            `;
+            const references = [];
+            let cursor = null;
+            let page;
+            do {
+              page = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: context.payload.pull_request.number,
+                cursor,
+              });
+              const closingReferences =
+                page.repository?.pullRequest?.closingIssuesReferences;
+              if (!closingReferences) {
+                core.setFailed('Unable to resolve the current pull request.');
+                return;
+              }
+              references.push(...closingReferences.nodes.filter(Boolean));
+              if (closingReferences.pageInfo.hasNextPage && !closingReferences.pageInfo.endCursor) {
+                core.setFailed('Closing issue reference pagination returned no cursor.');
+                return;
+              }
+              cursor = closingReferences.pageInfo.hasNextPage
+                ? closingReferences.pageInfo.endCursor
+                : null;
+            } while (cursor);
+
+            const repositoryName = `${context.repo.owner}/${context.repo.repo}`.toLowerCase();
+            const approvedIssue = references.find(
+              (issue) =>
+                issue.repository?.nameWithOwner?.toLowerCase() === repositoryName &&
+                issue.labels.nodes.some((label) => label.name === 'status:approved'),
+            );
+            if (!approvedIssue) {
+              core.setFailed(
+                'PR must canonically close at least one issue in this repository with the status:approved label.',
+              );
+              return;
+            }
+            const issueNumber = approvedIssue.number;
+
+            const prLabels = context.payload.pull_request.labels.map((label) => label.name);
+            const typeLabels = prLabels.filter((label) => label.startsWith('type:'));
+            if (typeLabels.length !== 1) {
+              core.setFailed(`PR must have exactly one type:* label; found ${typeLabels.length}.`);
+              return;
+            }
+            core.info(`Validated issue #${issueNumber} and label ${typeLabels[0]}.`);

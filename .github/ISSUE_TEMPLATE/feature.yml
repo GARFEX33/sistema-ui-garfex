@@ -1,0 +1,85 @@
+name: Feature slice
+description: Propose a bounded feature slice with a reviewable outcome.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or product problem should this feature slice solve?
+      placeholder: Describe the problem and who experiences it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: Desired outcome
+      description: What observable result should this feature produce?
+      placeholder: Describe the intended user-visible outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included in this slice, and what are its boundaries?
+      placeholder: List the smallest coherent set of work included.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Provide observable, testable conditions for completion.
+      placeholder: |
+        - Given ...
+        - When ...
+        - Then ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals-risks
+    attributes:
+      label: Non-goals and risks
+      description: State what is intentionally excluded and identify known risks or rollback concerns.
+      placeholder: Include explicit non-goals; write "None known" where appropriate.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation-feature
+    attributes:
+      label: Feature confirmation
+      options:
+        - label: I confirm this request is a feature slice, not a bug report or support question.
+          required: true
+
+  - type: checkboxes
+    id: confirmation-scope
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: I confirm the scope is bounded enough to review and deliver as one work unit.
+          required: true
+
+  - type: checkboxes
+    id: confirmation-criteria
+    attributes:
+      label: Criteria confirmation
+      options:
+        - label: I confirm the acceptance criteria are observable and testable.
+          required: true
+
+  - type: checkboxes
+    id: confirmation-duplicates
+    attributes:
+      label: Duplicate and dependency confirmation
+      options:
+        - label: I confirm I checked for a duplicate and disclosed relevant dependencies or risks above.
+          required: true
