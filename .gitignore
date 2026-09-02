@@ -15,4 +15,3 @@ storybook-static/
 coverage/
 test-results/
 .codegraph/
-pnpm-workspace.yaml
