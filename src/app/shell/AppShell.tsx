@@ -43,6 +43,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             Bandeja
           </Link>
+          <Link
+            to="/catalogo"
+            activeProps={{ className: 'navigation-link is-active' }}
+            className="navigation-link"
+          >
+            Catálogo
+          </Link>
         </nav>
       </aside>
       <div className="app-workspace">

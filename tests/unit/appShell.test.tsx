@@ -43,17 +43,40 @@ describe('runtime shell and operations inbox entry', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('renders /bandeja without product data effects or future destinations', async () => {
+  it('renders workstation destinations without product data effects', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     const storageSpy = vi.spyOn(Storage.prototype, 'getItem')
     renderAt('/bandeja')
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
-    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.getAllByRole('link')).toHaveLength(2)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(storageSpy).not.toHaveBeenCalled()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
     expect(document.querySelector('[aria-live]')).not.toBeInTheDocument()
+  })
+
+  it('resolves /catalogo inside the shell and marks its destination active', async () => {
+    renderAt('/catalogo')
+    expect(
+      await screen.findByRole('heading', { name: 'Catálogo' }),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Catálogo' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: 'Bandeja' })).not.toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('region', { name: 'Familias' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    expect(screen.getByRole('region', { name: 'Tipos' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
   })
 })
