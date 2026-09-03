@@ -50,3 +50,37 @@
 .catalog-meaning p{margin:0;font-size:16px;font-weight:700;line-height:1.45}
 /* prettier-ignore */
 .catalog-meaning p+p{margin-top:4px}
+/* prettier-ignore */
+.catalog-create-surface{margin-left:auto}
+/* prettier-ignore */
+.catalog-create-trigger,.catalog-dialog-actions button{min-height:34px;padding:7px 14px;color:var(--color-on-accent);font:inherit;font-size:13px;font-weight:700;background:var(--color-accent);border:1px solid var(--color-primary);border-radius:4px;cursor:pointer}
+/* prettier-ignore */
+.catalog-dialog-actions button:first-child{color:var(--color-primary);background:transparent}
+/* prettier-ignore */
+.catalog-dialog-actions button:disabled{color:var(--color-text-muted);background:var(--color-surface-subtle);border-color:var(--color-border);cursor:not-allowed}
+/* prettier-ignore */
+.catalog-dialog-backdrop{position:fixed;z-index:20;inset:0;display:grid;place-items:start center;padding-top:140px;background:rgb(31 31 29 / 42%)}
+/* prettier-ignore */
+.catalog-dialog-modal{width:630px}
+/* prettier-ignore */
+.catalog-dialog{width:630px;box-sizing:border-box;padding:26px 27px 18px;color:var(--color-text-primary);background:var(--color-surface);border:1px solid var(--color-primary);border-radius:12px;box-shadow:0 18px 50px rgb(31 31 29 / 25%)}
+/* prettier-ignore */
+.catalog-dialog-form{display:flex;min-height:390px;flex-direction:column}
+/* prettier-ignore */
+.catalog-dialog-heading{flex:0 0 auto}
+/* prettier-ignore */
+.catalog-dialog-heading h2{margin:0 0 16px;font-size:19px}
+/* prettier-ignore */
+.catalog-dialog-content{flex:1}
+/* prettier-ignore */
+.catalog-dialog-fields{display:grid;gap:12px}
+/* prettier-ignore */
+.catalog-field-row{display:grid;gap:7px}
+/* prettier-ignore */
+.catalog-field-row label{color:var(--color-text-primary);font-size:11px;font-weight:700;letter-spacing:.08em}
+/* prettier-ignore */
+.catalog-field-row input,.catalog-field-row textarea{width:100%;box-sizing:border-box;padding:8px 10px;color:var(--color-text-primary);font:inherit;font-size:13px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px}
+/* prettier-ignore */
+.catalog-field-row textarea{min-height:72px;resize:none}
+/* prettier-ignore */
+.catalog-dialog-actions{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;padding:14px 0 0}

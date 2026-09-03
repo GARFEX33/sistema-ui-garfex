@@ -1,3 +1,4 @@
+import { NuevaClaseSurface } from './NuevaClaseSurface'
 import type {
   CatalogHierarchyItem,
   CatalogHierarchyPresentation,
@@ -89,6 +90,7 @@ export function CatalogHierarchyScreen({
         <div className="catalog-model-bar" aria-label="Modelo del catálogo">
           <span>MODELO DEL CATÁLOGO</span>
           <strong>Clase&nbsp; → &nbsp;Familia&nbsp; → &nbsp;Tipo</strong>
+          <NuevaClaseSurface />
         </div>
         <div className="catalog-workstation">
           <div className="catalog-browser" aria-label="Estructura del catálogo">
