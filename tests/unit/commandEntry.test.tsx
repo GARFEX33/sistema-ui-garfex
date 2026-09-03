@@ -11,6 +11,15 @@ function renderShell() {
 }
 
 describe('command entry', () => {
+  it('lists the active registered commands with their shortcuts', async () => {
+    renderShell()
+    await screen.findByRole('heading', { name: 'Bandeja' })
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /Buscar o ejecutar comando/ }))
+    expect(screen.getByText('Mostrar atajos')).toBeVisible()
+    expect(screen.getByRole('button', { name: /Mostrar atajos/ })).toBeVisible()
+  })
   it('opens the minimum command layer from its trigger and restores trigger focus on Escape', async () => {
     const user = userEvent.setup()
     renderShell()

@@ -1,22 +1,18 @@
 export type SpatialDirection = 'up' | 'down' | 'left' | 'right'
-
 export interface SpatialRect {
   left: number
   top: number
   right: number
   bottom: number
 }
-
 export interface SpatialCandidate {
   id: string
   rect: SpatialRect
 }
-
 export interface SpatialResult {
   id: string
   score: number
 }
-
 type Scored = SpatialResult & {
   primary: number
   perpendicular: number
@@ -29,33 +25,29 @@ export function scoreSpatialCandidates(
   direction: SpatialDirection,
 ): SpatialResult | null {
   if (!valid(origin)) return null
-
   const counts = new Map<string, number>()
-  for (const { id } of candidates) counts.set(id, (counts.get(id) ?? 0) + 1)
-
+  candidates.forEach(({ id }) => counts.set(id, (counts.get(id) ?? 0) + 1))
   let best: Scored | null = null
   for (const item of candidates) {
     if (counts.get(item.id) !== 1 || !valid(item.rect)) continue
-    const scored = score(origin, item, direction)
-    if (scored && (!best || better(scored, best))) best = scored
+    const next = score(origin, item, direction)
+    if (next && (!best || better(next, best))) best = next
   }
   return best && { id: best.id, score: best.score }
 }
-
 function score(
   origin: SpatialRect,
   item: SpatialCandidate,
   direction: SpatialDirection,
 ): Scored | null {
-  const a = center(origin)
-  const b = center(item.rect)
-  const horizontal = direction === 'left' || direction === 'right'
-  const forward = direction === 'right' || direction === 'down'
-  const primaryCenter = horizontal ? b.x : b.y
-  const originCenter = horizontal ? a.x : a.y
+  const a = center(origin),
+    b = center(item.rect),
+    horizontal = direction === 'left' || direction === 'right'
+  const forward = direction === 'right' || direction === 'down',
+    primaryCenter = horizontal ? b.x : b.y,
+    originCenter = horizontal ? a.x : a.y
   if (forward ? primaryCenter <= originCenter : primaryCenter >= originCenter)
     return null
-
   const primary =
     direction === 'right'
       ? Math.max(0, item.rect.left - origin.right)
@@ -64,20 +56,18 @@ function score(
         : direction === 'down'
           ? Math.max(0, item.rect.top - origin.bottom)
           : Math.max(0, origin.top - item.rect.bottom)
-  const originPerpendicular = horizontal
+  const first = horizontal
     ? [origin.top, origin.bottom]
     : [origin.left, origin.right]
-  const candidatePerpendicular = horizontal
+  const second = horizontal
     ? [item.rect.top, item.rect.bottom]
     : [item.rect.left, item.rect.right]
   const perpendicular = Math.max(
     0,
-    Math.max(originPerpendicular[0], candidatePerpendicular[0]) -
-      Math.min(originPerpendicular[1], candidatePerpendicular[1]),
+    Math.max(first[0], second[0]) - Math.min(first[1], second[1]),
   )
   const offset = horizontal ? Math.abs(b.y - a.y) : Math.abs(b.x - a.x)
   const distance = (b.x - a.x) ** 2 + (b.y - a.y) ** 2
-
   return {
     id: item.id,
     score: primary + 2 * perpendicular + 0.25 * offset,
@@ -86,23 +76,19 @@ function score(
     distance,
   }
 }
-
 function better(a: Scored, b: Scored): boolean {
   for (const [left, right] of [
     [a.score, b.score],
     [a.primary, b.primary],
     [a.perpendicular, b.perpendicular],
     [a.distance, b.distance],
-  ]) {
+  ])
     if (left !== right) return left < right
-  }
   return a.id < b.id
 }
-
 function center(rect: SpatialRect) {
   return { x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 }
 }
-
 function valid(rect: SpatialRect) {
   return (
     [rect.left, rect.top, rect.right, rect.bottom].every(Number.isFinite) &&
@@ -123,6 +109,8 @@ export interface FocusSpatialTargetOptions {
   boundaryRoot: HTMLElement
   activeOverlayRoot?: HTMLElement | null
   candidates?: readonly HTMLElement[]
+  candidateFilter?: (element: HTMLElement) => boolean
+  onMoved?: (target: HTMLElement) => void
   measure?: SpatialMeasure
   viewport?: SpatialRect
 }
@@ -142,11 +130,11 @@ function invalidAncestor(element: HTMLElement, boundary: HTMLElement) {
       current.hidden ||
       current.getAttribute('aria-hidden') === 'true' ||
       current.hasAttribute('inert') ||
-      current.getAttribute('aria-disabled') === 'true' ||
-      current.hasAttribute('disabled') ||
-      (current instanceof HTMLButtonElement && current.disabled)
+      current.getAttribute('aria-disabled') === 'true'
     )
       return true
+    if (current instanceof HTMLButtonElement && current.disabled) return true
+    if (current.hasAttribute('disabled')) return true
     const style = getComputedStyle(current)
     if (
       style.display === 'none' ||
@@ -213,10 +201,10 @@ function eligible(
     !spatialId(element) ||
     (requireBoundary && !contains(boundary, element)) ||
     invalidAncestor(element, boundary) ||
-    !operable(element) ||
-    element.getClientRects().length === 0
+    !operable(element)
   )
     return null
+  if (element.getClientRects().length === 0) return null
   const rect = measure(element)
   if (
     !rect ||
@@ -236,6 +224,8 @@ export function focusSpatialTarget({
   boundaryRoot,
   activeOverlayRoot = null,
   candidates,
+  candidateFilter,
+  onMoved,
   measure = defaultMeasure,
   viewport,
 }: FocusSpatialTargetOptions): SpatialFocusResult {
@@ -245,24 +235,37 @@ export function focusSpatialTarget({
     right: window.innerWidth,
     bottom: window.innerHeight,
   }
-  const activeBoundary = activeOverlayRoot ?? boundaryRoot
   const originRect = eligible(origin, boundaryRoot, view, measure, false)
-  if (!originRect || !contains(activeBoundary, origin))
+  if (
+    !originRect ||
+    (activeOverlayRoot && !contains(activeOverlayRoot, origin))
+  )
     return { status: 'no-candidate' }
-  const pool = candidates ?? [
-    ...activeBoundary.querySelectorAll<HTMLElement>('[data-spatial-id]'),
-  ]
+  const pool = (
+    candidates ?? [
+      ...(activeOverlayRoot ?? boundaryRoot).querySelectorAll<HTMLElement>(
+        '[data-spatial-id]',
+      ),
+    ]
+  ).filter((element) => !candidateFilter || candidateFilter(element))
   const counts = new Map<string, number>()
   for (const element of pool) {
     const id = spatialId(element)
     if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
   }
-  const candidateBoundary = activeBoundary
   const validCandidates: SpatialCandidate[] = []
   const elements = new Map<string, HTMLElement>()
+  const candidateBoundary = activeOverlayRoot ?? boundaryRoot
   for (const element of pool) {
     const id = spatialId(element)
-    if (!id || counts.get(id) !== 1) continue
+    if (
+      !id ||
+      counts.get(id) !== 1 ||
+      (activeOverlayRoot
+        ? !contains(activeOverlayRoot, element)
+        : !contains(boundaryRoot, element))
+    )
+      continue
     const rect = eligible(element, candidateBoundary, view, measure, true)
     if (rect) {
       validCandidates.push({ id, rect })
@@ -279,16 +282,13 @@ export function focusSpatialTarget({
   if (
     !target ||
     !eligible(origin, boundaryRoot, view, measure, false) ||
-    !contains(activeBoundary, origin) ||
+    (activeOverlayRoot && !contains(activeOverlayRoot, origin)) ||
     !eligible(target, candidateBoundary, view, measure, true)
   )
     return { status: 'focus-failed', id: selected.id }
-  try {
-    target.focus({ preventScroll: true })
-  } catch {
+  target.focus({ preventScroll: true })
+  if (document.activeElement !== target)
     return { status: 'focus-failed', id: selected.id }
-  }
-  return document.activeElement === target
-    ? { status: 'moved', id: selected.id }
-    : { status: 'focus-failed', id: selected.id }
+  onMoved?.(target)
+  return { status: 'moved', id: selected.id }
 }
