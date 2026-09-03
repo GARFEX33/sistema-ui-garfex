@@ -279,6 +279,95 @@ describe('DOM spatial adapter', () => {
     ).toEqual({ status: 'no-candidate' })
   })
 
+  it('treats trimmed duplicate DOM ids and empty client geometry as ineligible', () => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML =
+      '<button data-spatial-id="origin">Origin</button><button data-spatial-id=" duplicate ">One</button><button data-spatial-id="duplicate">Two</button><button data-spatial-id="empty">Empty</button><button data-spatial-id="valid">Valid</button>'
+    document.body.append(boundary)
+    const [origin, firstDuplicate, secondDuplicate, empty, valid] = [
+      ...boundary.querySelectorAll<HTMLElement>('[data-spatial-id]'),
+    ]
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(firstDuplicate, { left: 20, top: 0, right: 30, bottom: 10 })
+    prepare(secondDuplicate, { left: 40, top: 0, right: 50, bottom: 10 })
+    rects.set(empty, { left: 60, top: 0, right: 70, bottom: 10 })
+    prepare(valid, { left: 80, top: 0, right: 90, bottom: 10 })
+
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [firstDuplicate, secondDuplicate, empty, valid],
+        measure,
+      }),
+    ).toEqual({ status: 'moved', id: 'valid' })
+  })
+
+  it.each([
+    ['hidden', 'hidden'],
+    ['aria-hidden', 'aria-hidden="true"'],
+    ['inert', 'inert'],
+  ])('excludes targets hidden by an ancestor (%s)', (_name, attribute) => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML = `<button data-spatial-id="origin">Origin</button><div ${attribute}><button data-spatial-id="hidden-child">Hidden child</button></div>`
+    document.body.append(boundary)
+    const origin = boundary.querySelector(
+      '[data-spatial-id="origin"]',
+    ) as HTMLElement
+    const hiddenChild = boundary.querySelector(
+      '[data-spatial-id="hidden-child"]',
+    ) as HTMLElement
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(hiddenChild, { left: 20, top: 0, right: 30, bottom: 10 })
+
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [hiddenChild],
+        measure,
+      }),
+    ).toEqual({ status: 'no-candidate' })
+  })
+
+  it('remeasures the selected target before focus and rejects newly invalid geometry', () => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML =
+      '<button data-spatial-id="origin">Origin</button><button data-spatial-id="target">Target</button>'
+    document.body.append(boundary)
+    const origin = boundary.querySelector(
+      '[data-spatial-id="origin"]',
+    ) as HTMLElement
+    const target = boundary.querySelector(
+      '[data-spatial-id="target"]',
+    ) as HTMLElement
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(target, { left: 20, top: 0, right: 30, bottom: 10 })
+    let targetMeasurements = 0
+    const remeasuringMeasure = vi.fn((element: HTMLElement) => {
+      if (element !== target) return measure(element)
+      targetMeasurements += 1
+      return targetMeasurements === 1
+        ? measure(element)
+        : { left: 20, top: 0, right: 20, bottom: 10 }
+    })
+    const focus = vi.spyOn(target, 'focus')
+
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [target],
+        measure: remeasuringMeasure,
+      }),
+    ).toEqual({ status: 'focus-failed', id: 'target' })
+    expect(targetMeasurements).toBe(2)
+    expect(focus).not.toHaveBeenCalled()
+  })
+
   it('uses the active portaled overlay and does not fall through after focus failure', () => {
     const boundary = document.createElement('main')
     document.body.append(boundary)
