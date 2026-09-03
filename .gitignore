@@ -8,6 +8,7 @@
 .pi/
 
 # Generated and local-only project output
+.env.local
 node_modules/
 dist/
 storybook-static/
