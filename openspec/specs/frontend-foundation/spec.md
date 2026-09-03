@@ -82,6 +82,10 @@ El sistema MUST mantener una organización feature-first con Bandeja como primer
 - THEN permanece dentro del límite de Bandeja
 - AND no existe un wrapper transversal creado para anticipar consumidores futuros
 
+### Requirement: Catálogo feature-local
+
+Catálogo MAY consumir la superficie pública Convex `catalogoAdmin/jerarquia` desde su feature para las lecturas y altas contextuales de Clase, Familia y Tipo. No otorga al frontend autoridad de datos y no habilita Recursos, actualización, borrado, activación, desactivación ni lifecycle.
+
 ### Requirement: Uso proporcional del stack instalado
 
 El sistema MUST usar TanStack Router para la ruta real de Bandeja y MUST usar React Aria Components para los composites u overlays accesibles que sí tengan responsabilidad observable en el slice. TanStack Form, TanStack Table y TanStack Virtual MUST permanecer sin consumidores de producto o demostración mientras no exista un formulario, tabla funcional o volumen aprobado que los requiera.

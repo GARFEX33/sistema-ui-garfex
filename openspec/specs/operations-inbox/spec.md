@@ -6,6 +6,10 @@ Ofrecer una entrada runtime honesta y accesible a la Bandeja operativa GARFEX, m
 
 ## Requirements
 
+### Requirement: Convivencia con Catálogo
+
+Bandeja MUST conservar sus límites internos cuando Catálogo convive como destino separado en el mismo shell. Las acciones, datos y jerarquía Clase → Familia → Tipo pertenecen exclusivamente a Catálogo.
+
 ### Requirement: Ruta y shell reconocibles de Bandeja
 
 El sistema MUST registrar una ruta de Bandeja y MUST presentar en la entrada runtime workstation un shell reconocible con identidad GARFEX, navegación persistente, barra superior y Bandeja identificada como el destino activo. TanStack Router MUST resolver esta entrada sin requerir datos de negocio.

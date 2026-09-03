@@ -240,33 +240,34 @@ El sistema conserva última ubicación, filtros, selección, columnas, densidad 
 
 ## 11. Filosofía centrada en el teclado
 
-Todos los flujos centrales deben poder operarse con teclado:
+Keyboard First es una regla permanente y transversal de GARFEX: todo flujo real debe poder completarse sin mouse, mientras el mouse continúa siendo una alternativa válida. Las nuevas superficies deben reutilizar este arbitraje, navegación espacial y ciclo de foco compartidos; no deben inventar atajos incompatibles.
 
-- Buscar y navegar.
-- Recorrer tablas.
-- Abrir registros.
-- Completar formularios.
-- Seleccionar opciones controladas.
-- Seleccionar lotes.
-- Revisar y aprobar.
-- Guardar, cancelar y deshacer.
-- Abrir acciones contextuales.
-- Cambiar de módulo o vista.
+### Contrato permanente de interacción
 
-### Contrato inicial de atajos
+- `Tab` y `Shift+Tab` conservan el recorrido nativo entre zonas mayores. GARFEX no captura `Tab` globalmente ni instala un orden roving para todo el documento.
+- Las flechas sin modificar navegan por geometría física vigente del viewport entre controles conectados, visibles, habilitados, operables y pertenecientes al contexto activo. Se priorizan semiplano, proximidad y alineación perpendicular; el desempate es determinista y no depende de idioma, texto, RTL, orden DOM u orden de una lista.
+- `Enter` activa únicamente el control enfocado cuando tiene una acción real. `Escape` cierra, cancela o vuelve según el contexto activo y restaura el foco al opener válido o a un fallback accesible explícito.
+- La edición, los campos de formulario, autocomplete, `contenteditable` y la composición IME suspenden flechas y atajos de una sola tecla. También se respetan el consumo local, `defaultPrevented` y los modificadores no registrados.
+- `N` o `n` abre sólo la acción contextual real y visible en Catálogo cuando está habilitada y no hay un overlay superior: Nueva Clase sin selección, Nueva Familia con Clase seleccionada o Nuevo Tipo con Familia seleccionada. No crea acciones para Bandeja o Recurso.
+- `?` abre la ayuda contextual por el carácter semántico producido por el teclado, incluso con los modificadores necesarios para una distribución internacional; no se asume la posición física de `/`.
+- `Ctrl/Cmd + K` conserva la Command Palette exacta de cada plataforma, sin Shift, Alt ni el modificador opuesto. `Ctrl+N` permanece reservado al navegador o sistema y GARFEX no lo captura ni cancela.
+- La contención de foco sólo existe dentro de un modal o diálogo activo. Al cerrarlo, la contención desaparece y el foco no se pierde en `body`, el fondo inactivo o un nodo desconectado.
+- Todo control enfocado muestra un indicador perceptible de foco conforme al objetivo WCAG 2.2 AA. La operación por teclado no elimina las alternativas visibles de mouse o controles táctiles.
 
-| Atajo | Acción |
-|---|---|
-| `Ctrl/Cmd + K` | Abrir la paleta unificada |
-| `/` | Enfocar la búsqueda del espacio actual |
-| `?` | Abrir la referencia de atajos |
-| `Esc` | Cerrar la capa actual o cancelar |
-| `Enter` | Abrir el resultado o aceptar una selección no destructiva |
-| `Ctrl/Cmd + Enter` | Guardar o enviar explícitamente |
-| Flechas | Navegar tablas, opciones y menús |
-| `Espacio` | Seleccionar la fila enfocada cuando corresponda |
+### Tabla canónica de atajos
 
-Los atajos avanzados se incorporan después de observar uso real. Siempre deben tener una alternativa visible por mouse o controles táctiles.
+| Atajo               | Regla y alcance                                                            |
+| ------------------- | -------------------------------------------------------------------------- |
+| `Tab` / `Shift+Tab` | Recorrido nativo entre zonas; nunca captura global                         |
+| Flechas             | Navegación espacial física entre controles elegibles del contexto activo   |
+| `Enter`             | Activa sólo la acción real del control enfocado                            |
+| `Escape`            | Cierra o cancela una capa y restaura opener o fallback una sola vez        |
+| `N` / `n`           | Creación contextual real en Catálogo: Clase, Familia o Tipo según selección |
+| `?`                 | Ayuda contextual por `event.key === "?"`, sin asumir layout estadounidense |
+| `Ctrl/Cmd + K`      | Command Palette con el modificador exacto de la plataforma                 |
+| `Ctrl+N`            | Comando reservado; GARFEX lo deja pasar sin cancelarlo                     |
+
+Este slice integra Bandeja, Catálogo, creación contextual de Clase, Familia y Tipo, Command Palette y ayuda contextual. Recurso, superficies densas o virtualizadas y los flujos responsive, móvil y touch permanecen diferidos hasta que exista una capacidad real aprobada. Esa postergación no reduce la regla permanente: cada integración futura debe reutilizar este contrato y aportar su propia evidencia.
 
 ## 12. Paleta de comandos
 
@@ -291,13 +292,13 @@ Deben permitir densidad ajustable, columnas configurables, vistas guardadas, sel
 
 ### Modelo mixto de edición
 
-| Contenedor | Uso correcto |
-|---|---|
-| Edición en línea | Valores simples, reversibles y fáciles de validar |
-| Panel lateral persistente | Consulta y edición contextual sin perder la tabla |
-| Panel superpuesto temporal | Tareas secundarias breves |
-| Ventana modal | Confirmaciones o decisiones muy acotadas |
-| Pantalla completa | Configuración compleja y relaciones extensas |
+| Contenedor                 | Uso correcto                                      |
+| -------------------------- | ------------------------------------------------- |
+| Edición en línea           | Valores simples, reversibles y fáciles de validar |
+| Panel lateral persistente  | Consulta y edición contextual sin perder la tabla |
+| Panel superpuesto temporal | Tareas secundarias breves                         |
+| Ventana modal              | Confirmaciones o decisiones muy acotadas          |
+| Pantalla completa          | Configuración compleja y relaciones extensas      |
 
 Los formularios largos no deben colocarse en ventanas modales o paneles superpuestos estrechos.
 
@@ -391,29 +392,29 @@ El logotipo completo se usa en contextos corporativos y formales. El isotipo se 
 
 ### Colores canónicos
 
-| Token | Valor | Uso |
-|---|---|---|
-| Rojo corporativo | `#7C0000` | Marca y acción primaria controlada |
-| Rojo al pasar el cursor | `#680000` | Estado interactivo bajo el cursor |
-| Rojo activo | `#540000` | Estado presionado |
-| Amarillo | `#F2D031` | Rayo y acento limitado |
-| Gris de apoyo | `#D9D6D3` | Apoyo de identidad |
-| Negro | `#000000` | Variante monocromática |
-| Blanco | `#FFFFFF` | Variante negativa y superficies |
+| Token                   | Valor     | Uso                                |
+| ----------------------- | --------- | ---------------------------------- |
+| Rojo corporativo        | `#7C0000` | Marca y acción primaria controlada |
+| Rojo al pasar el cursor | `#680000` | Estado interactivo bajo el cursor  |
+| Rojo activo             | `#540000` | Estado presionado                  |
+| Amarillo                | `#F2D031` | Rayo y acento limitado             |
+| Gris de apoyo           | `#D9D6D3` | Apoyo de identidad                 |
+| Negro                   | `#000000` | Variante monocromática             |
+| Blanco                  | `#FFFFFF` | Variante negativa y superficies    |
 
 El rojo y amarillo deben funcionar como acentos, no como grandes superficies dominantes. El amarillo no se usa como texto pequeño sobre fondo claro.
 
 ### Fundamentos claro y oscuro
 
-| Rol | Claro | Oscuro |
-|---|---|---|
-| Fondo | `#F7F6F3` | `#161616` |
-| Superficie | `#FFFFFF` | `#1D1D1B` |
-| Texto principal | `#1F1F1D` | `#ECEAE5` |
+| Rol              | Claro     | Oscuro    |
+| ---------------- | --------- | --------- |
+| Fondo            | `#F7F6F3` | `#161616` |
+| Superficie       | `#FFFFFF` | `#1D1D1B` |
+| Texto principal  | `#1F1F1D` | `#ECEAE5` |
 | Texto secundario | `#5F5D58` | `#C3C0B8` |
-| Borde | `#D9D6CF` | `#383733` |
-| Primario | `#7C0000` | `#B33A3A` |
-| Foco | `#8A6800` | `#E4B84A` |
+| Borde            | `#D9D6CF` | `#383733` |
+| Primario         | `#7C0000` | `#B33A3A` |
+| Foco             | `#8A6800` | `#E4B84A` |
 
 El tema oscuro utiliza gris profundo, no negro puro.
 
@@ -421,11 +422,11 @@ El tema oscuro utiliza gris profundo, no negro puro.
 
 Los estados no reutilizan automáticamente el rojo de marca:
 
-| Estado | Claro | Oscuro |
-|---|---|---|
-| Éxito | `#2F6B4F` | `#6FCF97` |
+| Estado      | Claro     | Oscuro    |
+| ----------- | --------- | --------- |
+| Éxito       | `#2F6B4F` | `#6FCF97` |
 | Advertencia | `#8A6800` | `#E4B84A` |
-| Error | `#B4232F` | `#FF8A94` |
+| Error       | `#B4232F` | `#FF8A94` |
 | Información | `#356A8A` | `#76B6D6` |
 
 ### Tipografía
