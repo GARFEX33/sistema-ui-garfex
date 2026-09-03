@@ -6,9 +6,10 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { GarfexLogoNegative } from '../../shared/design-system/GarfexLogoNegative'
-import { useGlobalCommandShortcut } from '../../shared/keyboard/useGlobalCommandShortcut'
+import { KeyboardControllerProvider } from '../../shared/keyboard/KeyboardController'
+import { restoreFocusNextFrame } from '../../shared/keyboard/focusRestoration'
 import { focusSpatialTarget } from '../../shared/keyboard/spatialNavigation'
 import { CommandEntry } from './CommandEntry'
 
@@ -16,6 +17,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false)
   const openerRef = useRef<HTMLElement | null>(null)
   const wasOpenRef = useRef(false)
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
 
   const openCommand = useCallback((opener: HTMLElement | null) => {
     openerRef.current = opener?.isConnected ? opener : null
@@ -92,21 +96,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (result.status === 'moved') event.preventDefault()
   }, [])
 
-  useGlobalCommandShortcut(openCommand, commandOpen)
-
   useEffect(() => {
     if (commandOpen) {
       wasOpenRef.current = true
       return
     }
     if (!wasOpenRef.current) return
-    const opener = openerRef.current
-    if (opener?.isConnected && !opener.hasAttribute('disabled')) opener.focus()
+    restoreFocusNextFrame(openerRef.current, [
+      () => document.querySelector<HTMLElement>('.command-trigger'),
+    ])
     openerRef.current = null
     wasOpenRef.current = false
   }, [commandOpen])
 
-  return (
+  const shell = (
     <div className="app-shell" onKeyDown={handleKeyDown}>
       <aside className="app-rail">
         <div className="brand-lockup">
@@ -142,5 +145,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="workspace-main">{children}</main>
       </div>
     </div>
+  )
+  return (
+    <KeyboardControllerProvider
+      activeSurface={pathname === '/catalogo' ? 'catalog' : 'bandeja'}
+      onCommandPalette={openCommand}
+    >
+      {shell}
+    </KeyboardControllerProvider>
   )
 }

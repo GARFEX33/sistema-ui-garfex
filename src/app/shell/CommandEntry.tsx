@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
 import {
   Button,
   Dialog,
@@ -17,8 +18,14 @@ interface CommandEntryProps {
 
 export function CommandEntry({ isOpen, onOpen, onClose }: CommandEntryProps) {
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const [value, setValue] = useState('')
+  const { registerOverlay } = useKeyboardController()
 
+  useEffect(
+    () => registerOverlay(() => (isOpen ? dialogRef.current : null)),
+    [isOpen, registerOverlay],
+  )
   useEffect(() => {
     if (!isOpen) setValue('')
   }, [isOpen])
@@ -42,7 +49,11 @@ export function CommandEntry({ isOpen, onOpen, onClose }: CommandEntryProps) {
         isDismissable={false}
       >
         <Modal className="command-modal">
-          <Dialog aria-label="Entrada de comandos" className="command-dialog">
+          <Dialog
+            ref={dialogRef}
+            aria-label="Entrada de comandos"
+            className="command-dialog"
+          >
             <h2>Entrada de comandos</h2>
             <TextField
               value={value}

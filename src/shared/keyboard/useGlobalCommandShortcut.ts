@@ -1,21 +1,9 @@
-import { useEffect } from 'react'
-import { shouldOpenGlobalCommand } from './keyboardArbitration'
-
+/** Compatibility hook: the shell-local KeyboardController owns the listener. */
 export function useGlobalCommandShortcut(
-  onOpen: (opener: HTMLElement | null) => void,
-  overlayOpen: boolean,
+  onOpen?: (opener: HTMLElement | null) => void,
+  overlayOpen?: boolean,
 ) {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!shouldOpenGlobalCommand(event, { overlayOpen })) return
-      onOpen(
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null,
-      )
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onOpen, overlayOpen])
+  void onOpen
+  void overlayOpen
+  return undefined
 }
