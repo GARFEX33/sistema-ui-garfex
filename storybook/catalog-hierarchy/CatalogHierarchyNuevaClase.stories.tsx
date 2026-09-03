@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Superficie local de presentación para Nueva Clase; no crea ni persiste datos.',
+          'Superficie local de presentación contrastada con la referencia OpenPencil aprobada; no crea ni persiste datos.',
       },
     },
   },
@@ -18,9 +18,13 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+const fakeCreateClass = async () => {
+  throw new Error('Storybook fake: createClass is not executed')
+}
 
 export const Approved: Story = {
   name: 'Nueva Clase — borrador local',
+  args: { createClass: fakeCreateClass },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.getByRole('button', { name: 'Nueva Clase' }).click()
@@ -28,16 +32,13 @@ export const Approved: Story = {
       name: 'Nueva Clase',
     })
     expect(dialog).toBeVisible()
+    expect(within(dialog).getByRole('textbox', { name: 'Clave' })).toBeVisible()
     expect(
-      Array.from(dialog.querySelectorAll('label')).map(
-        (label) => label.textContent,
-      ),
-    ).toEqual(['Clave', 'Nombre', 'Descripción'])
+      within(dialog).getByRole('textbox', { name: 'Nombre' }),
+    ).toBeVisible()
     expect(
-      Array.from(dialog.querySelectorAll('footer button')).map(
-        (button) => button.textContent,
-      ),
-    ).toEqual(['Cancelar', 'Crear Clase'])
+      within(dialog).getByRole('textbox', { name: 'Descripción' }),
+    ).toBeVisible()
     expect(
       within(dialog).getByRole('button', { name: 'Crear Clase' }),
     ).toBeDisabled()

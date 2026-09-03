@@ -18,16 +18,19 @@ export function isValidFocusCandidate(element: HTMLElement | null) {
 
 export function restoreFocusNextFrame(
   opener: HTMLElement | null,
-  fallbacks: readonly FocusCandidate[] = [],
+  fallbacks: readonly FocusCandidate[],
 ) {
   const restore = () => {
-    const target = [() => opener, ...fallbacks]
+    const candidates = [() => opener, ...fallbacks]
+    const target = candidates
       .map((candidate) => candidate())
       .find(isValidFocusCandidate)
     target?.focus({ preventScroll: true })
   }
   restore()
-  if (typeof window.requestAnimationFrame === 'function')
+  if (typeof window.requestAnimationFrame === 'function') {
     window.requestAnimationFrame(restore)
-  else window.setTimeout(restore, 0)
+  } else {
+    window.setTimeout(restore, 0)
+  }
 }
