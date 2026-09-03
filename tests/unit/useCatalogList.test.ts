@@ -1,79 +1,162 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createCatalogListSequence } from '../../src/features/catalog-hierarchy/useCatalogList'
-import type { CatalogListPage } from '../../src/features/catalog-hierarchy/catalogHierarchy.types'
+import {
+  createCatalogListSequence,
+  type CatalogListPage,
+} from '../../src/features/catalog-hierarchy/useCatalogList'
 
 type Row = { id: string; label: string }
 
 const page = (
   items: Row[],
-  continuationCursor: string | null,
+  cursor: string | null,
   isExhausted = false,
-): CatalogListPage<Row> => ({ items, continuationCursor, isExhausted })
+): CatalogListPage<Row> => ({ items, continuationCursor: cursor, isExhausted })
+
+const adapter = (
+  load: (request: unknown) => Promise<CatalogListPage<Row>>,
+) => ({
+  load,
+})
 
 describe('catalog list sequence', () => {
-  it('maps snapshotted context and preserves an opaque continuation cursor', async () => {
+  it('keeps context and opaque cursor across explicit continuation', async () => {
     const load = vi
       .fn()
-      .mockResolvedValueOnce(page([{ id: 'a', label: 'A' }], 'opaque:next'))
+      .mockResolvedValueOnce(page([{ id: 'a', label: 'A' }], 'next'))
       .mockResolvedValueOnce(page([{ id: 'b', label: 'B' }], null, true))
-    const filters = { mode: 'ACTIVE' }
     const sequence = createCatalogListSequence({
       operation: 'families',
       parentId: 'class-1',
-      filters,
-      adapter: { load },
+      filters: { mode: 'ACTIVE' },
+      adapter: adapter(load),
     })
 
-    filters.mode = 'INACTIVE'
     await sequence.start()
     await sequence.continue()
 
-    expect(load).toHaveBeenNthCalledWith(1, {
+    expect(load.mock.calls).toEqual([
+      [
+        {
+          operation: 'families',
+          parentId: 'class-1',
+          filters: { mode: 'ACTIVE' },
+          cursor: undefined,
+        },
+      ],
+      [
+        {
+          operation: 'families',
+          parentId: 'class-1',
+          filters: { mode: 'ACTIVE' },
+          cursor: 'next',
+        },
+      ],
+    ])
+    expect(sequence.getState()).toMatchObject({
+      items: [{ id: 'a' }, { id: 'b' }],
+      status: 'ready',
+      isExhausted: true,
+    })
+  })
+
+  it('snapshots filters before a pending request can observe caller mutation', async () => {
+    let resolve!: (value: CatalogListPage<Row>) => void
+    const load = vi.fn(
+      () =>
+        new Promise<CatalogListPage<Row>>((done) => {
+          resolve = done
+        }),
+    )
+    const filters = { mode: 'ACTIVE' }
+    const sequence = createCatalogListSequence({
+      operation: 'classes',
+      filters,
+      adapter: adapter(load),
+    })
+
+    const pending = sequence.start()
+    filters.mode = 'INACTIVE'
+
+    expect(load.mock.calls[0]?.[0]).toMatchObject({
+      filters: { mode: 'ACTIVE' },
+    })
+    resolve(page([{ id: 'a', label: 'A' }], null, true))
+    await pending
+    expect(sequence.getState().filters).toEqual({ mode: 'ACTIVE' })
+  })
+
+  it('retries a rejected initial page exactly once before succeeding', async () => {
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValueOnce(page([{ id: 'a', label: 'A' }], null, true))
+    const sequence = createCatalogListSequence({
+      operation: 'classes',
+      adapter: adapter(load),
+    })
+
+    expect(await sequence.start()).toBe(true)
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(load.mock.calls[0]?.[0].cursor).toBeUndefined()
+    expect(load.mock.calls[1]?.[0].cursor).toBeUndefined()
+    expect(sequence.getState()).toMatchObject({
+      status: 'ready',
+      items: [{ id: 'a', label: 'A' }],
+      isExhausted: true,
+    })
+  })
+
+  it('retries a dependent initial page with its parent and filters intact', async () => {
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValueOnce(page([{ id: 'f', label: 'Family' }], null, true))
+    const sequence = createCatalogListSequence({
+      operation: 'families',
+      parentId: 'class-1',
+      filters: { mode: 'ACTIVE' },
+      adapter: adapter(load),
+    })
+
+    expect(await sequence.start()).toBe(true)
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(load.mock.calls[1]?.[0]).toEqual({
       operation: 'families',
       parentId: 'class-1',
       filters: { mode: 'ACTIVE' },
       cursor: undefined,
     })
-    expect(load).toHaveBeenNthCalledWith(2, {
-      operation: 'families',
+    expect(sequence.getState()).toMatchObject({
       parentId: 'class-1',
-      filters: { mode: 'ACTIVE' },
-      cursor: 'opaque:next',
+      status: 'ready',
+      items: [{ id: 'f', label: 'Family' }],
     })
   })
 
-  it.each([
-    ['families', undefined],
-    ['families', null],
-    ['families', ''],
-    ['types', undefined],
-    ['types', null],
-    ['types', ''],
-  ] as const)(
-    'keeps %s waiting when its parent is unavailable',
-    async (operation, parentId) => {
-      const load = vi.fn()
-      const sequence = createCatalogListSequence({
-        operation,
-        parentId,
-        adapter: { load },
-      })
+  it('keeps initial-error after the bounded retry and exposes manual retry', async () => {
+    const load = vi.fn().mockRejectedValue(new Error('transport'))
+    const sequence = createCatalogListSequence({
+      operation: 'classes',
+      adapter: adapter(load),
+    })
 
-      expect(sequence.getState().isWaitingForParent).toBe(true)
-      expect(await sequence.start()).toBe(false)
-      expect(await sequence.continue()).toBe(false)
-      expect(load).not.toHaveBeenCalled()
-    },
-  )
+    expect(await sequence.start()).toBe(false)
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(sequence.getState().status).toBe('initial-error')
 
-  it('keeps class requests ungated, appends first item occurrences, and stops at exhaustion', async () => {
+    expect(await sequence.retry()).toBe(false)
+    expect(load).toHaveBeenCalledTimes(3)
+    expect(sequence.getState().status).toBe('initial-error')
+  })
+
+  it('deduplicates in delivery order and stops when exhausted', async () => {
     const load = vi
       .fn()
       .mockResolvedValueOnce(page([{ id: 'a', label: 'first' }], 'next'))
       .mockResolvedValueOnce(
         page(
           [
-            { id: 'a', label: 'duplicate' },
+            { id: 'a', label: 'second' },
             { id: 'b', label: 'B' },
           ],
           'ignored',
@@ -82,25 +165,95 @@ describe('catalog list sequence', () => {
       )
     const sequence = createCatalogListSequence({
       operation: 'classes',
-      adapter: { load },
+      adapter: adapter(load),
     })
-    const subscriber = vi.fn()
-    const unsubscribe = sequence.subscribe(subscriber)
 
-    expect(await sequence.start()).toBe(true)
-    expect(await sequence.continue()).toBe(true)
-    expect(await sequence.continue()).toBe(false)
-    unsubscribe()
+    await sequence.start()
+    await sequence.continue()
+    await sequence.continue()
 
     expect(load).toHaveBeenCalledTimes(2)
-    expect(sequence.getState()).toMatchObject({
-      items: [
-        { id: 'a', label: 'first' },
-        { id: 'b', label: 'B' },
-      ],
-      isExhausted: true,
-      isWaitingForParent: false,
+    expect(sequence.getState().items).toEqual([
+      { id: 'a', label: 'first' },
+      { id: 'b', label: 'B' },
+    ])
+  })
+
+  it.each([
+    ['families', 'undefined', undefined],
+    ['families', 'null', null],
+    ['families', 'empty string', ''],
+    ['types', 'undefined', undefined],
+    ['types', 'null', null],
+    ['types', 'empty string', ''],
+  ] as const)(
+    'waits for a dependent %s parent when it is %s without calling',
+    async (operation, _label, parentId) => {
+      const load = vi.fn()
+      const sequence = createCatalogListSequence({
+        operation,
+        parentId,
+        adapter: adapter(load),
+      })
+
+      expect(sequence.getState().status).toBe('waiting-for-parent')
+      expect(await sequence.start()).toBe(false)
+      expect(await sequence.continue()).toBe(false)
+      expect(await sequence.retry()).toBe(false)
+      expect(load).not.toHaveBeenCalled()
+    },
+  )
+
+  it('discards stale responses after parent change', async () => {
+    let resolve!: (value: CatalogListPage<Row>) => void
+    const load = vi.fn(
+      () =>
+        new Promise<CatalogListPage<Row>>((done) => {
+          resolve = done
+        }),
+    )
+    const sequence = createCatalogListSequence({
+      operation: 'families',
+      parentId: 'old',
+      adapter: adapter(load),
     })
-    expect(subscriber).toHaveBeenCalled()
+
+    const pending = sequence.start()
+    sequence.setContext({ operation: 'families', parentId: 'new' })
+    resolve(page([{ id: 'old', label: 'old' }], null, true))
+    await pending
+
+    expect(sequence.getState()).toMatchObject({
+      items: [],
+      parentId: 'new',
+      status: 'ready',
+    })
+  })
+
+  it('preserves valid pages and retries continuation only explicitly', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(page([{ id: 'a', label: 'A' }], 'next'))
+      .mockRejectedValueOnce(new Error('transport'))
+      .mockResolvedValueOnce(page([{ id: 'b', label: 'B' }], null, true))
+    const sequence = createCatalogListSequence({
+      operation: 'classes',
+      adapter: adapter(load),
+    })
+
+    await sequence.start()
+    await sequence.continue()
+    expect(sequence.getState()).toMatchObject({
+      status: 'partial-error',
+      items: [{ id: 'a' }],
+      isExhausted: false,
+    })
+    expect(load).toHaveBeenCalledTimes(2)
+
+    await sequence.retry()
+    expect(sequence.getState().items).toEqual([
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ])
   })
 })

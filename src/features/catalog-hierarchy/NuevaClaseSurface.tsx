@@ -1,131 +1,484 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button, Dialog, Modal, ModalOverlay } from 'react-aria-components'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
-import { restoreFocusNextFrame } from '../../shared/keyboard/focusRestoration'
-import './catalogHierarchy.css'
+import {
+  isValidFocusCandidate,
+  restoreFocusNextFrame,
+} from '../../shared/keyboard/focusRestoration'
+import type {
+  CatalogClassCreateInput,
+  CatalogClassItem,
+  CatalogCreated,
+  CatalogFamilyCreateInput,
+  CatalogFamilyItem,
+  CatalogTypeCreateInput,
+  CatalogTypeItem,
+} from './catalogHierarchy.types'
+import { useAutoClosingMessage } from './useAutoClosingMessage'
 
-type Draft = { clave: string; nombre: string; descripcion: string }
-const emptyDraft = (): Draft => ({ clave: '', nombre: '', descripcion: '' })
+type NewDraft = { key: string; name: string; description: string }
+type ParentContext = Readonly<{ id: string; label: string }>
+type CreateClass = (
+  input: CatalogClassCreateInput,
+) => Promise<CatalogCreated<CatalogClassItem>>
+type CreateFamily = (
+  input: CatalogFamilyCreateInput,
+) => Promise<CatalogCreated<CatalogFamilyItem>>
+type CreateType = (
+  input: CatalogTypeCreateInput,
+) => Promise<CatalogCreated<CatalogTypeItem>>
+type OnCreated = () => void | Promise<unknown>
+type OnSuccess = (message: string) => void
+type StructuredError = { code?: unknown; data?: unknown }
+type CreateSnapshot = Readonly<NewDraft & { parent: ParentContext | null }>
 
-export function NuevaClaseSurface() {
+export type CatalogCreateLevel = 'class' | 'family' | 'type'
+
+export interface CatalogCreateSurfaceProps {
+  level: CatalogCreateLevel
+  parent?: ParentContext
+  createClass?: CreateClass
+  createFamily?: CreateFamily
+  createType?: CreateType
+  onCreated?: OnCreated
+  onSuccess?: OnSuccess
+}
+
+export interface NuevaClaseSurfaceProps {
+  createClass?: CreateClass
+  onCreated?: OnCreated
+  onSuccess?: OnSuccess
+}
+
+const emptyDraft = (): NewDraft => ({ key: '', name: '', description: '' })
+const draftIdentity = (draft: NewDraft) =>
+  JSON.stringify([draft.key, draft.name, draft.description])
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const names = { class: 'Clase', family: 'Familia', type: 'Tipo' } as const
+const copyFor = (level: CatalogCreateLevel) => {
+  const noun = names[level]
+  return {
+    title: `${level === 'type' ? 'Nuevo' : 'Nueva'} ${noun}`,
+    action: `Crear ${noun}`,
+    parentLabel:
+      level === 'family' ? 'Clase' : level === 'type' ? 'Familia' : undefined,
+    noun,
+    failure: `No se pudo crear ${level === 'type' ? 'el' : 'la'} ${noun}.`,
+  }
+}
+
+const payloadFor = (level: CatalogCreateLevel, snapshot: CreateSnapshot) => {
+  const fields = {
+    clave: snapshot.key,
+    nombre: snapshot.name,
+    ...(snapshot.description === ''
+      ? {}
+      : { descripcion: snapshot.description }),
+  }
+  if (level === 'class') return fields
+  if (!snapshot.parent) return null
+  return level === 'family'
+    ? { claseRecursoId: snapshot.parent.id, ...fields }
+    : { familiaRecursoId: snapshot.parent.id, ...fields }
+}
+
+const createRequest = (
+  level: CatalogCreateLevel,
+  snapshot: CreateSnapshot,
+  createClass?: CreateClass,
+  createFamily?: CreateFamily,
+  createType?: CreateType,
+) => {
+  const payload = payloadFor(level, snapshot)
+  if (!payload) return
+  if (level === 'class')
+    return createClass?.(Object.freeze(payload as CatalogClassCreateInput))
+  if (level === 'family')
+    return createFamily?.(Object.freeze(payload as CatalogFamilyCreateInput))
+  return createType?.(Object.freeze(payload as CatalogTypeCreateInput))
+}
+
+const creationErrorMessage = (
+  error: unknown,
+  key: string,
+  level: CatalogCreateLevel,
+) => {
+  if (level !== 'class') return copyFor(level).failure
+  const structured = isRecord(error) ? (error as StructuredError) : undefined
+  const data = isRecord(structured?.data) ? structured.data : structured
+  return data?.code === 'DUPLICATE_CLASS_KEY'
+    ? `Ya existe una Clase con la Clave “${key}”.`
+    : copyFor(level).failure
+}
+
+export function CatalogCreateSurface({
+  level,
+  parent,
+  createClass,
+  createFamily,
+  createType,
+  onCreated,
+  onSuccess,
+}: CatalogCreateSurfaceProps) {
+  const copy = copyFor(level)
+  const [localSuccessMessage, showLocalSuccess] = useAutoClosingMessage()
   const [isOpen, setIsOpen] = useState(false)
   const [draft, setDraft] = useState(emptyDraft)
+  const [visibleParent, setVisibleParent] = useState<ParentContext | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const keyRef = useRef<HTMLInputElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const submitRef = useRef<HTMLButtonElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
-  const wasOpenRef = useRef(false)
+  const parentRef = useRef<ParentContext | null>(null)
+  const wasOpen = useRef(false)
+  const submittingRef = useRef(false)
+  const requestGenerationRef = useRef(0)
+  const completedDraftRef = useRef<string | null>(null)
+  const isOpenRef = useRef(isOpen)
   const { registerCommand, registerOverlay } = useKeyboardController()
-  const open = useCallback((opener: HTMLElement | null) => {
-    openerRef.current = opener?.isConnected ? opener : null
-    setDraft(emptyDraft())
-    setIsOpen(true)
-  }, [])
-  const close = useCallback(() => setIsOpen(false), [])
-  const setField = (field: keyof Draft, value: string) =>
-    setDraft((current) => ({ ...current, [field]: value }))
+  isOpenRef.current = isOpen
 
-  useEffect(
-    () =>
-      registerCommand({
-        id: 'catalog.new-class',
-        key: 'n',
-        shortcut: 'N',
-        label: 'Nueva Clase',
-        group: 'Catálogo',
-        scope: 'active-surface',
-        surface: 'catalog',
-        root: () => triggerRef.current,
-        isAvailable: () => true,
-        action: open,
-      }),
-    [open, registerCommand],
+  const setField = (field: keyof NewDraft, value: string) => {
+    completedDraftRef.current = null
+    setErrorMessage(null)
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
+  const close = useCallback(() => {
+    requestGenerationRef.current += 1
+    submittingRef.current = false
+    setIsSubmitting(false)
+    setIsOpen(false)
+  }, [])
+  const open = useCallback(
+    (opener: HTMLElement | null = triggerRef.current) => {
+      requestGenerationRef.current += 1
+      const capturedParent = parent
+        ? Object.freeze({ id: parent.id, label: parent.label })
+        : null
+      parentRef.current = capturedParent
+      setVisibleParent(capturedParent)
+      openerRef.current = opener?.isConnected ? opener : null
+      completedDraftRef.current = null
+      setErrorMessage(null)
+      setDraft(emptyDraft())
+      setIsOpen(true)
+    },
+    [parent],
   )
-  useEffect(
-    () => registerOverlay(() => (isOpen ? dialogRef.current : null)),
-    [isOpen, registerOverlay],
+  const command = useMemo(
+    () => ({
+      id: `catalog.new-${level}`,
+      surface: 'catalog' as const,
+      key: 'n',
+      shortcut: 'N',
+      label: copy.title,
+      group: 'Catálogo',
+      scope: 'active-surface' as const,
+      root: () => triggerRef.current,
+      isAvailable: () =>
+        !isOpenRef.current && isValidFocusCandidate(triggerRef.current),
+      action: open,
+    }),
+    [copy.title, level, open],
   )
-  useEffect(() => {
-    if (isOpen) {
-      wasOpenRef.current = true
+  const canSubmit =
+    (level === 'class'
+      ? !!createClass
+      : level === 'family'
+        ? !!createFamily
+        : !!createType) &&
+    (level === 'class' || !!parentRef.current) &&
+    draft.key.length > 0 &&
+    draft.name.length > 0 &&
+    !isSubmitting &&
+    completedDraftRef.current !== draftIdentity(draft)
+
+  const submit = async () => {
+    if (!canSubmit || submittingRef.current) return
+    const snapshot = Object.freeze({
+      key: draft.key,
+      name: draft.name,
+      description: draft.description,
+      parent: parentRef.current,
+    })
+    const draftKey = draftIdentity(draft)
+    const requestGeneration = requestGenerationRef.current
+    const isCurrentRequest = () =>
+      requestGenerationRef.current === requestGeneration && isOpenRef.current
+    submittingRef.current = true
+    setIsSubmitting(true)
+    setErrorMessage(null)
+    try {
+      const result = await createRequest(
+        level,
+        snapshot,
+        createClass,
+        createFamily,
+        createType,
+      )
+      if (!result || !isCurrentRequest()) return
+      if (result.disposition !== 'CREATED')
+        throw new Error('Invalid catalog hierarchy response')
+      completedDraftRef.current = draftKey
+      await onCreated?.()
+      if (!isCurrentRequest()) return
+      const successMessage = `${copy.noun} “${snapshot.name}” ${level === 'type' ? 'creado' : 'creada'}.`
+      if (onSuccess) onSuccess(successMessage)
+      else showLocalSuccess(successMessage)
+      close()
+    } catch (error) {
+      if (isCurrentRequest())
+        setErrorMessage(creationErrorMessage(error, snapshot.key, level))
+    } finally {
+      if (isCurrentRequest()) {
+        submittingRef.current = false
+        setIsSubmitting(false)
+      }
+    }
+  }
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+      event.preventDefault()
+      close()
       return
     }
-    if (!wasOpenRef.current) return
-    restoreFocusNextFrame(openerRef.current, [() => triggerRef.current])
-    openerRef.current = null
-    wasOpenRef.current = false
+    if (
+      event.nativeEvent.isComposing ||
+      event.keyCode === 229 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey
+    )
+      return
+    const target = event.currentTarget
+    if (!(target instanceof HTMLElement)) return
+    if (target === cancelRef.current && event.key === 'ArrowUp') {
+      event.preventDefault()
+      descriptionRef.current?.focus()
+      return
+    }
+    const fields = [keyRef.current, nameRef.current, descriptionRef.current]
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      const index = fields.indexOf(
+        target as HTMLInputElement | HTMLTextAreaElement,
+      )
+      if (index < 0) return
+      if (target instanceof HTMLTextAreaElement) {
+        const selectionStart = target.selectionStart
+        const selectionEnd = target.selectionEnd
+        const collapsed = selectionStart === selectionEnd
+        if (!collapsed) return
+        if (event.key === 'ArrowUp' && selectionStart !== 0) return
+        if (event.key === 'ArrowDown' && selectionEnd !== target.value.length)
+          return
+      }
+      const nextIndex = index + (event.key === 'ArrowUp' ? -1 : 1)
+      const next = fields[nextIndex]
+      if (!next) {
+        if (event.key === 'ArrowDown' && index === fields.length - 1)
+          cancelRef.current?.focus()
+        return
+      }
+      event.preventDefault()
+      next.focus()
+      return
+    }
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    const submitButton = submitRef.current
+    if (target === cancelRef.current && event.key === 'ArrowRight') {
+      if (submitButton && !submitButton.disabled) {
+        event.preventDefault()
+        submitButton.focus()
+      }
+    } else if (target === submitButton && event.key === 'ArrowLeft') {
+      event.preventDefault()
+      cancelRef.current?.focus()
+    }
+  }
+
+  useEffect(() => registerCommand(command), [command, registerCommand])
+  useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
+  useEffect(() => {
+    if (isOpen) {
+      wasOpen.current = true
+      keyRef.current?.focus()
+    } else if (wasOpen.current) {
+      restoreFocusNextFrame(openerRef.current, [
+        () => triggerRef.current,
+        () => document.querySelector<HTMLElement>('.navigation-catalog-link'),
+      ])
+      openerRef.current = null
+      wasOpen.current = false
+    }
   }, [isOpen])
 
+  const keyId = `new-${level}-key`
+  const nameId = `new-${level}-name`
+  const descriptionId = `new-${level}-description`
   return (
     <div className="catalog-create-surface">
-      <button
+      <Button
         ref={triggerRef}
         className="catalog-create-trigger"
-        type="button"
-        onClick={(event) => open(event.currentTarget)}
+        aria-label={copy.title}
+        onPress={() => open(triggerRef.current)}
       >
-        Nueva Clase
-      </button>
-      {isOpen && (
-        <div className="catalog-dialog-backdrop">
-          <div ref={dialogRef} className="catalog-dialog-modal">
-            <div
-              className="catalog-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="nueva-clase-title"
+        <span>{copy.title}</span>
+        <kbd>{command.shortcut}</kbd>
+      </Button>
+
+      <ModalOverlay
+        className="catalog-dialog-backdrop"
+        isOpen={isOpen}
+        isDismissable={false}
+        onOpenChange={(openState) => !openState && close()}
+      >
+        <Modal className="catalog-dialog-modal">
+          <Dialog
+            ref={dialogRef}
+            className="catalog-dialog"
+            data-approved-frame={
+              level === 'class'
+                ? 'n2418'
+                : level === 'family'
+                  ? 'n2487'
+                  : 'n2556'
+            }
+            aria-label={copy.title}
+          >
+            <form
+              className="catalog-dialog-form"
+              onKeyDown={handleDialogKeyDown}
+              onSubmit={(event) => {
+                event.preventDefault()
+                void submit()
+              }}
             >
-              <form className="catalog-dialog-form">
-                <header className="catalog-dialog-heading">
-                  <h2 id="nueva-clase-title">Nueva Clase</h2>
-                </header>
-                <div className="catalog-dialog-content">
-                  <div className="catalog-dialog-fields">
-                    <div className="catalog-field-row">
-                      <label htmlFor="nueva-clase-clave">Clave</label>
-                      <input
-                        id="nueva-clase-clave"
-                        value={draft.clave}
-                        onChange={(event) =>
-                          setField('clave', event.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="catalog-field-row">
-                      <label htmlFor="nueva-clase-nombre">Nombre</label>
-                      <input
-                        id="nueva-clase-nombre"
-                        value={draft.nombre}
-                        onChange={(event) =>
-                          setField('nombre', event.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="catalog-field-row">
-                      <label htmlFor="nueva-clase-descripcion">
-                        Descripción
-                      </label>
-                      <textarea
-                        id="nueva-clase-descripcion"
-                        value={draft.descripcion}
-                        onChange={(event) =>
-                          setField('descripcion', event.target.value)
-                        }
-                      />
-                    </div>
+              <header className="catalog-dialog-heading">
+                <h2>{copy.title}</h2>
+                <span>Esc cerrar</span>
+              </header>
+              <div className="catalog-dialog-content">
+                {visibleParent && copy.parentLabel && (
+                  <div className="catalog-creation-parent">
+                    <span>{copy.parentLabel}</span>
+                    <output
+                      data-testid="creation-parent"
+                      data-parent-id={visibleParent.id}
+                    >
+                      {visibleParent.label}
+                    </output>
                   </div>
+                )}
+                <div className="catalog-dialog-fields">
+                  <div className="catalog-field-row catalog-query-field">
+                    <label
+                      className={
+                        level === 'class'
+                          ? 'catalog-visually-hidden'
+                          : undefined
+                      }
+                      htmlFor={keyId}
+                    >
+                      Clave
+                    </label>
+                    <input
+                      ref={keyRef}
+                      onKeyDown={handleDialogKeyDown}
+                      id={keyId}
+                      placeholder="Clave"
+                      value={draft.key}
+                      disabled={isSubmitting}
+                      onChange={(event) => setField('key', event.target.value)}
+                    />
+                  </div>
+                  <div className="catalog-field-separator" />
+                  <div className="catalog-field-row catalog-name-field">
+                    <label htmlFor={nameId}>NOMBRE</label>
+                    <input
+                      ref={nameRef}
+                      onKeyDown={handleDialogKeyDown}
+                      id={nameId}
+                      aria-label="Nombre"
+                      value={draft.name}
+                      disabled={isSubmitting}
+                      onChange={(event) => setField('name', event.target.value)}
+                    />
+                  </div>
+                  <div className="catalog-field-separator" />
+                  <div className="catalog-field-row catalog-description-field">
+                    <label htmlFor={descriptionId}>DESCRIPCIÓN</label>
+                    <textarea
+                      ref={descriptionRef}
+                      onKeyDown={handleDialogKeyDown}
+                      id={descriptionId}
+                      aria-label="Descripción"
+                      value={draft.description}
+                      disabled={isSubmitting}
+                      onChange={(event) =>
+                        setField('description', event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="catalog-field-separator" />
                 </div>
-                <footer className="catalog-dialog-actions">
-                  <button type="button" onClick={close}>
-                    Cancelar
-                  </button>
-                  <button type="button" disabled>
-                    Crear Clase
-                  </button>
-                </footer>
-              </form>
-            </div>
-          </div>
+                <div className="catalog-dialog-error-region" role="alert">
+                  <span aria-hidden="true">{errorMessage ? '⚠' : ''}</span>
+                  <span>{errorMessage}</span>
+                </div>
+              </div>
+              <footer className="catalog-dialog-actions">
+                <Button
+                  ref={cancelRef}
+                  onKeyDown={handleDialogKeyDown}
+                  onPress={close}
+                  type="button"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  ref={submitRef}
+                  onKeyDown={handleDialogKeyDown}
+                  isDisabled={!canSubmit}
+                  type="submit"
+                >
+                  {copy.action}
+                </Button>
+              </footer>
+            </form>
+          </Dialog>
+        </Modal>
+      </ModalOverlay>
+      {!onSuccess && localSuccessMessage && (
+        <div className="catalog-success-toast" role="status" aria-live="polite">
+          {localSuccessMessage}
         </div>
       )}
     </div>
+  )
+}
+
+export function NuevaClaseSurface({
+  createClass,
+  onCreated,
+  onSuccess,
+}: NuevaClaseSurfaceProps) {
+  return (
+    <CatalogCreateSurface
+      level="class"
+      createClass={createClass}
+      onCreated={onCreated}
+      onSuccess={onSuccess}
+    />
   )
 }

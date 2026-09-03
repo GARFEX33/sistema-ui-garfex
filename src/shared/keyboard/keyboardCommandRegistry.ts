@@ -1,4 +1,5 @@
-export type KeyboardSurface = 'bandeja' | 'catalog'
+import type { KeyboardSurface } from './keyboardControllerContext'
+
 export type KeyboardCommandScope = 'global' | 'active-surface'
 
 export type KeyboardCommand = Readonly<{
@@ -15,11 +16,15 @@ export type KeyboardCommand = Readonly<{
 }>
 
 export type KeyboardCommandSnapshot = readonly KeyboardCommand[]
+export type KeyboardCommandRegistry = ReturnType<
+  typeof createKeyboardCommandRegistry
+>
 
 export function createKeyboardCommandRegistry() {
   const commands = new Map<string, KeyboardCommand>()
   const listeners = new Set<() => void>()
   let snapshot: KeyboardCommandSnapshot = []
+
   const publish = () => {
     snapshot = [...commands.values()]
     listeners.forEach((listener) => listener())
@@ -40,19 +45,15 @@ export function createKeyboardCommandRegistry() {
       return () => listeners.delete(listener)
     },
     getSnapshot: () => snapshot,
-    resolve(key: string, surface: KeyboardSurface) {
+    resolve(key: string, activeSurface: KeyboardSurface) {
       const normalized = key.toLowerCase()
       return snapshot.find(
         (command) =>
           command.key.toLowerCase() === normalized &&
-          (command.scope === 'global' || command.surface === surface) &&
+          (command.scope === 'global' || command.surface === activeSurface) &&
           command.root() !== null &&
           command.isAvailable(),
       )
     },
   }
 }
-
-export type KeyboardCommandRegistry = ReturnType<
-  typeof createKeyboardCommandRegistry
->

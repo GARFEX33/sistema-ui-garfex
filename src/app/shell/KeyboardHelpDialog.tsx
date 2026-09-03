@@ -1,35 +1,42 @@
 import { useEffect, useRef } from 'react'
-import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
+import { Button, Dialog, Modal, ModalOverlay } from 'react-aria-components'
+import {
+  useKeyboardCommands,
+  useKeyboardController,
+  type KeyboardSurface,
+} from '../../shared/keyboard/keyboardControllerContext'
+
+type KeyboardHelpDialogProps = {
+  isOpen: boolean
+  surface: KeyboardSurface
+  onClose: () => void
+}
+
+const conventions = [
+  { key: 'Tab / Shift+Tab', label: 'Recorrer zonas' },
+  { key: 'Esc', label: 'Volver / cerrar' },
+  { key: '↑ ↓', label: 'Navegar destinos' },
+  { key: '← →', label: 'Entrar o volver entre zonas' },
+  { key: 'Enter', label: 'Activar el destino enfocado' },
+]
 
 export function KeyboardHelpDialog({
   isOpen,
-  activeSurface,
-  onOpen,
+  surface,
   onClose,
-}: {
-  isOpen: boolean
-  activeSurface: 'bandeja' | 'catalog'
-  onOpen: (opener: HTMLElement | null) => void
-  onClose: () => void
-}) {
+}: KeyboardHelpDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
-  const { registerCommand, registerOverlay } = useKeyboardController()
-
-  useEffect(
-    () =>
-      registerCommand({
-        id: 'global.keyboard-help',
-        key: '?',
-        shortcut: '?',
-        label: 'Ayuda de teclado',
-        group: 'Global',
-        scope: 'global',
-        root: () => (isOpen ? dialogRef.current : document.body),
-        isAvailable: () => true,
-        action: onOpen,
-      }),
-    [isOpen, onOpen, registerCommand],
+  const { registerOverlay } = useKeyboardController()
+  const registered = useKeyboardCommands()
+  const commands = registered.filter(
+    (command) =>
+      (command.scope === 'global' || command.surface === surface) &&
+      command.root() !== null &&
+      command.isAvailable(),
   )
+  const global = commands.filter((command) => command.scope === 'global')
+  const contextual = commands.filter((command) => command.scope !== 'global')
+
   useEffect(
     () => registerOverlay(() => (isOpen ? dialogRef.current : null)),
     [isOpen, registerOverlay],
@@ -38,42 +45,56 @@ export function KeyboardHelpDialog({
     if (isOpen) dialogRef.current?.focus()
   }, [isOpen])
 
-  if (!isOpen) return null
   return (
-    <div className="keyboard-help-backdrop">
-      <div
-        ref={dialogRef}
-        className="keyboard-help-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="keyboard-help-title"
-        tabIndex={-1}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') onClose()
-        }}
-      >
-        <h2 id="keyboard-help-title">Ayuda de teclado</h2>
-        <section aria-labelledby="keyboard-help-global">
-          <h3 id="keyboard-help-global">Global</h3>
-          <p>
-            <kbd>Ctrl/Cmd+K</kbd> — Buscar o ejecutar comando
-          </p>
-          <p>
-            <kbd>?</kbd> — Ayuda de teclado
-          </p>
-        </section>
-        {activeSurface === 'catalog' && (
-          <section aria-labelledby="keyboard-help-catalog">
-            <h3 id="keyboard-help-catalog">Catálogo</h3>
-            <p>
-              <kbd>N</kbd> — Nueva Clase
-            </p>
-          </section>
-        )}
-        <button type="button" onClick={onClose}>
-          Cerrar ayuda de teclado
-        </button>
-      </div>
-    </div>
+    <ModalOverlay
+      className="command-overlay"
+      isOpen={isOpen}
+      isDismissable={false}
+      onOpenChange={(nextOpen) => !nextOpen && onClose()}
+    >
+      <Modal className="command-modal">
+        <Dialog
+          ref={dialogRef}
+          className="command-dialog"
+          aria-label="Ayuda de teclado"
+        >
+          <h2>Ayuda de teclado</h2>
+          <ul className="keyboard-help-list">
+            {global.map((command) => (
+              <li key={command.id}>
+                <span>
+                  {command.shortcut} — {command.label}
+                </span>
+                <kbd aria-hidden="true">{command.shortcut}</kbd>
+              </li>
+            ))}
+            {conventions.map((command) => (
+              <li key={command.key}>
+                <span>
+                  {command.key} — {command.label}
+                </span>
+                <kbd aria-hidden="true">{command.key}</kbd>
+              </li>
+            ))}
+            {contextual.length > 0 && (
+              <li className="keyboard-help-group" aria-hidden="true">
+                {surface === 'catalog' ? 'Catálogo' : 'Contexto actual'}
+              </li>
+            )}
+            {contextual.map((command) => (
+              <li key={command.id}>
+                <span>
+                  {command.shortcut} — {command.label}
+                </span>
+                <kbd aria-hidden="true">{command.shortcut}</kbd>
+              </li>
+            ))}
+          </ul>
+          <Button className="command-close" onPress={onClose}>
+            Cerrar ayuda
+          </Button>
+        </Dialog>
+      </Modal>
+    </ModalOverlay>
   )
 }
