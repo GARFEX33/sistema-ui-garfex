@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { Link } from '@tanstack/react-router'
 import { GarfexLogoNegative } from '../../shared/design-system/GarfexLogoNegative'
 import { useGlobalCommandShortcut } from '../../shared/keyboard/useGlobalCommandShortcut'
+import { focusSpatialTarget } from '../../shared/keyboard/spatialNavigation'
 import { CommandEntry } from './CommandEntry'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -14,6 +22,75 @@ export function AppShell({ children }: { children: ReactNode }) {
     setCommandOpen(true)
   }, [])
   const closeCommand = useCallback(() => setCommandOpen(false), [])
+
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      event.defaultPrevented ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey
+    )
+      return
+    const origin = event.target
+    if (!(origin instanceof HTMLElement)) return
+    const shell = event.currentTarget
+    const navigation = shell.querySelector<HTMLElement>('.primary-navigation')
+    const workspace = shell.querySelector<HTMLElement>('.workspace-main')
+    if (!navigation || !workspace) return
+
+    const sidebarLinks = [
+      ...navigation.querySelectorAll<HTMLAnchorElement>('a[href]'),
+    ]
+    const sidebarIndex = sidebarLinks.indexOf(origin as HTMLAnchorElement)
+    if (sidebarIndex !== -1) {
+      if (event.key === 'Home' || event.key === 'End') {
+        const target =
+          sidebarLinks[event.key === 'Home' ? 0 : sidebarLinks.length - 1]
+        if (target && target !== origin) {
+          event.preventDefault()
+          target.focus()
+        }
+        return
+      }
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        const nextIndex = sidebarIndex + (event.key === 'ArrowDown' ? 1 : -1)
+        const target = sidebarLinks[nextIndex]
+        if (target) {
+          event.preventDefault()
+          target.focus()
+        }
+        return
+      }
+      if (event.key === 'ArrowRight') {
+        const result = focusSpatialTarget({
+          origin,
+          direction: 'right',
+          boundaryRoot: shell,
+          candidates: [
+            ...workspace.querySelectorAll<HTMLElement>('[data-spatial-id]'),
+          ],
+        })
+        if (result.status === 'moved') event.preventDefault()
+        return
+      }
+      return
+    }
+
+    if (event.key !== 'ArrowLeft' || !origin.hasAttribute('data-spatial-id'))
+      return
+    const activeRoute = navigation.querySelector<HTMLElement>(
+      '[aria-current="page"]',
+    )
+    if (!activeRoute) return
+    const result = focusSpatialTarget({
+      origin,
+      direction: 'left',
+      boundaryRoot: shell,
+      candidates: [activeRoute],
+    })
+    if (result.status === 'moved') event.preventDefault()
+  }, [])
 
   useGlobalCommandShortcut(openCommand, commandOpen)
 
@@ -30,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [commandOpen])
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" onKeyDown={handleKeyDown}>
       <aside className="app-rail">
         <div className="brand-lockup">
           <GarfexLogoNegative />
@@ -40,6 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             to="/bandeja"
             activeProps={{ className: 'navigation-link is-active' }}
             className="navigation-link"
+            data-spatial-id="sidebar.bandeja"
           >
             Bandeja
           </Link>
@@ -47,6 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             to="/catalogo"
             activeProps={{ className: 'navigation-link is-active' }}
             className="navigation-link"
+            data-spatial-id="sidebar.catalogo"
           >
             Catálogo
           </Link>
