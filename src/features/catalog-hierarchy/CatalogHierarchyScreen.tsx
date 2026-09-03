@@ -6,7 +6,6 @@ import './catalogHierarchy.css'
 
 function CatalogRegion({
   label,
-  column,
   items,
   selectedId,
   waiting,
@@ -14,7 +13,6 @@ function CatalogRegion({
   disabled = false,
 }: {
   label: string
-  column: 'classes' | 'families' | 'types'
   items: CatalogHierarchyItem[]
   selectedId?: string
   waiting?: string
@@ -36,9 +34,6 @@ function CatalogRegion({
               key={item.id}
               type="button"
               aria-pressed={item.id === selectedId}
-              data-spatial-id={`catalog.row.${column}.${item.id}`}
-              data-spatial-column={column}
-              data-catalog-level={column}
             >
               {item.label}
               {hasChildren && (
@@ -101,14 +96,12 @@ export function CatalogHierarchyScreen({
             <div className="catalog-browser-columns">
               <CatalogRegion
                 label="Clases"
-                column="classes"
                 items={classes}
                 selectedId={presentation?.selectedClassId}
                 hasChildren
               />
               <CatalogRegion
                 label="Familias"
-                column="families"
                 items={families}
                 selectedId={presentation?.selectedFamilyId}
                 waiting="Seleccioná una Clase."
@@ -117,7 +110,6 @@ export function CatalogHierarchyScreen({
               />
               <CatalogRegion
                 label="Tipos"
-                column="types"
                 items={types}
                 selectedId={presentation?.selectedTypeId}
                 waiting="Seleccioná una Familia."
