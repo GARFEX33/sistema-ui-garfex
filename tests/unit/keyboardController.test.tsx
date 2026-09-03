@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { useEffect } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 import { useKeyboardController } from '../../src/shared/keyboard/keyboardControllerContext'
@@ -81,6 +82,48 @@ describe('keyboard controller core', () => {
     dialog.remove()
     addSpy.mockRestore()
     unmount()
+  })
+
+  it('dispatches registered active-surface commands and global help without capturing Ctrl+N', () => {
+    const surfaceAction = vi.fn()
+    const helpAction = vi.fn()
+    function Consumer() {
+      const { registerCommand } = useKeyboardController()
+      useEffect(() => {
+        const removeNew = registerCommand({
+          ...command('catalog-new'),
+          key: 'n',
+          shortcut: 'N',
+          scope: 'active-surface',
+          surface: 'catalog',
+          action: surfaceAction,
+        })
+        const removeHelp = registerCommand({
+          ...command('help'),
+          key: '?',
+          shortcut: '?',
+          action: helpAction,
+        })
+        return () => {
+          removeNew()
+          removeHelp()
+        }
+      }, [registerCommand])
+      return null
+    }
+    render(
+      <KeyboardControllerProvider
+        activeSurface="catalog"
+        onCommandPalette={vi.fn()}
+      >
+        <Consumer />
+      </KeyboardControllerProvider>,
+    )
+    fireEvent.keyDown(document, { key: 'n' })
+    fireEvent.keyDown(document, { key: 'n', ctrlKey: true })
+    fireEvent.keyDown(document, { key: '?', shiftKey: true })
+    expect(surfaceAction).toHaveBeenCalledTimes(1)
+    expect(helpAction).toHaveBeenCalledTimes(1)
   })
 
   it('accepts the compatibility shortcut hook without adding a listener', () => {

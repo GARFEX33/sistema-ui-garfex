@@ -64,8 +64,15 @@ export function KeyboardControllerProvider({
         overlayOpen,
         platform: state.platform,
       })
-      if (decision.action !== 'command-palette') return
-      const command = state.registry.resolve('k', state.activeSurface)
+      if (
+        decision.action !== 'command-palette' &&
+        decision.action !== 'keyboard-command'
+      )
+        return
+      const command = state.registry.resolve(
+        decision.action === 'command-palette' ? 'k' : event.key,
+        state.activeSurface,
+      )
       if (!command) return
       event.preventDefault()
       command.action(

@@ -1,4 +1,7 @@
-export type KeyboardArbitrationAction = 'command-palette' | null
+export type KeyboardArbitrationAction =
+  | 'command-palette'
+  | 'keyboard-command'
+  | null
 export type KeyboardArbitrationOwner =
   | 'command-palette'
   | 'editing'
@@ -16,6 +19,7 @@ export type KeyboardArbitrationReason =
   | 'overlay'
   | 'modifier'
   | 'command-palette'
+  | 'keyboard-command'
   | 'none'
 
 export interface KeyboardArbitrationDecision {
@@ -70,10 +74,30 @@ export function arbitrateKeyboardEvent(
     platform === 'mac'
       ? event.metaKey && !event.ctrlKey
       : event.ctrlKey && !event.metaKey
-  const hasUnsupportedModifier = event.altKey || event.shiftKey
+  const semanticKey = event.key === '?' ? '?' : event.key.toLowerCase()
 
-  if (event.key.toLowerCase() !== 'k') return noAction('none')
-  if (!hasExactPlatformModifier || hasUnsupportedModifier)
+  if (semanticKey === '?') {
+    if (event.ctrlKey || event.metaKey || event.altKey)
+      return noAction('modifier')
+    return {
+      action: 'keyboard-command',
+      owner: 'consumed',
+      reason: 'keyboard-command',
+      preventDefault: false,
+    }
+  }
+  if (semanticKey === 'n') {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+      return noAction('modifier')
+    return {
+      action: 'keyboard-command',
+      owner: 'consumed',
+      reason: 'keyboard-command',
+      preventDefault: false,
+    }
+  }
+  if (semanticKey !== 'k') return noAction('none')
+  if (!hasExactPlatformModifier || event.altKey || event.shiftKey)
     return noAction('modifier')
   return {
     action: 'command-palette',
@@ -111,7 +135,6 @@ function isEditableContext(event: KeyboardEvent): boolean {
       candidate.getAttribute('data-keyboard-editing') === 'true'
     )
       return true
-
     const contentEditable = candidate.getAttribute('contenteditable')
     if (contentEditable?.toLowerCase() === 'false')
       contentEditableBlocked = true

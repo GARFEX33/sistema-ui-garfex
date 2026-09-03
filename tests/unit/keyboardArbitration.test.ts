@@ -114,7 +114,7 @@ describe('global command keyboard arbitration', () => {
       arbitrateKeyboardEvent(
         keyEvent({ key: 'n', ctrlKey: false, target: nested }),
       ).reason,
-    ).toBe('none')
+    ).toBe('keyboard-command')
     outerEditor.remove()
   })
 

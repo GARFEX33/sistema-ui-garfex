@@ -12,11 +12,15 @@ import { KeyboardControllerProvider } from '../../shared/keyboard/KeyboardContro
 import { restoreFocusNextFrame } from '../../shared/keyboard/focusRestoration'
 import { focusSpatialTarget } from '../../shared/keyboard/spatialNavigation'
 import { CommandEntry } from './CommandEntry'
+import { KeyboardHelpDialog } from './KeyboardHelpDialog'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const openerRef = useRef<HTMLElement | null>(null)
+  const helpOpenerRef = useRef<HTMLElement | null>(null)
   const wasOpenRef = useRef(false)
+  const helpWasOpenRef = useRef(false)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -26,6 +30,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     setCommandOpen(true)
   }, [])
   const closeCommand = useCallback(() => setCommandOpen(false), [])
+  const openHelp = useCallback((opener: HTMLElement | null) => {
+    helpOpenerRef.current = opener?.isConnected ? opener : null
+    setHelpOpen(true)
+  }, [])
+  const closeHelp = useCallback(() => setHelpOpen(false), [])
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
     if (
@@ -42,7 +51,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     const navigation = shell.querySelector<HTMLElement>('.primary-navigation')
     const workspace = shell.querySelector<HTMLElement>('.workspace-main')
     if (!navigation || !workspace) return
-
     const sidebarLinks = [
       ...navigation.querySelectorAll<HTMLAnchorElement>('a[href]'),
     ]
@@ -58,8 +66,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         return
       }
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        const nextIndex = sidebarIndex + (event.key === 'ArrowDown' ? 1 : -1)
-        const target = sidebarLinks[nextIndex]
+        const target =
+          sidebarLinks[sidebarIndex + (event.key === 'ArrowDown' ? 1 : -1)]
         if (target) {
           event.preventDefault()
           target.focus()
@@ -76,11 +84,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           ],
         })
         if (result.status === 'moved') event.preventDefault()
-        return
       }
       return
     }
-
     if (event.key !== 'ArrowLeft' || !origin.hasAttribute('data-spatial-id'))
       return
     const activeRoute = navigation.querySelector<HTMLElement>(
@@ -108,6 +114,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     openerRef.current = null
     wasOpenRef.current = false
   }, [commandOpen])
+
+  useEffect(() => {
+    if (helpOpen) {
+      helpWasOpenRef.current = true
+      return
+    }
+    if (!helpWasOpenRef.current) return
+    restoreFocusNextFrame(helpOpenerRef.current, [
+      () => document.querySelector<HTMLElement>('.command-trigger'),
+      () => document.body,
+    ])
+    helpOpenerRef.current = null
+    helpWasOpenRef.current = false
+  }, [helpOpen])
 
   const shell = (
     <div className="app-shell" onKeyDown={handleKeyDown}>
@@ -143,6 +163,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         </header>
         <main className="workspace-main">{children}</main>
+        <KeyboardHelpDialog
+          isOpen={helpOpen}
+          activeSurface={pathname === '/catalogo' ? 'catalog' : 'bandeja'}
+          onOpen={openHelp}
+          onClose={closeHelp}
+        />
       </div>
     </div>
   )
