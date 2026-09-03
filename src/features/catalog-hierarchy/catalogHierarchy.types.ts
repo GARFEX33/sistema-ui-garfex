@@ -53,3 +53,28 @@ export interface CatalogListPage<T> {
   isExhausted: boolean
   items: T[]
 }
+
+export interface CatalogClassCreateInput {
+  readonly clave: string
+  readonly nombre: string
+  readonly descripcion?: string
+}
+
+export interface CatalogFamilyCreateInput {
+  readonly claseRecursoId: CatalogId
+  readonly clave: string
+  readonly nombre: string
+  readonly descripcion?: string
+}
+
+export interface CatalogTypeCreateInput {
+  readonly familiaRecursoId: CatalogId
+  readonly clave: string
+  readonly nombre: string
+  readonly descripcion?: string
+}
+
+export interface CatalogCreated<T> {
+  readonly disposition: 'CREATED'
+  readonly item: T
+}
