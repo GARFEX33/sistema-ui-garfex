@@ -56,4 +56,26 @@ describe('runtime and presentation fixture boundary', () => {
       /@tanstack\/(react-form|react-table|react-virtual)/,
     )
   })
+
+  it('keeps populated Catalog presentation data out of runtime source', () => {
+    const screen = readFileSync(
+      resolve(
+        root,
+        'src/features/catalog-hierarchy/CatalogHierarchyScreen.tsx',
+      ),
+      'utf8',
+    )
+    expect(screen).not.toMatch(
+      /storybook|Materiales|Canalizaciones|Tubería|fetch|storage/i,
+    )
+    expect(
+      readFileSync(
+        resolve(
+          root,
+          'storybook/catalog-hierarchy/catalogHierarchy.fixtures.ts',
+        ),
+        'utf8',
+      ),
+    ).toContain('Materiales')
+  })
 })
