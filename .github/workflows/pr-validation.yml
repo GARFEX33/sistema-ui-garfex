@@ -13,14 +13,25 @@ jobs:
     name: Check issue and PR governance
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Validate linked issue and type label
         uses: actions/github-script@v8
         with:
           script: |
+            const { pathToFileURL } = await import('node:url');
+            const governance = await import(
+              pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/validate-pr-governance.mjs`).href
+            );
             const query = `
               query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
                 repository(owner: $owner, name: $repo) {
+                  nameWithOwner
+                  defaultBranchRef { name }
                   pullRequest(number: $number) {
+                    baseRefName
+                    body
                     closingIssuesReferences(first: 100, after: $cursor) {
                       nodes {
                         number
@@ -33,50 +44,71 @@ jobs:
                 }
               }
             `;
-            const references = [];
-            let cursor = null;
-            let page;
-            do {
-              page = await github.graphql(query, {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                number: context.payload.pull_request.number,
-                cursor,
-              });
-              const closingReferences =
-                page.repository?.pullRequest?.closingIssuesReferences;
-              if (!closingReferences) {
-                core.setFailed('Unable to resolve the current pull request.');
-                return;
-              }
-              references.push(...closingReferences.nodes.filter(Boolean));
-              if (closingReferences.pageInfo.hasNextPage && !closingReferences.pageInfo.endCursor) {
-                core.setFailed('Closing issue reference pagination returned no cursor.');
-                return;
-              }
-              cursor = closingReferences.pageInfo.hasNextPage
-                ? closingReferences.pageInfo.endCursor
-                : null;
-            } while (cursor);
 
-            const repositoryName = `${context.repo.owner}/${context.repo.repo}`.toLowerCase();
-            const approvedIssue = references.find(
-              (issue) =>
-                issue.repository?.nameWithOwner?.toLowerCase() === repositoryName &&
-                issue.labels.nodes.some((label) => label.name === 'status:approved'),
-            );
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: context.payload.pull_request.number,
+            };
+            const firstPage = await github.graphql(query, { ...variables, cursor: null });
+            const repository = firstPage.repository;
+            const pullRequest = repository?.pullRequest;
+            if (!repository || !pullRequest) {
+              core.setFailed('Unable to resolve the current pull request.');
+              return;
+            }
+
+            const canonicalReferences = await governance.paginateConnection(async (cursor) => {
+              if (cursor === null) return pullRequest.closingIssuesReferences;
+              const page = await github.graphql(query, { ...variables, cursor });
+              return page.repository.pullRequest.closingIssuesReferences;
+            });
+            let references = governance.resolveIssueReferences({
+              canonicalReferences,
+              body: pullRequest.body ?? '',
+              baseRef: pullRequest.baseRefName,
+              defaultBranch: repository.defaultBranchRef?.name ?? 'main',
+            });
+
+            if (canonicalReferences.length === 0 && references.length > 0) {
+              const issueQuery = `
+                query($owner: String!, $repo: String!, $number: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    nameWithOwner
+                    issue(number: $number) {
+                      number
+                      repository { nameWithOwner }
+                      labels(first: 100) { nodes { name } }
+                    }
+                  }
+                }
+              `;
+              references = (await Promise.all(references.map(async ({ number }) => {
+                const result = await github.graphql(issueQuery, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  number,
+                });
+                return result.repository?.issue;
+              }))).filter(Boolean);
+            }
+
+            const repositoryName = repository.nameWithOwner ?? `${context.repo.owner}/${context.repo.repo}`;
+            const approvedIssue = governance.findApprovedIssue(references, repositoryName);
             if (!approvedIssue) {
               core.setFailed(
-                'PR must canonically close at least one issue in this repository with the status:approved label.',
+                'PR must canonically close at least one issue in this repository with the status:approved label.'
               );
               return;
             }
-            const issueNumber = approvedIssue.number;
 
-            const prLabels = context.payload.pull_request.labels.map((label) => label.name);
-            const typeLabels = prLabels.filter((label) => label.startsWith('type:'));
-            if (typeLabels.length !== 1) {
-              core.setFailed(`PR must have exactly one type:* label; found ${typeLabels.length}.`);
+            const prLabels = (context.payload.pull_request.labels ?? [])
+              .filter(Boolean)
+              .map((label) => label.name);
+            if (!governance.hasExactlyOneTypeLabel(prLabels)) {
+              const typeCount = prLabels.filter((label) => label.startsWith('type:')).length;
+              core.setFailed(`PR must have exactly one type:* label; found ${typeCount}.`);
               return;
             }
-            core.info(`Validated issue #${issueNumber} and label ${typeLabels[0]}.`);
+            const typeLabel = prLabels.find((label) => label.startsWith('type:'));
+            core.info(`Validated issue #${approvedIssue.number} and label ${typeLabel}.`);
