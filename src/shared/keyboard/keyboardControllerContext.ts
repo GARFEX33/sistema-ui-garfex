@@ -1,14 +1,26 @@
 import { createContext, useContext, useSyncExternalStore } from 'react'
-import type {
-  KeyboardCommand,
-  KeyboardCommandRegistry,
-  KeyboardSurface,
-} from './keyboardCommandRegistry'
+import type { KeyboardCommand } from './keyboardCommandRegistry'
 
-export type { KeyboardCommand, KeyboardSurface }
+export type KeyboardSurface = 'bandeja' | 'catalog'
+
+export type ContextualActionId =
+  | 'catalog.new-class'
+  | 'catalog.new-family'
+  | 'catalog.new-type'
+
+export type ContextualAction = {
+  id: ContextualActionId
+  surface: KeyboardSurface
+  key: string
+  label: string
+  root: () => HTMLElement | null
+  isAvailable: () => boolean
+  run: (opener: HTMLElement | null) => void
+}
 
 export type ControllerContextValue = {
   registerCommand: (command: KeyboardCommand) => () => void
+  registerAction: (action: ContextualAction) => () => void
   registerOverlay: (root: () => HTMLElement | null) => () => void
   subscribeCommands: (listener: () => void) => () => void
   getCommandsSnapshot: () => readonly KeyboardCommand[]
@@ -20,15 +32,30 @@ export const KeyboardControllerContext =
 const emptySnapshot: readonly KeyboardCommand[] = []
 const noop = () => undefined
 
-export function useKeyboardController(): ControllerContextValue {
+export function useKeyboardController() {
   const context = useContext(KeyboardControllerContext)
-  if (context) return context
-  return {
-    registerCommand: () => noop,
-    registerOverlay: () => noop,
-    subscribeCommands: () => noop,
-    getCommandsSnapshot: () => emptySnapshot,
+  if (!context) {
+    return {
+      registerCommand: (command: KeyboardCommand) => {
+        void command
+        return noop
+      },
+      registerAction: (action: ContextualAction) => {
+        void action
+        return noop
+      },
+      registerOverlay: (root: () => HTMLElement | null) => {
+        void root
+        return noop
+      },
+      subscribeCommands: (listener: () => void) => {
+        void listener
+        return noop
+      },
+      getCommandsSnapshot: () => emptySnapshot,
+    }
   }
+  return context
 }
 
 export function useKeyboardCommands() {
@@ -39,5 +66,3 @@ export function useKeyboardCommands() {
     () => emptySnapshot,
   )
 }
-
-export type { KeyboardCommandRegistry }

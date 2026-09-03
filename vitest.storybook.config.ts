@@ -6,6 +6,9 @@ import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  optimizeDeps: {
+    include: ['react/jsx-dev-runtime'],
+  },
   test: {
     projects: [
       {
