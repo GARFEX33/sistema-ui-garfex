@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  focusSpatialTarget,
   scoreSpatialCandidates,
   type SpatialCandidate,
   type SpatialRect,
@@ -156,5 +157,187 @@ describe('pure spatial navigation scorer', () => {
     expect(
       scoreSpatialCandidates(origin, [...options].reverse(), 'left')?.id,
     ).toBe('physical-left')
+  })
+})
+
+describe('DOM spatial adapter', () => {
+  const rects = new WeakMap<HTMLElement, SpatialRect>()
+  const measure = (element: HTMLElement) => rects.get(element) ?? null
+  const prepare = (element: HTMLElement, rect: SpatialRect) => {
+    rects.set(element, rect)
+    vi.spyOn(element, 'getClientRects').mockReturnValue([{} as DOMRect])
+  }
+
+  it('focuses an eligible measured control and excludes non-operable targets', () => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML =
+      '<button data-spatial-id="origin">Origin</button><button data-spatial-id="near">Near</button><span data-spatial-id="text">Text</span>'
+    document.body.append(boundary)
+    const origin = boundary.querySelector(
+      '[data-spatial-id="origin"]',
+    ) as HTMLElement
+    const near = boundary.querySelector(
+      '[data-spatial-id="near"]',
+    ) as HTMLElement
+    const text = boundary.querySelector(
+      '[data-spatial-id="text"]',
+    ) as HTMLElement
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(near, { left: 20, top: 0, right: 30, bottom: 10 })
+    prepare(text, { left: 11, top: 0, right: 12, bottom: 10 })
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [text, near],
+        measure,
+      }),
+    ).toEqual({ status: 'moved', id: 'near' })
+    const outsider = document.createElement('button')
+    outsider.dataset.spatialId = 'outsider'
+    document.body.append(outsider)
+    prepare(outsider, { left: 0, top: 0, right: 10, bottom: 10 })
+    expect(
+      focusSpatialTarget({
+        origin: outsider,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [near],
+        measure,
+      }),
+    ).toEqual({ status: 'no-candidate' })
+  })
+
+  it.each([
+    ['hidden', '<button data-spatial-id="bad" hidden>Bad</button>'],
+    [
+      'aria-hidden',
+      '<button data-spatial-id="bad" aria-hidden="true">Bad</button>',
+    ],
+    ['disabled', '<button data-spatial-id="bad" disabled>Bad</button>'],
+    [
+      'aria-disabled',
+      '<button data-spatial-id="bad" aria-disabled="true">Bad</button>',
+    ],
+    ['inert', '<button data-spatial-id="bad" inert>Bad</button>'],
+  ])('excludes %s targets', (_name, markup) => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML = `<button data-spatial-id="origin">Origin</button>${markup}`
+    document.body.append(boundary)
+    const origin = boundary.querySelector(
+      '[data-spatial-id="origin"]',
+    ) as HTMLElement
+    const bad = boundary.querySelector('[data-spatial-id="bad"]') as HTMLElement
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(bad, { left: 20, top: 0, right: 30, bottom: 10 })
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [bad],
+        measure,
+      }),
+    ).toEqual({ status: 'no-candidate' })
+  })
+
+  it('excludes duplicate, zero-area, disconnected, viewport-outside, and foreign targets', () => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML =
+      '<button data-spatial-id="origin">Origin</button><button data-spatial-id="dup">One</button><button data-spatial-id="dup">Two</button><button data-spatial-id="zero">Zero</button><button data-spatial-id="outside">Outside</button>'
+    document.body.append(boundary)
+    const origin = boundary.querySelector(
+      '[data-spatial-id="origin"]',
+    ) as HTMLElement
+    const all = [...boundary.querySelectorAll<HTMLElement>('[data-spatial-id]')]
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    all
+      .slice(1)
+      .forEach((element) =>
+        prepare(element, { left: 20, top: 0, right: 30, bottom: 10 }),
+      )
+    rects.set(all[3], { left: 20, top: 0, right: 20, bottom: 10 })
+    rects.set(all[4], { left: 200, top: 0, right: 210, bottom: 10 })
+    const detached = document.createElement('button')
+    detached.dataset.spatialId = 'detached'
+    prepare(detached, { left: 20, top: 0, right: 30, bottom: 10 })
+    const foreignDocument = document.implementation.createHTMLDocument()
+    const foreign = foreignDocument.createElement('button')
+    foreign.dataset.spatialId = 'foreign'
+    foreignDocument.body.append(foreign)
+    prepare(foreign, { left: 20, top: 0, right: 30, bottom: 10 })
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [...all.slice(1), detached, foreign],
+        measure,
+        viewport: { left: 0, top: 0, right: 100, bottom: 100 },
+      }),
+    ).toEqual({ status: 'no-candidate' })
+  })
+
+  it('uses the active portaled overlay and does not fall through after focus failure', () => {
+    const boundary = document.createElement('main')
+    document.body.append(boundary)
+    const overlay = document.createElement('div')
+    const origin = document.createElement('button')
+    origin.dataset.spatialId = 'origin'
+    const target = document.createElement('button')
+    target.dataset.spatialId = 'target'
+    const fallback = document.createElement('button')
+    fallback.dataset.spatialId = 'fallback'
+    overlay.append(origin, target, fallback)
+    document.body.append(overlay)
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(target, { left: 20, top: 0, right: 30, bottom: 10 })
+    prepare(fallback, { left: 80, top: 0, right: 90, bottom: 10 })
+    const focus = vi
+      .spyOn(target, 'focus')
+      .mockImplementation(() => target.remove())
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        activeOverlayRoot: overlay,
+        candidates: [target, fallback],
+        measure,
+      }),
+    ).toEqual({ status: 'focus-failed', id: 'target' })
+    expect(focus).toHaveBeenCalledTimes(1)
+    expect(fallback).not.toHaveFocus()
+  })
+
+  it('revalidates the selected target immediately before focus', () => {
+    const boundary = document.createElement('main')
+    boundary.innerHTML =
+      '<button data-spatial-id="origin">Origin</button><button data-spatial-id="target">Target</button>'
+    document.body.append(boundary)
+    const origin = boundary.querySelector(
+      '[data-spatial-id="origin"]',
+    ) as HTMLElement
+    const target = boundary.querySelector(
+      '[data-spatial-id="target"]',
+    ) as HTMLButtonElement
+    prepare(origin, { left: 0, top: 0, right: 10, bottom: 10 })
+    prepare(target, { left: 20, top: 0, right: 30, bottom: 10 })
+    const changingMeasure = vi.fn((element: HTMLElement) => {
+      if (element === target) target.disabled = true
+      return measure(element)
+    })
+    const focus = vi.spyOn(target, 'focus')
+    expect(
+      focusSpatialTarget({
+        origin,
+        direction: 'right',
+        boundaryRoot: boundary,
+        candidates: [target],
+        measure: changingMeasure,
+      }),
+    ).toEqual({ status: 'focus-failed', id: 'target' })
+    expect(focus).not.toHaveBeenCalled()
   })
 })

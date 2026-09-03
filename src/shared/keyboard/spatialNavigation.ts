@@ -110,3 +110,185 @@ function valid(rect: SpatialRect) {
     rect.bottom > rect.top
   )
 }
+
+export type SpatialMeasure = (element: HTMLElement) => SpatialRect | null
+export type SpatialFocusStatus = 'moved' | 'no-candidate' | 'focus-failed'
+export interface SpatialFocusResult {
+  status: SpatialFocusStatus
+  id?: string
+}
+export interface FocusSpatialTargetOptions {
+  origin: HTMLElement
+  direction: SpatialDirection
+  boundaryRoot: HTMLElement
+  activeOverlayRoot?: HTMLElement | null
+  candidates?: readonly HTMLElement[]
+  measure?: SpatialMeasure
+  viewport?: SpatialRect
+}
+
+const spatialId = (element: HTMLElement) =>
+  element.getAttribute('data-spatial-id')?.trim() ?? ''
+const contains = (root: HTMLElement, element: HTMLElement) =>
+  root === element || root.contains(element)
+
+function invalidAncestor(element: HTMLElement, boundary: HTMLElement) {
+  for (
+    let current: HTMLElement | null = element;
+    current;
+    current = current.parentElement
+  ) {
+    if (
+      current.hidden ||
+      current.getAttribute('aria-hidden') === 'true' ||
+      current.hasAttribute('inert') ||
+      current.getAttribute('aria-disabled') === 'true' ||
+      current.hasAttribute('disabled') ||
+      (current instanceof HTMLButtonElement && current.disabled)
+    )
+      return true
+    const style = getComputedStyle(current)
+    if (
+      style.display === 'none' ||
+      style.visibility === 'hidden' ||
+      style.visibility === 'collapse' ||
+      style.opacity === '0'
+    )
+      return true
+    if (current === boundary) break
+  }
+  return false
+}
+
+function operable(element: HTMLElement) {
+  if (
+    element instanceof HTMLButtonElement ||
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLTextAreaElement
+  )
+    return !element.disabled
+  if (element instanceof HTMLAnchorElement) return element.hasAttribute('href')
+  const role = element.getAttribute('role')
+  return (
+    role !== null &&
+    [
+      'button',
+      'link',
+      'checkbox',
+      'radio',
+      'switch',
+      'tab',
+      'menuitem',
+      'option',
+    ].includes(role) &&
+    element.tabIndex >= 0
+  )
+}
+
+function defaultMeasure(element: HTMLElement): SpatialRect | null {
+  const rect = element.getBoundingClientRect()
+  return {
+    left: rect.left,
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+  }
+}
+
+function eligible(
+  element: HTMLElement,
+  boundary: HTMLElement,
+  viewport: SpatialRect,
+  measure: SpatialMeasure,
+  requireBoundary: boolean,
+) {
+  if (
+    !(element instanceof HTMLElement) ||
+    !element.isConnected ||
+    element.ownerDocument !== boundary.ownerDocument
+  )
+    return null
+  if (
+    !spatialId(element) ||
+    (requireBoundary && !contains(boundary, element)) ||
+    invalidAncestor(element, boundary) ||
+    !operable(element) ||
+    element.getClientRects().length === 0
+  )
+    return null
+  const rect = measure(element)
+  if (
+    !rect ||
+    !valid(rect) ||
+    rect.right <= viewport.left ||
+    rect.left >= viewport.right ||
+    rect.bottom <= viewport.top ||
+    rect.top >= viewport.bottom
+  )
+    return null
+  return rect
+}
+
+export function focusSpatialTarget({
+  origin,
+  direction,
+  boundaryRoot,
+  activeOverlayRoot = null,
+  candidates,
+  measure = defaultMeasure,
+  viewport,
+}: FocusSpatialTargetOptions): SpatialFocusResult {
+  const view = viewport ?? {
+    left: 0,
+    top: 0,
+    right: window.innerWidth,
+    bottom: window.innerHeight,
+  }
+  const activeBoundary = activeOverlayRoot ?? boundaryRoot
+  const originRect = eligible(origin, boundaryRoot, view, measure, false)
+  if (!originRect || !contains(activeBoundary, origin))
+    return { status: 'no-candidate' }
+  const pool = candidates ?? [
+    ...activeBoundary.querySelectorAll<HTMLElement>('[data-spatial-id]'),
+  ]
+  const counts = new Map<string, number>()
+  for (const element of pool) {
+    const id = spatialId(element)
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+  }
+  const candidateBoundary = activeBoundary
+  const validCandidates: SpatialCandidate[] = []
+  const elements = new Map<string, HTMLElement>()
+  for (const element of pool) {
+    const id = spatialId(element)
+    if (!id || counts.get(id) !== 1) continue
+    const rect = eligible(element, candidateBoundary, view, measure, true)
+    if (rect) {
+      validCandidates.push({ id, rect })
+      elements.set(id, element)
+    }
+  }
+  const selected = scoreSpatialCandidates(
+    originRect,
+    validCandidates,
+    direction,
+  )
+  if (!selected) return { status: 'no-candidate' }
+  const target = elements.get(selected.id)
+  if (
+    !target ||
+    !eligible(origin, boundaryRoot, view, measure, false) ||
+    !contains(activeBoundary, origin) ||
+    !eligible(target, candidateBoundary, view, measure, true)
+  )
+    return { status: 'focus-failed', id: selected.id }
+  try {
+    target.focus({ preventScroll: true })
+  } catch {
+    return { status: 'focus-failed', id: selected.id }
+  }
+  return document.activeElement === target
+    ? { status: 'moved', id: selected.id }
+    : { status: 'focus-failed', id: selected.id }
+}
