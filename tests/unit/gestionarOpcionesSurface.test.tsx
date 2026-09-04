@@ -102,7 +102,7 @@ describe('GestionarOpcionesSurface', () => {
     })
 
     const trigger = screen.getByRole('button', { name: 'Opciones' })
-    expect(trigger.querySelector('kbd')).toHaveTextContent('O')
+    await waitFor(() => expect(trigger).toHaveAttribute('title', 'O'))
     await user.click(trigger)
 
     expect(

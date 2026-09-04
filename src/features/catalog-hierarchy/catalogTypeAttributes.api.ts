@@ -2,6 +2,7 @@ import { ConvexHttpClient } from 'convex/browser'
 import { makeFunctionReference } from 'convex/server'
 import type { FunctionReference } from 'convex/server'
 import type {
+  AttributeAssignmentLifecycleInput,
   AttributeDataType,
   AttributeDefinition,
   AttributeDefinitionsInput,
@@ -10,6 +11,7 @@ import type {
   AttributeOptionsInput,
   ChangedAttributeDefinition,
   ChangedAttributeOption,
+  ChangedTypeAttributeAssignment,
   CreatedAttributeDefinition,
   CreatedAttributeOption,
   CreatedTypeAttributeAssignment,
@@ -23,6 +25,7 @@ import type {
   TypeAttributePage,
   UpdateAttributeDefinitionInput,
   UpdateAttributeOptionInput,
+  UpdateTypeAttributeAssignmentInput,
 } from './catalogTypeAttributes.types'
 
 export type CatalogTypeAttributesOperation =
@@ -31,6 +34,9 @@ export type CatalogTypeAttributesOperation =
   | 'catalogoAdmin/atributos:obtenerDefinicionAtributo'
   | 'catalogoAdmin/atributos:crearDefinicionAtributo'
   | 'catalogoAdmin/atributos:crearAsignacionAtributo'
+  | 'catalogoAdmin/atributos:actualizarAsignacionAtributo'
+  | 'catalogoAdmin/atributos:activarAsignacionAtributo'
+  | 'catalogoAdmin/atributos:desactivarAsignacionAtributo'
   | 'catalogoAdmin/atributos:actualizarDefinicionAtributo'
   | 'catalogoAdmin/atributos:listarOpcionesAtributo'
   | 'catalogoAdmin/atributos:crearOpcionAtributo'
@@ -65,6 +71,15 @@ export interface CatalogTypeAttributesApi {
   createTypeAttributeAssignment: (
     input: CreateTypeAttributeAssignmentInput,
   ) => Promise<CreatedTypeAttributeAssignment>
+  updateTypeAttributeAssignment: (
+    input: UpdateTypeAttributeAssignmentInput,
+  ) => Promise<ChangedTypeAttributeAssignment>
+  activateTypeAttributeAssignment: (
+    input: AttributeAssignmentLifecycleInput,
+  ) => Promise<ChangedTypeAttributeAssignment>
+  deactivateTypeAttributeAssignment: (
+    input: AttributeAssignmentLifecycleInput,
+  ) => Promise<ChangedTypeAttributeAssignment>
   updateAttributeDefinition: (
     input: UpdateAttributeDefinitionInput,
   ) => Promise<ChangedAttributeDefinition>
@@ -224,6 +239,19 @@ export function parseCreatedTypeAttributeAssignment(
   if (!record(value) || value.disposition !== 'CREATED' || !has(value, 'item'))
     return bad()
   return { disposition: 'CREATED', item: assignment(value.item) }
+}
+
+export function parseChangedTypeAttributeAssignment(
+  value: unknown,
+): ChangedTypeAttributeAssignment {
+  if (
+    !record(value) ||
+    (value.disposition !== 'UPDATED' && value.disposition !== 'UNCHANGED') ||
+    !has(value, 'item')
+  ) {
+    return bad()
+  }
+  return { disposition: value.disposition, item: assignment(value.item) }
 }
 
 export function parseChangedAttributeDefinition(
@@ -420,6 +448,44 @@ const createAssignmentArgs = (input: CreateTypeAttributeAssignmentInput) => {
   return Object.freeze({ ...input })
 }
 
+const updateAssignmentArgs = (input: UpdateTypeAttributeAssignmentInput) => {
+  if (
+    !validOpaqueId(input.atributoRecursoId) ||
+    !validRevision(input.expectedRevision) ||
+    (input.aplicabilidad !== undefined &&
+      !isOneOf(input.aplicabilidad, applicability)) ||
+    (input.participaIdentidad !== undefined &&
+      typeof input.participaIdentidad !== 'boolean') ||
+    (input.orden !== undefined &&
+      (typeof input.orden !== 'number' || !Number.isFinite(input.orden)))
+  ) {
+    return bad()
+  }
+  return Object.freeze({
+    atributoRecursoId: input.atributoRecursoId,
+    expectedRevision: input.expectedRevision,
+    ...(input.aplicabilidad === undefined
+      ? {}
+      : { aplicabilidad: input.aplicabilidad }),
+    ...(input.participaIdentidad === undefined
+      ? {}
+      : { participaIdentidad: input.participaIdentidad }),
+    ...(input.orden === undefined ? {} : { orden: input.orden }),
+  })
+}
+
+const assignmentLifecycleArgs = (input: AttributeAssignmentLifecycleInput) => {
+  if (
+    !validOpaqueId(input.atributoRecursoId) ||
+    !validRevision(input.expectedRevision)
+  )
+    return bad()
+  return Object.freeze({
+    atributoRecursoId: input.atributoRecursoId,
+    expectedRevision: input.expectedRevision,
+  })
+}
+
 const updateDefinitionArgs = (input: UpdateAttributeDefinitionInput) => {
   if (
     !validOpaqueId(input.definicionAtributoId) ||
@@ -565,6 +631,27 @@ const createAssignmentReference = makeFunctionReference<
 >(
   'catalogoAdmin/atributos:crearAsignacionAtributo',
 ) as CatalogTypeAttributesMutationReference
+const updateAssignmentReference = makeFunctionReference<
+  'mutation',
+  Record<string, unknown>,
+  unknown
+>(
+  'catalogoAdmin/atributos:actualizarAsignacionAtributo',
+) as CatalogTypeAttributesMutationReference
+const activateAssignmentReference = makeFunctionReference<
+  'mutation',
+  Record<string, unknown>,
+  unknown
+>(
+  'catalogoAdmin/atributos:activarAsignacionAtributo',
+) as CatalogTypeAttributesMutationReference
+const deactivateAssignmentReference = makeFunctionReference<
+  'mutation',
+  Record<string, unknown>,
+  unknown
+>(
+  'catalogoAdmin/atributos:desactivarAsignacionAtributo',
+) as CatalogTypeAttributesMutationReference
 const updateDefinitionReference = makeFunctionReference<
   'mutation',
   Record<string, unknown>,
@@ -625,6 +712,12 @@ export function createCatalogTypeAttributesConvexApi(
           return client.mutation(createDefinitionReference, { ...args })
         case 'catalogoAdmin/atributos:crearAsignacionAtributo':
           return client.mutation(createAssignmentReference, { ...args })
+        case 'catalogoAdmin/atributos:actualizarAsignacionAtributo':
+          return client.mutation(updateAssignmentReference, { ...args })
+        case 'catalogoAdmin/atributos:activarAsignacionAtributo':
+          return client.mutation(activateAssignmentReference, { ...args })
+        case 'catalogoAdmin/atributos:desactivarAsignacionAtributo':
+          return client.mutation(deactivateAssignmentReference, { ...args })
         case 'catalogoAdmin/atributos:actualizarDefinicionAtributo':
           return client.mutation(updateDefinitionReference, { ...args })
         case 'catalogoAdmin/atributos:listarOpcionesAtributo':
@@ -684,6 +777,30 @@ export function createCatalogTypeAttributesApi(
         await transport.invoke(
           'catalogoAdmin/atributos:crearAsignacionAtributo',
           createAssignmentArgs(input),
+        ),
+      )
+    },
+    async updateTypeAttributeAssignment(input) {
+      return parseChangedTypeAttributeAssignment(
+        await transport.invoke(
+          'catalogoAdmin/atributos:actualizarAsignacionAtributo',
+          updateAssignmentArgs(input),
+        ),
+      )
+    },
+    async activateTypeAttributeAssignment(input) {
+      return parseChangedTypeAttributeAssignment(
+        await transport.invoke(
+          'catalogoAdmin/atributos:activarAsignacionAtributo',
+          assignmentLifecycleArgs(input),
+        ),
+      )
+    },
+    async deactivateTypeAttributeAssignment(input) {
+      return parseChangedTypeAttributeAssignment(
+        await transport.invoke(
+          'catalogoAdmin/atributos:desactivarAsignacionAtributo',
+          assignmentLifecycleArgs(input),
         ),
       )
     },

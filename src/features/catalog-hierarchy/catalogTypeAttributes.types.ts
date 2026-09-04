@@ -100,6 +100,24 @@ export interface CreatedTypeAttributeAssignment {
   item: TypeAttributeAssignment
 }
 
+export interface UpdateTypeAttributeAssignmentInput {
+  aplicabilidad?: AttributeApplicability
+  atributoRecursoId: OpaqueAttributeId
+  expectedRevision: OpaqueAttributeRevision
+  orden?: number
+  participaIdentidad?: boolean
+}
+
+export interface ChangedTypeAttributeAssignment {
+  disposition: 'UPDATED' | 'UNCHANGED'
+  item: TypeAttributeAssignment
+}
+
+export interface AttributeAssignmentLifecycleInput {
+  atributoRecursoId: OpaqueAttributeId
+  expectedRevision: OpaqueAttributeRevision
+}
+
 export interface UpdateAttributeDefinitionInput {
   definicionAtributoId: OpaqueAttributeId
   descripcion?: string

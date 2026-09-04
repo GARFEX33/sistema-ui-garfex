@@ -71,8 +71,8 @@ type OptionPreviewState =
   | { status: 'ready'; page: TypeAttributePage<AttributeOption> }
   | { status: 'error' }
 
-const attributeSelectionLabel = {
-  SELECTED: 'Seleccionado',
+const attributeEffectivenessLabel = {
+  SELECTED: 'Efectivo',
   SHADOWED: 'En sombra',
   SUPPRESSED: 'Suprimido',
   NONE: 'Sin selección',
@@ -92,6 +92,25 @@ const attributeDataTypeLabel = {
   BOOLEANO: 'Booleano',
   OPCION: 'Opción',
 } as const
+
+function attributeExceptionBadges(assignment: TypeAttributeAssignment) {
+  const badges: string[] = []
+  if (!assignment.tipoRecursoId) badges.push('Heredado')
+  if (!assignment.activo) badges.push('Inactivo')
+  if (assignment.selection !== 'SELECTED')
+    badges.push(attributeEffectivenessLabel[assignment.selection])
+  if (assignment.aplicabilidad !== 'OPTIONAL')
+    badges.push(attributeApplicabilityLabel[assignment.aplicabilidad])
+  if (assignment.participaIdentidad) badges.push('Parte de identidad')
+  return badges
+}
+
+function optionCountClosedLabel(state: OptionPreviewState | undefined) {
+  if (!state || state.status !== 'ready') return null
+  const active = state.page.items.filter((option) => option.activo).length
+  const suffix = state.page.isExhausted ? '' : '+'
+  return `${active}${suffix} ${active === 1 ? 'opción' : 'opciones'}`
+}
 
 const project = (items: readonly { id: unknown; nombre: string }[]) =>
   items.map((item) => ({ id: item.id as string, label: item.nombre }))
@@ -314,6 +333,7 @@ function AttributePanel({
   onRetry,
   onRetryDefinition,
   onReloadDefinition,
+  onAssignmentChanged,
   optionPreviews,
   onRetryOptions,
   onSuccess,
@@ -328,6 +348,7 @@ function AttributePanel({
   onRetry: () => void
   onRetryDefinition: (id: string) => void
   onReloadDefinition: (id: string) => void | Promise<unknown>
+  onAssignmentChanged: () => void
   optionPreviews: Readonly<Record<string, OptionPreviewState>>
   onRetryOptions: (id: string) => void
   onSuccess: (message: string) => void
@@ -338,6 +359,9 @@ function AttributePanel({
     target: KeyboardActionTarget | null,
   ) => void
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  useEffect(() => setExpandedId(null), [selectedTypeId])
+
   if (!selectedTypeId)
     return (
       <div
@@ -387,9 +411,20 @@ function AttributePanel({
       )}
       {items.map((assignment) => {
         const definition = definitions[assignment.definicionAtributoId]
+        const isReady = definition?.status === 'ready'
+        const isOption = isReady && definition.definition.tipoDato === 'OPCION'
+        const isExpanded = isReady && expandedId === assignment.id
+        const exceptions = isReady ? attributeExceptionBadges(assignment) : []
+        const optionCount = isOption
+          ? optionCountClosedLabel(optionPreviews[definition.definition.id])
+          : null
+        const toggleExpanded = () =>
+          setExpandedId((current) =>
+            current === assignment.id ? null : assignment.id,
+          )
         return (
           <article
-            className="catalog-attribute-card"
+            className="catalog-attribute-row"
             key={assignment.id}
             tabIndex={0}
             data-spatial-id={`catalog.row.attributes.${assignment.id}`}
@@ -397,28 +432,97 @@ function AttributePanel({
             onFocus={() => onActiveAttributeChange(assignment.id)}
             onClick={() => onActiveAttributeChange(assignment.id)}
           >
-            {definition?.status === 'ready' ? (
-              <>
-                <h3>{definition.definition.nombre}</h3>
-                <p className="catalog-attribute-definition">
-                  {definition.definition.clave} ·{' '}
-                  {attributeDataTypeLabel[definition.definition.tipoDato]}
-                </p>
+            <div className="catalog-attribute-row-header">
+              {isReady ? (
+                <>
+                  <div className="catalog-attribute-row-heading">
+                    <span className="catalog-attribute-row-name">
+                      {definition.definition.nombre}
+                    </span>
+                    <span className="catalog-attribute-row-meta">
+                      {definition.definition.clave} ·{' '}
+                      {attributeDataTypeLabel[definition.definition.tipoDato]}
+                    </span>
+                    {optionCount && (
+                      <span className="catalog-attribute-row-meta">
+                        {optionCount}
+                      </span>
+                    )}
+                  </div>
+                  <EditarAtributoSurface
+                    api={api}
+                    assignment={assignment}
+                    definition={definition.definition}
+                    shortcutHint={isOption ? 'E' : 'Enter / E'}
+                    onUpdated={() =>
+                      onReloadDefinition(definition.definition.id)
+                    }
+                    onAssignmentChanged={onAssignmentChanged}
+                    onSuccess={onSuccess}
+                    onCommandTargetChange={(target) =>
+                      onAttributeActionTargetChange(
+                        assignment.id,
+                        'edit',
+                        target,
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="catalog-attribute-chevron"
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? 'Ocultar' : 'Mostrar'} detalle de ${definition.definition.nombre}`}
+                    onClick={toggleExpanded}
+                  >
+                    <span aria-hidden="true">⌄</span>
+                  </button>
+                </>
+              ) : definition?.status === 'missing' ? (
+                <span className="catalog-attribute-row-meta">
+                  Definición no disponible.
+                </span>
+              ) : definition?.status === 'error' ? (
+                <div
+                  className="catalog-attribute-definition-error"
+                  role="status"
+                >
+                  <p>No se pudo cargar la definición.</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRetryDefinition(assignment.definicionAtributoId)
+                    }
+                  >
+                    Reintentar definición
+                  </button>
+                </div>
+              ) : (
+                <span className="catalog-attribute-row-meta" role="status">
+                  Cargando definición…
+                </span>
+              )}
+            </div>
+            {isReady && (
+              <div
+                className="catalog-attribute-row-expanded"
+                hidden={!isExpanded}
+              >
+                {exceptions.length > 0 && (
+                  <div
+                    className="catalog-attribute-badges"
+                    aria-label="Estado del atributo"
+                  >
+                    {exceptions.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                )}
                 {definition.definition.descripcion && (
                   <p className="catalog-attribute-description">
                     {definition.definition.descripcion}
                   </p>
                 )}
-                <EditarAtributoSurface
-                  api={api}
-                  definition={definition.definition}
-                  onUpdated={() => onReloadDefinition(definition.definition.id)}
-                  onSuccess={onSuccess}
-                  onCommandTargetChange={(target) =>
-                    onAttributeActionTargetChange(assignment.id, 'edit', target)
-                  }
-                />
-                {definition.definition.tipoDato === 'OPCION' && (
+                {isOption && (
                   <>
                     <AttributeOptionPreview
                       definition={definition.definition}
@@ -431,6 +535,7 @@ function AttributePanel({
                       }
                       api={api}
                       definition={definition.definition}
+                      shortcutHint="Enter / O"
                       onSuccess={onSuccess}
                       onCommandTargetChange={(target) =>
                         onAttributeActionTargetChange(
@@ -442,42 +547,8 @@ function AttributePanel({
                     />
                   </>
                 )}
-                <span hidden />
-              </>
-            ) : definition?.status === 'missing' ? (
-              <p className="catalog-attribute-definition">
-                Definición no disponible.
-              </p>
-            ) : definition?.status === 'error' ? (
-              <div className="catalog-attribute-definition-error" role="status">
-                <p>No se pudo cargar la definición.</p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onRetryDefinition(assignment.definicionAtributoId)
-                  }
-                >
-                  Reintentar definición
-                </button>
               </div>
-            ) : (
-              <p className="catalog-attribute-definition" role="status">
-                Cargando definición…
-              </p>
             )}
-            <div
-              className="catalog-attribute-badges"
-              aria-label="Estado del atributo"
-            >
-              <span>{assignment.tipoRecursoId ? 'Directo' : 'Heredado'}</span>
-              <span>{attributeSelectionLabel[assignment.selection]}</span>
-              <span>{assignment.activo ? 'Activo' : 'Inactivo'}</span>
-              <span>{assignment.effective ? 'Efectivo' : 'No efectivo'}</span>
-              <span>
-                {attributeApplicabilityLabel[assignment.aplicabilidad]}
-              </span>
-              {assignment.participaIdentidad && <span>Parte de identidad</span>}
-            </div>
           </article>
         )
       })}
@@ -508,17 +579,41 @@ function AttributePanel({
   )
 }
 
+function summaryStatsLine(items: readonly TypeAttributeAssignment[]) {
+  const heredados = items.filter(
+    (assignment) => !assignment.tipoRecursoId,
+  ).length
+  const inactivos = items.filter((assignment) => !assignment.activo).length
+  const noEfectivos = items.filter(
+    (assignment) => assignment.selection !== 'SELECTED',
+  ).length
+  const parts = [
+    `${items.length} ${items.length === 1 ? 'atributo' : 'atributos'}`,
+  ]
+  if (heredados)
+    parts.push(`${heredados} ${heredados === 1 ? 'heredado' : 'heredados'}`)
+  if (inactivos)
+    parts.push(`${inactivos} ${inactivos === 1 ? 'inactivo' : 'inactivos'}`)
+  if (noEfectivos)
+    parts.push(
+      `${noEfectivos} ${noEfectivos === 1 ? 'no efectivo' : 'no efectivos'}`,
+    )
+  return parts.join(' · ')
+}
+
 function AttributeSummaryPanel({
   selectedTypeId,
   state,
   definitions,
   onRetry,
+  onContinue,
   onShowAll,
 }: {
   selectedTypeId?: string
   state: CatalogListState<TypeAttributeAssignment> | null
   definitions: Readonly<Record<string, DefinitionState>>
   onRetry: () => void
+  onContinue: () => void
   onShowAll: () => void
 }) {
   const items = state?.items ?? []
@@ -530,9 +625,7 @@ function AttributeSummaryPanel({
     (!state.isExhausted ||
       state.status === 'loading-more' ||
       state.status === 'partial-error')
-  const direct = items.filter((assignment) => assignment.tipoRecursoId).length
-  const active = items.filter((assignment) => assignment.activo).length
-  const effective = items.filter((assignment) => assignment.effective).length
+  const canContinue = state?.status === 'ready' && !state.isExhausted
 
   return (
     <div
@@ -563,63 +656,68 @@ function AttributeSummaryPanel({
         </p>
       ) : (
         <>
-          <div
-            className="catalog-attribute-metrics"
-            aria-label="Métricas de atributos"
-          >
-            <strong>
-              {partial
-                ? `${items.length} asignaciones cargadas (vista parcial)`
-                : `Total: ${items.length} asignaciones`}
-            </strong>
-            {partial && (
-              <p>Los conteos corresponden solo a las páginas cargadas.</p>
-            )}
-            <p>
-              Directas: {direct} · Heredadas: {items.length - direct}
-            </p>
-            <p>
-              Activas: {active} · Inactivas: {items.length - active}
-            </p>
-            <p>
-              Efectivas: {effective} · No efectivas: {items.length - effective}
-            </p>
-          </div>
-          <ol
-            className="catalog-attribute-preview"
-            aria-label="Vista previa de atributos"
-          >
-            {items.slice(0, 3).map((assignment) => {
-              const definition = definitions[assignment.definicionAtributoId]
-              const definitionLabel =
-                definition?.status === 'ready'
+          <p className="catalog-summary-stats">
+            {summaryStatsLine(items)}
+            {partial && ' · vista parcial'}
+          </p>
+          <table className="catalog-summary-table">
+            <thead>
+              <tr>
+                <th scope="col">Atributo</th>
+                <th scope="col">Código</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Origen</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Efectividad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((assignment) => {
+                const definition = definitions[assignment.definicionAtributoId]
+                const ready = definition?.status === 'ready'
+                const nombre = ready
                   ? definition.definition.nombre
-                  : definition?.status === 'loading' || !definition
-                    ? 'Cargando definición…'
-                    : 'Definición no disponible.'
-              return (
-                <li key={assignment.id}>
-                  <strong>{definitionLabel}</strong>
-                  {definition?.status === 'ready' && (
-                    <span>
-                      {definition.definition.clave} ·{' '}
-                      {attributeDataTypeLabel[definition.definition.tipoDato]}
-                    </span>
-                  )}
-                  <span>
-                    {assignment.tipoRecursoId ? 'Directo' : 'Heredado'} ·{' '}
-                    {assignment.activo ? 'Activo' : 'Inactivo'} ·{' '}
-                    {assignment.effective ? 'Efectivo' : 'No efectivo'}
-                  </span>
-                </li>
-              )
-            })}
-          </ol>
+                  : definition?.status === 'missing' ||
+                      definition?.status === 'error'
+                    ? 'Definición no disponible.'
+                    : 'Cargando…'
+                return (
+                  <tr key={assignment.id}>
+                    <th scope="row">{nombre}</th>
+                    <td>{ready ? definition.definition.clave : '—'}</td>
+                    <td>
+                      {ready
+                        ? attributeDataTypeLabel[definition.definition.tipoDato]
+                        : '—'}
+                    </td>
+                    <td>{assignment.tipoRecursoId ? 'Directo' : 'Heredado'}</td>
+                    <td>{assignment.activo ? 'Activo' : 'Inactivo'}</td>
+                    <td>{attributeEffectivenessLabel[assignment.selection]}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {canContinue && (
+            <button
+              className="catalog-summary-continue"
+              type="button"
+              onClick={onContinue}
+            >
+              Cargar más…
+            </button>
+          )}
         </>
       )}
-      <button className="catalog-summary-all" type="button" onClick={onShowAll}>
-        Ver todos
-      </button>
+      {!initialLoading && !initialError && !empty && (
+        <button
+          className="catalog-summary-all"
+          type="button"
+          onClick={onShowAll}
+        >
+          Ver todos en Atributos
+        </button>
+      )}
     </div>
   )
 }
@@ -775,35 +873,38 @@ export function CatalogHierarchyScreen({
     if (!activeAttribute || !activeAttributeId) return
     const target = (action: keyof AttributeActionTargets) =>
       attributeActionTargets.current.get(activeAttributeId)?.[action]
+    const isOption = activeAttribute.tipoDato === 'OPCION'
+    const enterCanHandle = (event: KeyboardEvent) =>
+      event.key !== 'Enter' ||
+      document.activeElement?.closest<HTMLElement>(
+        '[data-catalog-level="attributes"]',
+      )?.dataset.spatialId === `catalog.row.attributes.${activeAttributeId}`
     const removeEdit = registerAction({
       id: 'catalog.edit-attribute',
       surface: 'catalog',
       key: 'e',
-      keys: ['e', 'Enter'],
-      shortcut: 'Enter / E',
+      keys: isOption ? ['e'] : ['e', 'Enter'],
+      shortcut: isOption ? 'E' : 'Enter / E',
       label: 'Editar atributo',
       root: () => target('edit')?.root() ?? null,
       isAvailable: () => target('edit') !== undefined,
-      canHandle: (event) =>
-        event.key !== 'Enter' ||
-        document.activeElement?.closest<HTMLElement>(
-          '[data-catalog-level="attributes"]',
-        )?.dataset.spatialId === `catalog.row.attributes.${activeAttributeId}`,
+      canHandle: enterCanHandle,
       run: (opener) => target('edit')?.open(opener),
     })
-    const removeOptions =
-      activeAttribute.tipoDato === 'OPCION'
-        ? registerAction({
-            id: 'catalog.manage-options',
-            surface: 'catalog',
-            key: 'o',
-            shortcut: 'O',
-            label: 'Opciones',
-            root: () => target('options')?.root() ?? null,
-            isAvailable: () => target('options') !== undefined,
-            run: (opener) => target('options')?.open(opener),
-          })
-        : undefined
+    const removeOptions = isOption
+      ? registerAction({
+          id: 'catalog.manage-options',
+          surface: 'catalog',
+          key: 'o',
+          keys: ['o', 'Enter'],
+          shortcut: 'Enter / O',
+          label: 'Opciones',
+          root: () => target('options')?.root() ?? null,
+          isAvailable: () => target('options') !== undefined,
+          canHandle: enterCanHandle,
+          run: (opener) => target('options')?.open(opener),
+        })
+      : undefined
     return () => {
       removeEdit()
       removeOptions?.()
@@ -825,13 +926,11 @@ export function CatalogHierarchyScreen({
   }, [attributeList, selectedTypeId])
 
   useEffect(() => {
-    if (!selectedAttributeState || !selectedTypeId || false) return
-    const scopedItems =
-      activeTab === 'attributes'
-        ? selectedAttributeState.items
-        : selectedAttributeState.items.slice(0, 3)
+    if (!selectedAttributeState || !selectedTypeId) return
     const ids = [
-      ...new Set(scopedItems.map((item) => item.definicionAtributoId)),
+      ...new Set(
+        selectedAttributeState.items.map((item) => item.definicionAtributoId),
+      ),
     ]
     const pending = ids.filter((id) => definitions[id] === undefined)
     if (!pending.length) return
@@ -861,7 +960,6 @@ export function CatalogHierarchyScreen({
         })
     })
   }, [
-    activeTab,
     selectedAttributeState,
     attributesApi,
     definitionRetry,
@@ -1199,30 +1297,17 @@ export function CatalogHierarchyScreen({
             </button>
           </div>
           {activeTab === 'summary' ? (
-            <>
-              <AttributeSummaryPanel
-                selectedTypeId={selectedTypeId}
-                state={selectedAttributeState}
-                definitions={definitions}
-                onRetry={() => void attributeList.retry()}
-                onShowAll={() => {
-                  setActiveTab('attributes')
-                  attributesTabRef.current?.focus()
-                }}
-              />
-              <div
-                className="catalog-summary-legacy"
-                aria-hidden="true"
-                id="catalog-summary-panel-legacy"
-                aria-labelledby="catalog-summary-tab"
-              >
-                <h3>RESUMEN</h3>
-                <p className="catalog-summary-muted">
-                  Consultá los atributos asignados a este Tipo desde la pestaña
-                  Atributos.
-                </p>
-              </div>
-            </>
+            <AttributeSummaryPanel
+              selectedTypeId={selectedTypeId}
+              state={selectedAttributeState}
+              definitions={definitions}
+              onRetry={() => void attributeList.retry()}
+              onContinue={() => void attributeList.continue()}
+              onShowAll={() => {
+                setActiveTab('attributes')
+                attributesTabRef.current?.focus()
+              }}
+            />
           ) : (
             <AttributePanel
               api={attributesApi}
@@ -1233,6 +1318,7 @@ export function CatalogHierarchyScreen({
               onRetry={() => void attributeList.retry()}
               onRetryDefinition={retryDefinition}
               onReloadDefinition={reloadDefinition}
+              onAssignmentChanged={() => void reloadTypeAttributes()}
               optionPreviews={optionPreviews}
               onRetryOptions={retryOptionPreview}
               onSuccess={showSuccess}

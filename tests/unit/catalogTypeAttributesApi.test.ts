@@ -8,6 +8,7 @@ import {
   parseAttributeOption,
   parseChangedAttributeDefinition,
   parseChangedAttributeOption,
+  parseChangedTypeAttributeAssignment,
   parseCreatedAttributeDefinition,
   parseCreatedAttributeOption,
   parseCreatedTypeAttributeAssignment,
@@ -138,6 +139,110 @@ describe('catalog Type attributes API boundary', () => {
         tipoRecursoId: 'type-1',
       },
     )
+  })
+
+  it('updates only mutable assignment fields and parses change dispositions', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      disposition: 'UPDATED',
+      item: assignment({ aplicabilidad: 'REQUIRED', orden: 7, revision: 2 }),
+    })
+    const api = createCatalogTypeAttributesApi({ invoke })
+
+    await expect(
+      api.updateTypeAttributeAssignment({
+        aplicabilidad: 'REQUIRED',
+        atributoRecursoId: 'assignment-1',
+        expectedRevision: 1,
+        orden: 7,
+        participaIdentidad: true,
+      }),
+    ).resolves.toMatchObject({ disposition: 'UPDATED' })
+
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/atributos:actualizarAsignacionAtributo',
+      {
+        aplicabilidad: 'REQUIRED',
+        atributoRecursoId: 'assignment-1',
+        expectedRevision: 1,
+        orden: 7,
+        participaIdentidad: true,
+      },
+    )
+  })
+
+  it('uses exact assignment lifecycle operations and preserves their dispositions', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({
+        disposition: 'UNCHANGED',
+        item: assignment({ activo: true, revision: 3 }),
+      })
+      .mockResolvedValueOnce({
+        disposition: 'UPDATED',
+        item: assignment({
+          activo: false,
+          effective: false,
+          effectiveReasons: ['INACTIVE'],
+          revision: 4,
+        }),
+      })
+    const api = createCatalogTypeAttributesApi({ invoke })
+
+    await expect(
+      api.activateTypeAttributeAssignment({
+        atributoRecursoId: 'assignment-1',
+        expectedRevision: 3,
+      }),
+    ).resolves.toMatchObject({ disposition: 'UNCHANGED' })
+    await expect(
+      api.deactivateTypeAttributeAssignment({
+        atributoRecursoId: 'assignment-1',
+        expectedRevision: 3,
+      }),
+    ).resolves.toMatchObject({ disposition: 'UPDATED' })
+
+    expect(invoke).toHaveBeenNthCalledWith(
+      1,
+      'catalogoAdmin/atributos:activarAsignacionAtributo',
+      { atributoRecursoId: 'assignment-1', expectedRevision: 3 },
+    )
+    expect(invoke).toHaveBeenNthCalledWith(
+      2,
+      'catalogoAdmin/atributos:desactivarAsignacionAtributo',
+      { atributoRecursoId: 'assignment-1', expectedRevision: 3 },
+    )
+  })
+
+  it('rejects malformed assignment update/lifecycle inputs and dispositions', async () => {
+    const invoke = vi.fn().mockResolvedValue(page())
+    const api = createCatalogTypeAttributesApi({ invoke })
+
+    await expect(
+      api.updateTypeAttributeAssignment({
+        atributoRecursoId: '',
+        expectedRevision: 1,
+      }),
+    ).rejects.toThrow()
+    await expect(
+      api.updateTypeAttributeAssignment({
+        atributoRecursoId: 'assignment-1',
+        expectedRevision: 1,
+        aplicabilidad: 'UNKNOWN' as never,
+      }),
+    ).rejects.toThrow()
+    await expect(
+      api.activateTypeAttributeAssignment({
+        atributoRecursoId: 'assignment-1',
+        expectedRevision: 0,
+      }),
+    ).rejects.toThrow()
+    expect(invoke).not.toHaveBeenCalled()
+    expect(() =>
+      parseChangedTypeAttributeAssignment({ disposition: 'EXISTS' }),
+    ).toThrow()
+    expect(() =>
+      parseChangedTypeAttributeAssignment({ disposition: 'UPDATED' }),
+    ).toThrow()
   })
 
   it('creates an inactive attribute definition through the exact mutation and omits an absent description', async () => {

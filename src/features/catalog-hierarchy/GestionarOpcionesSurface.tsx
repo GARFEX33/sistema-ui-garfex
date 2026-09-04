@@ -30,6 +30,7 @@ type Draft = Readonly<{
 export interface GestionarOpcionesSurfaceProps {
   api: CatalogTypeAttributesApi
   definition: AttributeDefinition
+  shortcutHint?: string
   onSuccess?: (message: string) => void
   onOptionsChanged?: () => void
   onCommandTargetChange?: (target: KeyboardActionTarget | null) => void
@@ -123,6 +124,7 @@ const optionErrorMessage = (
 export function GestionarOpcionesSurface({
   api,
   definition,
+  shortcutHint = 'O',
   onSuccess,
   onOptionsChanged,
   onCommandTargetChange,
@@ -318,6 +320,9 @@ export function GestionarOpcionesSurface({
     }
   }
 
+  useEffect(() => {
+    triggerRef.current?.setAttribute('title', shortcutHint)
+  }, [shortcutHint])
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
   useEffect(() => {
     if (!onCommandTargetChange) return
@@ -354,7 +359,7 @@ export function GestionarOpcionesSurface({
         aria-label="Opciones"
         onPress={() => open(triggerRef.current)}
       >
-        Opciones <kbd aria-hidden="true">O</kbd>
+        Opciones
       </Button>
       <ModalOverlay
         className="catalog-dialog-backdrop"

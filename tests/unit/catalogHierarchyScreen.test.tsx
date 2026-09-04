@@ -17,6 +17,10 @@ const item = (id: string, nombre: string, extra = {}) => ({
   ...extra,
 })
 const button = (name: string) => screen.getByRole('button', { name })
+const flushFocusRestoration = () =>
+  new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  )
 const expectAbsent = (...names: string[]) =>
   names.forEach((name) =>
     expect(screen.queryByRole('button', { name })).not.toBeInTheDocument(),
@@ -80,7 +84,6 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
   })
 
   it('eagerly loads the selected Type summary before the Attributes tab is active', async () => {
-    const user = userEvent.setup()
     const attributes: CatalogTypeAttributesApi = {
       listTypeAssignments: vi.fn().mockResolvedValue(page([])),
       getAttributeDefinition: vi.fn(),
@@ -113,12 +116,6 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     expect(
       screen.getByText('Este Tipo no tiene atributos asignados.'),
     ).toBeVisible()
-    await user.click(button('Ver todos'))
-    expect(screen.getByRole('tab', { name: 'Atributos' })).toHaveFocus()
-    expect(screen.getByRole('tab', { name: 'Atributos' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
   })
 
   it('retries a friendly summary error and only confirms an exhausted empty result', async () => {
@@ -155,7 +152,7 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     ).toBeVisible()
   })
 
-  it('summarizes only loaded pages and caps the backend-order preview at three assignments', async () => {
+  it('summarizes only loaded pages as a compact table without capping rows', async () => {
     const assignments = ['a', 'b', 'c', 'd'].map((id, index) => ({
       id: `assignment-${id}`,
       definicionAtributoId: `definition-${id}`,
@@ -204,20 +201,16 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     )
 
     expect(
-      await screen.findByText('4 asignaciones cargadas (vista parcial)'),
+      await screen.findByText(
+        '4 atributos · 2 heredados · 2 inactivos · vista parcial',
+      ),
     ).toBeVisible()
-    expect(
-      screen.getByText('Los conteos corresponden solo a las páginas cargadas.'),
-    ).toBeVisible()
-    expect(screen.getByText('Directas: 2 · Heredadas: 2')).toBeVisible()
-    expect(
-      screen.getByRole('list', { name: 'Vista previa de atributos' }),
-    ).toHaveTextContent('Nombre a')
-    expect(
-      screen.getByRole('list', { name: 'Vista previa de atributos' }),
-    ).toHaveTextContent('Definición no disponible.')
-    expect(screen.getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.queryByText('Nombre d')).not.toBeInTheDocument()
+    const table = screen.getByRole('table')
+    expect(await screen.findByText('Nombre d')).toBeVisible()
+    expect(table).toHaveTextContent('Nombre a')
+    expect(table).toHaveTextContent('Definición no disponible.')
+    expect(table).toHaveTextContent('Nombre c')
+    expect(screen.getAllByRole('row')).toHaveLength(5)
   })
 
   it('lists all Type attribute assignments with resolved definition and state badges', async () => {
@@ -313,9 +306,14 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       }),
     )
     expect(await screen.findByText('Código comercial')).toBeVisible()
-    expect(screen.getByText('Directo')).toBeVisible()
-    expect(screen.getByText('Seleccionado')).toBeVisible()
-    expect(screen.getByText('Efectivo')).toBeVisible()
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Mostrar detalle de Código comercial',
+      }),
+    )
+    expect(screen.getByText('Obligatorio')).toBeVisible()
+    expect(screen.getByText('Parte de identidad')).toBeVisible()
+    expect(screen.queryByText('Heredado')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Cargar más atributos…' }),
     ).toBeVisible()
@@ -325,10 +323,12 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     )
 
     expect(await screen.findByText('Peso')).toBeVisible()
+    await user.click(
+      screen.getByRole('button', { name: 'Mostrar detalle de Peso' }),
+    )
     expect(screen.getByText('Heredado')).toBeVisible()
     expect(screen.getByText('Inactivo')).toBeVisible()
     expect(screen.getByText('Suprimido')).toBeVisible()
-    expect(screen.getByText('No efectivo')).toBeVisible()
   })
 
   it('exposes stable, focusable spatial metadata for read-only attribute rows', async () => {
@@ -388,7 +388,7 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     expect(row).toHaveAttribute('tabindex', '0')
   })
 
-  it('uses the active attribute row for Enter/E edit and exposes O only for OPCION', async () => {
+  it('uses Enter for the primary action (Opciones when OPCION, else edit) and E always edits', async () => {
     const user = userEvent.setup()
     const attributes = {
       listTypeAssignments: vi.fn().mockResolvedValue(
@@ -461,10 +461,22 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     optionRow.focus()
     await user.keyboard('{Enter}')
     expect(
+      screen.getByRole('dialog', { name: 'Opciones de Color' }),
+    ).toBeVisible()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(optionRow).toHaveFocus())
+    await flushFocusRestoration()
+
+    optionRow.focus()
+    await user.keyboard('e')
+    expect(
       screen.getByRole('dialog', { name: 'Editar atributo' }),
     ).toBeVisible()
     await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(optionRow).toHaveFocus())
+    await flushFocusRestoration()
 
     optionRow.focus()
     await user.keyboard('o')
@@ -472,13 +484,25 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       screen.getByRole('dialog', { name: 'Opciones de Color' }),
     ).toBeVisible()
     await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(optionRow).toHaveFocus())
+    await flushFocusRestoration()
 
     textRow.focus()
     await user.keyboard('o')
     expect(
       screen.queryByRole('dialog', { name: /Opciones de/ }),
     ).not.toBeInTheDocument()
+    await user.keyboard('{Enter}')
+    expect(
+      screen.getByRole('dialog', { name: 'Editar atributo' }),
+    ).toBeVisible()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(textRow).toHaveFocus())
+    await flushFocusRestoration()
+
+    textRow.focus()
     await user.keyboard('e')
     expect(
       screen.getByRole('dialog', { name: 'Editar atributo' }),
@@ -824,7 +848,7 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       id: 'definition-color',
       nombre: 'Color',
       clave: 'ACR',
-      tipoDato: 'TEXTO' as const,
+      tipoDato: 'OPCION' as const,
       activo: false,
       effective: false,
       effectiveReasons: ['INACTIVE'],
@@ -856,10 +880,10 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       getAttributeDefinition: vi
         .fn()
         .mockReturnValueOnce(firstDefinition)
-        .mockResolvedValueOnce({ ...color, tipoDato: 'OPCION' as const }),
+        .mockResolvedValueOnce(color),
       updateAttributeDefinition: vi.fn().mockResolvedValue({
         disposition: 'UNCHANGED',
-        item: { ...color, tipoDato: 'OPCION' as const },
+        item: color,
       }),
     } as unknown as CatalogTypeAttributesApi
     attributeFactory.mockReturnValue(attributes)
@@ -888,9 +912,10 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       name: 'Editar atributo',
     })
     await user.click(trigger)
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Tipo de dato' }),
-      'OPCION',
+    await user.clear(screen.getByRole('textbox', { name: 'Nombre' }))
+    await user.type(
+      screen.getByRole('textbox', { name: 'Nombre' }),
+      'Color comercial',
     )
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
@@ -898,7 +923,7 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       expect(attributes.updateAttributeDefinition).toHaveBeenCalledWith({
         definicionAtributoId: 'definition-color',
         expectedRevision: 1,
-        tipoDato: 'OPCION',
+        nombre: 'Color comercial',
       }),
     )
     await waitFor(() =>
@@ -980,6 +1005,11 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       />,
     )
     await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Mostrar detalle de Color',
+      }),
+    )
     const preview = await screen.findByRole('region', {
       name: 'Vista previa de opciones de Color',
     })
@@ -1219,9 +1249,6 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       />,
     )
     await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    const [preview] = await screen.findAllByRole('region', {
-      name: 'Vista previa de opciones de Color',
-    })
     await waitFor(() =>
       expect(attributes.listAttributeOptions).toHaveBeenCalledTimes(1),
     )
@@ -1230,6 +1257,18 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       mode: 'ALL',
       pageSize: 50,
       cursor: null,
+    })
+    const [firstChevron, secondChevron] = await waitFor(() => {
+      const buttons = screen.getAllByRole('button', {
+        name: 'Mostrar detalle de Color',
+      })
+      expect(buttons).toHaveLength(2)
+      return buttons
+    })
+
+    await user.click(firstChevron)
+    const [preview] = await screen.findAllByRole('region', {
+      name: 'Vista previa de opciones de Color',
     })
     expect(preview).toHaveTextContent('Blanco')
     expect(preview).toHaveTextContent('Negro')
@@ -1240,6 +1279,13 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       'Al menos 4 activas · al menos 1 inactiva',
     )
     expect(preview.querySelectorAll('[tabindex]')).toHaveLength(0)
+
+    await user.click(secondChevron)
+    const [secondPreview] = await screen.findAllByRole('region', {
+      name: 'Vista previa de opciones de Color',
+    })
+    expect(secondPreview).toHaveTextContent('Blanco')
+    expect(attributes.listAttributeOptions).toHaveBeenCalledTimes(1)
   })
 
   it('uses N to invoke the visible contextual creation action', async () => {

@@ -559,7 +559,7 @@ test.describe('Catálogo workstation 1440×980', () => {
     await expect(summaryTab).toBeFocused()
     await expect(summaryTab).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText('Cargando resumen de atributos…')).toBeVisible()
-    await page.getByRole('button', { name: 'Ver todos' }).click()
+    await attributesTab.click()
     await expect(attributesTab).toBeFocused()
     await expect(attributesTab).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText('Cargando atributos…')).toBeVisible()
@@ -580,9 +580,7 @@ test.describe('Catálogo workstation 1440×980', () => {
     await page.keyboard.press('ArrowLeft')
     await expect(summaryTab).toBeFocused()
     await expect(summaryTab).toHaveAttribute('aria-selected', 'true')
-    await expect(page.locator('.catalog-attribute-preview')).toContainText(
-      'Presión nominal',
-    )
+    await expect(page.getByRole('table')).toContainText('Presión nominal')
     await expect(summaryTab).toHaveAttribute('tabindex', '0')
     await expect(attributesTab).toHaveAttribute('tabindex', '-1')
     await page.keyboard.press('ArrowLeft')
@@ -950,11 +948,10 @@ test.describe('Catálogo workstation 1440×980', () => {
     )
   })
 
-  test('converts Color to OPCION and manages its administrative options', async ({
+  test('manages an OPCION attribute administrative options', async ({
     page,
   }) => {
     const calls: Array<{ path: string; args: Record<string, unknown> }> = []
-    let converted = false
     let deactivationAttempts = 0
     const options: Array<Record<string, unknown>> = []
     const response = (value: unknown) => ({
@@ -989,8 +986,8 @@ test.describe('Catálogo workstation 1440×980', () => {
       effectiveReasons: ['INACTIVE'],
       id: 'definition-color',
       nombre: 'Color',
-      revision: converted ? 2 : 1,
-      tipoDato: converted ? 'OPCION' : 'TEXTO',
+      revision: 1,
+      tipoDato: 'OPCION',
     })
     await page.route('http://127.0.0.1:3210/**', async (route) => {
       if (route.request().method() !== 'POST') {
@@ -1085,12 +1082,6 @@ test.describe('Catálogo workstation 1440×980', () => {
         )
         return
       }
-      if (body.path.endsWith(':actualizarDefinicionAtributo')) {
-        calls.push({ path: body.path, args })
-        converted = true
-        await route.fulfill(response({ disposition: 'UPDATED', item: color() }))
-        return
-      }
       const value = body.path.endsWith(':listarClases')
         ? {
             continuationCursor: null,
@@ -1154,31 +1145,8 @@ test.describe('Catálogo workstation 1440×980', () => {
     await page.getByRole('button', { name: 'Tuberías' }).click()
     await page.getByRole('tab', { name: 'Atributos' }).click()
     await expect(page.getByRole('button', { name: 'Opciones' })).toHaveCount(0)
-    const trigger = page.getByRole('button', { name: 'Editar atributo' })
-    await trigger.click()
-    const dialog = page.getByRole('dialog', { name: 'Editar atributo' })
-    await expect(dialog).toContainText(
-      'Este cambio afecta todas las Familias y Tipos que usan esta definición.',
-    )
-    await expect(dialog.getByRole('textbox', { name: 'Clave' })).toBeDisabled()
-    await dialog
-      .getByRole('combobox', { name: 'Tipo de dato' })
-      .selectOption('OPCION')
-    await dialog.getByRole('button', { name: 'Guardar cambios' }).click()
-    await expect.poll(() => calls.length).toBe(1)
-    expect(calls[0]).toEqual({
-      path: 'catalogoAdmin/atributos:actualizarDefinicionAtributo',
-      args: {
-        definicionAtributoId: 'definition-color',
-        expectedRevision: 1,
-        tipoDato: 'OPCION',
-      },
-    })
-    await expect(dialog).toHaveCount(0)
     await expect(page.getByText('ACR · Opción')).toBeVisible()
-    await expect(page.getByRole('status')).toHaveText(
-      'Atributo “Color” actualizado.',
-    )
+    await page.getByRole('button', { name: 'Mostrar detalle de Color' }).click()
     const optionsTrigger = page.getByRole('button', { name: 'Opciones' })
     await expect(optionsTrigger).toBeVisible()
     await optionsTrigger.click()
@@ -1198,7 +1166,7 @@ test.describe('Catálogo workstation 1440×980', () => {
     await expect(
       optionsDialog.getByText('NEGRO', { exact: true }),
     ).toBeVisible()
-    expect(calls.slice(1)).toEqual([
+    expect(calls).toEqual([
       {
         path: 'catalogoAdmin/atributos:crearOpcionAtributo',
         args: {
@@ -1227,8 +1195,8 @@ test.describe('Catálogo workstation 1440×980', () => {
       .getByRole('textbox', { name: 'Descripción' })
       .fill('Tono claro y cálido.')
     await optionsDialog.getByRole('button', { name: 'Guardar edición' }).click()
-    await expect.poll(() => calls.length).toBe(4)
-    expect(calls[3]).toEqual({
+    await expect.poll(() => calls.length).toBe(3)
+    expect(calls[2]).toEqual({
       path: 'catalogoAdmin/atributos:actualizarOpcionAtributo',
       args: {
         descripcion: 'Tono claro y cálido.',
@@ -1257,8 +1225,8 @@ test.describe('Catálogo workstation 1440×980', () => {
     await optionsDialog
       .getByRole('button', { name: 'Activar Blanco cálido' })
       .click()
-    await expect.poll(() => calls.length).toBe(5)
-    expect(calls[4]).toEqual({
+    await expect.poll(() => calls.length).toBe(4)
+    expect(calls[3]).toEqual({
       path: 'catalogoAdmin/atributos:activarOpcionAtributo',
       args: { expectedRevision: 2, opcionAtributoId: 'option-1' },
     })
@@ -1294,8 +1262,8 @@ test.describe('Catálogo workstation 1440×980', () => {
       .getByRole('alertdialog', { name: 'Desactivar opción' })
       .getByRole('button', { name: 'Desactivar opción' })
       .click()
-    await expect.poll(() => calls.length).toBe(7)
-    expect(calls.slice(5)).toEqual([
+    await expect.poll(() => calls.length).toBe(6)
+    expect(calls.slice(4)).toEqual([
       {
         path: 'catalogoAdmin/atributos:desactivarOpcionAtributo',
         args: { expectedRevision: 1, opcionAtributoId: 'option-2' },
