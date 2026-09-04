@@ -1,0 +1,10 @@
+{
+  "source_line": 1269,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/build-command-palette.js",
+    "operation": "write"
+  }
+}

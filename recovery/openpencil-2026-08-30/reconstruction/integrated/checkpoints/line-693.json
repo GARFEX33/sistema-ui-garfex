@@ -1,0 +1,14 @@
+{
+  "source_line": 693,
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "/bin/bash: line 1: /tmp/garfex-original-small/*.png.b64: No such file or directory\nwc: '/tmp/garfex-original-small/*.b64': No such file or directory\n"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "seq": 150,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 41,
+  "timestamp": "2026-08-30T17:28:55.545Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":50,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: SetActivePage { index: 8 }\"}],\"isError\":true}}",
+      "stderr": ""
+    }
+  }
+}

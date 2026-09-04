@@ -1,0 +1,183 @@
+{
+  "purpose": "Non-destructive OpenPencil recovery evidence",
+  "source_session_total": 19,
+  "artifact_total": 6,
+  "entries": [
+    {
+      "original_path": "/home/garfex/.pi/agent/sessions/--home-garfex-PROGRAMACION-sistema-ui-garfex--/2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+      "size": 23176680,
+      "mtime": "2026-08-30 12:44:18.539868116 -0700",
+      "sha256": "393d955f73e7d39b8b2c5e844165015577011362251b5cfecb297d43c4795f92"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a.jsonl",
+      "size": 241951,
+      "mtime": "2026-08-30 00:13:34.750962127 -0700",
+      "sha256": "b3f598c7fa18737ecb715dfb557a95ebabb8c465028191f06a7c8012d753f592"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T07-14-00-991Z_01a05184-9e9f-7d6d-a8c4-b1b9fe713a21.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T07-14-00-991Z_01a05184-9e9f-7d6d-a8c4-b1b9fe713a21.jsonl",
+      "size": 301933,
+      "mtime": "2026-08-30 00:18:24.549701897 -0700",
+      "sha256": "d01db194d9ba5ca6c2df030439a3d80f906e32c25956a54ba79a34a09b6dd1b3"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545.jsonl",
+      "size": 511712,
+      "mtime": "2026-08-30 00:34:37.446933749 -0700",
+      "sha256": "d4814c86554d1a8ff1b6f93de9ebdc6e61faf82f2fe77aea43a9786a864af729"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368.jsonl",
+      "size": 306756,
+      "mtime": "2026-08-30 00:41:48.258995480 -0700",
+      "sha256": "7a8cc6f2e308463211bbc63ac3b5f7a84ff183ed292c3fe86a119d722fcb7eec"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T07-42-40-044Z_01a0519e-d9ac-7c30-aad9-c15357c0ac1c.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T07-42-40-044Z_01a0519e-d9ac-7c30-aad9-c15357c0ac1c.jsonl",
+      "size": 930957,
+      "mtime": "2026-08-30 00:47:14.574067716 -0700",
+      "sha256": "349c1bb1dadc2b0efeb54258ea0b92c704e487f4891376a7112b73d9154c1803"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1.jsonl",
+      "size": 507052,
+      "mtime": "2026-08-30 10:10:02.283248024 -0700",
+      "sha256": "e8f54c626092e60ce3989e9abdabdcbbd7cd08f749ac12368b25d761cdf51023"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-15-31-423Z_01a053ab-50df-7dad-a73b-ba3eda99d165.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-15-31-423Z_01a053ab-50df-7dad-a73b-ba3eda99d165.jsonl",
+      "size": 48719,
+      "mtime": "2026-08-30 10:16:07.921989784 -0700",
+      "sha256": "19bb1d3570baaa4299ca997024bb22a6b67d45b80cf7d3cc9f948e01d6404abc"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-23-21-686Z_01a053b2-7dd5-7244-aa79-9817dac72b93.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-23-21-686Z_01a053b2-7dd5-7244-aa79-9817dac72b93.jsonl",
+      "size": 179562,
+      "mtime": "2026-08-30 10:24:36.025972530 -0700",
+      "sha256": "ae41f0901ed08d65a6e3792d01b9009720e6ee6cbda9806d473935667dfbe03c"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-23-21-689Z_01a053b2-7dd9-7ffa-82b0-c067f25fa380.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-23-21-689Z_01a053b2-7dd9-7ffa-82b0-c067f25fa380.jsonl",
+      "size": 109140,
+      "mtime": "2026-08-30 10:24:58.822153765 -0700",
+      "sha256": "fe14f8a25b97359b6333d5c8d438cafe02d6f2f1dbea410f7cc99f27d450a142"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-23-21-693Z_01a053b2-7ddd-7044-a223-120531d14cd6.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-23-21-693Z_01a053b2-7ddd-7044-a223-120531d14cd6.jsonl",
+      "size": 184131,
+      "mtime": "2026-08-30 10:24:56.810137763 -0700",
+      "sha256": "39a58c180cdf05061433511a07145254850632838478984d44a00549fb305d02"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a.jsonl",
+      "size": 387167,
+      "mtime": "2026-08-30 10:32:02.897546442 -0700",
+      "sha256": "a9065355a0ba34ce3c33aa797b897b7eb79f01833069851ceeaca3794e131eac"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-40-11-280Z_01a053c1-e590-7152-b6e9-5b5c8ffd5e58.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-40-11-280Z_01a053c1-e590-7152-b6e9-5b5c8ffd5e58.jsonl",
+      "size": 1036919,
+      "mtime": "2026-08-30 10:45:54.297182084 -0700",
+      "sha256": "4f905efcd2533f12c1a4613b4aae61c61a597876ec57f8b60783482708cbad40"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T17-47-37-525Z_01a053c8-b4b5-746e-919a-df8115f45f8c.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T17-47-37-525Z_01a053c8-b4b5-746e-919a-df8115f45f8c.jsonl",
+      "size": 4047015,
+      "mtime": "2026-08-30 10:51:04.934995966 -0700",
+      "sha256": "d0145fb8eea57076f432a7b410d7b3794a3d628e127c079b0272dd021a1ff2ab"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T18-13-08-387Z_01a053e0-10a3-7c07-a22b-6350e4d33859.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T18-13-08-387Z_01a053e0-10a3-7c07-a22b-6350e4d33859.jsonl",
+      "size": 29327,
+      "mtime": "2026-08-30 11:13:25.772228273 -0700",
+      "sha256": "e3b5c04f24dd2b604d5b64db4780064b0b937af49c860cc5a83c4ee7b7d94091"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T18-21-57-976Z_01a053e8-2558-758c-bccc-89ae98946a31.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T18-21-57-976Z_01a053e8-2558-758c-bccc-89ae98946a31.jsonl",
+      "size": 997678,
+      "mtime": "2026-08-30 11:29:37.379237802 -0700",
+      "sha256": "f0ae9396e14805d076ce2cf6e7fa0edcfbf3060ac8b1cb1c415d99c8b771f87a"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-30T18-30-58-221Z_01a053f0-63ad-7fe1-8744-2f1f79f145e6.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-30T18-30-58-221Z_01a053f0-63ad-7fe1-8744-2f1f79f145e6.jsonl",
+      "size": 1304035,
+      "mtime": "2026-08-30 11:34:51.269510137 -0700",
+      "sha256": "f7fe2bb7d6dba726e615cf0cfb57e7df3b9369841ef82596ad0524f03642d0b5"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-31T00-16-15-505Z_01a0552c-8291-7008-8346-1a022f7823d3.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-31T00-16-15-505Z_01a0552c-8291-7008-8346-1a022f7823d3.jsonl",
+      "size": 307068,
+      "mtime": "2026-08-30 17:21:29.927415387 -0700",
+      "sha256": "0477844288aaedfa5c725526deb04ba834a28dac4cc1a5eee1b4816f4b0d7152"
+    },
+    {
+      "original_path": "/home/garfex/.local/share/pi/subagents/sessions/2026-08-31T05-04-12-600Z_01a05634-2338-7528-896a-ba182b53c5e1.jsonl",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/sessions/2026-08-31T05-04-12-600Z_01a05634-2338-7528-896a-ba182b53c5e1.jsonl.snapshot-2",
+      "size": 438229,
+      "mtime": "2026-08-31T05:09:45.932Z",
+      "sha256": "99b618203ce8d99a8756f4f0a90a445e8899fa451eb5eca24086fb75c07ff624"
+    },
+    {
+      "original_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/design.op",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/artifacts/design.op",
+      "size": 16201,
+      "mtime": "2026-08-30 10:15:05.749513428 -0700",
+      "sha256": "520c74c91a335a8d8d8a0953c1293c9ce47ce903f20a60b8130a3dc834a99a44"
+    },
+    {
+      "original_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/n2033.png",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/artifacts/n2033.png",
+      "size": 123184,
+      "mtime": "2026-08-30 11:32:02.988291709 -0700",
+      "sha256": "1687ac59abaa74c9f34334d8c70624755962b8c8702a91c57d9dbd32321196c6"
+    },
+    {
+      "original_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/n2082.png",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/artifacts/n2082.png",
+      "size": 104667,
+      "mtime": "2026-08-30 11:32:11.252351535 -0700",
+      "sha256": "3058f2ddb35cc121d589de588cf3756c0c436a880d7c6409e631bc03982086eb"
+    },
+    {
+      "original_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/n2137.png",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/artifacts/n2137.png",
+      "size": 116855,
+      "mtime": "2026-08-30 11:32:17.916399779 -0700",
+      "sha256": "7216c0193b188f1d6a038eb6fec721a1d3a7894de57638efd5eafaf2ff09547c"
+    },
+    {
+      "original_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/n2192.png",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/artifacts/n2192.png",
+      "size": 116355,
+      "mtime": "2026-08-30 11:32:14.576375599 -0700",
+      "sha256": "12511f8b0429cb0f7575de2710a60d890573264421abc22b8de4190e3a62088f"
+    },
+    {
+      "original_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/page04.png",
+      "copied_path": "/home/garfex/PROGRAMACION/sistema-ui-garfex/recovery/openpencil-2026-08-30/evidence/artifacts/page04.png",
+      "size": 134680,
+      "mtime": "2026-08-30 10:09:16.158915032 -0700",
+      "sha256": "19867d05aefe2d041f419f3e98aedcab6d64fb09c21d2f93077f8cd8cf50c0a4"
+    }
+  ],
+  "verification": "All copied SHA-256 hashes verified equal to originals."
+}

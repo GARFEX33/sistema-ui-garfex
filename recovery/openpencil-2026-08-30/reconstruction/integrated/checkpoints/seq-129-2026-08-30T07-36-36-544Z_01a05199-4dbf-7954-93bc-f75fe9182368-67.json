@@ -1,0 +1,17 @@
+{
+  "seq": 129,
+  "source_session": "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+  "source_line": 67,
+  "timestamp": "2026-08-30T07:41:19.309Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":410,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1320\\\"), x: None, y: None, width: None, height: None, name: Some(\\\"05 Mapa de bases maestras · Architecture frame\\\"), fill_hex: None, page_id: Some(\\\"n1319\\\") }\"}],\"isError\":true}}\n",
+      "stderr": ""
+    }
+  }
+}

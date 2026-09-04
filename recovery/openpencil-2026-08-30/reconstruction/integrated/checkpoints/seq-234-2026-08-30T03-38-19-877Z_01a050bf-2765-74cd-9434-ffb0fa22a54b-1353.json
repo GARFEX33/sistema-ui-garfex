@@ -1,0 +1,17 @@
+{
+  "seq": 234,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1353,
+  "timestamp": "2026-08-30T19:06:48.223Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "n1551 node\n",
+      "stderr": ""
+    }
+  }
+}

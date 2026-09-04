@@ -1,0 +1,17 @@
+{
+  "seq": 208,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1188,
+  "timestamp": "2026-08-30T18:21:31.286Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: page not found: n2191\"}],\"isError\":true}\n    at call ([stdin]:1:407)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async [stdin]:2:41\nSyntaxError: Unexpected token 'E', \"Error: ite\"... is not valid JSON\n    at JSON.parse (<anonymous>)\n    at call (/tmp/export-create-resource.js:2:431)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async /tmp/export-create-resource.js:3:46\n"
+    }
+  }
+}

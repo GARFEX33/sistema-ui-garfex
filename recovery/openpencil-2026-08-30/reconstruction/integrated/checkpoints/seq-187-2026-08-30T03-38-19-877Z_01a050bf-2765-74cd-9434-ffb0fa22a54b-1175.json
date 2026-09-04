@@ -1,0 +1,9 @@
+{
+  "seq": 187,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1175,
+  "timestamp": "2026-08-30T18:18:59.121Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n2118\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"+ Agregar atributo\\\\\\\"}\\\", page_id: Some(\\\"n2081\\\") }\"}],\"isError\":true}"
+}

@@ -1,0 +1,9 @@
+{
+  "seq": 204,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1175,
+  "timestamp": "2026-08-30T18:18:59.121Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n2117\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"1          Material                 Lista controlada         Sí                 Selector         PVC              Sí\\\\\\\\n\\\\\\\\n2          Tipo conduit          Lista controlada         Sí                 Selector         Pesado         Sí\\\\\\\\n\\\\\\\\n3          Diámetro              Lista controlada         Sí                 Selector         1 pulgada    Sí\\\\\\\\n\\\\\\\\n4          Cédula                  Lista controlada         No               Selector         40                No\\\\\\\\n\\\\\\\\n5          Longitud comercial      Número + unidad      No               Selector         3 m              No\\\\\\\"}\\\", page_id: Some(\\\"n2081\\\") }\"}],\"isError\":true}"
+}

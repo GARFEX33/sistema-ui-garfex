@@ -1,0 +1,17 @@
+{
+  "seq": 153,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 23,
+  "timestamp": "2026-08-30T17:26:19.454Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 127,
+      "signal": null,
+      "stdout": "",
+      "stderr": "/bin/bash: line 1: python: command not found\n"
+    }
+  }
+}

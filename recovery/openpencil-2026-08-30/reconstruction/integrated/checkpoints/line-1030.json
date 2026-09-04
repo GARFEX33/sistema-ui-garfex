@@ -1,0 +1,10 @@
+{
+  "source_line": 1030,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/build-concept-boards.js",
+    "operation": "write"
+  }
+}

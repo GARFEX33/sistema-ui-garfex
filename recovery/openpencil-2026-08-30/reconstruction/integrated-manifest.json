@@ -1,0 +1,110 @@
+{
+  "source": "all preserved session JSONLs",
+  "parent_source": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+  "parent_cutoff": {
+    "line": 1565,
+    "timestamp": "2026-08-30T19:40:36.523Z"
+  },
+  "session_count": 19,
+  "event_count": 272,
+  "counts": {
+    "script": 38,
+    "mcp": 57,
+    "shell": 163,
+    "file": 14
+  },
+  "counts_by_source_session": {
+    "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b": {
+      "script": 38,
+      "mcp": 57,
+      "shell": 101,
+      "file": 14
+    },
+    "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a": {
+      "shell": 6
+    },
+    "2026-08-30T07-14-00-991Z_01a05184-9e9f-7d6d-a8c4-b1b9fe713a21": {},
+    "2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545": {
+      "shell": 7
+    },
+    "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368": {
+      "shell": 12
+    },
+    "2026-08-30T07-42-40-044Z_01a0519e-d9ac-7c30-aad9-c15357c0ac1c": {
+      "shell": 2
+    },
+    "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1": {
+      "shell": 7
+    },
+    "2026-08-30T17-15-31-423Z_01a053ab-50df-7dad-a73b-ba3eda99d165": {},
+    "2026-08-30T17-23-21-686Z_01a053b2-7dd5-7244-aa79-9817dac72b93": {},
+    "2026-08-30T17-23-21-689Z_01a053b2-7dd9-7ffa-82b0-c067f25fa380": {},
+    "2026-08-30T17-23-21-693Z_01a053b2-7ddd-7044-a223-120531d14cd6": {},
+    "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a": {
+      "shell": 16
+    },
+    "2026-08-30T17-40-11-280Z_01a053c1-e590-7152-b6e9-5b5c8ffd5e58": {
+      "shell": 5
+    },
+    "2026-08-30T17-47-37-525Z_01a053c8-b4b5-746e-919a-df8115f45f8c": {},
+    "2026-08-30T18-13-08-387Z_01a053e0-10a3-7c07-a22b-6350e4d33859": {},
+    "2026-08-30T18-21-57-976Z_01a053e8-2558-758c-bccc-89ae98946a31": {
+      "shell": 6
+    },
+    "2026-08-30T18-30-58-221Z_01a053f0-63ad-7fe1-8744-2f1f79f145e6": {
+      "shell": 1
+    },
+    "2026-08-31T00-16-15-505Z_01a0552c-8291-7008-8346-1a022f7823d3": {},
+    "2026-08-31T05-04-12-600Z_01a05634-2338-7528-896a-ba182b53c5e1": {}
+  },
+  "events_sha256": "a45559b7e528364389170d04330d9e7209b8228debc0695dd2ea5b228564c165",
+  "target": "/workspace/recovery/openpencil-2026-08-30/reconstruction/full-replay.op",
+  "subagent_sessions_contributing_mutations": [
+    "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a",
+    "2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545",
+    "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+    "2026-08-30T07-42-40-044Z_01a0519e-d9ac-7c30-aad9-c15357c0ac1c",
+    "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1",
+    "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+    "2026-08-30T17-40-11-280Z_01a053c1-e590-7152-b6e9-5b5c8ffd5e58",
+    "2026-08-30T18-21-57-976Z_01a053e8-2558-758c-bccc-89ae98946a31",
+    "2026-08-30T18-30-58-221Z_01a053f0-63ad-7fe1-8744-2f1f79f145e6"
+  ],
+  "validation": {
+    "parent_subagent_run_line": 792,
+    "foundation_worker_sessions": [
+      "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+      "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a"
+    ],
+    "concept_worker_sessions": [
+      "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+      "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+      "2026-08-30T17-40-11-280Z_01a053c1-e590-7152-b6e9-5b5c8ffd5e58"
+    ],
+    "later_config_focus_worker_sessions": [
+      "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+      "2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545",
+      "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+      "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1",
+      "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+      "2026-08-30T18-21-57-976Z_01a053e8-2558-758c-bccc-89ae98946a31",
+      "2026-08-30T18-30-58-221Z_01a053f0-63ad-7fe1-8744-2f1f79f145e6"
+    ],
+    "foundation_worker_present": true,
+    "concept_worker_present": true,
+    "later_config_focus_worker_present": true
+  },
+  "safety": {
+    "default": "dry-run",
+    "execute_flag": "--execute",
+    "mcp_filePath_forced": true,
+    "shell_design_op_policy": "rewrite direct design.op save targets only",
+    "excluded": [
+      "repository application changes",
+      "repository design.op overwrite/copy",
+      "git",
+      "docker/container/server lifecycle",
+      "unrelated diagnostics/exports"
+    ]
+  }
+}

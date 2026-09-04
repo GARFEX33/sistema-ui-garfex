@@ -1,0 +1,19 @@
+{
+  "seq": 63,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 532,
+  "timestamp": "2026-08-30T06:19:25.497Z",
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"results\":[],\"nodeCount\":258,\"applied\":false,\"hint\":\"Transaction rolled back: 2 operation(s) failed, so NONE of this batch was applied — the document is unchanged. Fix the failing line(s) and resend the whole corrected batch.\",\"errors\":[{\"line\":\"U(\\\"n1126\\\", {\\\"fill\\\":[{\\\"type\\\":\\\"solid\\\",\\\"color\\\":\\\"#F2D031\\\"}]})\",\"error\":\"Update target not found: n1126\"},{\"line\":\"U(\\\"n1183\\\", {\\\"fill\\\":[{\\\"type\\\":\\\"solid\\\",\\\"color\\\":\\\"#F2D031\\\"}]})\",\"error\":\"Update target not found: n1183\"}]}"
+        }
+      ]
+    }
+  }
+}

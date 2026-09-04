@@ -1,0 +1,6 @@
+{
+  "source_line": 288,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: save document failed: Permission denied (os error 13)\"}],\"isError\":true}"
+}

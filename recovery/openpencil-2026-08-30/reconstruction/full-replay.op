@@ -1,0 +1,25 @@
+{
+  "version": "0.8.4",
+  "name": "OpenPencil full replay",
+  "children": [
+    {
+      "id": "0",
+      "type": "PAGE",
+      "name": "Page 1",
+      "children": [
+        {
+          "id": "n10",
+          "type": "FRAME",
+          "name": "Frame",
+          "x": 11,
+          "y": 7,
+          "width": 1200,
+          "height": 800,
+          "fills": [{"type": "SOLID", "color": "#FFFFFF"}],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "activePageIndex": 0
+}

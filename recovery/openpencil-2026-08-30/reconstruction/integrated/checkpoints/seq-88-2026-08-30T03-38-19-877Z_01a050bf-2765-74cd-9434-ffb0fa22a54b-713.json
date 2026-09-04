@@ -1,0 +1,17 @@
+{
+  "seq": 88,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 713,
+  "timestamp": "2026-08-30T06:39:51.241Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "inserted garfex-color-positivo.svg\ninserted garfex-blanco-negativo.svg\ninserted garfex-negro-positivo.svg\ninserted garfex-g-color-positivo.svg\ninserted garfex-g-blanco-negativo.svg\ninserted garfex-g-negro-positivo.svg\n",
+      "stderr": "Error: delete_node: [{\"type\":\"text\",\"text\":\"Error: host rejected command: DeleteNode { node_id: NodeId(\\\"n1170\\\"), page_id: None }\"}]\n    at call (/tmp/openpencil-replace-logos.js:10:28)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async /tmp/openpencil-replace-logos.js:30:3\n"
+    }
+  }
+}

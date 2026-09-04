@@ -1,0 +1,6 @@
+{
+  "source_line": 1115,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: nodeId not found: n1955\"}],\"isError\":true}"
+}

@@ -1,0 +1,17 @@
+{
+  "seq": 97,
+  "source_session": "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a",
+  "source_line": 33,
+  "timestamp": "2026-08-30T07:12:43.300Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "set_active_page {\"jsonrpc\":\"2.0\",\"id\":50,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"wrote\\\":\\\"true\\\"}\"}]}}\nupdate_node {\"jsonrpc\":\"2.0\",\"id\":51,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1318\\\"), x: None, y: None, width: Some(1440), height: Some(980), name: Some(\\\"04 Mapa operativo · Foundation frame\\\"), fill_hex: Some(\\\"#F7F6F3\\\"), page_id: None }\"}],\"isError\":true}}\nbatch_design {\"jsonrpc\":\"2.0\",\"id\":52,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: InsertAuthoredSubtree { nodes: [Rectangle(RectangleNode { base: PenNodeBase { id: \\\"n1430\\\", name: Some(\\\"Encabezado · navegación y continuidad\\\"), role: None, explain: None, x: Some(40.0), y: Some(32.0), rotation: None, constraints: None, opacity: None, enabled: None, visible: None, locked: None, flip_x: None, flip_y: None, mask_type: None, blend_mode: None, theme: None }, container: ContainerProp\nset_active_page {\"jsonrpc\":\"2.0\",\"id\":64,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"wrote\\\":\\\"true\\\"}\"}]}}\nupdate_node {\"jsonrpc\":\"2.0\",\"id\":74,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1320\\\"), x: None, y: None, width: Some(1440), height: Some(980), name: Some(\\\"05 Maestro de Recursos · Foundation frame\\\"), fill_hex: Some(\\\"#F7F6F3\\\"), page_id: None }\"}],\"isError\":true}}\nbatch_design {\"jsonrpc\":\"2.0\",\"id\":84,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: InsertAuthoredSubtree { nodes: [Rectangle(RectangleNode { base: PenNodeBase { id: \\\"n1430\\\", name: Some(\\\"Encabezado\\\"), role: None, explain: None, x: Some(40.0), y: Some(32.0), rotation: None, constraints: None, opacity: None, enabled: None, visible: None, locked: None, flip_x: None, flip_y: None, mask_type: None, blend_mode: None, theme: None }, container: ContainerProps { width: Some(Number(1360\nset_active_page {\"jsonrpc\":\"2.0\",\"id\":65,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"wrote\\\":\\\"true\\\"}\"}]}}\nupdate_node {\"jsonrpc\":\"2.0\",\"id\":75,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1322\\\"), x: None, y: None, width: Some(1440), height: Some(980), name: Some(\\\"06 Flujo XML y precios · Foundation frame\\\"), fill_hex: Some(\\\"#F7F6F3\\\"), page_id: None }\"}],\"isError\":true}}\nbatch_design {\"jsonrpc\":\"2.0\",\"id\":85,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: InsertAuthoredSubtree { nodes: [Rectangle(RectangleNode { base: PenNodeBase { id: \\\"n1430\\\", name: Some(\\\"Encabezado\\\"), role: None, explain: None, x: Some(40.0), y: Some(32.0), rotation: None, constraints: None, opacity: None, enabled: None, visible: None, locked: None, flip_x: None, flip_y: None, mask_type: None, blend_mode: None, theme: None }, container: ContainerProps { width: Some(Number(1360\nDONE\n",
+      "stderr": ""
+    }
+  }
+}

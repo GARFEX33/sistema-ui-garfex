@@ -1,0 +1,6 @@
+{
+  "source_line": 1066,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: ReplaceNode { node_id: NodeId(\\\"n1737\\\"), kind: \\\"frame\\\", name: \\\"Intención estructurada · Dirección conceptual\\\", x: 0, y: 0, width: 1440, height: 1100, fill_hex: Some(\\\"#F7F6F3\\\"), drop_children: true, page_id: Some(\\\"n1687\\\") }\"}],\"isError\":true}"
+}

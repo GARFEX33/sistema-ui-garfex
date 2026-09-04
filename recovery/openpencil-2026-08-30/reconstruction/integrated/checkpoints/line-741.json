@@ -1,0 +1,16 @@
+{
+  "source_line": 741,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"query\":\"Reorder root-level nodes bring images to front move node sibling index page root\",\"count\":5,\"results\":[{\"name\":\"reorder_page\",\"description\":\"Move a page. Accepts TS-style pageId + index or legacy from + to. Target is clamped to [0, page_count).\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"Optional target .op file path; omit to use the server document\"},\"pageId\":{\"type\":\"string\",\"description\":\"Page id returned by list_pages\"},\"index\":{\"type\":\"string\",\"description\":\"0-based target page index\"},\"from\":{\"type\":\"string\",\"description\":\"0-based source page index (legacy)\"},\"to\":{\"type\":\"string\",\"description\":\"0-based target page index (legacy)\"}}}},{\"name\":\"move_node\",\"description\":\"Reparent a node. Accepts Rust node_id/target_parent_id or TS nodeId/parent, plus optional index and pageId.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"Optional target .op file path; omit to use the server document\"},\"node_id\":{\"type\":\"string\"},\"nodeId\":{\"type\":\"string\"},\"target_parent_id\":{\"type\":\"string\"},\"parent\":{\"type\":\"string\",\"description\":\"target parent node id; empty/0/null/root omitted = page root\"},\"index\":{\"type\":\"string\",\"description\":\"optional insertion index within target parent/root\"},\"pageId\":{\"type\":\"string\",\"description\":\"optional target page id or legacy page index; omitted = active page\"}}}},{\"name\":\"count_nodes\",\"description\":\"Return total node count across all pages + a per-page breakdown. Result `per_page` is `;`-separated `index|count` records.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},{\"name\":\"read_nodes\",\"description\":\"Read nodes with depth control. Omit nodeIds to return top-level page children; depth=0 truncates children to \\\"...\\\", depth=-1 returns full subtrees. includeVariables=true attaches variables/themes JSON strings.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"Optional target .op file path; omit to use the server document\"},\"nodeIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Node ids to read; omit for top-level children\"},\"depth\":{\"type\":\"number\",\"description\":\"0=node only, 1=direct children, -1=full subtree\"},\"pageId\":{\"type\":\"string\"},\"includeVariables\":{\"type\":\"boolean\"}}}},{\"name\":\"export_nodes\",\"description\":\"Export one or more nodes to base64-encoded image/PDF bytes. format is one of png|jpeg|webp|pdf.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"nodeIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"format\":{\"type\":\"string\",\"enum\":[\"png\",\"jpeg\",\"webp\",\"pdf\"]},\"scale\":{\"type\":\"number\"}},\"required\":[\"nodeIds\",\"format\"]}}]}"
+        }
+      ]
+    }
+  }
+}

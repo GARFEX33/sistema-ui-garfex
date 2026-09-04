@@ -1,0 +1,17 @@
+{
+  "seq": 99,
+  "source_session": "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a",
+  "source_line": 39,
+  "timestamp": "2026-08-30T07:13:05.004Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":130,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1318\\\"), x: None, y: None, width: None, height: None, name: None, fill_hex: Some(\\\"#F7F6F3\\\"), page_id: None }\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":131,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1320\\\"), x: None, y: None, width: None, height: None, name: None, fill_hex: Some(\\\"#F7F6F3\\\"), page_id: None }\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":132,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1322\\\"), x: None, y: None, width: None, height: None, name: None, fill_hex: Some(\\\"#F7F6F3\\\"), page_id: None }\"}],\"isError\":true}}\n",
+      "stderr": ""
+    }
+  }
+}

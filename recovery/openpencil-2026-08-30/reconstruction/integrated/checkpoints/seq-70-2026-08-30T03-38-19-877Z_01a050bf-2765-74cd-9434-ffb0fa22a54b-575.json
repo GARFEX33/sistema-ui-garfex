@@ -1,0 +1,17 @@
+{
+  "seq": 70,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 575,
+  "timestamp": "2026-08-30T06:23:43.413Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"96\" height=\"96\" viewBox=\"0 0 71.2 71.2\"><path d=\"M57.566 9.402l-12 13.8c-2.16-1.907-5.16-3.427-8.76-3.427-1.693 0-3.293 0.24-4.773 0.72l6.093-17.587 0.29",
+      "stderr": ""
+    }
+  }
+}

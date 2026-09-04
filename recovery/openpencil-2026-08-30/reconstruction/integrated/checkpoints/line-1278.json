@@ -1,0 +1,6 @@
+{
+  "source_line": 1278,
+  "kind": "script",
+  "ok": false,
+  "error": "Error: No se pudo eliminar n2265: Error: pageId must be a known page id or u32 index, got \"n2265\""
+}

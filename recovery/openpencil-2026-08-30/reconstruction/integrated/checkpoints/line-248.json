@@ -1,0 +1,6 @@
+{
+  "source_line": 248,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: DeleteNode { node_id: NodeId(\\\"n8\\\"), page_id: Some(\\\"n6\\\") }\"}],\"isError\":true}"
+}

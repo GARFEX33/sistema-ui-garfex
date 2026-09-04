@@ -1,0 +1,10 @@
+{
+  "source_line": 1484,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/polish-05a-grid.js",
+    "operation": "write"
+  }
+}

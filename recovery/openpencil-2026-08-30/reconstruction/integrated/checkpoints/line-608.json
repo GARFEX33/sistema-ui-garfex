@@ -1,0 +1,6 @@
+{
+  "source_line": 608,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: node n1170 not found on page n380\"}],\"isError\":true}"
+}

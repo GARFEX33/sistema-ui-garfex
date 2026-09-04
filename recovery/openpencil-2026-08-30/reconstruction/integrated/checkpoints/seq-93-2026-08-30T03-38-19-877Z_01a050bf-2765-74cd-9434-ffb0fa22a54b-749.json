@@ -1,0 +1,19 @@
+{
+  "seq": 93,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 749,
+  "timestamp": "2026-08-30T07:00:03.618Z",
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"wrote\":\"true\"}"
+        }
+      ]
+    }
+  }
+}

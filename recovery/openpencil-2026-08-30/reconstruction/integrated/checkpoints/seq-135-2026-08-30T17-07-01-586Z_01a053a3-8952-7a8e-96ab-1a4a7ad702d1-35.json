@@ -1,0 +1,17 @@
+{
+  "seq": 135,
+  "source_session": "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1",
+  "source_line": 35,
+  "timestamp": "2026-08-30T17:08:05.644Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "op: Usage: op page rename <page-id> <name>\nop: argument must be key=value, got \"3\"\nop: Error: host rejected command: DeleteNode { node_id: NodeId(\"n1404\"), page_id: Some(\"n1317\") }\n",
+      "stderr": ""
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "chunk": 1,
+  "pages": {
+    "ok": true,
+    "data": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"pageCount\":3,\"activePageIndex\":0,\"pages\":[{\"id\":\"n6\",\"name\":\"01 Brand Reference\"},{\"id\":\"n2\",\"name\":\"02 UI Tokens\"},{\"id\":\"n4\",\"name\":\"03 UX Foundation\"}]}"
+        }
+      ]
+    }
+  },
+  "info": {
+    "ok": true,
+    "data": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"active_page_index\":\"0\",\"page_count\":\"3\",\"total_nodes\":\"86\"}"
+        }
+      ]
+    }
+  },
+  "eventCount": 70
+}

@@ -1,0 +1,6 @@
+{
+  "source_line": 1472,
+  "kind": "script",
+  "ok": false,
+  "error": "SyntaxError: Unexpected token 'E', \"Error: pag\"... is not valid JSON"
+}

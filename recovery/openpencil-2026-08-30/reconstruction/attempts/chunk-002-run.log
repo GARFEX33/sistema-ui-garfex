@@ -1,0 +1,17 @@
+=== chunk-002.js ===
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:250 seq 27 openpencil_set_active_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:250 seq 27 openpencil_import_html","ok":true}
+{"active":true,"imported":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:252 seq 28 openpencil_set_active_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:252 seq 28 openpencil_import_html","ok":true}
+{"active":true,"imported":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:258 seq 30 openpencil_duplicate_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:258 seq 30 openpencil_duplicate_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:258 seq 30 openpencil_duplicate_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:258 seq 30 openpencil_delete_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:258 seq 30 openpencil_delete_page","ok":true}
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:258 seq 30 openpencil_delete_page","ok":true}
+[{"p":"openpencil_duplicate_page","ok":true},{"p":"openpencil_duplicate_page","ok":true},{"p":"openpencil_duplicate_page","ok":true},{"p":"openpencil_delete_page","ok":true},{"p":"openpencil_delete_page","ok":true},{"p":"openpencil_delete_page","ok":true}]
+{"checkpoint":"source 2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl:262 seq 32 mutation","ok":true}
+{"checkpoint":"chunk-complete","calls":11}
+{"chunk":2,"pagesOk":true,"infoOk":true}

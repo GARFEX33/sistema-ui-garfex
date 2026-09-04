@@ -1,0 +1,10 @@
+{
+  "source_line": 1361,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/build-focus-state-sequence.js",
+    "operation": "write"
+  }
+}

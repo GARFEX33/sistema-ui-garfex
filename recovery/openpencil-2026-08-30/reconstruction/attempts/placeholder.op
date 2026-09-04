@@ -1,0 +1,2579 @@
+{
+  "version": "0.8.4",
+  "name": "GARFEX · Maestro de Recursos · recovered",
+  "children": [
+    {
+      "id": "n380",
+      "type": "PAGE",
+      "name": "01 Referencia de marca",
+      "children": [
+        {
+          "id": "n380-frame",
+          "type": "FRAME",
+          "name": "01 Referencia de marca",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n380-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "01 Referencia de marca",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n380-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n380-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n465",
+      "type": "PAGE",
+      "name": "02 Tokens de interfaz",
+      "children": [
+        {
+          "id": "n465-frame",
+          "type": "FRAME",
+          "name": "02 Tokens de interfaz",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n465-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "02 Tokens de interfaz",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n465-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n465-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n564",
+      "type": "PAGE",
+      "name": "03 Fundamentos UX",
+      "children": [
+        {
+          "id": "n564-frame",
+          "type": "FRAME",
+          "name": "03 Fundamentos UX",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n564-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "03 Fundamentos UX",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n564-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n564-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2032",
+      "type": "PAGE",
+      "name": "05A Configuración · Taller del catálogo",
+      "children": [
+        {
+          "id": "n2032-frame",
+          "type": "FRAME",
+          "name": "05A Configuración · Taller del catálogo",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2032-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "05A Configuración · Taller del catálogo",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2032-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2032-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2284",
+      "type": "PAGE",
+      "name": "05A Estado de foco · Clase",
+      "children": [
+        {
+          "id": "n2284-frame",
+          "type": "FRAME",
+          "name": "05A Estado de foco · Clase",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2284-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "05A Estado de foco · Clase",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2284-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2284-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2337",
+      "type": "PAGE",
+      "name": "05A Estado de foco · Tipo",
+      "children": [
+        {
+          "id": "n2337-frame",
+          "type": "FRAME",
+          "name": "05A Estado de foco · Tipo",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2337-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "05A Estado de foco · Tipo",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2337-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2337-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2081",
+      "type": "PAGE",
+      "name": "05B Tipo Tubería · Atributos",
+      "children": [
+        {
+          "id": "n2081-frame",
+          "type": "FRAME",
+          "name": "05B Tipo Tubería · Atributos",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2081-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "05B Tipo Tubería · Atributos",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2081-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2081-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2136",
+      "type": "PAGE",
+      "name": "05C Tipo Tubería · Presentación",
+      "children": [
+        {
+          "id": "n2136-frame",
+          "type": "FRAME",
+          "name": "05C Tipo Tubería · Presentación",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2136-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "05C Tipo Tubería · Presentación",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2136-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2136-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2191",
+      "type": "PAGE",
+      "name": "06 Crear recurso · Tubería",
+      "children": [
+        {
+          "id": "n2191-frame",
+          "type": "FRAME",
+          "name": "06 Crear recurso · Tubería",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2191-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "06 Crear recurso · Tubería",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2191-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2191-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2390",
+      "type": "PAGE",
+      "name": "06 Estado de foco · Selector Material",
+      "children": [
+        {
+          "id": "n2390-frame",
+          "type": "FRAME",
+          "name": "06 Estado de foco · Selector Material",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2390-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "06 Estado de foco · Selector Material",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2390-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2390-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2477",
+      "type": "PAGE",
+      "name": "07 Estado global · Paleta de comandos",
+      "children": [
+        {
+          "id": "n2477-frame",
+          "type": "FRAME",
+          "name": "07 Estado global · Paleta de comandos",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n2477-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "07 Estado global · Paleta de comandos",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n2477-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ÁREA ACTIVA",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n2477-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1683",
+      "type": "PAGE",
+      "name": "ARCHIVO · 04A Concepto · Campo de operación",
+      "children": [
+        {
+          "id": "n1683-frame",
+          "type": "FRAME",
+          "name": "04A Concepto · Campo de operación",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n1683-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "04A Concepto · Campo de operación",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n1683-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ARCHIVO",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n1683-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1685",
+      "type": "PAGE",
+      "name": "ARCHIVO · 04B Concepto · Flujo continuo",
+      "children": [
+        {
+          "id": "n1685-frame",
+          "type": "FRAME",
+          "name": "04B Concepto · Flujo continuo",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n1685-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "04B Concepto · Flujo continuo",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n1685-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ARCHIVO",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n1685-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1687",
+      "type": "PAGE",
+      "name": "ARCHIVO · 04C Concepto · Intención estructurada",
+      "children": [
+        {
+          "id": "n1687-frame",
+          "type": "FRAME",
+          "name": "04C Concepto · Intención estructurada",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n1687-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "04C Concepto · Intención estructurada",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n1687-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ARCHIVO",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n1687-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1317",
+      "type": "PAGE",
+      "name": "ARCHIVO · 80 Exploración previa · Bandeja workstation",
+      "children": [
+        {
+          "id": "n1317-frame",
+          "type": "FRAME",
+          "name": "80 Exploración previa · Bandeja workstation",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n1317-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "80 Exploración previa · Bandeja workstation",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n1317-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ARCHIVO",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n1317-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1319",
+      "type": "PAGE",
+      "name": "ARCHIVO · 81 Referencia previa · Bases maestras",
+      "children": [
+        {
+          "id": "n1319-frame",
+          "type": "FRAME",
+          "name": "81 Referencia previa · Bases maestras",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n1319-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "81 Referencia previa · Bases maestras",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n1319-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ARCHIVO",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n1319-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1504",
+      "type": "PAGE",
+      "name": "ARCHIVO · 82 Exploración previa · Recursos",
+      "children": [
+        {
+          "id": "n1505",
+          "type": "FRAME",
+          "name": "06 Maestro de Recursos · Workstation",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "t01",
+              "type": "TEXT",
+              "x": 24,
+              "y": 21,
+              "characters": "GARFEX",
+              "fontSize": 18,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "id": "t02",
+              "type": "TEXT",
+              "x": 24,
+              "y": 91,
+              "characters": "Bandeja",
+              "fontSize": 14,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#D9D6D0"
+                }
+              ]
+            },
+            {
+              "id": "t03",
+              "type": "TEXT",
+              "x": 24,
+              "y": 137,
+              "characters": "Recursos",
+              "fontSize": 14,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "id": "t04",
+              "type": "TEXT",
+              "x": 24,
+              "y": 183,
+              "characters": "Catálogo",
+              "fontSize": 14,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#D9D6D0"
+                }
+              ]
+            },
+            {
+              "id": "t05",
+              "type": "TEXT",
+              "x": 24,
+              "y": 229,
+              "characters": "Actividad",
+              "fontSize": 14,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#D9D6D0"
+                }
+              ]
+            },
+            {
+              "id": "t06",
+              "type": "TEXT",
+              "x": 24,
+              "y": 852,
+              "characters": "Administración",
+              "fontSize": 13,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#D9D6D0"
+                }
+              ]
+            },
+            {
+              "id": "t07",
+              "type": "TEXT",
+              "x": 24,
+              "y": 894,
+              "characters": "Configuración",
+              "fontSize": 13,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#D9D6D0"
+                }
+              ]
+            },
+            {
+              "id": "t08",
+              "type": "TEXT",
+              "x": 24,
+              "y": 938,
+              "characters": "Administrador",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "id": "t09",
+              "type": "TEXT",
+              "x": 240,
+              "y": 86,
+              "characters": "RECURSOS",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t10",
+              "type": "TEXT",
+              "x": 240,
+              "y": 108,
+              "characters": "Maestro de recursos",
+              "fontSize": 26,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t11",
+              "type": "TEXT",
+              "x": 240,
+              "y": 147,
+              "characters": "Gobernanza del catálogo · edición rápida y trazabilidad",
+              "fontSize": 13,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#6B6964"
+                }
+              ]
+            },
+            {
+              "id": "t12",
+              "type": "TEXT",
+              "x": 249,
+              "y": 207,
+              "characters": "Buscar por nombre, código o atributo…",
+              "fontSize": 13,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t13",
+              "type": "TEXT",
+              "x": 813,
+              "y": 207,
+              "characters": "Configurar columnas",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t14",
+              "type": "TEXT",
+              "x": 977,
+              "y": 207,
+              "characters": "Importar",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t15",
+              "type": "TEXT",
+              "x": 1050,
+              "y": 207,
+              "characters": "Más acciones  ⋯",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t16",
+              "type": "TEXT",
+              "x": 240,
+              "y": 248,
+              "characters": "Clase ⌄     Familia ⌄     Tipo ⌄     Unidad ⌄     Estado ⌄",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t17",
+              "type": "TEXT",
+              "x": 824,
+              "y": 248,
+              "characters": "Vista: Todos los activos  ⌄",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t18",
+              "type": "TEXT",
+              "x": 1070,
+              "y": 248,
+              "characters": "Guardar vista",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t19",
+              "type": "TEXT",
+              "x": 256,
+              "y": 278,
+              "characters": "4 seleccionados",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t20",
+              "type": "TEXT",
+              "x": 390,
+              "y": 278,
+              "characters": "Desactivar",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t21",
+              "type": "TEXT",
+              "x": 478,
+              "y": 278,
+              "characters": "Asignar clasificación",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t22",
+              "type": "TEXT",
+              "x": 638,
+              "y": 278,
+              "characters": "Editar campo",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t23",
+              "type": "TEXT",
+              "x": 743,
+              "y": 278,
+              "characters": "Exportar",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t24",
+              "type": "TEXT",
+              "x": 259,
+              "y": 322,
+              "characters": "□   Código",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t25",
+              "type": "TEXT",
+              "x": 357,
+              "y": 322,
+              "characters": "Recurso",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t26",
+              "type": "TEXT",
+              "x": 570,
+              "y": 322,
+              "characters": "Clase / Familia",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t27",
+              "type": "TEXT",
+              "x": 706,
+              "y": 322,
+              "characters": "Unidad",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t28",
+              "type": "TEXT",
+              "x": 765,
+              "y": 322,
+              "characters": "Estado",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t29",
+              "type": "TEXT",
+              "x": 859,
+              "y": 322,
+              "characters": "Modificado",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "r01",
+              "type": "RECTANGLE",
+              "x": 0,
+              "y": 0,
+              "width": 216,
+              "height": 980,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#242322"
+                }
+              ]
+            },
+            {
+              "id": "r02",
+              "type": "RECTANGLE",
+              "x": 216,
+              "y": 0,
+              "width": 1224,
+              "height": 64,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "id": "r03",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 12,
+              "width": 690,
+              "height": 40,
+              "cornerRadius": 6,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#F2F1EE"
+                }
+              ],
+              "strokes": [
+                {
+                  "color": "#D5D1CB",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "id": "t30",
+              "type": "TEXT",
+              "x": 257,
+              "y": 25,
+              "characters": "⌕  Buscar o ejecutar comando…",
+              "fontSize": 14,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#393734"
+                }
+              ]
+            },
+            {
+              "id": "t31",
+              "type": "TEXT",
+              "x": 799,
+              "y": 26,
+              "characters": "Ctrl/Cmd + K",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t32",
+              "type": "TEXT",
+              "x": 1124,
+              "y": 26,
+              "characters": "●  Sincronizado",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#3D704C"
+                }
+              ]
+            },
+            {
+              "id": "r04",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 136,
+              "width": 150,
+              "height": 34,
+              "cornerRadius": 5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t33",
+              "type": "TEXT",
+              "x": 263,
+              "y": 147,
+              "characters": "+  Crear recurso",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "id": "t34",
+              "type": "TEXT",
+              "x": 1320,
+              "y": 147,
+              "characters": "⌘ Enter",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "r05",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 194,
+              "width": 540,
+              "height": 32,
+              "cornerRadius": 4,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ],
+              "strokes": [
+                {
+                  "color": "#D5D1CB",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "id": "r06",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 260,
+              "width": 1200,
+              "height": 28,
+              "cornerRadius": 4,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#EEECEA"
+                }
+              ]
+            },
+            {
+              "id": "r07",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 294,
+              "width": 760,
+              "height": 638,
+              "cornerRadius": 5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ],
+              "strokes": [
+                {
+                  "color": "#D5D1CB",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "id": "r08",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 294,
+              "width": 760,
+              "height": 42,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#F0EFEC"
+                }
+              ]
+            },
+            {
+              "id": "r09",
+              "type": "RECTANGLE",
+              "x": 240,
+              "y": 378,
+              "width": 760,
+              "height": 48,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFF8DB"
+                }
+              ]
+            },
+            {
+              "id": "r10",
+              "type": "RECTANGLE",
+              "x": 1016,
+              "y": 294,
+              "width": 400,
+              "height": 638,
+              "cornerRadius": 5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ],
+              "strokes": [
+                {
+                  "color": "#D5D1CB",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "id": "t35",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 320,
+              "characters": "RECURSO SELECCIONADO",
+              "fontSize": 11,
+              "fontWeight": 700,
+              "letterSpacing": 1,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t36",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 345,
+              "characters": "Cable THW-LS 2.5 mm²",
+              "fontSize": 18,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t37",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 370,
+              "characters": "MAT-EL-0241   ·   Activo",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#3D704C"
+                }
+              ]
+            },
+            {
+              "id": "t38",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 408,
+              "characters": "Editar     Duplicar     Desactivar",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t39",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 456,
+              "characters": "Identidad técnica",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t40",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 480,
+              "characters": "Clase       Material eléctrico\nFamilia      Conductores\nTipo         Cable de baja tensión",
+              "fontSize": 12,
+              "lineHeight": 18,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t41",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 548,
+              "characters": "Atributos",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t42",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 572,
+              "characters": "Sección       2.5 mm²\nTensión       600 V\nColor         Negro",
+              "fontSize": 12,
+              "lineHeight": 18,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t43",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 640,
+              "characters": "Trazabilidad",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t44",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 664,
+              "characters": "Fuente: importación ERP · 12 jun 2025\nXML y precios  → Ver referencias",
+              "fontSize": 12,
+              "lineHeight": 18,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t45",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 714,
+              "characters": "Relaciones",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t46",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 738,
+              "characters": "3 partidas · 2 equivalentes",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t47",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 782,
+              "characters": "Validación",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t48",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 806,
+              "characters": "✓ Completo · Sin conflictos",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#3D704C"
+                }
+              ]
+            },
+            {
+              "id": "t49",
+              "type": "TEXT",
+              "x": 1038,
+              "y": 858,
+              "characters": "Abrir editor completo →\nReglas de clasificación y atributos",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "lineHeight": 18,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t50",
+              "type": "TEXT",
+              "x": 259,
+              "y": 351,
+              "characters": "□   MAT-EL-0238",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t51",
+              "type": "TEXT",
+              "x": 357,
+              "y": 351,
+              "characters": "Cable THW-LS 1.5 mm²",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t52",
+              "type": "TEXT",
+              "x": 570,
+              "y": 351,
+              "characters": "Material eléctrico / Conductores",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t53",
+              "type": "TEXT",
+              "x": 706,
+              "y": 351,
+              "characters": "m",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t54",
+              "type": "TEXT",
+              "x": 765,
+              "y": 351,
+              "characters": "Activo",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#3D704C"
+                }
+              ]
+            },
+            {
+              "id": "t55",
+              "type": "TEXT",
+              "x": 859,
+              "y": 351,
+              "characters": "12 jun 2025",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#6B6964"
+                }
+              ]
+            },
+            {
+              "id": "t56",
+              "type": "TEXT",
+              "x": 259,
+              "y": 395,
+              "characters": "☑   MAT-EL-0241",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t57",
+              "type": "TEXT",
+              "x": 357,
+              "y": 395,
+              "characters": "Cable THW-LS 2.5 mm²",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t58",
+              "type": "TEXT",
+              "x": 570,
+              "y": 395,
+              "characters": "Material eléctrico / Conductores",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t59",
+              "type": "TEXT",
+              "x": 706,
+              "y": 395,
+              "characters": "m",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t60",
+              "type": "TEXT",
+              "x": 765,
+              "y": 395,
+              "characters": "Activo",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#3D704C"
+                }
+              ]
+            },
+            {
+              "id": "t61",
+              "type": "TEXT",
+              "x": 859,
+              "y": 395,
+              "characters": "12 jun 2025",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#6B6964"
+                }
+              ]
+            },
+            {
+              "id": "t62",
+              "type": "TEXT",
+              "x": 259,
+              "y": 443,
+              "characters": "☑   MAT-EL-0242   Cable THW-LS 4 mm²          Conductores        m      Activo      11 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t63",
+              "type": "TEXT",
+              "x": 259,
+              "y": 491,
+              "characters": "☑   MAT-EL-0243   Cable THW-LS 6 mm²          Conductores        m      Activo      11 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t64",
+              "type": "TEXT",
+              "x": 259,
+              "y": 539,
+              "characters": "□   MAT-EL-0310   Interruptor termomagnético 2P   Protección        pza    Activo      10 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t65",
+              "type": "TEXT",
+              "x": 259,
+              "y": 587,
+              "characters": "□   MAT-EL-0311   Interruptor termomagnético 3P   Protección        pza    Activo      10 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t66",
+              "type": "TEXT",
+              "x": 259,
+              "y": 635,
+              "characters": "□   MAT-OB-0088   Concreto premezclado f’c 250    Agregados         m³     Activo      09 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t67",
+              "type": "TEXT",
+              "x": 259,
+              "y": 683,
+              "characters": "□   MAT-OB-0142   Varilla corrugada 3/8”         Acero             t      Activo      08 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t68",
+              "type": "TEXT",
+              "x": 259,
+              "y": 731,
+              "characters": "□   MAT-HE-0021   Guantes de carnaza             EPP               par    Inactivo    06 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t69",
+              "type": "TEXT",
+              "x": 259,
+              "y": 779,
+              "characters": "□   MAT-HE-0046   Casco de seguridad              EPP               pza    Activo      05 jun",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t70",
+              "type": "TEXT",
+              "x": 259,
+              "y": 884,
+              "characters": "↑↓ seleccionar   Space marcar   Enter editar   Esc limpiar",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t71",
+              "type": "TEXT",
+              "x": 240,
+              "y": 958,
+              "characters": "↑↓ navegar   Space seleccionar   Enter abrir   Esc cerrar   / buscar   Ctrl/Cmd + K comandos   Ctrl/Cmd + Enter guardar",
+              "fontSize": 12,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "r11",
+              "type": "RECTANGLE",
+              "x": 420,
+              "y": 66,
+              "width": 620,
+              "height": 210,
+              "cornerRadius": 7,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#FFFFFF"
+                }
+              ],
+              "strokes": [
+                {
+                  "color": "#7C0000",
+                  "weight": 1.5
+                }
+              ]
+            },
+            {
+              "id": "t72",
+              "type": "TEXT",
+              "x": 444,
+              "y": 82,
+              "characters": "Paleta de comandos",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t73",
+              "type": "TEXT",
+              "x": 444,
+              "y": 105,
+              "characters": "cable",
+              "fontSize": 14,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "t74",
+              "type": "TEXT",
+              "x": 444,
+              "y": 129,
+              "characters": "BUSCAR",
+              "fontSize": 10,
+              "fontWeight": 700,
+              "letterSpacing": 1,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t75",
+              "type": "TEXT",
+              "x": 464,
+              "y": 148,
+              "characters": "Cable THW-LS 2.5 mm²",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "t76",
+              "type": "TEXT",
+              "x": 464,
+              "y": 166,
+              "characters": "Cable THW-LS 4 mm²",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t77",
+              "type": "TEXT",
+              "x": 444,
+              "y": 187,
+              "characters": "ACTUAR",
+              "fontSize": 10,
+              "fontWeight": 700,
+              "letterSpacing": 1,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t78",
+              "type": "TEXT",
+              "x": 464,
+              "y": 205,
+              "characters": "Editar recurso seleccionado   ·   Asignar unidad   ·   Comparar duplicados",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t79",
+              "type": "TEXT",
+              "x": 444,
+              "y": 226,
+              "characters": "COMANDOS",
+              "fontSize": 10,
+              "fontWeight": 700,
+              "letterSpacing": 1,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            },
+            {
+              "id": "t80",
+              "type": "TEXT",
+              "x": 464,
+              "y": 244,
+              "characters": "Crear recurso   ·   Configurar columnas",
+              "fontSize": 12,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            },
+            {
+              "id": "t81",
+              "type": "TEXT",
+              "x": 444,
+              "y": 264,
+              "characters": "↑↓ navegar   ·   Enter abrir   ·   Esc cerrar",
+              "fontSize": 11,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#77736C"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n1321",
+      "type": "PAGE",
+      "name": "ARCHIVO · 90 Futuro · XML y precios",
+      "children": [
+        {
+          "id": "n1321-frame",
+          "type": "FRAME",
+          "name": "90 Futuro · XML y precios",
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 980,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": "#F7F6F3"
+            }
+          ],
+          "children": [
+            {
+              "id": "n1321-title",
+              "type": "TEXT",
+              "x": 56,
+              "y": 56,
+              "characters": "90 Futuro · XML y precios",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#171717"
+                }
+              ]
+            },
+            {
+              "id": "n1321-label",
+              "type": "TEXT",
+              "x": 56,
+              "y": 112,
+              "characters": "GARFEX · RECUPERADO · ARCHIVO",
+              "fontSize": 12,
+              "fontWeight": 700,
+              "letterSpacing": 1.5,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#7C0000"
+                }
+              ]
+            },
+            {
+              "id": "n1321-note",
+              "type": "TEXT",
+              "x": 56,
+              "y": 170,
+              "characters": "Estructura editable reconstruida desde la transacción OpenPencil preservada.",
+              "fontSize": 16,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": "#4C4A46"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "design_md": "# Sistema de diseño GARFEX\n\n## Estado\n\nFundamentos de marca y experiencia para la primera etapa del ERP. No contiene pantallas finales.\n\n## Fuente de verdad\n\n- `01 Referencia de marca`: variantes, contraste, área libre y restricciones.\n- `02 Tokens de interfaz`: color, temas, tipografía, semántica y accesibilidad.\n- `03 Fundamentos UX`: teclado, densidad, tabla + panel, responsive y feedback.\n\n## Marca\n\n- Rojo canónico de interfaz: `#7C0000`.\n- Amarillo de acento: `#F2D031`.\n- Los SVG rojos positivos contienen `#8B0000`; conservarlos sin alteración hasta validación del responsable de marca.\n- Nexa para títulos; RNS Sanz para interfaz y texto; Monola Script solo en usos decorativos.\n- Fallback temporal: Inter/Arial cuando las fuentes corporativas no estén disponibles.\n- Preservar proporciones, contraste y área libre mínima de `1x`.\n- Prohibidos: sombras, resplandores, rotación, distorsión y recoloración arbitraria.\n\n## Experiencia\n\n- Interfaz empresarial keyboard-first, compatible con mouse y touch.\n- Bandeja operativa centrada en excepciones.\n- Tabla persistente con panel contextual en desktop.\n- Densidad compacta, cómoda y touch.\n- Paridad funcional con composiciones adaptadas en tablet y móvil.\n- Guardado híbrido y riesgo graduado.\n- Procesos largos en centro de actividad persistente.\n- Accesibilidad objetivo: WCAG 2.2 AA.\n\n## Idioma\n\nTodo el contenido visible y la documentación UX/UI se redactan en español.",
+  "activePageIndex": 3
+}

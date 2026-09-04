@@ -1,0 +1,16 @@
+{
+  "source_line": 246,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[{\"type\":\"group\",\"id\":\"n77\",\"name\":\"Imported SVG\",\"children\":\"...\"},{\"type\":\"group\",\"id\":\"n84\",\"name\":\"Imported SVG\",\"children\":\"...\"},{\"type\":\"group\",\"id\":\"n91\",\"name\":\"Imported SVG\",\"children\":\"...\"},{\"type\":\"frame\",\"id\":\"n92\",\"name\":\"HTML Import\",\"width\":1440.0,\"height\":\"fit_content\",\"layout\":\"vertical\",\"fill\":[{\"type\":\"solid\",\"color\":\"#ffffff\"}],\"children\":\"...\"}]}"
+        }
+      ]
+    }
+  }
+}

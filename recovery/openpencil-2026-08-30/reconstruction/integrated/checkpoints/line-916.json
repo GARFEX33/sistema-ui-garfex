@@ -1,0 +1,6 @@
+{
+  "source_line": 916,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n1381\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"FLUJO PRINCIPAL · carriles conceptuales\\\\\\\"}\\\", page_id: Some(\\\"n1321\\\") }\"}],\"isError\":true}"
+}

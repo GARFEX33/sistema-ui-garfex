@@ -1,0 +1,17 @@
+{
+  "seq": 141,
+  "source_session": "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1",
+  "source_line": 43,
+  "timestamp": "2026-08-30T17:09:08.249Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "op: Error: save document failed: Permission denied (os error 13)\nop: Error: page not found: n1317\n",
+      "stderr": ""
+    }
+  }
+}

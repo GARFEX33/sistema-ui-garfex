@@ -1,0 +1,17 @@
+{
+  "seq": 139,
+  "source_session": "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1",
+  "source_line": 39,
+  "timestamp": "2026-08-30T17:08:10.055Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "op: Error: pageId must be a known page id or u32 index, got \"n1317\"\n",
+      "stderr": ""
+    }
+  }
+}

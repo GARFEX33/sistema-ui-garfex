@@ -1,0 +1,9 @@
+{
+  "seq": 132,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 923,
+  "timestamp": "2026-08-30T07:47:47.218Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: SetActivePage { index: 3 }\"}],\"isError\":true}"
+}

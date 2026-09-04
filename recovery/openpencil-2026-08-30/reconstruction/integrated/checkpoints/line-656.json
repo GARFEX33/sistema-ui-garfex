@@ -1,0 +1,6 @@
+{
+  "source_line": 656,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: node n1305 not found\"}],\"isError\":true}"
+}

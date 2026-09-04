@@ -1,0 +1,17 @@
+{
+  "seq": 107,
+  "source_session": "2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545",
+  "source_line": 29,
+  "timestamp": "2026-08-30T07:31:15.483Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":12,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: SetActivePage { index: 3 }\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"active_page_id\\\":\\\"n380\\\",\\\"active_page_index\\\":\\\"0\\\",\\\"components\\\":\\\"\\\",\\\"page_count\\\":\\\"3\\\",\\\"selection_count\\\":\\\"1\\\",\\\"selection_ids\\\":\\\"n1413\\\",\\\"top_level_nodes\\\":\\\"n1311|Path|path;n1312|Path|path;n1313|Path|path;n1314|Path|path;n1315|Path|path;n1316|Path|path;n1305|Path|path;n1298|Path|path;n1291|Path|path;n1284|Path|path;n1227|Path|path;n402|HTML Import|frame;n1212|HTML Import|frame;n1271|Imported SVG|group;n1328|Imported SVG|group;n1385|Imported SVG|group;n1392|Imported SVG|group;n1399|Imported SVG|group;n1406|Imported SVG|group;n1413|Imported SVG|group;n1414|HTML Import|frame;n1416|HTML Import|frame;n1418|Original SVG · garfex-color-positivo.svg|image;n1419|Original SVG · garfex-blanco-negativo.svg|image;n1420|Original SVG · garfex-negro-positivo.svg|image;n1421|Original SVG · garfex-g-color-positivo.svg|image;n1422|Original SVG · garfex-g-blanco-negativo.svg|image;n1423|Original SVG · garfex-g-negro-positivo.svg|image\\\"}\"}]}}",
+      "stderr": ""
+    }
+  }
+}

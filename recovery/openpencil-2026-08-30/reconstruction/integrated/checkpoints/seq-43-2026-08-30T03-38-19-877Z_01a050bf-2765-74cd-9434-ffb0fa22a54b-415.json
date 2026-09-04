@@ -1,0 +1,11 @@
+{
+  "seq": 43,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 415,
+  "timestamp": "2026-08-30T06:07:22.957Z",
+  "kind": "script",
+  "ok": true,
+  "observed": {
+    "kind": "script"
+  }
+}

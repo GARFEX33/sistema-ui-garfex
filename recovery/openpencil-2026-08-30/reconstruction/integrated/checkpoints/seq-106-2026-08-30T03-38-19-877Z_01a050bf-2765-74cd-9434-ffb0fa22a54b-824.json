@@ -1,0 +1,17 @@
+{
+  "seq": 106,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 824,
+  "timestamp": "2026-08-30T07:22:53.544Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "Error: read_nodes: Error: page not found: n1317\n    at call (/tmp/openpencil-front-text.js:2:461)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async /tmp/openpencil-front-text.js:5:11\n"
+    }
+  }
+}

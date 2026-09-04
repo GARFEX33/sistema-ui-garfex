@@ -1,0 +1,16 @@
+{
+  "source_line": 1443,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"pageCount\":4,\"activePageIndex\":3,\"pages\":[{\"id\":\"n380\",\"name\":\"01 Referencia de marca\"},{\"id\":\"n465\",\"name\":\"02 Tokens de interfaz\"},{\"id\":\"n564\",\"name\":\"03 Fundamentos UX\"},{\"id\":\"n1025\",\"name\":\"05A Configuración · Taller del catálogo\"}]}"
+        }
+      ]
+    }
+  }
+}

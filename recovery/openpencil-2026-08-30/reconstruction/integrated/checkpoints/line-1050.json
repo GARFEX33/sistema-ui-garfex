@@ -1,0 +1,16 @@
+{
+  "source_line": 1050,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[{\"type\":\"frame\",\"id\":\"n402\",\"name\":\"HTML Import\",\"width\":1440.0,\"height\":\"fit_content\",\"layout\":\"vertical\",\"fill\":[{\"type\":\"solid\",\"color\":\"#ffffff\"}],\"children\":\"...\"},{\"type\":\"group\",\"id\":\"n1020\",\"name\":\"Imported SVG\",\"children\":\"...\"},{\"type\":\"frame\",\"id\":\"n1021\",\"name\":\"HTML Import\",\"x\":1500.0,\"y\":0.0,\"width\":1440.0,\"height\":\"fit_content\",\"layout\":\"vertical\",\"fill\":[{\"type\":\"solid\",\"color\":\"#ffffff\"}],\"children\":\"...\"},{\"type\":\"frame\",\"id\":\"n1023\",\"name\":\"HTML Import\",\"x\":1500.0,\"y\":120.0,\"width\":1440.0,\"height\":\"fit_content\",\"layout\":\"vertical\",\"fill\":[{\"type\":\"solid\",\"color\":\"#ffffff\"}],\"children\":\"...\"}]}"
+        }
+      ]
+    }
+  }
+}

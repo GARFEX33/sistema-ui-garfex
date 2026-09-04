@@ -1,0 +1,16 @@
+{
+  "source_line": 1012,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"pageCount\":3,\"activePageIndex\":0,\"pages\":[{\"id\":\"n380\",\"name\":\"01 Referencia de marca\"},{\"id\":\"n465\",\"name\":\"02 Tokens de interfaz\"},{\"id\":\"n564\",\"name\":\"03 Fundamentos UX\"}]}"
+        }
+      ]
+    }
+  }
+}

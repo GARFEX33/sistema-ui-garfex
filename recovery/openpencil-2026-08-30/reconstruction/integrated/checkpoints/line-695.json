@@ -1,0 +1,14 @@
+{
+  "source_line": 695,
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "/bin/bash: line 1: /tmp/svg-raster/render-target.js: No such file or directory\n/bin/bash: line 4: cd: /tmp/svg-raster: No such file or directory\n"
+    }
+  }
+}

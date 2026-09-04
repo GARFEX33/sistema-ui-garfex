@@ -1,0 +1,10 @@
+{
+  "source_line": 1151,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/build-master-config-pages.js",
+    "operation": "write"
+  }
+}

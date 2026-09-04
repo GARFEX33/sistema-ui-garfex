@@ -1,0 +1,17 @@
+{
+  "seq": 154,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 25,
+  "timestamp": "2026-08-30T17:26:22.568Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "\n export_item {'type': 'object', 'properties': {'itemId': {'type': 'string'}, 'format': {'type': 'string', 'enum': ['png', 'jpeg', 'webp', 'pdf']}, 'scale': {'type': 'number'}}, 'required': ['format']}\n\n export_frames {'type': 'object', 'properties': {'outputDir': {'type': 'string', 'description': 'Destination directory; created if absent'}, 'format': {'type': 'string', 'enum': ['png', 'jpeg', 'webp'], 'default': 'png'}}, 'required': ['outputDir']}\n\n snapshot_layout {'type': 'object', 'properties': {'filePath': {'type': 'string', 'description': 'Optional target .op file path; omit to use the server document'}, 'parentId': {'type': 'string', 'description': 'Only return layout under this parent node'}, 'maxDepth': {'type': 'number', 'description': 'Max depth to traverse (default 1)'}, 'pageId': {'type': 'string', 'description': 'Target page ID (defaults to the active page)'}}}\n\n add_page {'type': 'object', 'properties': {'filePath': {'type': 'string', 'description': 'Optional target .op file path; omit to use the server document'}, 'name': {'type': 'string', 'description': 'Page name (default: Page N)'}, 'children': {'type': 'array', 'items': {'type': 'object'}, 'description': 'Initial child nodes for the new page; omitted creates the default blank frame'}}}\n\n rename_page {'type': 'object', 'properties': {'filePath': {'type': 'string', 'description': 'Optional target .op file path; omit to use the server document'}, 'pageId': {'type': 'string', 'description': 'Page id returned by list_pages'}, 'index': {'type': 'string', 'description': '0-based page index (legacy)'}, 'name': {'type': 'string'}}, 'required': ['name']}\n\n reorder_page {'type': 'object', 'properties': {'filePath': {'type': 'string', 'description': 'Optional target .op file path; omit to use the server document'}, 'pageId': {'type': 'string', 'description': 'Page id returned by list_pages'}, 'index': {'type': 'string', 'description': '0-based target page index'}, 'from': {'type': 'string', 'description': '0-based source page index (legacy)'}, 'to': {'type': 'string', 'description': '0-based target page index (legacy)'}}}\n",
+      "stderr": ""
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "seq": 133,
+  "source_session": "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+  "source_line": 65,
+  "timestamp": "2026-08-30T07:41:13.640Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":401,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: MoveNode { node_id: NodeId(\\\"n1503\\\"), target_parent: NodeId(\\\"n1322\\\"), page_id: Some(\\\"n1321\\\"), index: Some(0) }\"}],\"isError\":true}}\n",
+      "stderr": ""
+    }
+  }
+}

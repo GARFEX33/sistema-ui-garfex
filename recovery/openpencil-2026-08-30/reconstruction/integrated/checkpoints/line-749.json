@@ -1,0 +1,6 @@
+{
+  "source_line": 749,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: MoveNode { node_id: NodeId(\\\"n1313\\\"), target_parent: NodeId(\\\"\\\"), page_id: Some(\\\"n380\\\"), index: Some(0) }\"}],\"isError\":true}"
+}

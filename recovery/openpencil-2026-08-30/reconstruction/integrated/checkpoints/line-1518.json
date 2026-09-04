@@ -1,0 +1,10 @@
+{
+  "source_line": 1518,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/polish-form-states.js",
+    "operation": "write"
+  }
+}

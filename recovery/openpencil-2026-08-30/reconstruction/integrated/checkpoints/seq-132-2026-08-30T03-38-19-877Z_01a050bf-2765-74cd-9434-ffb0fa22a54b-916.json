@@ -1,0 +1,9 @@
+{
+  "seq": 132,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 916,
+  "timestamp": "2026-08-30T07:47:21.322Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n1503\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"Referencia futura · no pertenece a la etapa actual.\\\\\\\"}\\\", page_id: Some(\\\"n1321\\\") }\"}],\"isError\":true}"
+}

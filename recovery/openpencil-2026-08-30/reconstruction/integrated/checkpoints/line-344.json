@@ -1,0 +1,16 @@
+{
+  "source_line": 344,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[{\"type\":\"frame\",\"id\":\"n565\",\"name\":\"HTML Import\",\"x\":0.0,\"y\":0.0,\"width\":1440.0,\"height\":\"fit_content\",\"layout\":\"vertical\",\"fill\":[{\"type\":\"solid\",\"color\":\"#ffffff\"}],\"children\":\"...\"}]}"
+        }
+      ]
+    }
+  }
+}

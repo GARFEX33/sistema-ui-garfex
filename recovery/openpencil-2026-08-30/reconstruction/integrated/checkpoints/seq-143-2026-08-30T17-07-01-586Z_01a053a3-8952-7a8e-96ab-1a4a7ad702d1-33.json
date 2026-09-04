@@ -1,0 +1,17 @@
+{
+  "seq": 143,
+  "source_session": "2026-08-30T17-07-01-586Z_01a053a3-8952-7a8e-96ab-1a4a7ad702d1",
+  "source_line": 33,
+  "timestamp": "2026-08-30T17:07:49.204Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "n the current Rust MCP document, or the TS-compatible filePath target for this call, and return metadata, context summary, and design prompt.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"Optional target .op file path; omit to use the server document\"}}}},{\"name\":\"save_document\",\"description\":\"Save the current Rust MCP document snapshot to a .op file. Used by the Rust HTTP CLI to match TS `op save`; pass sourceFilePath to copy a specific source .op file to the target filePath.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"Target .op file path\"},\"sourceFilePath\":{\"type\":\"string\",\"description\":\"Optional source .op file path for TS-compatible `op save <target> --file <source>`\"}},\"required\":[\"filePath\"]}},{\"name\":\"get_document_in\n",
+      "stderr": ""
+    }
+  }
+}

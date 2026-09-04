@@ -1,0 +1,17 @@
+{
+  "seq": 171,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1032,
+  "timestamp": "2026-08-30T17:35:45.884Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "Error: batch_design: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: ReplaceNode { node_id: NodeId(\\\"n1684\\\"), kind: \\\"frame\\\", name: \\\"Campo de operación · Dirección conceptual\\\", x: 0, y: 0, width: 1440, height: 1100, fill_hex: Some(\\\"#F7F6F3\\\"), drop_children: false, page_id: Some(\\\"n1683\\\") }\"}],\"isError\":true}\n    at tool (/tmp/build-concept-boards.js:42:355)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async replace (/tmp/build-concept-boards.js:43:122)\n    at async /tmp/build-concept-boards.js:160:12\n"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "source_line": 640,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"active_page_index\":\"0\",\"page_count\":\"3\",\"total_nodes\":\"392\"}"
+        }
+      ]
+    }
+  }
+}
