@@ -1,14 +1,14 @@
 schema: spec-driven
 
 context: |
-  Project: GARFEX ERP frontend, a greenfield web application. Product-visible language and SDD artifacts are Spanish; technical identifiers and code are English.
-  Stack: React 19, TypeScript, Vite, TanStack Router/Form/Table/Virtual, React Aria Components, Tailwind CSS, Vitest, React Testing Library, Playwright, Storybook, ESLint, Prettier. Package manager: pnpm. No package.json, source application, or runnable test/build commands exist yet.
-  Architecture: Feature-first Scope Rule with Screaming Architecture; keep only minimal transversal shared infrastructure and avoid speculative abstractions. The external backend is authoritative. This frontend must not introduce a backend, persistence, invented domain rules, global stores, repositories, use cases, gateways, facades, or a Query state layer. The canonical future model is Familia -> Clase -> Tipo -> Recurso maestro.
-  Initial scope: Base mínima plus the approved Bandeja operativa workstation only. Future catalog and resource blocks are out of scope for this change. Implement only frozen workstation designs approved in OpenPencil; tablet, mobile, touch-specific, and additional visual states remain blocked until separately approved.
-  Design evidence: design.op, page04.png, n2033.png, n2082.png, n2137.png, n2192.png, docs/erp-first-stage-design-brief.md, and docs/manual_identidad_garfex_ai_canonico_v2_digital.md. Preserve these files and do not modify OpenPencil artifacts during SDD initialization.
-  Quality: Strict TDD is required once tests exist. Intended commands are pnpm-based, but commands must not be claimed runnable until package.json and the corresponding tooling exist. Target accessibility is WCAG 2.2 AA. Brand and UI decisions follow the supplied GARFEX design evidence and canonical identity manual.
-  SDD preflight: execution_mode=auto; artifact_store=openspec; delivery_strategy=ask-on-risk; review_budget_authored_lines=400; chain_strategy=deferred; git is initialized with no commits authorized.
-  Initialization scope: establish project context and OpenSpec configuration only. Do not create an active change or proposal, specification, design, tasks, application code, package manifests, or implementation artifacts.
+  Project: GARFEX ERP frontend with the Base mínima and Bandeja workstation slice implemented and archived. Product-visible language and SDD artifacts are Spanish; technical identifiers and code are English.
+  Stack: React 19, TypeScript, Vite, TanStack Router/Form/Table/Virtual, React Aria Components, Tailwind CSS, Vitest, React Testing Library, Playwright, Storybook, ESLint, Prettier. Package manager: pnpm. Package scripts and test/build tooling are runnable.
+  Architecture: Feature-first Scope Rule with Screaming Architecture; keep only minimal transversal shared infrastructure and avoid speculative abstractions. The external backend is authoritative. This frontend must not introduce a backend, persistence, invented domain rules, global stores, repositories, use cases, gateways, facades, or a Query state layer. The canonical model is Clase -> Familia -> Tipo -> Recurso: Familia.claseRecursoId references Clase, Tipo.familiaRecursoId references Familia, and Recurso.tipoRecursoId references Tipo.
+  Current scope: the next change is the Catálogo maestro hierarchy base only: Clases, Familias and Tipos with navigation, creation and read behavior. Familia->Clase and Tipo->Familia are immutable; Recurso->Tipo is reclassifiable through a future controlled, auditable flow. Units, attribute definitions, assignments, rules, presentation, compatibility, publication, Resources implementation, responsive/mobile/touch-specific behavior and additional visual states are out of scope unless separately approved.
+  Design evidence: approved OpenPencil artifacts and frozen snapshots remain visual authority, but every selector, breadcrumb and dependency must be audited against Clase -> Familia -> Tipo before implementation. Preserve design.op, design-recovered.op, recovery/, PNG evidence and docs; this SDD must not modify OpenPencil recovery artifacts.
+  Quality: Strict TDD is required. Runnable pnpm commands include test, Storybook tests, Playwright E2E, build, lint, format check and typecheck. Target accessibility is WCAG 2.2 AA. Brand and UI decisions follow approved GARFEX design evidence and the canonical identity manual.
+  SDD preflight: execution_mode=auto; artifact_store=openspec; delivery_strategy=ask-on-risk; review_budget_authored_lines=400; chain_strategy=deferred. No commit, branch, PR, remote or push authorization is inferred for the new change.
+  Initialization state: OpenSpec is initialized and the previous bootstrap-operations-inbox change is archived. New changes must preserve canonical specs and unrelated recovery work.
 
 strict_tdd: true
 
@@ -16,9 +16,9 @@ rules:
   proposal:
     require_problem_statement: true
     guidelines:
-      - Keep the approved first frontend change limited to Base mínima and Bandeja operativa workstation.
-      - State explicit scope, non-goals, risks, and rollback boundaries.
-      - Treat frozen OpenPencil designs and supplied evidence as the visual authority.
+      - Keep the catalog hierarchy change limited to Clases, Familias and Tipos.
+      - State explicit scope, non-goals, risks, backend-authoritative relations and rollback boundaries.
+      - Treat approved OpenPencil designs as visual authority only after auditing them against Clase -> Familia -> Tipo.
   spec:
     require_acceptance_criteria: true
     guidelines:
@@ -30,7 +30,7 @@ rules:
     guidelines:
       - Preserve feature-first Scope Rule and Screaming Architecture.
       - Keep shared infrastructure minimal and justify every transversal abstraction.
-      - Record OpenPencil fidelity, accessibility, and workstation-only boundaries.
+      - Record OpenPencil fidelity, accessibility, immutable catalog-parent relationships and workstation-only boundaries.
   tasks:
     protect_review_workload: true
     guidelines:
@@ -47,16 +47,16 @@ rules:
     build_command: "pnpm build"
     coverage_threshold: 0
     guidelines:
-      - Report unavailable commands honestly when package manifests or tooling do not yet exist.
-      - Verify the implementation against the approved frozen workstation design and accessibility constraints.
+      - Run and report the configured pnpm quality commands honestly.
+      - Verify the implementation against the audited approved workstation design, backend hierarchy contracts and accessibility constraints.
   archive:
     - Preserve an auditable record of deviations, follow-up work, and unexecuted checks.
 
 testing:
-  detected: "2026-08-30"
+  detected: "2026-08-31"
   runner:
-    command: ""
-    framework: ""
+    command: "pnpm test"
+    framework: "Vitest"
   intended:
     package_manager: pnpm
     unit: "pnpm test"
@@ -64,33 +64,33 @@ testing:
     component: "pnpm exec vitest"
   layers:
     unit:
-      available: false
+      available: true
       tool: "Vitest"
-      note: "Planned; no package.json, source, or test files exist yet."
+      note: "Runnable with pnpm test."
     component:
-      available: false
+      available: true
       tool: "React Testing Library with Vitest"
-      note: "Planned; no package.json, source, or test files exist yet."
+      note: "Runnable through the Vitest suite."
     e2e:
-      available: false
+      available: true
       tool: "Playwright"
-      note: "Planned; no package.json, source, or test files exist yet."
+      note: "Runnable with pnpm test:e2e; Chromium was installed for the previous verified change."
   coverage:
     available: false
-    note: "No coverage command is available in the greenfield workspace."
+    note: "No dedicated coverage script is configured."
   quality:
     compiler_or_type_checker:
-      available: false
-      note: "TypeScript is mandatory but no compiler/tooling is installed yet."
+      available: true
+      note: "Runnable with pnpm typecheck."
     linter:
-      available: false
+      available: true
       tool: ESLint
-      note: "Planned; no package.json exists yet."
+      note: "Runnable with pnpm lint."
     formatter:
-      available: false
+      available: true
       tool: Prettier
-      note: "Planned; no package.json exists yet."
+      note: "Runnable with pnpm format:check."
     build:
-      available: false
+      available: true
       command: "pnpm build"
-      note: "Planned Vite build; no package.json exists yet."
+      note: "Runnable Vite production build."

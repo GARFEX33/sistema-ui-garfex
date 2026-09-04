@@ -56,4 +56,70 @@ describe('runtime and presentation fixture boundary', () => {
       /@tanstack\/(react-form|react-table|react-virtual)/,
     )
   })
+
+  it('keeps the Catalog runtime free of populated presentation fixtures', () => {
+    const catalog = readFileSync(
+      resolve(
+        root,
+        'src/features/catalog-hierarchy/CatalogHierarchyScreen.tsx',
+      ),
+      'utf8',
+    )
+    expect(catalog).not.toMatch(
+      /storybook|Materiales|Canalizaciones|Tubería|fetch|storage/i,
+    )
+  })
+
+  it('keeps the Catalog adapter feature-local and free of runtime fixtures', () => {
+    const adapter = readFileSync(
+      resolve(root, 'src/features/catalog-hierarchy/catalogHierarchy.api.ts'),
+      'utf8',
+    )
+    expect(adapter).toContain("from 'convex/browser'")
+    expect(adapter).toContain("from 'convex/server'")
+    const mutationRoutes = [
+      ...adapter.matchAll(
+        /(['"])(catalogoAdmin\/jerarquia:(?:crearClase|crearFamilia|crearTipo))\1/g,
+      ),
+    ].map(([, , route]) => route)
+    expect(new Set(mutationRoutes)).toEqual(
+      new Set([
+        'catalogoAdmin/jerarquia:crearClase',
+        'catalogoAdmin/jerarquia:crearFamilia',
+        'catalogoAdmin/jerarquia:crearTipo',
+      ]),
+    )
+    expect(adapter).toMatch(/\bclient\.mutation\s*\(/)
+    expect(adapter).not.toMatch(
+      /`[^`]*catalogoAdmin\/jerarquia|String\.(?:fromCharCode|fromCodePoint)|decodeURIComponent|(?:client|operation)\s*\[\s*['"`]/,
+    )
+    expect(adapter).not.toMatch(/\\u[0-9a-fA-F]{4}/)
+    expect(adapter).not.toMatch(
+      /storybook|fetch|localStorage|sessionStorage|addEventListener|\b(?:update|activate|deactivate|activar|desactivar|actualizar)\b|\bRecurso\b|catalogoRecursos|\bfixtures?\b/i,
+    )
+  })
+
+  it('keeps Convex out of app, Bandeja, providers, stories, and visible wiring', () => {
+    const appFiles = sourceFiles(resolve(root, 'src/app'))
+    const appSource = appFiles
+      .map((file) => readFileSync(file, 'utf8'))
+      .join('\n')
+    const stories = sourceFiles(resolve(root, 'storybook'))
+      .map((file) => readFileSync(file, 'utf8'))
+      .join('\n')
+    expect(appSource).not.toMatch(/from ['"]convex\//)
+    expect(appSource).not.toMatch(/HierarchyBrowser|HierarchyReadPanel/)
+    expect(stories).not.toMatch(/from ['"]convex\//)
+    expect(
+      readFileSync(
+        resolve(
+          root,
+          'src/features/catalog-hierarchy/CatalogHierarchyScreen.tsx',
+        ),
+        'utf8',
+      ),
+    ).not.toMatch(
+      /HierarchyBrowser|HierarchyReadPanel|KeyboardControllerProvider|createContext|addEventListener|onKeyDown|event\.code|(?:selected|active)Index|roving/i,
+    )
+  })
 })
