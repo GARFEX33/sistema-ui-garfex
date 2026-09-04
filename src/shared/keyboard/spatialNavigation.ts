@@ -281,7 +281,8 @@ export function focusSpatialTarget({
   )
     return { status: 'focus-failed', id: selected.id }
   target.focus({ preventScroll: true })
-  return document.activeElement === target
-    ? { status: 'moved', id: selected.id }
-    : { status: 'focus-failed', id: selected.id }
+  if (document.activeElement !== target)
+    return { status: 'focus-failed', id: selected.id }
+  target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  return { status: 'moved', id: selected.id }
 }

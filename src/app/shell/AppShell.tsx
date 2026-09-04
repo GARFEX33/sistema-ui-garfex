@@ -8,6 +8,11 @@ import { KeyboardHelpDialog } from './KeyboardHelpDialog'
 import { useKeyboardCommands } from '../../shared/keyboard/keyboardControllerContext'
 import { focusSpatialTarget } from '../../shared/keyboard/spatialNavigation'
 
+function focusRow(candidate: HTMLElement | null) {
+  candidate?.focus({ preventScroll: true })
+  candidate?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+}
+
 function GlobalHelpTrigger() {
   const command = useKeyboardCommands().find(
     (candidate) => candidate.id === 'global.contextual-help',
@@ -71,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         const firstClass = boundaryRoot.querySelector<HTMLElement>(
           '[data-catalog-level="classes"][data-spatial-id]',
         )
-        firstClass?.focus({ preventScroll: true })
+        focusRow(firstClass)
         firstClass?.click()
         return
       }
@@ -103,11 +108,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           target.dataset.spatialId === 'catalog.tab.attributes'
         ) {
           event.preventDefault()
-          boundaryRoot
-            .querySelector<HTMLElement>(
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
               '[data-catalog-level="attributes"][data-spatial-id]',
-            )
-            ?.focus({ preventScroll: true })
+            ),
+          )
           return
         }
         if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
@@ -117,11 +122,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         ]
         const index = tabs.indexOf(target)
         if (event.key === 'ArrowLeft' && index === 0) {
-          boundaryRoot
-            .querySelector<HTMLElement>(
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
               '[data-catalog-level="types"][aria-pressed="true"]',
-            )
-            ?.focus({ preventScroll: true })
+            ),
+          )
           return
         }
         const nextIndex = Math.max(
@@ -133,7 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )
         const nextTab = tabs[nextIndex]
         if (nextTab && nextTab !== target) {
-          nextTab.focus({ preventScroll: true })
+          focusRow(nextTab)
           nextTab.click()
         }
         return
@@ -163,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       event.preventDefault()
       const level = row.dataset.catalogLevel!
       const move = (candidate: HTMLElement | null) => {
-        candidate?.focus({ preventScroll: true })
+        focusRow(candidate)
         candidate?.click()
       }
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
@@ -174,11 +179,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         ]
         const index = rows.indexOf(row)
         if (level === 'attributes' && event.key === 'ArrowUp' && index === 0) {
-          boundaryRoot
-            .querySelector<HTMLElement>(
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
               '[data-spatial-id="catalog.tab.attributes"]',
-            )
-            ?.focus({ preventScroll: true })
+            ),
+          )
           return
         }
         const next = Math.max(
@@ -229,9 +234,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           ),
         )
       } else {
-        document
-          .querySelector<HTMLElement>('[data-spatial-id="sidebar.catalogo"]')
-          ?.focus({ preventScroll: true })
+        focusRow(
+          document.querySelector<HTMLElement>(
+            '[data-spatial-id="sidebar.catalogo"]',
+          ),
+        )
       }
     },
     [],
