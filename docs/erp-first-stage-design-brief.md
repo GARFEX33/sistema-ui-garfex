@@ -240,33 +240,35 @@ El sistema conserva última ubicación, filtros, selección, columnas, densidad 
 
 ## 11. Filosofía centrada en el teclado
 
-Todos los flujos centrales deben poder operarse con teclado:
+Keyboard First es una regla permanente y transversal de GARFEX: todo flujo real debe poder completarse sin mouse, mientras el mouse continúa siendo una alternativa válida. Las nuevas superficies deben reutilizar este arbitraje, navegación espacial y ciclo de foco compartidos; no deben inventar atajos incompatibles.
 
-- Buscar y navegar.
-- Recorrer tablas.
-- Abrir registros.
-- Completar formularios.
-- Seleccionar opciones controladas.
-- Seleccionar lotes.
-- Revisar y aprobar.
-- Guardar, cancelar y deshacer.
-- Abrir acciones contextuales.
-- Cambiar de módulo o vista.
+### Contrato permanente de interacción
 
-### Contrato inicial de atajos
+- `Tab` y `Shift+Tab` conservan el recorrido nativo entre zonas mayores. GARFEX no captura `Tab` globalmente ni instala un orden roving para todo el documento.
+- Las flechas sin modificar navegan por geometría física vigente del viewport entre controles conectados, visibles, habilitados, operables y pertenecientes al contexto activo. Se priorizan semiplano, proximidad y alineación perpendicular; el desempate es determinista y no depende de idioma, texto, RTL, orden DOM u orden de una lista.
+- `Enter` activa únicamente el control enfocado cuando tiene una acción real; en una fila de atributo activa abre su edición. `E` ofrece la misma edición contextual. `O` abre Opciones sólo cuando esa definición es de tipo `OPCION`. `Escape` cierra, cancela o vuelve según el contexto activo y restaura el foco al opener válido o a un fallback accesible explícito.
+- La edición, los campos de formulario, autocomplete, `contenteditable` y la composición IME suspenden flechas y atajos de una sola tecla. También se respetan el consumo local, `defaultPrevented` y los modificadores no registrados.
+- `N` o `n` abre sólo la acción real y visible Nueva Clase en Catálogo cuando está habilitada y no hay un overlay superior. No crea acciones para Bandeja, Familia, Tipo o Recurso.
+- `?` abre la ayuda contextual por el carácter semántico producido por el teclado, incluso con los modificadores necesarios para una distribución internacional; no se asume la posición física de `/`.
+- `Ctrl/Cmd + K` conserva la Command Palette exacta de cada plataforma, sin Shift, Alt ni el modificador opuesto. `Ctrl+N` permanece reservado al navegador o sistema y GARFEX no lo captura ni cancela.
+- La contención de foco sólo existe dentro de un modal o diálogo activo. Al cerrarlo, la contención desaparece y el foco no se pierde en `body`, el fondo inactivo o un nodo desconectado.
+- Todo control enfocado muestra un indicador perceptible de foco conforme al objetivo WCAG 2.2 AA. La operación por teclado no elimina las alternativas visibles de mouse o controles táctiles.
 
-| Atajo | Acción |
+### Tabla canónica de atajos
+
+| Atajo | Regla y alcance |
 |---|---|
-| `Ctrl/Cmd + K` | Abrir la paleta unificada |
-| `/` | Enfocar la búsqueda del espacio actual |
-| `?` | Abrir la referencia de atajos |
-| `Esc` | Cerrar la capa actual o cancelar |
-| `Enter` | Abrir el resultado o aceptar una selección no destructiva |
-| `Ctrl/Cmd + Enter` | Guardar o enviar explícitamente |
-| Flechas | Navegar tablas, opciones y menús |
-| `Espacio` | Seleccionar la fila enfocada cuando corresponda |
+| `Tab` / `Shift+Tab` | Recorrido nativo entre zonas; nunca captura global |
+| Flechas | Navegación espacial física entre controles elegibles del contexto activo |
+| `Enter` / `E` | Edita la definición de la fila de atributo activa; `Enter` conserva su activación nativa fuera de esa acción real |
+| `O` | Abre Opciones sólo para la fila activa cuya definición es `OPCION` |
+| `Escape` | Cierra o cancela una capa y restaura opener o fallback una sola vez |
+| `N` / `n` | Abre la acción contextual real disponible en Catálogo |
+| `?` | Ayuda contextual por `event.key === "?"`, sin asumir layout estadounidense |
+| `Ctrl/Cmd + K` | Command Palette con el modificador exacto de la plataforma |
+| `Ctrl+N` | Comando reservado; GARFEX lo deja pasar sin cancelarlo |
 
-Los atajos avanzados se incorporan después de observar uso real. Siempre deben tener una alternativa visible por mouse o controles táctiles.
+Este primer slice integra Bandeja, Catálogo, las acciones contextuales disponibles, edición de atributos, administración de opciones `OPCION`, Command Palette y ayuda contextual. Familia, Tipo y Recurso, las acciones que no tengan una capacidad real aprobada, superficies densas o virtualizadas y los flujos responsive, móvil y touch permanecen diferidos hasta que exista una capacidad real aprobada. Esa postergación no reduce la regla permanente: cada integración futura debe reutilizar este contrato y aportar su propia evidencia.
 
 ## 12. Paleta de comandos
 

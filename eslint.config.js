@@ -12,6 +12,7 @@ export default tseslint.config(
       'storybook-static',
       'coverage',
       'node_modules',
+      'recovery',
       '.codegraph',
       'src/app/routeTree.gen.ts',
     ],
