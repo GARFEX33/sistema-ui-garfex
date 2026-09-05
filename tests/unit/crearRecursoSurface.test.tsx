@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CrearRecursoSurface } from '../../src/features/resources-master/CrearRecursoSurface'
@@ -136,7 +142,11 @@ const defaultAssignments = [
     orden: 2,
     aplicabilidad: 'REQUIRED',
   }),
-  assignment({ id: 'attr-numero', definicionAtributoId: 'def-numero', orden: 3 }),
+  assignment({
+    id: 'attr-numero',
+    definicionAtributoId: 'def-numero',
+    orden: 3,
+  }),
   assignment({ id: 'attr-bool', definicionAtributoId: 'def-bool', orden: 4 }),
   assignment({
     id: 'attr-hidden',
@@ -146,7 +156,9 @@ const defaultAssignments = [
   }),
 ]
 
-function fakeApi(overrides: Partial<ResourcesMasterApi> = {}): ResourcesMasterApi {
+function fakeApi(
+  overrides: Partial<ResourcesMasterApi> = {},
+): ResourcesMasterApi {
   return {
     listResources: vi.fn(),
     searchResources: vi.fn(),
@@ -194,8 +206,9 @@ function fakeApi(overrides: Partial<ResourcesMasterApi> = {}): ResourcesMasterAp
       continuationCursor: null,
       isExhausted: true,
     })),
-    getAttributeDefinition: vi.fn(async ({ definicionAtributoId }: { definicionAtributoId: unknown }) =>
-      definitionsById[String(definicionAtributoId)] ?? null,
+    getAttributeDefinition: vi.fn(
+      async ({ definicionAtributoId }: { definicionAtributoId: unknown }) =>
+        definitionsById[String(definicionAtributoId)] ?? null,
     ),
     listAttributeOptions: vi.fn(async () => ({
       items: [
@@ -307,13 +320,15 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
 
     await chooseOption(user, 'Tipo', 'Arena')
     await waitFor(() =>
-      expect(api.listUnitPolicies).toHaveBeenCalledWith({ tipoRecursoId: 'type-1' }),
+      expect(api.listUnitPolicies).toHaveBeenCalledWith({
+        tipoRecursoId: 'type-1',
+      }),
     )
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Unidad natural/ })).toHaveTextContent(
-        'Metro cúbico (m³)',
-      ),
+      expect(
+        screen.getByRole('button', { name: /Unidad natural/ }),
+      ).toHaveTextContent('Metro cúbico (m³)'),
     )
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
   })
@@ -344,7 +359,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(
       within(listbox).queryByRole('option', { name: /Tonelada|TON/ }),
     ).not.toBeInTheDocument()
-    expect(within(listbox).getByRole('option', { name: /Kilogramo/ })).toBeVisible()
+    expect(
+      within(listbox).getByRole('option', { name: /Kilogramo/ }),
+    ).toBeVisible()
     await user.keyboard('{Escape}')
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled(),
@@ -367,9 +384,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Unidad natural/ })).toHaveTextContent(
-        'Metro cúbico (m³)',
-      ),
+      expect(
+        screen.getByRole('button', { name: /Unidad natural/ }),
+      ).toHaveTextContent('Metro cúbico (m³)'),
     )
 
     await chooseOption(user, 'Clase', 'Otro')
@@ -382,11 +399,13 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.getByRole('button', { name: /Tipo/ })).toHaveTextContent(
       'Elegir Tipo…',
     )
-    expect(screen.getByRole('button', { name: /Unidad natural/ })).toHaveTextContent(
-      'Elegir Unidad natural…',
-    )
+    expect(
+      screen.getByRole('button', { name: /Unidad natural/ }),
+    ).toHaveTextContent('Elegir Unidad natural…')
     expect(screen.getByRole('button', { name: /Tipo/ })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Unidad natural/ })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: /Unidad natural/ }),
+    ).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
   })
 
@@ -455,7 +474,9 @@ describe('CrearRecursoSurface — Paso 2 (Atributos dinámicos)', () => {
     await screen.findByText('Lavada')
 
     await chooseOption(user, 'Lavada', 'Sí')
-    expect(screen.getByRole('button', { name: /Lavada/ })).toHaveTextContent('Sí')
+    expect(screen.getByRole('button', { name: /Lavada/ })).toHaveTextContent(
+      'Sí',
+    )
   })
 
   it('renders plain text/number inputs for TEXTO/NUMERO attributes', async () => {
@@ -639,13 +660,19 @@ describe('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
     })
     expect(payload.valores).toEqual(
       expect.arrayContaining([
-        { atributoRecursoId: 'attr-opcion', valor: 'Fina', opcionAtributoId: 'opt-fina' },
+        {
+          atributoRecursoId: 'attr-opcion',
+          valor: 'Fina',
+          opcionAtributoId: 'opt-fina',
+        },
         { atributoRecursoId: 'attr-numero', valor: 1600 },
         { atributoRecursoId: 'attr-bool', valor: true },
       ]),
     )
     expect(payload.valores).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ atributoRecursoId: 'attr-texto' })]),
+      expect.arrayContaining([
+        expect.objectContaining({ atributoRecursoId: 'attr-texto' }),
+      ]),
     )
 
     expect(await screen.findByText('✓ Recurso creado')).toBeVisible()
@@ -678,7 +705,10 @@ describe('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
   })
 
   it('blocks a second submit while the first one is still in flight', async () => {
-    let resolveCreate: (value: { disposition: 'CREATED'; item: ReturnType<typeof resourceSummary> }) => void
+    let resolveCreate: (value: {
+      disposition: 'CREATED'
+      item: ReturnType<typeof resourceSummary>
+    }) => void
     const createResource = vi.fn(
       () =>
         new Promise((resolve) => {

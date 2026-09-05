@@ -8,7 +8,13 @@ export interface FieldProps {
   children: ReactNode
 }
 
-export function Field({ label, htmlFor, hideLabel, emphasis, children }: FieldProps) {
+export function Field({
+  label,
+  htmlFor,
+  hideLabel,
+  emphasis,
+  children,
+}: FieldProps) {
   return (
     <div
       className={

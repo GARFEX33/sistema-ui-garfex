@@ -27,7 +27,10 @@
 /* prettier-ignore */
 .catalog-workstation{display:grid;grid-template-columns:520px minmax(0,1fr);gap:22px;margin-top:12px}
 /* Domain sizing remains local; WorkCard owns neutral surface chrome and padding. */
-.catalog-browser,.catalog-summary{min-height:550px}
+.catalog-browser,
+.catalog-summary {
+  min-height: 550px;
+}
 /* prettier-ignore */
 .catalog-browser h2{margin:0 0 24px;font-size:13px}
 /* prettier-ignore */

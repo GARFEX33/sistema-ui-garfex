@@ -363,7 +363,11 @@ export function CatalogCreateSurface({
               </div>
             )}
             <div className="catalog-dialog-fields">
-              <Field label="Clave" htmlFor={keyId} hideLabel={level === 'class'}>
+              <Field
+                label="Clave"
+                htmlFor={keyId}
+                hideLabel={level === 'class'}
+              >
                 <input
                   ref={keyRef}
                   onKeyDown={handleDialogKeyDown}

@@ -4,13 +4,19 @@ import type { ResourceListPage } from '../../src/features/resources-master/resou
 
 type Row = { id: string; nombre: string }
 
-const page = (items: Row[], continueCursor: string, isDone = false): ResourceListPage<Row> => ({
+const page = (
+  items: Row[],
+  continueCursor: string,
+  isDone = false,
+): ResourceListPage<Row> => ({
   page: items,
   isDone,
   continueCursor,
 })
 
-const adapter = (load: (request: unknown) => Promise<ResourceListPage<Row>>) => ({ load })
+const adapter = (
+  load: (request: unknown) => Promise<ResourceListPage<Row>>,
+) => ({ load })
 
 describe('resources master list controller', () => {
   it('keeps filters and cursor across explicit continuation', async () => {
@@ -42,16 +48,23 @@ describe('resources master list controller', () => {
       .fn()
       .mockRejectedValueOnce(new Error('transient'))
       .mockResolvedValueOnce(page([{ id: 'a', nombre: 'A' }], 'done', true))
-    const controller = createResourcesMasterListController({ adapter: adapter(load) })
+    const controller = createResourcesMasterListController({
+      adapter: adapter(load),
+    })
 
     expect(await controller.start()).toBe(true)
     expect(load).toHaveBeenCalledTimes(2)
-    expect(controller.getState()).toMatchObject({ status: 'ready', isDone: true })
+    expect(controller.getState()).toMatchObject({
+      status: 'ready',
+      isDone: true,
+    })
   })
 
   it('keeps initial-error after the bounded retry and exposes manual retry', async () => {
     const load = vi.fn().mockRejectedValue(new Error('transport'))
-    const controller = createResourcesMasterListController({ adapter: adapter(load) })
+    const controller = createResourcesMasterListController({
+      adapter: adapter(load),
+    })
 
     expect(await controller.start()).toBe(false)
     expect(load).toHaveBeenCalledTimes(2)
@@ -66,8 +79,19 @@ describe('resources master list controller', () => {
     const load = vi
       .fn()
       .mockResolvedValueOnce(page([{ id: 'a', nombre: 'first' }], 'next'))
-      .mockResolvedValueOnce(page([{ id: 'a', nombre: 'second' }, { id: 'b', nombre: 'B' }], 'ignored', true))
-    const controller = createResourcesMasterListController({ adapter: adapter(load) })
+      .mockResolvedValueOnce(
+        page(
+          [
+            { id: 'a', nombre: 'second' },
+            { id: 'b', nombre: 'B' },
+          ],
+          'ignored',
+          true,
+        ),
+      )
+    const controller = createResourcesMasterListController({
+      adapter: adapter(load),
+    })
 
     await controller.start()
     await controller.continue()
@@ -82,7 +106,12 @@ describe('resources master list controller', () => {
 
   it('discards a stale response after filters change mid-flight', async () => {
     let resolve!: (value: ResourceListPage<Row>) => void
-    const load = vi.fn(() => new Promise<ResourceListPage<Row>>((done) => { resolve = done }))
+    const load = vi.fn(
+      () =>
+        new Promise<ResourceListPage<Row>>((done) => {
+          resolve = done
+        }),
+    )
     const controller = createResourcesMasterListController({
       filters: { lifecycle: 'ACTIVE' },
       adapter: adapter(load),
@@ -106,7 +135,9 @@ describe('resources master list controller', () => {
       .mockResolvedValueOnce(page([{ id: 'a', nombre: 'A' }], 'next'))
       .mockRejectedValueOnce(new Error('transport'))
       .mockResolvedValueOnce(page([{ id: 'b', nombre: 'B' }], 'done', true))
-    const controller = createResourcesMasterListController({ adapter: adapter(load) })
+    const controller = createResourcesMasterListController({
+      adapter: adapter(load),
+    })
 
     await controller.start()
     await controller.continue()
@@ -125,7 +156,9 @@ describe('resources master list controller', () => {
 
   it('reports empty when the first page is already done with no items', async () => {
     const load = vi.fn().mockResolvedValueOnce(page([], 'done', true))
-    const controller = createResourcesMasterListController({ adapter: adapter(load) })
+    const controller = createResourcesMasterListController({
+      adapter: adapter(load),
+    })
 
     await controller.start()
     expect(controller.getState().status).toBe('empty')

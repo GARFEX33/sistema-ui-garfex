@@ -77,9 +77,7 @@ export function DialogHeading({
 }
 
 export function DialogContent({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-  )
+  return <div className="flex min-h-0 flex-1 flex-col">{children}</div>
 }
 
 export function DialogActions({ children }: { children: ReactNode }) {
