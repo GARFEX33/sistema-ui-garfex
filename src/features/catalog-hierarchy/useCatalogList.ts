@@ -16,16 +16,20 @@ export type CatalogListOperation =
   | 'attributes'
 export type CatalogListStatus = ParentGatedListStatus
 
-export interface CatalogListRequest
-  extends ParentGatedListRequest<CatalogListOperation, OpaqueCursor> {}
+export type CatalogListRequest = ParentGatedListRequest<
+  CatalogListOperation,
+  OpaqueCursor
+>
 
 export interface CatalogListAdapter<T extends { id: unknown }>
   extends ParentGatedListAdapter<T, CatalogListOperation, OpaqueCursor> {
   load: (request: CatalogListRequest) => Promise<CatalogListPage<T>>
 }
 
-export interface CatalogListState<T extends { id: unknown }>
-  extends ParentGatedListState<T, CatalogListOperation> {}
+export type CatalogListState<T extends { id: unknown }> = ParentGatedListState<
+  T,
+  CatalogListOperation
+>
 
 export interface CatalogListController<T extends { id: unknown }>
   extends ParentGatedListController<T, CatalogListOperation> {
