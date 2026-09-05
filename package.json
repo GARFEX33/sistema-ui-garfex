@@ -26,11 +26,13 @@
     "verify:runtime-bundle": "node scripts/verify-runtime-fixtures.mjs"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.102.8",
     "@tanstack/react-router": "1.131.27",
     "convex": "1.45.0",
     "react": "19.1.1",
     "react-aria-components": "1.11.0",
-    "react-dom": "19.1.1"
+    "react-dom": "19.1.1",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
