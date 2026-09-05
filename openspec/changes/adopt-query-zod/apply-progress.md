@@ -96,3 +96,19 @@ Slice B–E are deliberately untouched. Exact unchecked implementation-owned row
 - Strengthened the path-based architecture guard for the sole provider and `QueryClient` construction, AppProviders import/default policy, and bare or subpath Convex imports under `src/app/**`.
 - Reverified with `pnpm test -- tests/architecture/queryZodBoundaries.test.ts` (exit 0; 30 files, 338 tests) and `pnpm typecheck` (exit 0).
 - After formatting all five Slice A files, tracked and untracked Slice A changes total **246 authored lines** (226 additions, 20 deletions), below the 400-line budget.
+
+## Slice B — list transport
+
+- **Work unit:** Slice B only; Slice C was not started.
+- **RED:** Added the list-only contract matrix before the Zod implementation. `pnpm test -- tests/unit/resourcesMasterApi.test.ts` exited 0 with 30 files / 340 tests because the replaced manual parser was already behavior-equivalent. A black-box RED failure would have required changing the preserved contract, so no failure is claimed.
+- **GREEN:** Added private Zod 4 schemas and an explicit list-only projection behind `parseResourceListPage`; its public return type and `bad()` generic error seam remain unchanged. The focused command exited 0 with 30 files / 340 tests.
+- **TRIANGULATE:** Added null optional-ID, missing revision, non-string cursor, opaque ID, ignored-extra, no-coercion/no-trim/no-default, and `NaN`/infinite numeric-revision cases. The focused command exited 0 with 30 files / 340 tests.
+- **REFACTOR:** Kept schemas private and the projection local to the list parser; Prettier made only test formatting changes. No non-list parser was changed.
+
+### Slice B verification and rollback
+
+- `pnpm typecheck` exited 0 (`pnpm router:generate && tsc -b`; route tree generated in 122ms with no generated-file diff).
+- Targeted ESLint, Prettier check, and `git diff --check` exited 0.
+- **Rollback boundary:** restore only the manual list-envelope/list-summary path in `src/features/resources-master/resourcesMaster.api.ts` and the Slice B tests/checklist/evidence. Detail, context, creation, mutation, transport, UI, and backend remain independent.
+- **Count:** 244 authored lines (220 additions, 24 deletions), below the 400-line limit.
+- **Commit verdict:** no commit created (delegated scope); this is one reviewable list-transport work unit.

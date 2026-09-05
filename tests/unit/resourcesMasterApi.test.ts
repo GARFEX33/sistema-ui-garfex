@@ -35,6 +35,22 @@ const nativePage = (
   ...overrides,
 })
 
+const expectGenericListError = (value: unknown) => {
+  const payloadMarker = 'private-list-payload-marker'
+  let thrown: unknown
+  try {
+    parseResourceListPage(value)
+  } catch (error) {
+    thrown = error
+  }
+  expect(thrown).toMatchObject({
+    name: 'Error',
+    message: 'Invalid resources master response',
+  })
+  expect(thrown).not.toMatchObject({ name: 'ZodError' })
+  expect((thrown as Error).message).not.toContain(payloadMarker)
+}
+
 describe('resources master API boundary', () => {
   it('parses a valid list page and rejects malformed envelopes', () => {
     expect(parseResourceListPage(nativePage()).page[0]?.id).toBe('resource-1')
@@ -66,11 +82,135 @@ describe('resources master API boundary', () => {
     ).toThrow()
   })
 
-  it('accepts an optional organizacionId when present and valid', () => {
+  it('preserves opaque IDs, optional organization IDs, and every classification state', () => {
+    const opaqueId = { resource: 'opaque' }
+    const opaqueOrganizationId = ['organization', 1]
+    const reasons = ['declared inactive']
+    const items = [
+      summary({
+        id: opaqueId,
+        tipoRecursoId: 7,
+        unidadId: false,
+        classificationStatus: { state: 'EFFECTIVE', reasons: [] },
+        ignoredItemField: 'ignored',
+      }),
+      summary({
+        organizacionId: opaqueOrganizationId,
+        classificationStatus: { state: 'INERT', reasons },
+      }),
+      summary({
+        classificationStatus: {
+          state: 'BROKEN_REFERENCE',
+          reasons: [],
+          ignoredStatusField: 'ignored',
+        },
+      }),
+    ]
+
     const result = parseResourceListPage(
-      nativePage([summary({ organizacionId: 'org-1' })]),
+      nativePage(items, { ignoredEnvelopeField: 'ignored' }),
     )
-    expect(result.page[0]).toMatchObject({ organizacionId: 'org-1' })
+
+    expect(result).toEqual({
+      page: [
+        {
+          id: opaqueId,
+          identificadorTecnico: 'REC-000001',
+          nombre: 'Cable UTP',
+          tipoRecursoId: 7,
+          unidadId: false,
+          activo: true,
+          revision: 1,
+          classificationStatus: { state: 'EFFECTIVE', reasons: [] },
+        },
+        {
+          id: 'resource-1',
+          identificadorTecnico: 'REC-000001',
+          nombre: 'Cable UTP',
+          tipoRecursoId: 'type-1',
+          unidadId: 'unit-1',
+          organizacionId: opaqueOrganizationId,
+          activo: true,
+          revision: 1,
+          classificationStatus: { state: 'INERT', reasons },
+        },
+        {
+          id: 'resource-1',
+          identificadorTecnico: 'REC-000001',
+          nombre: 'Cable UTP',
+          tipoRecursoId: 'type-1',
+          unidadId: 'unit-1',
+          activo: true,
+          revision: 1,
+          classificationStatus: { state: 'BROKEN_REFERENCE', reasons: [] },
+        },
+      ],
+      isDone: false,
+      continueCursor: 'opaque-next',
+    })
+    expect(result.page).not.toBe(items)
+    expect(result.page[1]?.classificationStatus.reasons).not.toBe(reasons)
+  })
+
+  it('rejects invalid list envelopes, items, statuses, and reasons generically', () => {
+    const payloadMarker = 'private-list-payload-marker'
+    for (const value of [
+      { isDone: false, continueCursor: 'next' },
+      nativePage([], { page: 'not-an-array' }),
+      nativePage([], { isDone: 'false' }),
+      nativePage([], { continueCursor: null }),
+      nativePage([], { continueCursor: 1 }),
+      nativePage([{}]),
+      nativePage([summary({ id: null })]),
+      nativePage([summary({ tipoRecursoId: null })]),
+      nativePage([summary({ organizacionId: null })]),
+      nativePage([
+        summary({ classificationStatus: { state: 'UNKNOWN', reasons: [] } }),
+      ]),
+      nativePage([
+        summary({ classificationStatus: { state: 'EFFECTIVE', reasons: [1] } }),
+      ]),
+      nativePage([summary({ classificationStatus: payloadMarker })]),
+    ]) {
+      expectGenericListError(value)
+    }
+  })
+
+  it('does not coerce, trim, default, infer, or narrow numeric list values', () => {
+    const opaqueId = { nested: ['id'] }
+    const result = parseResourceListPage(
+      nativePage([
+        summary({
+          id: opaqueId,
+          identificadorTecnico: '  REC-000001  ',
+          nombre: '  Cable UTP  ',
+          organizacionId: undefined,
+          revision: Number.NaN,
+          classificationStatus: { state: 'INERT', reasons: [] },
+        }),
+        summary({ revision: Infinity }),
+      ]),
+    )
+
+    expect(result.page[0]).toMatchObject({
+      id: opaqueId,
+      identificadorTecnico: '  REC-000001  ',
+      nombre: '  Cable UTP  ',
+      classificationStatus: { state: 'INERT', reasons: [] },
+    })
+    expect(result.page[0]).not.toHaveProperty('organizacionId')
+    expect(result.page[0]?.revision).toBeNaN()
+    expect(result.page[1]?.revision).toBe(Infinity)
+
+    for (const item of [
+      summary({ identificadorTecnico: 1 }),
+      summary({ activo: 'true' }),
+      summary({ revision: '1' }),
+      summary({ revision: undefined }),
+      summary({ activo: undefined }),
+    ]) {
+      expectGenericListError(nativePage([item]))
+    }
   })
 
   it('passes through detail null and validates a populated detail', () => {

@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from 'convex/browser'
 import { makeFunctionReference } from 'convex/server'
 import type { FunctionReference } from 'convex/server'
+import { z } from 'zod'
 import type {
   ResourceAttributeAssignment,
   ResourceAttributeAssignmentListInput,
@@ -589,27 +590,66 @@ export function parseAttributeOptionsPage(
   return { ...result, items: result.items.map(attributeOptionItem) }
 }
 
-const nativePage = (value: unknown) => {
-  if (
-    !record(value) ||
-    !Array.isArray(value.page) ||
-    typeof value.isDone !== 'boolean' ||
-    typeof value.continueCursor !== 'string'
-  ) {
-    return bad()
-  }
-  return {
-    page: value.page as unknown[],
-    isDone: value.isDone,
-    continueCursor: value.continueCursor,
-  }
-}
+const resourceListIdSchema = z.custom<ResourceId>(
+  (value) => value !== undefined && value !== null,
+)
+
+const resourceListRevisionSchema = z.custom<number>(
+  (value) => typeof value === 'number',
+)
+
+const resourceListClassificationStatusSchema = z.object({
+  state: z.enum(['EFFECTIVE', 'INERT', 'BROKEN_REFERENCE']),
+  reasons: z.array(z.string()),
+})
+
+const resourceListSummarySchema = z.object({
+  id: resourceListIdSchema,
+  identificadorTecnico: z.string(),
+  nombre: z.string(),
+  tipoRecursoId: resourceListIdSchema,
+  unidadId: resourceListIdSchema,
+  organizacionId: resourceListIdSchema.optional(),
+  activo: z.boolean(),
+  revision: resourceListRevisionSchema,
+  classificationStatus: resourceListClassificationStatusSchema,
+})
+
+const resourceListPageSchema = z.object({
+  page: z.array(resourceListSummarySchema),
+  isDone: z.boolean(),
+  continueCursor: z.string(),
+})
+
+const resourceListSummary = (
+  value: z.infer<typeof resourceListSummarySchema>,
+): ResourceSummary => ({
+  id: value.id,
+  identificadorTecnico: value.identificadorTecnico,
+  nombre: value.nombre,
+  tipoRecursoId: value.tipoRecursoId,
+  unidadId: value.unidadId,
+  ...(value.organizacionId === undefined
+    ? {}
+    : { organizacionId: value.organizacionId }),
+  activo: value.activo,
+  revision: value.revision,
+  classificationStatus: {
+    state: value.classificationStatus.state,
+    reasons: [...value.classificationStatus.reasons],
+  },
+})
 
 export function parseResourceListPage(
   value: unknown,
 ): ResourceListPage<ResourceSummary> {
-  const result = nativePage(value)
-  return { ...result, page: result.page.map(resourceSummary) }
+  const result = resourceListPageSchema.safeParse(value)
+  if (!result.success) return bad()
+  return {
+    page: result.data.page.map(resourceListSummary),
+    isDone: result.data.isDone,
+    continueCursor: result.data.continueCursor,
+  }
 }
 
 export function parseResourceDetail(value: unknown): ResourceDetail | null {
