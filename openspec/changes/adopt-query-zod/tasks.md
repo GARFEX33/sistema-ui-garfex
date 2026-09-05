@@ -30,7 +30,7 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 | C2 — query actions and concurrency                   |  260–360 | C1                    | C1 read model → key-scoped semantic actions and continuation/retry concurrency                                         | Restore the C1 read-model return shape and remove only C2 action/concurrency code and tests.                                                              |
 | D — screen migration                                 |  280–380 | C2                    | Manual list controller wired to screen → Query hook projects onto unchanged JSX                                        | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests. |
 | E1a — active-observer post-create refetch            |   80–140 | C2, D                 | No confirmed-create refresh → refetch only the active observed list key with one focused unit test                     | Remove only the screen callback, E1a refetch test, and E1a evidence; confirmed backend creations are not reverted.                                        |
-| E1b — binding-aware architecture guardrails (future) |  260–380 | E1a                   | HEAD architecture guard → robust Query/Zod/Convex/provider/action boundary coverage, including syntax/binding variants | Restore the architecture guard and E1b evidence; E1a post-create behavior remains independently reviewable.                                               |
+| E1b — explicit-import architecture guardrails        |  260–380 | E1a                   | HEAD architecture guard → explicit Query/Zod/Convex import governance plus provider/hook strict AST boundary coverage. | Restore the architecture guard and E1b evidence; E1a post-create behavior remains independently reviewable.                                               |
 | E2 — browser regression and lifecycle reconciliation |  180–280 | E1b                   | E1b guardrails → focused browser regression, final repository verification, and parent reconciliation/review receipts  | Remove only E2 E2E/verification evidence after deciding the parent lifecycle disposition; E1a/E1b remain independently reviewable.                        |
 
 ## A — Provider transversal mínimo (140–210 lines)
@@ -87,16 +87,16 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 - [x] **TRIANGULATE:** The focused unit test seeds a different exact key and proves it remains idle and unchanged after confirmed creation. <!-- sdd-owner: implementation -->
 - [x] **REFACTOR:** Kept the semantic callback and fresh-`QueryClient` test harness minimal; no architecture guardrail change belongs to E1a. <!-- sdd-owner: implementation -->
 
-## E1b — Guardrails de arquitectura conscientes de bindings (260–380 lines, future branch)
+## E1b — Guardrails de arquitectura de importaciones explícitas (260–380 lines)
 
-**Status:** Pending; do not start on the E1a branch. E1b is the next future-branch work unit after E1a.
+**Status:** Completed only after the focused architecture and E1a regression commands pass; E2 remains pending.
 
-**Focused verification:** Extend and run `pnpm exec vitest run tests/architecture/queryZodBoundaries.test.ts`; run the E1a refetch/screen/hook command as a regression. **Runtime harness:** N/A — browser regression is E2.
+**Focused verification:** Run `pnpm exec vitest run tests/architecture/queryZodBoundaries.test.ts`; run the E1a refetch/screen/hook command as a regression. **Runtime harness:** N/A — browser regression is E2.
 
-- [ ] **RED:** Add failing architecture cases for aliased imports, namespace imports, computed/member syntax, Zod subpath imports, and provider `defaultOptions` forms that the current path/regex guard cannot safely classify. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement full AST and import-binding-aware Query/Zod/Convex/provider/action guardrails with exact production allowlists; detect aliases, namespace and computed members, Zod subpaths, provider construction, `defaultOptions`, observer exposure, mutations, cache writes, and prefix refreshes without false positives from comments or strings. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Cover allowed and forbidden static, export-from, dynamic-import, and `require` forms, including binding aliases and computed accesses; verify the guard rejects bypasses while preserving approved provider/hook/API usage. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Keep parsing and binding analysis local to the architecture test, retain explicit allowlists, and rerun the focused architecture plus E1a regression commands. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add architecture fixtures for protected-package namespace/default/aliased imports, dynamic import, `require`, import-equals, re-export, Zod/Convex subpaths, and provider shape violations. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Enforce explicit static named imports for protected runtime Query/Zod/Convex consumption: approved files have exact binding sets, and `AppProviders` has one array-bound zero-argument lazy `QueryClient` used by its sole provider. The hook rejects unapproved Query bindings and direct forbidden cache/action member names. TypeScript-only import types remain allowed because compilation erases them; this is runtime import governance, not whole-program dataflow analysis. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Prove string/template dynamic and require syntax, discarded constructors, and unrelated provider clients are rejected; comments, strings, and similarly named unrelated packages do not false-positive. Retain integration-wrapper and exact root/subpath coverage. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Keep local AST syntax checks and explicit allowlists in the architecture test; do not add alias propagation/dataflow logic, and rerun the focused architecture plus E1a regression commands. <!-- sdd-owner: implementation -->
 
 ## E2 — Regresión de navegador y reconciliación de ciclo de vida (180–280 lines)
 

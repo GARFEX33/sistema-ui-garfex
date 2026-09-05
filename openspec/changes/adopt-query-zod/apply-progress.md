@@ -5,7 +5,7 @@
 - **Date:** 2026-09-24
 - **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
 - **Change / delivery:** `adopt-query-zod` / local `feature-branch-chain`; individual branch names are recorded by their commits.
-- **Current state:** A, B, C1, C2, D, and E1a completed; E1b and E2 are pending future-branch work units.
+- **Current state:** A, B, C1, C2, D, E1a, and E1b completed; E2 is pending.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
 - **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
@@ -181,8 +181,8 @@ The checklist below records the state immediately after Slice A and is supersede
 
 ## Slice E1 scope split — reviewer finding
 
-- **Review finding:** The proposed E1 architecture guard was near the 400-line budget but still incomplete: it did not robustly resolve import bindings or member syntax, so aliases, namespace/computed members, Zod subpaths, and `defaultOptions` variants could evade or confuse its assertions. Patching that guard on this branch would combine the active-refresh behavior with an overstated architecture-hardening claim.
-- **Decision:** One honest split replaces E1. **E1a (current branch)** contains only active-observer post-create refetch behavior and its focused unit test. **E1b (future branch)** is pending and owns the full AST/binding-aware Query/Zod/Convex/provider/action guardrails. E2 now depends on E1b. No E1b or E2 implementation, branch creation, commit, dependency, or unrelated runtime change was made here.
+- **Review finding:** The proposed E1 architecture guard was near the 400-line budget and would have overstated syntax checks as robust binding propagation. Patching it on this branch would combine active-refresh behavior with an unmaintainable whole-program dataflow claim.
+- **Decision:** One honest split replaces E1. **E1a (current branch)** contains only active-observer post-create refetch behavior and its focused unit test. **E1b** owns explicit-import Query/Zod/Convex governance, provider shape, and direct hook-member checks; it intentionally does not perform alias propagation or whole-program dataflow. E2 now depends on E1b. No E1b or E2 implementation, branch creation, commit, dependency, or unrelated runtime change was made here.
 - **Restoration:** `tests/architecture/queryZodBoundaries.test.ts` was restored exactly to its HEAD state. Its existing provider/Convex boundary coverage remains a regression check; it is not E1a architecture hardening.
 
 ## Slice E1a — active-observer post-create refetch
@@ -200,3 +200,21 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Rollback boundary:** remove only the `onCreated` refresh callback, `tests/unit/resourcesMasterScreenRefetch.test.tsx`, and E1a task/progress evidence. Preserve the restored `tests/architecture/queryZodBoundaries.test.ts`, C1/C2 query behavior, and confirmed backend creations.
 - **Final E1a count:** **214 authored lines** (**183 additions**, **31 deletions**), below the 400-line budget.
 - **Commit verdict:** E1a is a single commit-ready work unit: required focused validation passed, no commit was created in delegated scope.
+
+## Slice E1b — explicit-import architecture guardrails
+
+- **Work unit:** E1b only. No production/runtime, dependency, E2, E2E, or lifecycle changes were made.
+- **RED:** Strict TDD was not activated for this maintenance redesign; no RED claim is made.
+- **GREEN:** The local TypeScript AST guard permits protected runtime Query/Zod/Convex consumption only through non-aliased static named imports in approved files. Query has exact provider/hook binding sets; `AppProviders` has one directly returned, zero-argument lazy `QueryClient`, one provider inside that function, and its exact state binding as the provider client. TypeScript-only import types remain allowed because they are erased and create no runtime consumer.
+- **TRIANGULATE:** Synthetic fixtures reject namespace/default/aliased imports, string/template-literal dynamic import and `require`, import-equals, re-export, and protected subpaths. They reject discarded constructors and unrelated provider clients, while comments, strings, and `convexity`/`zodiac`/`@tanstack/react-queryish` do not match. This remains syntax governance, not alias or dataflow analysis.
+- **REFACTOR:** Parsing and explicit allowlists remain local to `queryZodBoundaries.test.ts`; the guard intentionally avoids binding propagation and whole-program dataflow.
+
+### Slice E1b verification and rollback
+
+- `pnpm exec vitest run tests/architecture/queryZodBoundaries.test.ts` exited 0: 1 file / 4 tests passed.
+- `pnpm exec vitest run tests/unit/resourcesMasterScreenRefetch.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` exited 0: 3 files / 26 tests passed.
+- Targeted ESLint, targeted Prettier, `pnpm exec tsc --noEmit -p tsconfig.json`, and `git diff --check` each exited 0.
+- **Runtime harness:** N/A — this is a static architecture guard; browser regression remains E2.
+- **Rollback boundary:** remove only the AST architecture test and the E1b task/progress evidence; production Query/Zod behavior and E1a active-observer refresh remain unchanged.
+- **Count:** the architecture code/test work unit committed as `713157c` contains 397 authored lines (359 additions, 38 deletions), below the 400-line budget. This separate evidence update remains a small documentation-only child unit.
+- **Commit verdict:** architecture guard committed after focused verification; this evidence correction is ready as its own bounded child commit.
