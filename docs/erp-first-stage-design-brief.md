@@ -294,13 +294,13 @@ Deben permitir densidad ajustable, columnas configurables, vistas guardadas, sel
 
 ### Modelo mixto de edición
 
-| Contenedor | Uso correcto |
-|---|---|
-| Edición en línea | Valores simples, reversibles y fáciles de validar |
-| Panel lateral persistente | Consulta y edición contextual sin perder la tabla |
-| Panel superpuesto temporal | Tareas secundarias breves |
-| Ventana modal | Confirmaciones o decisiones muy acotadas |
-| Pantalla completa | Configuración compleja y relaciones extensas |
+| Contenedor                 | Uso correcto                                      |
+| -------------------------- | ------------------------------------------------- |
+| Edición en línea           | Valores simples, reversibles y fáciles de validar |
+| Panel lateral persistente  | Consulta y edición contextual sin perder la tabla |
+| Panel superpuesto temporal | Tareas secundarias breves                         |
+| Ventana modal              | Confirmaciones o decisiones muy acotadas          |
+| Pantalla completa          | Configuración compleja y relaciones extensas      |
 
 Los formularios largos no deben colocarse en ventanas modales o paneles superpuestos estrechos.
 
@@ -394,29 +394,29 @@ El logotipo completo se usa en contextos corporativos y formales. El isotipo se 
 
 ### Colores canónicos
 
-| Token | Valor | Uso |
-|---|---|---|
-| Rojo corporativo | `#7C0000` | Marca y acción primaria controlada |
-| Rojo al pasar el cursor | `#680000` | Estado interactivo bajo el cursor |
-| Rojo activo | `#540000` | Estado presionado |
-| Amarillo | `#F2D031` | Rayo y acento limitado |
-| Gris de apoyo | `#D9D6D3` | Apoyo de identidad |
-| Negro | `#000000` | Variante monocromática |
-| Blanco | `#FFFFFF` | Variante negativa y superficies |
+| Token                   | Valor     | Uso                                |
+| ----------------------- | --------- | ---------------------------------- |
+| Rojo corporativo        | `#7C0000` | Marca y acción primaria controlada |
+| Rojo al pasar el cursor | `#680000` | Estado interactivo bajo el cursor  |
+| Rojo activo             | `#540000` | Estado presionado                  |
+| Amarillo                | `#F2D031` | Rayo y acento limitado             |
+| Gris de apoyo           | `#D9D6D3` | Apoyo de identidad                 |
+| Negro                   | `#000000` | Variante monocromática             |
+| Blanco                  | `#FFFFFF` | Variante negativa y superficies    |
 
 El rojo y amarillo deben funcionar como acentos, no como grandes superficies dominantes. El amarillo no se usa como texto pequeño sobre fondo claro.
 
 ### Fundamentos claro y oscuro
 
-| Rol | Claro | Oscuro |
-|---|---|---|
-| Fondo | `#F7F6F3` | `#161616` |
-| Superficie | `#FFFFFF` | `#1D1D1B` |
-| Texto principal | `#1F1F1D` | `#ECEAE5` |
+| Rol              | Claro     | Oscuro    |
+| ---------------- | --------- | --------- |
+| Fondo            | `#F7F6F3` | `#161616` |
+| Superficie       | `#FFFFFF` | `#1D1D1B` |
+| Texto principal  | `#1F1F1D` | `#ECEAE5` |
 | Texto secundario | `#5F5D58` | `#C3C0B8` |
-| Borde | `#D9D6CF` | `#383733` |
-| Primario | `#7C0000` | `#B33A3A` |
-| Foco | `#8A6800` | `#E4B84A` |
+| Borde            | `#D9D6CF` | `#383733` |
+| Primario         | `#7C0000` | `#B33A3A` |
+| Foco             | `#8A6800` | `#E4B84A` |
 
 El tema oscuro utiliza gris profundo, no negro puro.
 
@@ -424,11 +424,11 @@ El tema oscuro utiliza gris profundo, no negro puro.
 
 Los estados no reutilizan automáticamente el rojo de marca:
 
-| Estado | Claro | Oscuro |
-|---|---|---|
-| Éxito | `#2F6B4F` | `#6FCF97` |
+| Estado      | Claro     | Oscuro    |
+| ----------- | --------- | --------- |
+| Éxito       | `#2F6B4F` | `#6FCF97` |
 | Advertencia | `#8A6800` | `#E4B84A` |
-| Error | `#B4232F` | `#FF8A94` |
+| Error       | `#B4232F` | `#FF8A94` |
 | Información | `#356A8A` | `#76B6D6` |
 
 ### Tipografía
