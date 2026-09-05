@@ -229,3 +229,9 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Count:** 180 authored lines (177 additions, 3 deletions), below the 400-line budget.
 - **Rollback boundary:** remove only the E2 window visibility, continuation-cursor, and active-key-only confirmed-create assertions/helpers plus this E2 task/evidence; Query runtime, E1a refresh behavior, Keyboard First coverage, axe coverage, and parent lifecycle work remain independent.
 - **Commit verdict:** no commit created in delegated scope; this is one bounded E2 browser-coverage work unit after focused browser and targeted static validation.
+
+## Parent three-way frontend-foundation reconciliation
+
+- **Decision:** The combined requirement lives in the Catálogo delta until sync: Catálogo retains only its direct feature-local `catalogoAdmin/jerarquia` access for approved navigation, reads, and Clase/Familia/Tipo creation; React Query remains prohibited in Catálogo and is authorized only as ephemeral, non-authoritative feature-local remote state for the current Resources Master list pilot.
+- **Merge-order evidence:** Applying `catalog-hierarchy-base` before `adopt-query-zod` preserves Catálogo's direct exception and narrows Query to the Resources pilot during reconciliation; applying `adopt-query-zod` before the revised Catálogo delta preserves the same Query boundary while restoring the same direct Catálogo exception. Both orders retain the prohibitions on frontend backend/API and persistence, global/domain stores (including Zustand/Redux), transversal Convex, speculative shared wrappers, and frontend domain authority.
+- **Canonical disposition:** `openspec/specs/frontend-foundation/spec.md` is intentionally unchanged; the sync phase owns its canonical update.

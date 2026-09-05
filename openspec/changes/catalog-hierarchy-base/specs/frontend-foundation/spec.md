@@ -26,15 +26,17 @@ El sistema MUST mantener una organización feature-first con Bandeja y Catálogo
 
 ### Requirement: Ausencia de infraestructura y dominio especulativos
 
-El sistema MUST NOT introducir backend propio, persistencia frontend, sincronización inventada, permisos inferidos, métricas, reglas de dominio no confirmadas, stores globales, repositorios, casos de uso, gateways, facades ni una capa de estado de consultas. Como única excepción de acceso backend en este cambio, la feature de Catálogo MAY integrar directamente las operaciones públicas verificadas de `catalogoAdmin/jerarquia` necesarias para navegación, lectura y creación de Clase, Familia y Tipo. El backend externo MUST conservar la autoridad sobre datos, relaciones, validación efectiva y persistencia.
+El sistema MUST NOT introducir backend propio, API propia, persistencia frontend, sincronización inventada, permisos inferidos, métricas, reglas de dominio no confirmadas, stores globales, repositorios, casos de uso, gateways, facades, wrappers genéricos o compartidos especulativos, ni una capa de estado de consultas fuera de las excepciones aprobadas. Catálogo MAY conservar su acceso directo feature-local a las operaciones públicas verificadas de `catalogoAdmin/jerarquia` necesarias para su navegación, lectura y creación de Clase, Familia y Tipo; esta excepción no autoriza React Query en Catálogo ni amplía esas operaciones backend. React Query MAY usarse exclusivamente como cache feature-local de estado remoto/de servidor en pilotos aprobados; actualmente, el único piloto aprobado es la lista de Resources Master. Su cache MUST ser efímera, en memoria de la sesión y no autoritativa. Esta excepción MUST NOT autorizar Zustand, Redux, context global de datos de dominio, persistencia de cache, clientes Convex transversales, wrappers Query compartidos ni uso de Query fuera de los pilotos aprobados. El backend externo MUST conservar la autoridad sobre datos, relaciones, permisos, validación efectiva y persistencia.
 
 (Previously: El frontend no podía introducir ningún cliente backend ni contrato de endpoint porque el primer slice carecía de una integración autorizada.)
 
-#### Scenario: El frontend integra Catálogo sin asumir autoridad de datos
+#### Scenario: Las excepciones feature-locales no crean infraestructura ni autoridad
 
-- GIVEN el grafo runtime con Bandeja y la feature de Catálogo
-- WHEN se inspeccionan sus dependencias y efectos externos
-- THEN el acceso backend de Catálogo se limita a la superficie pública verificada `catalogoAdmin/jerarquia`
-- AND no existe lectura ni escritura de persistencia frontend de producto
+- GIVEN el grafo runtime con Bandeja, Catálogo y el piloto de lista de Resources Master
+- WHEN se inspeccionan sus dependencias, efectos externos y cache
+- THEN el acceso backend de Catálogo se limita a la superficie pública verificada `catalogoAdmin/jerarquia` para su alcance aprobado
+- AND Catálogo no usa React Query
+- AND React Query sólo administra el estado remoto de la lista de Resources Master mediante una cache efímera y no autoritativa
+- AND no existe lectura ni escritura de persistencia frontend de producto, store global, cliente Convex transversal ni wrapper compartido especulativo
 - AND no existe una capa que simule autoridad, reglas o estado de dominio
-- AND Bandeja no adquiere una integración backend por efecto de esta excepción
+- AND Bandeja no adquiere una integración backend por efecto de estas excepciones
