@@ -1,3 +1,19 @@
+```yaml
+schema: gentle-ai.verify-result/v1
+evidence_revision: sha256:d2ad51de71571324847b35efde77a2d44a609d23c9f5589d271771c036675ae3
+verdict: pass
+blockers: 0
+critical_findings: 0
+requirements: 9/9
+scenarios: 13/13
+test_command: pnpm test
+test_exit_code: 0
+test_output_hash: sha256:abbbc99d248cbb1327584257c3ab8d1964a9d2a50475fd434e99b1a1c36e04b4
+build_command: pnpm build
+build_exit_code: 0
+build_output_hash: sha256:d2cf083c05f0240e3e65bda62222d9261454019b35cd26a74653bb051ed350fa
+```
+
 # Final verification — adopt-query-zod
 
 **Disposition: complete.** The local delivery chain is green and review-receipted. This report records verification only; it does not synchronize or archive the OpenSpec change.
@@ -6,14 +22,29 @@
 
 | Check                                                            | Result                                                      |
 | ---------------------------------------------------------------- | ----------------------------------------------------------- |
-| `pnpm test`                                                      | Pass — 359/359 unit tests                                   |
+| `pnpm test`                                                      | Pass — exit code 0; combined stdout/stderr SHA-256 recorded |
 | `pnpm typecheck`                                                 | Pass                                                        |
 | `pnpm lint`                                                      | Pass — zero warnings                                        |
 | `pnpm format:check`                                              | Pass                                                        |
-| `pnpm build`                                                     | Pass — Zod annotation and chunk-size warnings were nonfatal |
+| `pnpm build`                                                     | Pass — exit code 0; combined stdout/stderr SHA-256 recorded |
 | `pnpm verify:runtime-bundle`                                     | Pass — 4 runtime-bundle files                               |
 | `pnpm test:e2e -- tests/e2e/resourcesMaster.workstation.spec.ts` | Pass — 7/7 focused Resources E2E tests                      |
 | `git status --short`                                             | Pass — no output; worktree was clean                        |
+
+## Native verification evidence
+
+- **Specification coverage:** 9/9 requirements and 13/13 scenarios. The `frontend-foundation` delta contributes 3 requirements and 3 scenarios; `resources-master-remote-list` contributes 6 requirements and 10 scenarios.
+- **`pnpm test`:** exited 0. Its complete merged stdout/stderr was captured in memory (6,808 bytes); SHA-256: `abbbc99d248cbb1327584257c3ab8d1964a9d2a50475fd434e99b1a1c36e04b4`.
+- **`pnpm build`:** exited 0. Its complete merged stdout/stderr was captured in memory (1,885 bytes); SHA-256: `d2cf083c05f0240e3e65bda62222d9261454019b35cd26a74653bb051ed350fa`.
+- **Evidence revision:** `d2ad51de71571324847b35efde77a2d44a609d23c9f5589d271771c036675ae3` is the SHA-256 of the canonical UTF-8 identity below. It binds this verification to the committed `adopt-query-zod` evidence/tree baseline, not to this uncommitted report update.
+
+  ```text
+  gentle-ai.verify-result/v1
+  evidence_revision_basis: committed-evidence-tree
+  change: adopt-query-zod
+  head: 93653c3d93125d4a7857d46675228267a61d980e
+  tree: 35d6fe27d205e7b32cedb79da0afa74f5a824db2
+  ```
 
 ## Local chain and review receipts
 
