@@ -83,6 +83,22 @@ type AttributeField = {
   options: ResourceAttributeOption[]
 }
 
+type ContextField = 'class' | 'family' | 'type' | 'unit'
+
+const contextErrorMessages: Record<ContextField, string> = {
+  class: 'Seleccioná una Clase.',
+  family: 'Seleccioná una Familia.',
+  type: 'Seleccioná un Tipo.',
+  unit: 'Seleccioná una Unidad natural.',
+}
+
+const contextFieldLabels: Record<ContextField, string> = {
+  class: 'Clase',
+  family: 'Familia',
+  type: 'Tipo',
+  unit: 'Unidad natural',
+}
+
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
   onCreated?: () => void
@@ -139,6 +155,10 @@ export function CrearRecursoSurface({
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle')
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [created, setCreated] = useState<ResourceSummary | null>(null)
+  const [contextError, setContextError] = useState<ContextField | null>(null)
+  const [attributeError, setAttributeError] = useState<string | null>(null)
+  const [nombreError, setNombreError] = useState(false)
+  const nombreRef = useRef<HTMLInputElement>(null)
 
   const [classes, loadClasses] = useLevel<ResourceContextClassItem>()
   const [families, loadFamilies, clearFamilies] =
@@ -163,6 +183,9 @@ export function CrearRecursoSurface({
       setSubmitStatus('idle')
       setSubmitError(null)
       setCreated(null)
+      setContextError(null)
+      setAttributeError(null)
+      setNombreError(false)
       clearFamilies()
       clearTypes()
       clearUnits()
@@ -190,6 +213,46 @@ export function CrearRecursoSurface({
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
 
   useEffect(() => {
+    if (step === 1) {
+      for (const field of ['class', 'family', 'type', 'unit'] as const) {
+        const control = dialogRef.current?.querySelector<HTMLButtonElement>(
+          `button[aria-label="${contextFieldLabels[field]}"]`,
+        )
+        if (!control) continue
+        if (contextError === field) {
+          control.setAttribute('aria-invalid', 'true')
+          control.setAttribute(
+            'aria-describedby',
+            `resource-context-${field}-error`,
+          )
+        } else {
+          control.removeAttribute('aria-invalid')
+          control.removeAttribute('aria-describedby')
+        }
+      }
+    }
+    if (step === 2) {
+      dialogRef.current
+        ?.querySelectorAll<HTMLElement>('[data-resource-attribute]')
+        .forEach((container) => {
+          const control = container.querySelector<HTMLElement>('button, input')
+          const attributeKey = container.dataset.resourceAttribute
+          if (!control || !attributeKey) return
+          if (attributeError === attributeKey) {
+            control.setAttribute('aria-invalid', 'true')
+            control.setAttribute(
+              'aria-describedby',
+              `resource-attribute-${attributeKey}-error`,
+            )
+          } else {
+            control.removeAttribute('aria-invalid')
+            control.removeAttribute('aria-describedby')
+          }
+        })
+    }
+  }, [attributeError, contextError, step])
+
+  useEffect(() => {
     if (isOpen) {
       wasOpen.current = true
       void loadClasses(() => api.listContextClasses({}))
@@ -214,11 +277,13 @@ export function CrearRecursoSurface({
       attributes.items.length > 0 || Object.keys(attributeValues).length > 0
     clearAttributes()
     setAttributeValues({})
+    setAttributeError(null)
     if (hadProgress)
       showMessage('Se limpiaron los atributos por cambio de Tipo')
   }
 
   const selectClass = (id: ResourceId) => {
+    setContextError(null)
     setClassId(id)
     setFamilyId(null)
     setTypeId(null)
@@ -230,6 +295,7 @@ export function CrearRecursoSurface({
   }
 
   const selectFamily = (id: ResourceId) => {
+    setContextError(null)
     setFamilyId(id)
     setTypeId(null)
     setUnitId(null)
@@ -239,6 +305,7 @@ export function CrearRecursoSurface({
   }
 
   const selectType = (id: ResourceId) => {
+    setContextError(null)
     setTypeId(id)
     setUnitId(null)
     resetAttributesIfNeeded()
@@ -263,9 +330,6 @@ export function CrearRecursoSurface({
       return { items: withNames }
     })
   }
-
-  const canGoNext =
-    classId !== null && familyId !== null && typeId !== null && unitId !== null
 
   const loadStep2 = (forTypeId: ResourceId) =>
     loadAttributes(async () => {
@@ -309,7 +373,26 @@ export function CrearRecursoSurface({
     })
 
   const goToAttributes = () => {
-    if (!canGoNext || typeId === null) return
+    const missing: ContextField | null =
+      classId === null
+        ? 'class'
+        : familyId === null
+          ? 'family'
+          : typeId === null
+            ? 'type'
+            : unitId === null
+              ? 'unit'
+              : null
+    if (missing) {
+      setContextError(missing)
+      dialogRef.current
+        ?.querySelector<HTMLButtonElement>(
+          `button[aria-label="${contextFieldLabels[missing]}"]`,
+        )
+        ?.focus()
+      return
+    }
+    if (typeId === null) return
     setStep(2)
     void loadStep2(typeId)
   }
@@ -317,9 +400,11 @@ export function CrearRecursoSurface({
   const backToContext = () => setStep(1)
 
   const setAttributeValue = (atributoRecursoId: ResourceId, value: string) => {
+    const attributeKey = key(atributoRecursoId)
+    if (value !== '' && attributeError === attributeKey) setAttributeError(null)
     setAttributeValues((current) => ({
       ...current,
-      [key(atributoRecursoId)]: value,
+      [attributeKey]: value,
     }))
   }
 
@@ -333,6 +418,24 @@ export function CrearRecursoSurface({
       })
 
   const goToReview = () => {
+    const missing = attributes.items.find(
+      (field) =>
+        field.aplicabilidad === 'REQUIRED' &&
+        (attributeValues[key(field.atributoRecursoId)] ?? '') === '',
+    )
+    if (missing) {
+      const attributeKey = key(missing.atributoRecursoId)
+      setAttributeError(attributeKey)
+      ;[
+        ...(dialogRef.current?.querySelectorAll<HTMLElement>(
+          '[data-resource-attribute]',
+        ) ?? []),
+      ]
+        .find((element) => element.dataset.resourceAttribute === attributeKey)
+        ?.querySelector<HTMLElement>('button, input')
+        ?.focus()
+      return
+    }
     if (!attributesComplete) return
     setStep(3)
   }
@@ -387,9 +490,13 @@ export function CrearRecursoSurface({
   }
 
   const submit = async () => {
+    if (submitStatus === 'submitting') return
+    if (nombre.trim() === '') {
+      setNombreError(true)
+      nombreRef.current?.focus()
+      return
+    }
     if (
-      submitStatus === 'submitting' ||
-      nombre.trim() === '' ||
       classId === null ||
       familyId === null ||
       typeId === null ||
@@ -452,14 +559,18 @@ export function CrearRecursoSurface({
         >
           <DialogHeading title="Nuevo recurso" />
           <div className="resources-dialog-content">
-            <p className="resources-dialog-step">
-              {step === 1
-                ? 'Paso 1 de 3 — Contexto'
-                : step === 2
-                  ? 'Paso 2 de 3 — Atributos'
-                  : submitStatus === 'created'
-                    ? 'Recurso creado'
-                    : 'Paso 3 de 3 — Revisión'}
+            <ol
+              aria-label="Progreso de creación"
+              className="resources-dialog-step m-0 flex list-none gap-3 p-0 text-[11px] font-semibold"
+            >
+              <li aria-current={step === 1 ? 'step' : undefined}>1 Contexto</li>
+              <li aria-current={step === 2 ? 'step' : undefined}>
+                2 Atributos
+              </li>
+              <li aria-current={step === 3 ? 'step' : undefined}>3 Revisión</li>
+            </ol>
+            <p className="mb-3 text-[11px] text-text-secondary">
+              * Obligatorio
             </p>
             {message && (
               <p role="status" className="resources-dialog-notice">
@@ -474,13 +585,14 @@ export function CrearRecursoSurface({
                     aria-label="Clase"
                     placeholder="Elegir Clase…"
                     isDisabled={classes.status === 'loading'}
+                    isRequired
                     selectedKey={classId === null ? null : key(classId)}
                     onSelectionChange={(id) => {
                       const item = classes.items.find((c) => key(c.id) === id)
                       if (item) selectClass(item.id)
                     }}
                   >
-                    <Label>Clase</Label>
+                    <Label>Clase *</Label>
                     <SelectTriggerButton className="resources-select-trigger">
                       <SelectValue />
                       <span aria-hidden="true">▾</span>
@@ -498,6 +610,15 @@ export function CrearRecursoSurface({
                       </ListBox>
                     </Popover>
                   </Select>
+                  {contextError === 'class' && (
+                    <p
+                      id="resource-context-class-error"
+                      role="alert"
+                      className="resources-context-error"
+                    >
+                      {contextErrorMessages.class}
+                    </p>
+                  )}
                   {classes.status === 'error' && (
                     <p role="alert" className="resources-context-error">
                       No se pudieron cargar las Clases.{' '}
@@ -520,13 +641,14 @@ export function CrearRecursoSurface({
                     isDisabled={
                       classId === null || families.status === 'loading'
                     }
+                    isRequired
                     selectedKey={familyId === null ? null : key(familyId)}
                     onSelectionChange={(id) => {
                       const item = families.items.find((f) => key(f.id) === id)
                       if (item) selectFamily(item.id)
                     }}
                   >
-                    <Label>Familia</Label>
+                    <Label>Familia *</Label>
                     <SelectTriggerButton className="resources-select-trigger">
                       <SelectValue />
                       <span aria-hidden="true">▾</span>
@@ -544,6 +666,15 @@ export function CrearRecursoSurface({
                       </ListBox>
                     </Popover>
                   </Select>
+                  {contextError === 'family' && (
+                    <p
+                      id="resource-context-family-error"
+                      role="alert"
+                      className="resources-context-error"
+                    >
+                      {contextErrorMessages.family}
+                    </p>
+                  )}
                   {families.status === 'error' && (
                     <p role="alert" className="resources-context-error">
                       No se pudieron cargar las Familias.{' '}
@@ -569,13 +700,14 @@ export function CrearRecursoSurface({
                     aria-label="Tipo"
                     placeholder="Elegir Tipo…"
                     isDisabled={familyId === null || types.status === 'loading'}
+                    isRequired
                     selectedKey={typeId === null ? null : key(typeId)}
                     onSelectionChange={(id) => {
                       const item = types.items.find((t) => key(t.id) === id)
                       if (item) selectType(item.id)
                     }}
                   >
-                    <Label>Tipo</Label>
+                    <Label>Tipo *</Label>
                     <SelectTriggerButton className="resources-select-trigger">
                       <SelectValue />
                       <span aria-hidden="true">▾</span>
@@ -593,6 +725,15 @@ export function CrearRecursoSurface({
                       </ListBox>
                     </Popover>
                   </Select>
+                  {contextError === 'type' && (
+                    <p
+                      id="resource-context-type-error"
+                      role="alert"
+                      className="resources-context-error"
+                    >
+                      {contextErrorMessages.type}
+                    </p>
+                  )}
                   {types.status === 'error' && (
                     <p role="alert" className="resources-context-error">
                       No se pudieron cargar los Tipos.{' '}
@@ -618,15 +759,19 @@ export function CrearRecursoSurface({
                     aria-label="Unidad natural"
                     placeholder="Elegir Unidad natural…"
                     isDisabled={typeId === null || units.status === 'loading'}
+                    isRequired
                     selectedKey={unitId === null ? null : key(unitId)}
                     onSelectionChange={(id) => {
                       const item = units.items.find(
                         (u) => key(u.unidadId) === id,
                       )
-                      if (item) setUnitId(item.unidadId)
+                      if (item) {
+                        setContextError(null)
+                        setUnitId(item.unidadId)
+                      }
                     }}
                   >
-                    <Label>Unidad natural</Label>
+                    <Label>Unidad natural *</Label>
                     <SelectTriggerButton className="resources-select-trigger">
                       <SelectValue />
                       <span aria-hidden="true">▾</span>
@@ -645,6 +790,15 @@ export function CrearRecursoSurface({
                       </ListBox>
                     </Popover>
                   </Select>
+                  {contextError === 'unit' && (
+                    <p
+                      id="resource-context-unit-error"
+                      role="alert"
+                      className="resources-context-error"
+                    >
+                      {contextErrorMessages.unit}
+                    </p>
+                  )}
                   {units.status === 'error' && (
                     <p role="alert" className="resources-context-error">
                       No se pudo cargar la Unidad natural.{' '}
@@ -690,7 +844,11 @@ export function CrearRecursoSurface({
                   const label = required ? `${field.nombre} *` : field.nombre
                   const value = attributeValues[fieldKey] ?? ''
                   return (
-                    <div className="resources-context-field" key={fieldKey}>
+                    <div
+                      className="resources-context-field"
+                      data-resource-attribute={fieldKey}
+                      key={fieldKey}
+                    >
                       {field.tipoDato === 'OPCION' && (
                         <Select
                           aria-label={label}
@@ -753,11 +911,29 @@ export function CrearRecursoSurface({
                           </Popover>
                         </Select>
                       )}
+                      {attributeError === fieldKey && (
+                        <p
+                          id={`resource-attribute-${fieldKey}-error`}
+                          role="alert"
+                          className="resources-context-error"
+                        >
+                          {field.tipoDato === 'OPCION' ||
+                          field.tipoDato === 'BOOLEANO'
+                            ? `Seleccioná ${field.nombre}.`
+                            : `Ingresá ${field.nombre}.`}
+                        </p>
+                      )}
                       {field.tipoDato === 'TEXTO' && (
                         <Field label={label} htmlFor={`attr-${fieldKey}`}>
                           <input
                             id={`attr-${fieldKey}`}
                             type="text"
+                            aria-invalid={attributeError === fieldKey}
+                            aria-describedby={
+                              attributeError === fieldKey
+                                ? `resource-attribute-${fieldKey}-error`
+                                : undefined
+                            }
                             className={fieldInputClass}
                             required={required}
                             value={value}
@@ -775,6 +951,12 @@ export function CrearRecursoSurface({
                           <input
                             id={`attr-${fieldKey}`}
                             type="number"
+                            aria-invalid={attributeError === fieldKey}
+                            aria-describedby={
+                              attributeError === fieldKey
+                                ? `resource-attribute-${fieldKey}-error`
+                                : undefined
+                            }
                             className={fieldInputClass}
                             required={required}
                             value={value}
@@ -815,16 +997,36 @@ export function CrearRecursoSurface({
 
             {step === 3 && submitStatus !== 'created' && (
               <>
-                <Field label="Nombre" htmlFor="resource-nombre">
+                <Field label="Nombre *" htmlFor="resource-nombre">
                   <input
                     id="resource-nombre"
+                    aria-label="Nombre"
+                    ref={nombreRef}
+                    required
+                    aria-invalid={nombreError}
+                    aria-describedby={
+                      nombreError ? 'resource-nombre-error' : undefined
+                    }
                     type="text"
                     className={fieldInputClass}
                     value={nombre}
                     disabled={submitStatus === 'submitting'}
-                    onChange={(event) => setNombre(event.target.value)}
+                    onChange={(event) => {
+                      if (event.target.value.trim() !== '')
+                        setNombreError(false)
+                      setNombre(event.target.value)
+                    }}
                   />
                 </Field>
+                {nombreError && (
+                  <p
+                    id="resource-nombre-error"
+                    role="alert"
+                    className="resources-context-error"
+                  >
+                    Ingresá un Nombre.
+                  </p>
+                )}
                 <Field label="Descripción" htmlFor="resource-descripcion">
                   <input
                     id="resource-descripcion"
@@ -886,7 +1088,7 @@ export function CrearRecursoSurface({
                 </Button>
                 <Button
                   type="button"
-                  isDisabled={!canGoNext}
+                  isDisabled={classes.status !== 'ready'}
                   onPress={goToAttributes}
                 >
                   Siguiente
@@ -900,7 +1102,7 @@ export function CrearRecursoSurface({
                 </Button>
                 <Button
                   type="button"
-                  isDisabled={!attributesComplete}
+                  isDisabled={attributes.status !== 'ready'}
                   onPress={goToReview}
                 >
                   Siguiente
@@ -921,9 +1123,7 @@ export function CrearRecursoSurface({
                   </Button>
                   <Button
                     type="button"
-                    isDisabled={
-                      nombre.trim() === '' || submitStatus === 'submitting'
-                    }
+                    isDisabled={submitStatus === 'submitting'}
                     onPress={() => void submit()}
                   >
                     Crear recurso

@@ -297,6 +297,75 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('uses compact semantic progress and validates only the first missing context field on Next', async () => {
+    const api = fakeApi()
+    const user = userEvent.setup()
+    renderSurface(api)
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await waitFor(() => expect(api.listContextClasses).toHaveBeenCalled())
+
+    const progress = screen.getByRole('list', { name: 'Progreso de creación' })
+    const currentSteps = () =>
+      within(progress).getAllByRole('listitem', { current: 'step' })
+    expect(within(progress).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(progress).getByText('1 Contexto')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+    expect(within(progress).getByText('2 Atributos')).not.toHaveAttribute(
+      'aria-current',
+    )
+    expect(within(progress).getByText('3 Revisión')).not.toHaveAttribute(
+      'aria-current',
+    )
+    expect(screen.getByText('* Obligatorio')).toBeVisible()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Clase/ })).not.toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+
+    const next = screen.getByRole('button', { name: 'Siguiente' })
+    expect(next).toBeEnabled()
+    await user.click(next)
+
+    const classTrigger = screen.getByRole('button', { name: /Clase/ })
+    const error = screen.getByRole('alert')
+    expect(error).toHaveTextContent('Seleccioná una Clase.')
+    expect(classTrigger).toHaveAttribute('aria-invalid', 'true')
+    expect(classTrigger).toHaveAttribute('aria-describedby', error.id)
+    expect(classTrigger).toHaveFocus()
+    expect(
+      screen.queryByText('Seleccioná una Familia.'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('1 Contexto')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    await user.click(next)
+    await screen.findByText('Observaciones')
+
+    expect(currentSteps()).toHaveLength(1)
+    expect(within(progress).getByText('2 Atributos')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+
+    await chooseOption(user, 'Granulometría', 'Fina')
+    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByLabelText('Nombre')
+
+    expect(currentSteps()).toHaveLength(1)
+    expect(within(progress).getByText('3 Revisión')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+  })
+
   it('cascades Clase -> Familia -> Tipo -> Unidad natural, preselecting the principal unit', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
@@ -364,7 +433,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     ).toBeVisible()
     await user.keyboard('{Escape}')
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled(),
+      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled(),
     )
   })
 
@@ -406,7 +475,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(
       screen.getByRole('button', { name: /Unidad natural/ }),
     ).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
   })
 
   it('closes on Escape and restores focus to the trigger', async () => {
@@ -440,17 +509,27 @@ describe('CrearRecursoSurface — Paso 2 (Atributos dinámicos)', () => {
       definicionAtributoId: 'def-hidden',
     })
 
-    const fields = document.querySelectorAll(
-      '.resources-dialog-content .resources-context-field',
+    const textInput = await screen.findByLabelText('Observaciones')
+    const optionTrigger = screen.getByRole('button', {
+      name: /Granulometría \*/,
+    })
+    const numberInput = screen.getByLabelText('Densidad')
+    const booleanTrigger = screen.getByRole('button', { name: /Lavada/ })
+
+    expect(optionTrigger).toHaveAccessibleName(/Granulometría \*/)
+    expect(numberInput).toHaveAccessibleName('Densidad')
+    expect(numberInput).not.toHaveAccessibleName(/\*/)
+    expect(booleanTrigger).toHaveAccessibleName(/Lavada/)
+    expect(booleanTrigger).not.toHaveAccessibleName(/\*/)
+    expect(textInput.compareDocumentPosition(optionTrigger)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
     )
-    const texts = [...fields].map((field) => field.textContent)
-    expect(texts).toHaveLength(4)
-    expect(texts[0]).toContain('Observaciones')
-    expect(texts[1]).toContain('Granulometría')
-    expect(texts[1]).toContain('*')
-    expect(texts[2]).toContain('Densidad')
-    expect(texts[2]).not.toContain('*')
-    expect(texts[3]).toContain('Lavada')
+    expect(optionTrigger.compareDocumentPosition(numberInput)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(numberInput.compareDocumentPosition(booleanTrigger)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
   })
 
   it('renders a Select with the active options for OPCION attributes', async () => {
@@ -496,17 +575,30 @@ describe('CrearRecursoSurface — Paso 2 (Atributos dinámicos)', () => {
     expect(numberInput).toHaveValue(1600)
   })
 
-  it('keeps Siguiente disabled on Paso 2 until every REQUIRED attribute has a value', async () => {
+  it('validates and focuses only the first missing REQUIRED attribute on Paso 2', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
     renderSurface(api)
     await goToStep2(user, api)
     await screen.findByText('Observaciones')
 
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+    const next = screen.getByRole('button', { name: 'Siguiente' })
+    expect(next).toBeEnabled()
+    await user.click(next)
+
+    const attributeTrigger = screen.getByRole('button', {
+      name: /Granulometría/,
+    })
+    const error = screen.getByRole('alert')
+    expect(error).toHaveTextContent('Seleccioná Granulometría.')
+    expect(attributeTrigger).toHaveAttribute('aria-invalid', 'true')
+    expect(attributeTrigger).toHaveAttribute('aria-describedby', error.id)
+    expect(attributeTrigger).toHaveFocus()
+    expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
 
     await chooseOption(user, 'Granulometría', 'Fina')
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(attributeTrigger).not.toHaveAttribute('aria-invalid', 'true')
   })
 
   it('preserves Paso 2 values across Volver / Siguiente without refetching lost state', async () => {
@@ -623,7 +715,7 @@ describe('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
     expect(screen.getByText(/Granulometría: Fina/)).toBeVisible()
   })
 
-  it('disables Crear recurso until Nombre is filled, and submits the full mapped payload', async () => {
+  it('validates Nombre before creation and submits the full mapped payload after correction', async () => {
     const createResource = vi.fn(async () => ({
       disposition: 'CREATED' as const,
       item: resourceSummary(),
@@ -639,9 +731,21 @@ describe('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
     await user.click(screen.getByRole('button', { name: 'Siguiente' }))
     await screen.findByLabelText('Nombre')
 
-    expect(screen.getByRole('button', { name: 'Crear recurso' })).toBeDisabled()
+    const create = screen.getByRole('button', { name: 'Crear recurso' })
+    expect(create).toBeEnabled()
+    await user.click(create)
 
-    await user.type(screen.getByLabelText('Nombre'), 'Arena fina')
+    const nombre = screen.getByLabelText('Nombre')
+    const error = screen.getByRole('alert')
+    expect(error).toHaveTextContent('Ingresá un Nombre.')
+    expect(nombre).toHaveAttribute('aria-invalid', 'true')
+    expect(nombre).toHaveAttribute('aria-describedby', error.id)
+    expect(nombre).toHaveFocus()
+    expect(createResource).not.toHaveBeenCalled()
+
+    await user.type(nombre, 'Arena fina')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(nombre).not.toHaveAttribute('aria-invalid', 'true')
     await user.type(screen.getByLabelText('Descripción'), 'Lote de prueba')
 
     expect(screen.getByRole('button', { name: 'Crear recurso' })).toBeEnabled()
