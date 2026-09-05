@@ -2,21 +2,21 @@
 
 ## Review Workload Forecast
 
-| Field                   | Value                                                       |
-| ----------------------- | ----------------------------------------------------------- |
-| Estimated changed lines | 1,120–1,570 total; each review slice is estimated below 400 |
-| 400-line budget risk    | High                                                        |
-| Chained PRs recommended | Yes                                                         |
-| Suggested split         | PR 1 (A) → PR 2 (B) → PR 3 (C) → PR 4 (D) → PR 5 (E)        |
-| Delivery strategy       | ask-on-risk                                                 |
-| Chain strategy          | feature-branch-chain                                        |
+| Field                   | Value                                                             |
+| ----------------------- | ----------------------------------------------------------------- |
+| Estimated changed lines | 1,120–1,570 total; each review slice is estimated below 400       |
+| 400-line budget risk    | High                                                              |
+| Chained PRs recommended | Yes                                                               |
+| Suggested split         | PR 1 (A) → PR 2 (B) → PR 3 (C1) → PR 4 (C2) → PR 5 (D) → PR 6 (E) |
+| Delivery strategy       | ask-on-risk                                                       |
+| Chain strategy          | feature-branch-chain                                              |
 
 Decision needed before apply: No — resolved by the user
 Chained PRs recommended: Yes
 Chain strategy: feature-branch-chain
 400-line budget risk: High
 
-The aggregate forecast exceeds the 400-line review budget even though every autonomous slice is bounded below it. Before apply, the parent must choose the chain strategy or explicitly authorize an alternative under `ask-on-risk`; do not combine slices C and D. Stop and escalate before starting a slice whose measured or updated estimate reaches 400 authored additions plus deletions.
+The aggregate forecast exceeds the 400-line review budget even though every autonomous slice is bounded below it. Before apply, the parent must choose the chain strategy or explicitly authorize an alternative under `ask-on-risk`; do not combine C1 and C2, or C2 and D. Stop and escalate before starting a slice whose measured or updated estimate reaches 400 authored additions plus deletions.
 
 **Verified prerequisite:** `@tanstack/react-query@5.102.8` and `zod@4.5.4` are direct exact dependencies resolved in `package.json` and `pnpm-lock.yaml`; installation is complete and neither file is changed by this work.
 
@@ -26,9 +26,10 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 | ----------------------------------- | -------: | --------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A — provider                        |  140–210 | Verified prerequisite | No Query provider → stable per-mount provider with no consumers                                     | Remove the `AppProviders` wrapper/initializer and its tests; no persistent data exists.                                                                        |
 | B — list transport                  |  180–260 | Verified prerequisite | Manual list parser → Zod-backed `parseResourceListPage` with identical public DTO                   | Restore only the manual list-envelope/list-summary path in `resourcesMaster.api.ts`; leave non-list parsers untouched.                                         |
-| C — feature-local query hook        |  300–380 | A, B                  | No hook → isolated `useInfiniteQuery` list behavior without screen consumer                         | Remove `useResourcesMasterListQuery.ts` and its focused test; A may remain inert.                                                                              |
-| D — screen migration                |  280–380 | C                     | Manual list controller wired to screen → Query hook projects onto unchanged JSX                     | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests.      |
-| E — explicit refresh and guardrails |  220–340 | D                     | No Query refresh/allowlist evidence → active-list refresh and complete boundary/regression evidence | Restore the `CrearRecursoSurface` callback to the previous controller start path and remove only E tests/guards; confirmed backend creations are not reverted. |
+| C1 — query identity and read model  |  220–320 | A, B                  | No hook → isolated `useInfiniteQuery` identity/read projection without screen consumer              | Remove `useResourcesMasterListQuery.ts` and its focused C1 tests; A may remain inert.                                                                          |
+| C2 — query actions and concurrency  |  260–360 | C1                    | C1 read model → key-scoped semantic actions and continuation/retry concurrency                      | Restore the C1 read-model return shape and remove only C2 action/concurrency code and tests.                                                                   |
+| D — screen migration                |  280–380 | C2                    | Manual list controller wired to screen → Query hook projects onto unchanged JSX                     | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests.      |
+| E — explicit refresh and guardrails |  220–340 | C2, D                 | No Query refresh/allowlist evidence → active-list refresh and complete boundary/regression evidence | Restore the `CrearRecursoSurface` callback to the previous controller start path and remove only E tests/guards; confirmed backend creations are not reverted. |
 
 ## A — Provider transversal mínimo (140–210 lines)
 
@@ -48,14 +49,23 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 - [x] **TRIANGULATE:** Add boundary values to `tests/unit/resourcesMasterApi.test.ts` proving no coercion, trim, default, business inference, or conversion of opaque IDs occurs, including the current acceptance semantics for numeric `revision` and rejection of `null` IDs or non-string cursors. <!-- sdd-owner: implementation -->
 - [x] **REFACTOR:** Keep Zod schema symbols private and simplify only the list-parser projection in `src/features/resources-master/resourcesMaster.api.ts`; rerun the focused API command to confirm non-list parser coverage remains green. <!-- sdd-owner: implementation -->
 
-## C — Hook `useInfiniteQuery` feature-local (300–380 lines)
+## C1 — Hook `useInfiniteQuery`: identidad y modelo de lectura (220–320 lines)
 
-**Focused verification:** `pnpm test -- tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun the focused command and `pnpm typecheck`. **Runtime harness:** N/A — the hook deliberately has no screen consumer until D; adapter call counts and status contract are covered in isolation.
+**Focused verification:** `pnpm test -- tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` (focused command must exit 0); after the focused run, execute lint, Prettier check, `pnpm typecheck`, and `git diff --check`. **Runtime harness:** N/A — the hook deliberately has no screen consumer until D; isolated adapter calls and the public read model are covered in the hook test.
 
-- [ ] **RED:** Create failing contract tests in `tests/unit/useResourcesMasterListQuery.test.tsx` using a fresh `QueryClient` and local `QueryClientProvider` per case for key identity, trimmed search, deepest effective hierarchy filter, list-versus-search payload, initial cursor, explicit query options, isolated caches, and no Convex import. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Create `src/features/resources-master/useResourcesMasterListQuery.ts` as a private-feature hook that calls only `ResourcesMasterApi`, derives the exact `['resources-master', 'list', normalizedSearchText, effectiveLevel, effectiveId]` key and matching payload, and configures `useInfiniteQuery` with the approved initial page param, CTA-driven continuation, focus/reconnect/remount policy, and no shared wrapper. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Add failing-then-passing cases in `tests/unit/useResourcesMasterListQuery.test.tsx` for exactly one automatic initial retry, zero automatic continuation retries, one-call manual retry, duplicate-CTA suppression, cursor reuse after partial failure, page-order flatten/dedupe, confirmed-empty semantics, retained valid pages, and no focus/reconnect/remount refetch; restore any global `focusManager` state in `finally`. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Encapsulate the private technical failure marker, in-flight continuation promise, semantic status mapping, and `useMemo` projection in `src/features/resources-master/useResourcesMasterListQuery.ts` without exposing remote error messages or Query internals; clear locally created test clients and rerun the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Added the failing hook-contract cases with a fresh `QueryClient` and local `QueryClientProvider` per case for key identity, trimmed search, deepest effective hierarchy filter, list-versus-search payload, initial cursor, isolated caches, and no Convex import. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Added `src/features/resources-master/useResourcesMasterListQuery.ts` as a feature-local hook that calls only `ResourcesMasterApi`, derives the exact `['resources-master', 'list', normalizedSearchText, effectiveLevel, effectiveId]` key and matching payload, and configures `useInfiniteQuery` with the approved initial page parameter, next-page derivation, initial automatic retry, and no focus/reconnect/remount refetch. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Covered exactly one automatic initial retry, ordered first-page flatten/dedupe, retained continuation state, confirmed-empty semantics, semantic initial-error projection without a private error, and no focus/reconnect/remount refetch; global focus/online state is restored in `finally`. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Kept the technical failure marker and `useMemo` projection private; C1 exposes only `items`, `status`, and `isDone`, not Query observer results, errors, or actions. <!-- sdd-owner: implementation -->
+
+## C2 — Hook `useInfiniteQuery`: acciones y concurrencia (260–360 lines)
+
+**Focused verification:** `pnpm test -- tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun the focused command and `pnpm typecheck`. **Runtime harness:** N/A — D remains the first screen consumer; adapter call sequencing and semantic action promises are covered in isolation.
+
+- [ ] **RED:** Add failing hook cases for key-scoped manual retry and continuation state, cross-key races, duplicate CTA suppression, cursor reuse after partial failure, partial-error recovery with retained pages, semantic void action promises, and observer-local refetch. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add public `loadMore`, `retry`, and `refetchActive` semantic actions without exposing Query observer results or private errors; keep C1 key, payload, initial page parameter, next-page derivation, and read projection unchanged. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE:** Prove a key change cannot inherit or clear another key's manual-retry/continuation state; prove repeated CTA activation shares one continuation, retries reuse the failed cursor, partial errors retain valid pages, action promises resolve `void`, and refetch targets only the mounted observer key. <!-- sdd-owner: implementation -->
+- [ ] **REFACTOR:** Encapsulate per-key action/concurrency bookkeeping and preserve C1's private failure marker and `useMemo` read model; clear locally created test clients and rerun the focused command. <!-- sdd-owner: implementation -->
 
 ## D — Criterio atómico y wiring de pantalla (280–380 lines)
 
@@ -77,6 +87,6 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 ## Parent-owned delivery and lifecycle gates
 
-- [x] Before apply, choose and record the delivery chain strategy for the estimated 1,120–1,570-line total. The user selected `feature-branch-chain`; A, B, C, D and E remain separate review units so no combined A+B diff can exceed the 400-line budget. <!-- sdd-owner: parent -->
+- [x] Before apply, choose and record the delivery chain strategy for the estimated 1,120–1,570-line total. The user selected `feature-branch-chain`; A, B, C1, C2, D and E remain separate review units so no combined A+B diff can exceed the 400-line budget. <!-- sdd-owner: parent -->
 - [ ] After slice E and before synchronizing or archiving either change, perform the required three-way reconciliation of `openspec/specs/frontend-foundation/spec.md`, `openspec/changes/catalog-hierarchy-base/specs/frontend-foundation/spec.md`, and `openspec/changes/adopt-query-zod/specs/frontend-foundation/spec.md`; retain both the Catálogo feature-local Convex exception and the Resources-only feature-local Query exception, keep Query prohibited in Catálogo, and record the merge-order resolution. <!-- sdd-owner: parent -->
-- [ ] Start or reuse bounded review for each completed A–E slice, checking its measured additions plus deletions against the 400-line budget, its focused command result, its runtime scenario result, and its stated rollback boundary before accepting the next slice. <!-- sdd-owner: parent -->
+- [ ] Start or reuse bounded review for each completed A, B, C1, C2, D and E slice, checking its measured additions plus deletions against the 400-line budget, its focused command result, its runtime scenario result, and its stated rollback boundary before accepting the next slice. <!-- sdd-owner: parent -->
