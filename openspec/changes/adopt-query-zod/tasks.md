@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                       |
+| ----------------------- | ----------------------------------------------------------- |
 | Estimated changed lines | 1,120–1,570 total; each review slice is estimated below 400 |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 (A) → PR 2 (B) → PR 3 (C) → PR 4 (D) → PR 5 (E) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | feature-branch-chain |
+| 400-line budget risk    | High                                                        |
+| Chained PRs recommended | Yes                                                         |
+| Suggested split         | PR 1 (A) → PR 2 (B) → PR 3 (C) → PR 4 (D) → PR 5 (E)        |
+| Delivery strategy       | ask-on-risk                                                 |
+| Chain strategy          | feature-branch-chain                                        |
 
 Decision needed before apply: No — resolved by the user
 Chained PRs recommended: Yes
@@ -22,22 +22,22 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 ## Slice plan and boundaries
 
-| Slice | Estimate | Depends on | Start → finish boundary | Rollback boundary |
-|---|---:|---|---|---|
-| A — provider | 140–210 | Verified prerequisite | No Query provider → stable per-mount provider with no consumers | Remove the `AppProviders` wrapper/initializer and its tests; no persistent data exists. |
-| B — list transport | 180–260 | Verified prerequisite | Manual list parser → Zod-backed `parseResourceListPage` with identical public DTO | Restore only the manual list-envelope/list-summary path in `resourcesMaster.api.ts`; leave non-list parsers untouched. |
-| C — feature-local query hook | 300–380 | A, B | No hook → isolated `useInfiniteQuery` list behavior without screen consumer | Remove `useResourcesMasterListQuery.ts` and its focused test; A may remain inert. |
-| D — screen migration | 280–380 | C | Manual list controller wired to screen → Query hook projects onto unchanged JSX | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests. |
-| E — explicit refresh and guardrails | 220–340 | D | No Query refresh/allowlist evidence → active-list refresh and complete boundary/regression evidence | Restore the `CrearRecursoSurface` callback to the previous controller start path and remove only E tests/guards; confirmed backend creations are not reverted. |
+| Slice                               | Estimate | Depends on            | Start → finish boundary                                                                             | Rollback boundary                                                                                                                                              |
+| ----------------------------------- | -------: | --------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — provider                        |  140–210 | Verified prerequisite | No Query provider → stable per-mount provider with no consumers                                     | Remove the `AppProviders` wrapper/initializer and its tests; no persistent data exists.                                                                        |
+| B — list transport                  |  180–260 | Verified prerequisite | Manual list parser → Zod-backed `parseResourceListPage` with identical public DTO                   | Restore only the manual list-envelope/list-summary path in `resourcesMaster.api.ts`; leave non-list parsers untouched.                                         |
+| C — feature-local query hook        |  300–380 | A, B                  | No hook → isolated `useInfiniteQuery` list behavior without screen consumer                         | Remove `useResourcesMasterListQuery.ts` and its focused test; A may remain inert.                                                                              |
+| D — screen migration                |  280–380 | C                     | Manual list controller wired to screen → Query hook projects onto unchanged JSX                     | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests.      |
+| E — explicit refresh and guardrails |  220–340 | D                     | No Query refresh/allowlist evidence → active-list refresh and complete boundary/regression evidence | Restore the `CrearRecursoSurface` callback to the previous controller start path and remove only E tests/guards; confirmed backend creations are not reverted. |
 
 ## A — Provider transversal mínimo (140–210 lines)
 
 **Focused verification:** `pnpm test -- tests/unit/appProviders.test.tsx tests/architecture/queryZodBoundaries.test.ts` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR run `pnpm typecheck`. **Runtime harness:** N/A — this provider-only slice has no standalone user flow; Router composition is asserted by the focused component test.
 
-- [ ] **RED:** Add failing cases in `tests/unit/appProviders.test.tsx` for Router composition, one `QueryClient` identity across rerenders of one `AppProviders` mount, and a distinct identity after a new mount; add the initial allowlist assertions in `tests/architecture/queryZodBoundaries.test.ts` for the sole provider location and no Convex import under `src/app/**`. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Update `src/app/providers/AppProviders.tsx` to create `QueryClient` with a `useState` lazy initializer and wrap the existing `RouterProvider` in `QueryClientProvider`; import no feature, Convex API, domain API, singleton, devtools, persistence, or global defaults. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Extend `tests/unit/appProviders.test.tsx` to prove an independent remount receives a new client while the Router still renders, and extend `tests/architecture/queryZodBoundaries.test.ts` to reject module-level `QueryClient` construction and provider duplication. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Reduce `src/app/providers/AppProviders.tsx` and the two focused tests to the smallest explicit per-mount composition while preserving the passing identity, Router, and import-boundary assertions; rerun the focused command and `pnpm typecheck`. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing cases in `tests/unit/appProviders.test.tsx` for Router composition, one `QueryClient` identity across rerenders of one `AppProviders` mount, and a distinct identity after a new mount; add the initial allowlist assertions in `tests/architecture/queryZodBoundaries.test.ts` for the sole provider location and no Convex import under `src/app/**`. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Update `src/app/providers/AppProviders.tsx` to create `QueryClient` with a `useState` lazy initializer and wrap the existing `RouterProvider` in `QueryClientProvider`; import no feature, Convex API, domain API, singleton, devtools, persistence, or global defaults. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Extend `tests/unit/appProviders.test.tsx` to prove an independent remount receives a new client while the Router still renders, and extend `tests/architecture/queryZodBoundaries.test.ts` to reject module-level `QueryClient` construction and provider duplication. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Reduce `src/app/providers/AppProviders.tsx` and the two focused tests to the smallest explicit per-mount composition while preserving the passing identity, Router, and import-boundary assertions; rerun the focused command and `pnpm typecheck`. <!-- sdd-owner: implementation -->
 
 ## B — Frontera Zod de la lista (180–260 lines)
 
