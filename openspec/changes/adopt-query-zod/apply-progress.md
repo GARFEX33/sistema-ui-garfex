@@ -4,7 +4,7 @@
 
 - **Date:** 2026-09-24
 - **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
-- **Change / current branch:** `adopt-query-zod` / `feat/adopt-query-zod-05-query-actions`.
+- **Change / delivery:** `adopt-query-zod` / local `feature-branch-chain`; individual branch names are recorded by their commits.
 - **Current state:** A, B, C1, and C2 completed; D is the next pending work unit.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
@@ -149,6 +149,6 @@ The checklist below records the state immediately after Slice A and is supersede
 - Targeted `pnpm exec eslint src/features/resources-master/useResourcesMasterListQuery.ts tests/unit/useResourcesMasterListQuery.test.tsx`, targeted `pnpm exec prettier --check src/features/resources-master/useResourcesMasterListQuery.ts tests/unit/useResourcesMasterListQuery.test.tsx`, `pnpm typecheck`, and `git diff --check` each exited 0.
 - Runtime harness: N/A — D remains the first screen consumer; controlled adapter sequencing covers this feature-local hook boundary.
 - **Rollback boundary:** remove C2 actions/bookkeeping and their C2 tests, then restore the C1 three-field return shape and four C2 task boxes. Provider A and transport B remain independent; no UI, cache writes, dependency, backend, or migration change exists.
-- **Count:** 348 authored lines (326 additions, 22 deletions), below the 400-line budget.
+- **Count:** 350 authored lines (327 additions, 23 deletions), below the 400-line budget.
 - **Review focus:** key identity from `QueryCache.find({ exact: true })`, stale-action guards, continuation promise sharing/finally cleanup, and manual-initial retry marker lifetime.
 - **Commit verdict:** commit-ready as one C2 work unit; no commit created in delegated scope.
