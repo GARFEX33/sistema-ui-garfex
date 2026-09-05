@@ -74,6 +74,7 @@ describe('Keyboard First architecture boundaries', () => {
     const approvedConvexTransportAdapters = new Set([
       'features/catalog-hierarchy/catalogHierarchy.api.ts',
       'features/catalog-hierarchy/catalogTypeAttributes.api.ts',
+      'features/resources-master/resourcesMaster.api.ts',
     ])
     const runtimeWithoutApprovedConvexTransportAdapters = runtimeFiles
       .filter((file) => !approvedConvexTransportAdapters.has(file))

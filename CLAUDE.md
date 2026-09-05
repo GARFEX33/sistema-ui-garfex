@@ -48,7 +48,7 @@ Feature-first Scope Rule / Screaming Architecture. Three top-level zones under `
 
 ### Transport adapters
 
-Convex is allowed in exactly two files: `src/features/catalog-hierarchy/catalogHierarchy.api.ts` and `catalogTypeAttributes.api.ts`. Each exports a plain `interface ...Api` over a `Transport` seam, builds `FunctionReference`s with `makeFunctionReference` from **literal** operation strings (`'catalogoAdmin/jerarquia:listarClases'`, `'catalogoAdmin/atributos:...'`), and validates every response field before returning typed data. No template strings, no computed property access, no dynamic operation names — the architecture tests assert this literally.
+Convex is allowed in exactly three files: `src/features/catalog-hierarchy/catalogHierarchy.api.ts`, `catalogTypeAttributes.api.ts`, and `src/features/resources-master/resourcesMaster.api.ts`. Each exports a plain `interface ...Api` over a `Transport` seam, builds `FunctionReference`s with `makeFunctionReference` from **literal** operation strings (`'catalogoAdmin/jerarquia:listarClases'`, `'catalogoAdmin/atributos:...'`, `'catalogoAdmin/recursos:...'`), and validates every response field before returning typed data. No template strings, no computed property access, no dynamic operation names — the architecture tests assert this literally.
 
 There is no global store and no query-cache layer. List paging/state is a hand-rolled controller (`useCatalogList.ts`) with an adapter seam; selection state is pure functions in `catalogHierarchyState.ts`.
 
