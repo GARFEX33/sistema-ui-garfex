@@ -47,6 +47,8 @@ import type {
   TypeAttributeAssignment,
   TypeAttributePage,
 } from './catalogTypeAttributes.types'
+import { PageHeader } from '../../shared/ui/PageHeader'
+import { WorkCard } from '../../shared/ui/WorkCard'
 import './catalogHierarchy.css'
 
 type ConnectedLists = {
@@ -1139,75 +1141,94 @@ export function CatalogHierarchyScreen({
       aria-labelledby="catalog-hierarchy-title"
       data-context-class={context.classId}
     >
-      <header className="catalog-hierarchy-header">
-        <h1 id="catalog-hierarchy-title" className="catalog-visually-hidden">
-          Catálogo
-        </h1>
-      </header>
+      <PageHeader
+        title={
+          <h1 id="catalog-hierarchy-title" className="text-lg font-bold">
+            Catálogo
+          </h1>
+        }
+        context={
+          <div
+            className="flex flex-col gap-1 text-text-primary md:flex-row md:items-baseline md:gap-3"
+            aria-label="Modelo del catálogo"
+          >
+            <span className="text-xs font-bold tracking-wider text-text-secondary">
+              MODELO DEL CATÁLOGO
+            </span>
+            <strong className="text-sm">
+              Clase&nbsp; → &nbsp;Familia&nbsp; → &nbsp;Tipo
+            </strong>
+          </div>
+        }
+        action={
+          <>
+            {showAssignmentAction && (
+              <div data-contextual-action="attributes">
+                <AsignarAtributoSurface
+                  api={attributesApi}
+                  assignments={selectedAttributeState?.items ?? []}
+                  family={{ id: selectedFamily!.id, label: selectedFamily!.label }}
+                  type={{ id: selectedType!.id, label: selectedType!.label }}
+                  onCreated={reloadTypeAttributes}
+                  onSuccess={showSuccess}
+                />
+              </div>
+            )}
+            {!showAssignmentAction &&
+              creationLevel === 'class' &&
+              (createClass ?? api?.createClass) && (
+                <div data-contextual-action="class">
+                  <NuevaClaseSurface
+                    createClass={createClass ?? api?.createClass}
+                    onCreated={reloadClasses}
+                    onSuccess={showSuccess}
+                  />
+                </div>
+              )}
+            {!showAssignmentAction &&
+              creationLevel === 'family' &&
+              (createFamily ?? api?.createFamily) && (
+                <div data-contextual-action="family">
+                  <CatalogCreateSurface
+                    level="family"
+                    parent={{ id: selectedClass!.id, label: selectedClass!.label }}
+                    createFamily={createFamily ?? api?.createFamily}
+                    onCreated={() => reloadFamilies(selectedClass!.id)}
+                    onSuccess={showSuccess}
+                  />
+                </div>
+              )}
+            {!showAssignmentAction &&
+              creationLevel === 'type' &&
+              (createType ?? api?.createType) && (
+                <div data-contextual-action="type">
+                  <CatalogCreateSurface
+                    level="type"
+                    parent={{
+                      id: selectedFamily!.id,
+                      label: selectedFamily!.label,
+                    }}
+                    createType={createType ?? api?.createType}
+                    onCreated={() => reloadTypes(selectedFamily!.id)}
+                    onSuccess={showSuccess}
+                  />
+                </div>
+              )}
+          </>
+        }
+      />
       {successMessage && (
         <div className="catalog-success-toast" role="status" aria-live="polite">
           {successMessage}
         </div>
       )}
-      <div className="catalog-model-bar" aria-label="Modelo del catálogo">
-        <span>MODELO DEL CATÁLOGO</span>
-        <strong>Clase&nbsp; → &nbsp;Familia&nbsp; → &nbsp;Tipo</strong>
-        {showAssignmentAction && (
-          <div data-contextual-action="attributes">
-            <AsignarAtributoSurface
-              api={attributesApi}
-              assignments={selectedAttributeState?.items ?? []}
-              family={{ id: selectedFamily!.id, label: selectedFamily!.label }}
-              type={{ id: selectedType!.id, label: selectedType!.label }}
-              onCreated={reloadTypeAttributes}
-              onSuccess={showSuccess}
-            />
-          </div>
-        )}
-        {!showAssignmentAction &&
-          creationLevel === 'class' &&
-          (createClass ?? api?.createClass) && (
-            <div data-contextual-action="class">
-              <NuevaClaseSurface
-                createClass={createClass ?? api?.createClass}
-                onCreated={reloadClasses}
-                onSuccess={showSuccess}
-              />
-            </div>
-          )}
-        {!showAssignmentAction &&
-          creationLevel === 'family' &&
-          (createFamily ?? api?.createFamily) && (
-            <div data-contextual-action="family">
-              <CatalogCreateSurface
-                level="family"
-                parent={{ id: selectedClass!.id, label: selectedClass!.label }}
-                createFamily={createFamily ?? api?.createFamily}
-                onCreated={() => reloadFamilies(selectedClass!.id)}
-                onSuccess={showSuccess}
-              />
-            </div>
-          )}
-        {!showAssignmentAction &&
-          creationLevel === 'type' &&
-          (createType ?? api?.createType) && (
-            <div data-contextual-action="type">
-              <CatalogCreateSurface
-                level="type"
-                parent={{
-                  id: selectedFamily!.id,
-                  label: selectedFamily!.label,
-                }}
-                createType={createType ?? api?.createType}
-                onCreated={() => reloadTypes(selectedFamily!.id)}
-                onSuccess={showSuccess}
-              />
-            </div>
-          )}
-      </div>
       <div className="catalog-workstation">
-        <div className="catalog-browser" aria-label="Estructura del catálogo">
-          <h2>ESTRUCTURA DEL CATÁLOGO</h2>
+        <WorkCard
+          className="catalog-browser"
+          density="comfortable"
+          aria-labelledby="catalog-browser-title"
+        >
+          <h2 id="catalog-browser-title">ESTRUCTURA DEL CATÁLOGO</h2>
           <div className="catalog-browser-columns">
             <CatalogRegion
               label="Clases"
@@ -1252,8 +1273,12 @@ export function CatalogHierarchyScreen({
               onRetry={isStatic ? undefined : () => void lists?.types.retry()}
             />
           </div>
-        </div>
-        <div className="catalog-summary" aria-label="Lectura del catálogo">
+        </WorkCard>
+        <WorkCard
+          className="catalog-summary"
+          density="compact"
+          aria-label="Lectura del catálogo"
+        >
           <p className="catalog-summary-path">
             {selectedPath
               ? `CLASE / FAMILIA / TIPO · ${selectedPath.classLabel} / ${selectedPath.familyLabel} / ${selectedPath.typeLabel}`
@@ -1326,7 +1351,7 @@ export function CatalogHierarchyScreen({
               onAttributeActionTargetChange={setAttributeActionTarget}
             />
           )}
-        </div>
+        </WorkCard>
       </div>
       <section className="catalog-meaning" aria-label="Regla de jerarquía">
         <p>

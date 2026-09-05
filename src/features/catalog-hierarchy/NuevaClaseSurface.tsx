@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Dialog, Modal, ModalOverlay } from 'react-aria-components'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
 import {
   isValidFocusCandidate,
   restoreFocusNextFrame,
 } from '../../shared/keyboard/focusRestoration'
+import { Button } from '../../shared/ui/Button'
+import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
+import { Field, FieldSeparator } from '../../shared/ui/Field'
+import { fieldInputClass } from '../../shared/ui/fieldStyles'
 import type {
   CatalogClassCreateInput,
   CatalogClassItem,
@@ -315,7 +318,7 @@ export function CatalogCreateSurface({
     <div className="catalog-create-surface">
       <Button
         ref={triggerRef}
-        className="catalog-create-trigger"
+        data-spatial-id={command.id}
         aria-label={copy.title}
         onPress={() => open(triggerRef.current)}
       >
@@ -323,133 +326,111 @@ export function CatalogCreateSurface({
         <kbd>{command.shortcut}</kbd>
       </Button>
 
-      <ModalOverlay
-        className="catalog-dialog-backdrop"
+      <Dialog
+        ref={dialogRef}
         isOpen={isOpen}
-        isDismissable={false}
+        height={440}
         onOpenChange={(openState) => !openState && close()}
+        data-approved-frame={
+          level === 'class' ? 'n2418' : level === 'family' ? 'n2487' : 'n2556'
+        }
+        aria-label={copy.title}
       >
-        <Modal className="catalog-dialog-modal">
-          <Dialog
-            ref={dialogRef}
-            className="catalog-dialog"
-            data-approved-frame={
-              level === 'class'
-                ? 'n2418'
-                : level === 'family'
-                  ? 'n2487'
-                  : 'n2556'
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              close()
             }
-            aria-label={copy.title}
-          >
-            <form
-              className="catalog-dialog-form"
-              onKeyDown={(event) => {
-                if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
-                  event.preventDefault()
-                  close()
-                }
-              }}
-              onSubmit={(event) => {
-                event.preventDefault()
-                void submit()
-              }}
-            >
-              <header className="catalog-dialog-heading">
-                <h2>{copy.title}</h2>
-                <span>Esc cerrar</span>
-              </header>
-              <div className="catalog-dialog-content">
-                {visibleParent && copy.parentLabel && (
-                  <div className="catalog-creation-parent">
-                    <span>{copy.parentLabel}</span>
-                    <output
-                      data-testid="creation-parent"
-                      data-parent-id={visibleParent.id}
-                    >
-                      {visibleParent.label}
-                    </output>
-                  </div>
-                )}
-                <div className="catalog-dialog-fields">
-                  <div className="catalog-field-row catalog-query-field">
-                    <label
-                      className={
-                        level === 'class'
-                          ? 'catalog-visually-hidden'
-                          : undefined
-                      }
-                      htmlFor={keyId}
-                    >
-                      Clave
-                    </label>
-                    <input
-                      ref={keyRef}
-                      onKeyDown={handleDialogKeyDown}
-                      id={keyId}
-                      placeholder="Clave"
-                      value={draft.key}
-                      disabled={isSubmitting}
-                      onChange={(event) => setField('key', event.target.value)}
-                    />
-                  </div>
-                  <div className="catalog-field-separator" />
-                  <div className="catalog-field-row catalog-name-field">
-                    <label htmlFor={nameId}>NOMBRE</label>
-                    <input
-                      ref={nameRef}
-                      onKeyDown={handleDialogKeyDown}
-                      id={nameId}
-                      aria-label="Nombre"
-                      value={draft.name}
-                      disabled={isSubmitting}
-                      onChange={(event) => setField('name', event.target.value)}
-                    />
-                  </div>
-                  <div className="catalog-field-separator" />
-                  <div className="catalog-field-row catalog-description-field">
-                    <label htmlFor={descriptionId}>DESCRIPCIÓN</label>
-                    <textarea
-                      ref={descriptionRef}
-                      onKeyDown={handleDialogKeyDown}
-                      id={descriptionId}
-                      aria-label="Descripción"
-                      value={draft.description}
-                      disabled={isSubmitting}
-                      onChange={(event) =>
-                        setField('description', event.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="catalog-field-separator" />
-                </div>
-                <div className="catalog-dialog-error-region" role="alert">
-                  <span aria-hidden="true">{errorMessage ? '⚠' : ''}</span>
-                  <span>{errorMessage}</span>
-                </div>
+          }}
+          onSubmit={(event) => {
+            event.preventDefault()
+            void submit()
+          }}
+        >
+          <DialogHeading title={copy.title} />
+          <div className="catalog-dialog-content">
+            {visibleParent && copy.parentLabel && (
+              <div className="catalog-creation-parent">
+                <span>{copy.parentLabel}</span>
+                <output
+                  data-testid="creation-parent"
+                  data-parent-id={visibleParent.id}
+                >
+                  {visibleParent.label}
+                </output>
               </div>
-              <footer className="catalog-dialog-actions">
-                <Button
-                  ref={cancelRef}
+            )}
+            <div className="catalog-dialog-fields">
+              <Field label="Clave" htmlFor={keyId} hideLabel={level === 'class'}>
+                <input
+                  ref={keyRef}
                   onKeyDown={handleDialogKeyDown}
-                  onPress={close}
-                  type="button"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  ref={submitRef}
+                  id={keyId}
+                  placeholder="Clave"
+                  className={fieldInputClass}
+                  value={draft.key}
+                  disabled={isSubmitting}
+                  onChange={(event) => setField('key', event.target.value)}
+                />
+              </Field>
+              <FieldSeparator />
+              <Field label="NOMBRE" htmlFor={nameId} emphasis>
+                <input
+                  ref={nameRef}
                   onKeyDown={handleDialogKeyDown}
-                  isDisabled={!canSubmit}
-                  type="submit"
-                >
-                  {copy.action}
-                </Button>
-              </footer>
-            </form>
-          </Dialog>
-        </Modal>
-      </ModalOverlay>
+                  id={nameId}
+                  aria-label="Nombre"
+                  className={fieldInputClass}
+                  value={draft.name}
+                  disabled={isSubmitting}
+                  onChange={(event) => setField('name', event.target.value)}
+                />
+              </Field>
+              <FieldSeparator />
+              <Field label="DESCRIPCIÓN" htmlFor={descriptionId}>
+                <textarea
+                  ref={descriptionRef}
+                  onKeyDown={handleDialogKeyDown}
+                  id={descriptionId}
+                  aria-label="Descripción"
+                  className={`${fieldInputClass} h-[60px] resize-none`}
+                  value={draft.description}
+                  disabled={isSubmitting}
+                  onChange={(event) =>
+                    setField('description', event.target.value)
+                  }
+                />
+              </Field>
+              <FieldSeparator />
+            </div>
+            <div className="catalog-dialog-error-region" role="alert">
+              <span aria-hidden="true">{errorMessage ? '⚠' : ''}</span>
+              <span>{errorMessage}</span>
+            </div>
+          </div>
+          <DialogActions>
+            <Button
+              ref={cancelRef}
+              variant="outline"
+              onKeyDown={handleDialogKeyDown}
+              onPress={close}
+              type="button"
+            >
+              Cancelar
+            </Button>
+            <Button
+              ref={submitRef}
+              onKeyDown={handleDialogKeyDown}
+              isDisabled={!canSubmit}
+              type="submit"
+            >
+              {copy.action}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
       {!onSuccess && localSuccessMessage && (
         <div className="catalog-success-toast" role="status" aria-live="polite">
           {localSuccessMessage}

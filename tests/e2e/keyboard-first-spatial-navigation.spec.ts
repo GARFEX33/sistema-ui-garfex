@@ -214,7 +214,9 @@ test.describe('Keyboard First workstation contract at 1440×980', () => {
     const trigger = page.getByRole('button', { name: 'Nueva Clase' })
     await trigger.click()
     await page.evaluate(() => {
-      document.querySelector<HTMLElement>('.catalog-create-trigger')?.remove()
+      document
+        .querySelector<HTMLElement>('button[aria-label="Nueva Clase"]')
+        ?.remove()
     })
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)

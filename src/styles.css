@@ -1,6 +1,31 @@
 @import 'tailwindcss' source('./');
 @import './shared/design-system/tokens.css';
 
+/* Maps the existing runtime tokens.css custom properties into Tailwind's
+   theme namespace so `bg-surface`, `text-primary`, `border-border`, etc.
+   generate real utilities instead of requiring arbitrary-value syntax.
+   `@theme inline` keeps the values delegated to the runtime variables
+   (rather than inlining them at build time), which is what future
+   Light/Dark theme switching will need. */
+@theme inline {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-subtle: var(--color-surface-subtle);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-active: var(--color-primary-active);
+  --color-primary-subtle: var(--color-primary-subtle);
+  --color-accent: var(--color-accent);
+  --color-on-accent: var(--color-on-accent);
+  --color-focus: var(--color-focus);
+  --font-sans: var(--font-sans);
+}
+
 :root {
   font-family: var(--font-sans);
   color: var(--color-text-primary);

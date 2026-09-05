@@ -82,7 +82,7 @@ describe('Nueva Clase creation flow', () => {
     const content = form!.children[1]
     expect(content.querySelector('.catalog-dialog-fields')).not.toBeNull()
     expect(content.querySelector('[role="alert"]')).not.toBeNull()
-    const footer = form!.querySelector('footer.catalog-dialog-actions')
+    const footer = form!.querySelector('footer')
     expect(footer).not.toBeNull()
     expect(
       Array.from(footer!.querySelectorAll('button')).map(

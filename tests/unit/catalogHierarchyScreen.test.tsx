@@ -754,11 +754,17 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     await waitFor(() => expect(button('Clase 1')).toBeVisible())
     expect(button('Nueva Clase')).toBeVisible()
     expectAbsent('Nueva Familia', 'Nuevo Tipo')
-    const modelBar = screen.getByLabelText('Modelo del catálogo')
-    expect(modelBar).toContainElement(button('Nueva Clase'))
-    expect(
-      document.querySelector('.catalog-hierarchy-header'),
-    ).not.toContainElement(button('Nueva Clase'))
+    const pageHeader = screen
+      .getByRole('heading', { name: 'Catálogo' })
+      .closest('header')
+    expect(pageHeader).toContainElement(button('Nueva Clase'))
+    expect(pageHeader).toHaveClass('md:grid-cols-3')
+    expect(screen.getByLabelText('Modelo del catálogo')).toBeVisible()
+    expect(screen.getByRole('region', { name: /Estructura del catálogo/i })).toHaveClass(
+      'rounded-lg',
+      'border-border',
+      'bg-surface',
+    )
     expect(screen.getAllByTestId('catalog-row-chevron')).toHaveLength(1)
     expect(screen.getByTestId('catalog-row-chevron')).toHaveAttribute(
       'aria-hidden',
