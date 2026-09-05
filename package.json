@@ -11,7 +11,7 @@
     "dev": "pnpm router:generate && vite",
     "build": "pnpm router:generate && tsc -b && vite build",
     "test": "vitest run",
-    "test:connected": "RUN_CONNECTED_CATALOG_TESTS=true vitest run tests/integration/catalogHierarchyConnectedTransport.test.ts",
+    "test:connected": "RUN_CONNECTED_CATALOG_TESTS=true vitest run --config vitest.connected.config.ts",
     "test:watch": "vitest",
     "test:stories": "vitest --config vitest.storybook.config.ts",
     "test:e2e": "playwright test",
