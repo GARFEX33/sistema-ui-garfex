@@ -15,24 +15,24 @@ Status as of 2026-09: **incremental, first real components landed.** Tailwind CS
 
 Light mode only today (`color-scheme: light` — Dark is future work, not implemented):
 
-| Token | Value |
-|---|---|
-| `--color-background` | `#f7f6f3` |
-| `--color-surface` | `#ffffff` |
-| `--color-surface-subtle` | `#f1f0ec` |
-| `--color-text-primary` | `#1f1f1d` |
-| `--color-text-secondary` | `#5f5d58` |
-| `--color-text-muted` | `#6d6a64` |
-| `--color-border` | `#d9d6cf` |
-| `--color-border-strong` | `#b8b4ab` |
-| `--color-primary` | `#7c0000` |
-| `--color-primary-hover` | `#680000` |
-| `--color-primary-active` | `#540000` |
-| `--color-primary-subtle` | `#f7eaea` |
-| `--color-accent` | `#f2d031` |
-| `--color-on-accent` | `#2b2500` |
-| `--color-focus` | `#8a6800` |
-| `--font-sans` | `Inter, Arial, sans-serif` |
+| Token                    | Value                      |
+| ------------------------ | -------------------------- |
+| `--color-background`     | `#f7f6f3`                  |
+| `--color-surface`        | `#ffffff`                  |
+| `--color-surface-subtle` | `#f1f0ec`                  |
+| `--color-text-primary`   | `#1f1f1d`                  |
+| `--color-text-secondary` | `#5f5d58`                  |
+| `--color-text-muted`     | `#6d6a64`                  |
+| `--color-border`         | `#d9d6cf`                  |
+| `--color-border-strong`  | `#b8b4ab`                  |
+| `--color-primary`        | `#7c0000`                  |
+| `--color-primary-hover`  | `#680000`                  |
+| `--color-primary-active` | `#540000`                  |
+| `--color-primary-subtle` | `#f7eaea`                  |
+| `--color-accent`         | `#f2d031`                  |
+| `--color-on-accent`      | `#2b2500`                  |
+| `--color-focus`          | `#8a6800`                  |
+| `--font-sans`            | `Inter, Arial, sans-serif` |
 
 `success` / `warning` / `error` / `info` semantic tokens don't exist yet — add them when a real screen needs them, not speculatively. Other token categories (spacing, radius, shadows, z-index, breakpoints, motion, component sizes) are not centralized yet; see `references/atomic-vocabulary.md` in the skill for the target list.
 
@@ -47,6 +47,12 @@ Tailwind's `@theme inline` mapping generates utilities named after the property 
 - **`WorkCard`** (`src/shared/ui/WorkCard.tsx`) — a semantic `<section>` work surface. Its `compact` and `comfortable` densities own neutral surface, border, radius, and padding. Features provide the accessible label plus domain content and any domain-required minimum height.
 
 Not yet extracted (still local, hand-rolled CSS): the Select-dropdown trigger chrome (`resources-master`'s `.resources-select-trigger` — no Catálogo equivalent exists to compare against, since Catálogo has no comboboxes), the multi-step wizard progress/field-grid patterns used by `AsignarAtributoSurface`/`GestionarOpcionesSurface`/`EditarAtributoSurface`, and the whole Atoms/Molecules/Organisms/Patterns vocabulary beyond these three.
+
+## Shared hierarchy contracts
+
+`HierarchyNavigator` (`src/shared/ui/HierarchyNavigator.tsx`) is the reusable three-column hierarchy presentation. Supply three labeled columns, their items and selection, optional parent-waiting/loading/empty/error/pagination state, and spatial metadata. It owns accessible regions and local row controls; it never loads data, installs global listeners, or knows feature terminology. Use feature-owned class hooks only when an approved fixed geometry cannot be expressed with existing token-backed utilities.
+
+`src/shared/hierarchy/parentGatedListController.ts` owns parent-required pagination, bounded initial retry, deduplication, and stale-response rejection. `hierarchySelection.ts` owns descendant reset plus parent-validated selection. Features retain their domain operation names, API adapters, and public state exports as thin adapters.
 
 ## Atomic Design vocabulary, Button contract, styling chain
 

@@ -25,27 +25,43 @@ test.describe('Catálogo workstation 1440×980', () => {
       y: 0,
       width: 220,
     })
-    await expect(await geometry('.catalog-model-bar')).toMatchObject({
-      x: 232,
-      y: 116,
-      width: 1196,
-      height: 52,
+    const catalogHeader = page.locator('.catalog-hierarchy-screen > header')
+    const model = page.getByLabel('Modelo del catálogo')
+    await expect(await catalogHeader.boundingBox()).toMatchObject({
+      x: 244,
+      y: 76,
+      width: 1172,
+      height: 66,
     })
+    await expect(model).toContainText('MODELO DEL CATÁLOGO')
+    await expect(model).toContainText('Clase → Familia → Tipo')
+    const headerBox = await catalogHeader.boundingBox()
+    const modelBox = await model.boundingBox()
+    if (!headerBox || !modelBox)
+      throw new Error('Catalog header and model context must be measurable')
+    expect(modelBox.x).toBeGreaterThan(headerBox.x)
+    expect(modelBox.x + modelBox.width).toBeLessThan(
+      headerBox.x + headerBox.width,
+    )
+    expect(modelBox.y).toBeGreaterThanOrEqual(headerBox.y)
+    expect(modelBox.y + modelBox.height).toBeLessThanOrEqual(
+      headerBox.y + headerBox.height,
+    )
     await expect(await geometry('.catalog-browser')).toMatchObject({
       x: 244,
-      y: 180,
+      y: 154,
       width: 520,
       height: 550,
     })
     await expect(await geometry('.catalog-summary')).toMatchObject({
       x: 786,
-      y: 180,
+      y: 154,
       width: 630,
       height: 550,
     })
     await expect(await geometry('.catalog-meaning')).toMatchObject({
       x: 244,
-      y: 748,
+      y: 722,
       width: 1172,
       height: 132,
     })

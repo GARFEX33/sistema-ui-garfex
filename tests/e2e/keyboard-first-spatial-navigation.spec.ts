@@ -24,7 +24,7 @@ test.describe('Keyboard First workstation contract at 1440×980', () => {
     })
     await expect(await geometry('.catalog-browser')).toMatchObject({
       x: 244,
-      y: 180,
+      y: 154,
       width: 520,
       height: 550,
     })

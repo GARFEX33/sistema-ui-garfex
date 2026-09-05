@@ -37,10 +37,10 @@ import {
 import type {
   CatalogClassItem,
   CatalogFamilyItem,
-  CatalogHierarchyItem,
   CatalogHierarchyPresentation,
   CatalogTypeItem,
 } from './catalogHierarchy.types'
+import { HierarchyNavigator } from '../../shared/ui/HierarchyNavigator'
 import type {
   AttributeDefinition,
   AttributeOption,
@@ -173,92 +173,6 @@ function useListSnapshot<T extends { id: unknown }>(
     subscribe,
     () => snapshotRef.current,
     () => snapshotRef.current,
-  )
-}
-
-function CatalogRegion({
-  label,
-  items,
-  selectedId,
-  waiting,
-  state,
-  onSelect,
-  onContinue,
-  onRetry,
-  hasChildren = false,
-  column,
-}: {
-  label: string
-  items: CatalogHierarchyItem[]
-  selectedId?: string
-  column: 'classes' | 'families' | 'types'
-  waiting?: string
-  state?: CatalogListState<{ id: unknown }>
-  onSelect?: (id: string) => void
-  onContinue?: () => void
-  onRetry?: () => void
-  hasChildren?: boolean
-}) {
-  const isWaiting = state?.status === 'waiting-for-parent'
-  const isLoading =
-    state?.status === 'initial-loading' ||
-    (state?.status === 'ready' && !state.isExhausted && !items.length)
-  const initialError = state?.status === 'initial-error'
-  const partialError = state?.status === 'partial-error'
-  return (
-    <section className="catalog-region" aria-label={label}>
-      <h3>{label.toUpperCase()}</h3>
-      <div className="catalog-region-items">
-        {items.length ? (
-          items.map((item) => (
-            <button
-              className={`catalog-item${item.id === selectedId ? ' is-selected' : ''}`}
-              key={item.id}
-              type="button"
-              aria-pressed={item.id === selectedId}
-              data-spatial-id={`catalog.row.${column}.${item.id}`}
-              data-spatial-column={column}
-              data-catalog-level={column}
-              onClick={() => onSelect?.(item.id)}
-            >
-              {item.label}
-              {hasChildren && (
-                <span
-                  className="catalog-row-chevron"
-                  data-testid="catalog-row-chevron"
-                  aria-hidden="true"
-                >
-                  ›
-                </span>
-              )}
-            </button>
-          ))
-        ) : isWaiting ? (
-          <p className="catalog-region-state">{waiting}</p>
-        ) : isLoading ? (
-          <p className="catalog-region-state">Cargando…</p>
-        ) : initialError ? (
-          <button type="button" onClick={onRetry}>
-            Reintentar
-          </button>
-        ) : (
-          <p className="catalog-region-state">Estado vacío confirmado</p>
-        )}
-        {partialError && (
-          <>
-            <p className="catalog-region-state">Listado parcial</p>
-            <button type="button" onClick={onRetry}>
-              Reintentar continuación
-            </button>
-          </>
-        )}
-        {state?.status === 'ready' && !state.isExhausted && !!items.length && (
-          <button type="button" onClick={onContinue}>
-            Cargar más…
-          </button>
-        )}
-      </div>
-    </section>
   )
 }
 
@@ -1167,7 +1081,10 @@ export function CatalogHierarchyScreen({
                 <AsignarAtributoSurface
                   api={attributesApi}
                   assignments={selectedAttributeState?.items ?? []}
-                  family={{ id: selectedFamily!.id, label: selectedFamily!.label }}
+                  family={{
+                    id: selectedFamily!.id,
+                    label: selectedFamily!.label,
+                  }}
                   type={{ id: selectedType!.id, label: selectedType!.label }}
                   onCreated={reloadTypeAttributes}
                   onSuccess={showSuccess}
@@ -1191,7 +1108,10 @@ export function CatalogHierarchyScreen({
                 <div data-contextual-action="family">
                   <CatalogCreateSurface
                     level="family"
-                    parent={{ id: selectedClass!.id, label: selectedClass!.label }}
+                    parent={{
+                      id: selectedClass!.id,
+                      label: selectedClass!.label,
+                    }}
                     createFamily={createFamily ?? api?.createFamily}
                     onCreated={() => reloadFamilies(selectedClass!.id)}
                     onSuccess={showSuccess}
@@ -1229,50 +1149,104 @@ export function CatalogHierarchyScreen({
           aria-labelledby="catalog-browser-title"
         >
           <h2 id="catalog-browser-title">ESTRUCTURA DEL CATÁLOGO</h2>
-          <div className="catalog-browser-columns">
-            <CatalogRegion
-              label="Clases"
-              column="classes"
-              items={classes}
-              hasChildren
-              selectedId={selectedClassId}
-              state={classState ?? undefined}
-              onSelect={isStatic ? undefined : handleClassSelect}
-              onContinue={
-                isStatic ? undefined : () => void lists?.classes.continue()
-              }
-              onRetry={isStatic ? undefined : () => void lists?.classes.retry()}
-            />
-            <CatalogRegion
-              label="Familias"
-              column="families"
-              items={families}
-              hasChildren
-              selectedId={selectedFamilyId}
-              state={familyState ?? undefined}
-              waiting="En espera de Clase."
-              onSelect={isStatic ? undefined : handleFamilySelect}
-              onContinue={
-                isStatic ? undefined : () => void lists?.families.continue()
-              }
-              onRetry={
-                isStatic ? undefined : () => void lists?.families.retry()
-              }
-            />
-            <CatalogRegion
-              label="Tipos"
-              column="types"
-              items={types}
-              selectedId={selectedTypeId}
-              state={typeState ?? undefined}
-              waiting="En espera de Familia."
-              onSelect={isStatic ? undefined : handleTypeSelect}
-              onContinue={
-                isStatic ? undefined : () => void lists?.types.continue()
-              }
-              onRetry={isStatic ? undefined : () => void lists?.types.retry()}
-            />
-          </div>
+          <HierarchyNavigator
+            className="catalog-browser-columns"
+            classNames={{
+              region: 'catalog-region',
+              items: 'catalog-region-items',
+              row: 'catalog-item',
+              selectedRow: 'is-selected',
+              childIndicator: 'catalog-row-chevron',
+              state: 'catalog-region-state',
+            }}
+            columns={[
+              {
+                id: 'classes',
+                label: 'Clases',
+                items: classes,
+                hasChildren: true,
+                selectedId: selectedClassId,
+                state: classState ?? undefined,
+                spatial: {
+                  id: (item) => `catalog.row.classes.${item.id}`,
+                  column: 'classes',
+                  metadata: { 'data-catalog-level': 'classes' },
+                },
+                testIds: { childIndicator: 'catalog-row-chevron' },
+                labels: {
+                  loading: 'Cargando…',
+                  empty: 'Estado vacío confirmado',
+                  retry: 'Reintentar',
+                  partial: 'Listado parcial',
+                  retryContinuation: 'Reintentar continuación',
+                  loadMore: 'Cargar más…',
+                },
+                onSelect: isStatic ? undefined : handleClassSelect,
+                onContinue: isStatic
+                  ? undefined
+                  : () => void lists?.classes.continue(),
+                onRetry: isStatic
+                  ? undefined
+                  : () => void lists?.classes.retry(),
+              },
+              {
+                id: 'families',
+                label: 'Familias',
+                items: families,
+                hasChildren: true,
+                selectedId: selectedFamilyId,
+                state: familyState ?? undefined,
+                waitingLabel: 'En espera de Clase.',
+                spatial: {
+                  id: (item) => `catalog.row.families.${item.id}`,
+                  column: 'families',
+                  metadata: { 'data-catalog-level': 'families' },
+                },
+                testIds: { childIndicator: 'catalog-row-chevron' },
+                labels: {
+                  loading: 'Cargando…',
+                  empty: 'Estado vacío confirmado',
+                  retry: 'Reintentar',
+                  partial: 'Listado parcial',
+                  retryContinuation: 'Reintentar continuación',
+                  loadMore: 'Cargar más…',
+                },
+                onSelect: isStatic ? undefined : handleFamilySelect,
+                onContinue: isStatic
+                  ? undefined
+                  : () => void lists?.families.continue(),
+                onRetry: isStatic
+                  ? undefined
+                  : () => void lists?.families.retry(),
+              },
+              {
+                id: 'types',
+                label: 'Tipos',
+                items: types,
+                selectedId: selectedTypeId,
+                state: typeState ?? undefined,
+                waitingLabel: 'En espera de Familia.',
+                spatial: {
+                  id: (item) => `catalog.row.types.${item.id}`,
+                  column: 'types',
+                  metadata: { 'data-catalog-level': 'types' },
+                },
+                labels: {
+                  loading: 'Cargando…',
+                  empty: 'Estado vacío confirmado',
+                  retry: 'Reintentar',
+                  partial: 'Listado parcial',
+                  retryContinuation: 'Reintentar continuación',
+                  loadMore: 'Cargar más…',
+                },
+                onSelect: isStatic ? undefined : handleTypeSelect,
+                onContinue: isStatic
+                  ? undefined
+                  : () => void lists?.types.continue(),
+                onRetry: isStatic ? undefined : () => void lists?.types.retry(),
+              },
+            ]}
+          />
         </WorkCard>
         <WorkCard
           className="catalog-summary"

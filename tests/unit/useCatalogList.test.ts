@@ -3,6 +3,7 @@ import {
   createCatalogListSequence,
   type CatalogListPage,
 } from '../../src/features/catalog-hierarchy/useCatalogList'
+import { createParentGatedListController } from '../../src/shared/hierarchy/parentGatedListController'
 
 type Row = { id: string; label: string }
 
@@ -19,6 +20,31 @@ const adapter = (
 })
 
 describe('catalog list sequence', () => {
+  it('exposes the shared parent-gated controller contract without feature vocabulary', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValue(page([{ id: 'a', label: 'A' }], null, true))
+    const sequence = createParentGatedListController({
+      operation: 'dependent',
+      parentId: 'parent-a',
+      adapter: adapter(load),
+      requiresParent: (operation) => operation === 'dependent',
+    })
+
+    expect(await sequence.start()).toBe(true)
+    expect(load).toHaveBeenCalledWith({
+      operation: 'dependent',
+      parentId: 'parent-a',
+      filters: {},
+      cursor: undefined,
+    })
+    expect(sequence.getState()).toMatchObject({
+      items: [{ id: 'a' }],
+      status: 'ready',
+      isExhausted: true,
+    })
+  })
+
   it('keeps context and opaque cursor across explicit continuation', async () => {
     const load = vi
       .fn()
@@ -232,6 +258,29 @@ describe('catalog list sequence', () => {
       expect(load).not.toHaveBeenCalled()
     },
   )
+
+  it.each([
+    ['zero', 0],
+    ['false', false],
+  ])('treats a %s dependent parent as valid', async (_label, parentId) => {
+    const load = vi
+      .fn()
+      .mockResolvedValue(page([{ id: 'a', label: 'A' }], null, true))
+    const sequence = createCatalogListSequence({
+      operation: 'families',
+      parentId,
+      adapter: adapter(load),
+    })
+
+    expect(sequence.getState().status).toBe('ready')
+    expect(await sequence.start()).toBe(true)
+    expect(load).toHaveBeenCalledWith({
+      operation: 'families',
+      parentId,
+      filters: {},
+      cursor: undefined,
+    })
+  })
 
   it('discards stale responses after parent change', async () => {
     let resolve!: (value: CatalogListPage<Row>) => void
