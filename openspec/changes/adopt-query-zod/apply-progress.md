@@ -3,13 +3,13 @@
 ## Status
 
 - **Date:** 2026-09-24
-- **Executor:** SDD apply
-- **Change / branch:** `adopt-query-zod` / `feat/adopt-query-zod-01-provider`
-- **Work unit:** Slice A — provider only
-- **Native attempt authority:** `proceed`, work unit `slice-a-provider`, token `sha256:e132794a8754303248d3e621a0978ce8a0b43adc4b416542b25a3116d5260119`.
-- **Structured status consumed:** `artifactStore: openspec`; `applyState: ready`; `dependencies.apply: ready`; `actionContext.mode: repo-local`; `workspaceRoot: /home/garfex/PROGRAMACION/sistema-ui-garfex`.
-- **Action-context warning:** None; every edit is within the parent-authorized surfaces.
-- **Delivery boundary:** feature-branch chain, child work unit A only. Slice B was not started.
+- **Executors:** SDD apply for Slice A; bounded project workers for B and C1.
+- **Change / current branch:** `adopt-query-zod` / `feat/adopt-query-zod-03-query-hook`.
+- **Current state:** A, B and C1 completed; C2 is the next pending work unit.
+- **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
+- **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
+- **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
+- **Delivery boundary:** feature-branch chain `A → B → C1 → C2 → D → E`; every completed unit remains below 400 changed lines.
 
 ## Completed implementation tasks and persisted evidence
 
@@ -70,9 +70,9 @@ Runtime harness: N/A — this provider-only unit has no standalone user flow, an
 - No design deviation occurred.
 - Risks are limited to an inert session-memory Query provider before consumers arrive; the new tests guard Router composition, per-mount identity, one provider location, and the `src/app/**` Convex boundary.
 
-## Remaining tasks
+## Historical pending-task snapshot after Slice A
 
-Slice B–E are deliberately untouched. Exact unchecked implementation-owned rows:
+The checklist below records the state immediately after Slice A and is superseded by the current `tasks.md` plus the later Slice B/C1 evidence in this file. It is retained only as chronological apply evidence; it is not the current completion state.
 
 - [ ] **RED:** Extend `tests/unit/resourcesMasterApi.test.ts` with failing list-only equivalence cases for opaque IDs, `organizacionId` absent/present, all three classification states, string-only reasons, ignored extra envelope/item/status fields, and invalid envelope/item/status values that expose exactly `Invalid resources master response` rather than payload or `ZodError`. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** In `src/features/resources-master/resourcesMaster.api.ts`, add private Zod 4 schemas and an explicit projection used only by exported `parseResourceListPage`; retain its public return type and `bad()` seam, preserve references/copies and optionality, and do not change detail, context, creation, mutation, or transport parsers. <!-- sdd-owner: implementation -->
@@ -112,3 +112,30 @@ Slice B–E are deliberately untouched. Exact unchecked implementation-owned row
 - **Rollback boundary:** restore only the manual list-envelope/list-summary path in `src/features/resources-master/resourcesMaster.api.ts` and the Slice B tests/checklist/evidence. Detail, context, creation, mutation, transport, UI, and backend remain independent.
 - **Count:** 244 authored lines (220 additions, 24 deletions), below the 400-line limit.
 - **Commit verdict:** no commit created (delegated scope); this is one reviewable list-transport work unit.
+
+## Slice C scope split review
+
+- **Review finding:** The original combined Slice C put `manualRetry` and the in-flight `continuation` promise in hook-instance refs rather than state scoped to the active query key. A criteria/key change while either action was in flight could let key A suppress, clear, or alter retry behavior for key B. This is a high-severity cross-key race, not a safe near-budget patch.
+- **Decision:** One honest split replaces the combined Slice C. C1 is the feature-local query identity/read model below; C2 is a separate pending work unit for public actions and concurrency. C1 exposes no action, Query observer result, or private error.
+- **Revised chain:** `A → B → C1 → C2 → D → E`; D and E now depend on C2. No branch, commit, or PR was created by this delegated work.
+
+## Slice C1 — feature-local query identity and read model
+
+- **Work unit:** C1 only; C2 and Slice D were not started.
+- **RED:** The original module-creation RED was observed before implementation: `pnpm exec vitest run tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` exited 1 because the hook module did not exist. The C1 core contract was retained through the scope split.
+- **GREEN:** C1 keeps the canonical key, normalized search, deepest filter, exact list/search payload, initial `undefined` cursor, next-page derivation, initial automatic retry, isolated cache behavior, and explicit no-focus/reconnect/remount policy.
+- **TRIANGULATE:** C1 tests cover one automatic initial retry, ordered first-page flatten/dedupe, retained continuation state, confirmed-empty/status projection, isolated clients, and focus/reconnect/remount call counts. Public actions, manual-retry state, in-flight continuation state, and their tests were removed for C2.
+- **REFACTOR:** The private failure marker and `useMemo` projection remain local. The public C1 result is exactly `items`, `status`, and `isDone`; it contains no raw observer result or private error.
+
+### Slice C1 verification and rollback
+
+- **Focused validation:** `pnpm test -- tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` exited 0: 31 files / 345 tests passed (the Vitest configuration ran the full suite while including both focused files).
+- **Formatting and static validation:** targeted `pnpm exec prettier --write` for the four C1 files, `pnpm typecheck`, and `git diff --check` exited 0. `pnpm lint` and repository-wide `pnpm format:check` exit 1 only for pre-existing files outside C1; no out-of-scope file was changed.
+- **Rollback boundary:** remove only the current `useResourcesMasterListQuery.ts`, its focused C1 test, and the C1 task/progress evidence. Provider A and transport B remain inert and independent; C2 actions/concurrency and all screen code are absent.
+- **Count:** 382 authored lines (362 additions, 20 deletions), below the 400-line limit.
+- **Commit verdict:** C1 is commit-ready based on its focused tests, targeted lint/format checks, typecheck and diff check. Repository-wide lint/format failures are pre-existing and outside this work unit; they remain documented without blocking this scoped verdict.
+
+## Slice C2 — actions and concurrency
+
+- **Status:** Pending; no C2 code or tests are present in C1.
+- **Required coverage before completion:** key-scoped manual retry and continuation state, cross-key races, duplicate CTA suppression, cursor reuse, partial-error recovery, semantic void action promises, and observer-local refetch.
