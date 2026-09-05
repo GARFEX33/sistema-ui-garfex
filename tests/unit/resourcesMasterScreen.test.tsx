@@ -1,6 +1,17 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  act,
+  fireEvent,
+  render as baseRender,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import type { ReactElement } from 'react'
+import ts from 'typescript'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ResourcesMasterScreen } from '../../src/features/resources-master/ResourcesMasterScreen'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
 
@@ -90,6 +101,83 @@ const fakeApi = (
   }) as ResourcesMasterApi
 
 const factory = vi.hoisted(() => vi.fn())
+const screenSource = readFileSync(
+  join(
+    process.cwd(),
+    'src/features/resources-master/ResourcesMasterScreen.tsx',
+  ),
+  'utf8',
+)
+const screenAst = ts.createSourceFile(
+  'ResourcesMasterScreen.tsx',
+  screenSource,
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TSX,
+)
+
+const reactEffectBindings = new Set<string>()
+const reactNamespaces = new Set<string>()
+for (const statement of screenAst.statements) {
+  if (
+    !ts.isImportDeclaration(statement) ||
+    !ts.isStringLiteral(statement.moduleSpecifier) ||
+    statement.moduleSpecifier.text !== 'react'
+  ) {
+    continue
+  }
+  const importClause = statement.importClause
+  if (importClause?.name) reactNamespaces.add(importClause.name.text)
+  const bindings = importClause?.namedBindings
+  if (bindings && ts.isNamespaceImport(bindings)) {
+    reactNamespaces.add(bindings.name.text)
+  }
+  if (!bindings || !ts.isNamedImports(bindings)) continue
+  for (const element of bindings.elements) {
+    if ((element.propertyName?.text ?? element.name.text) === 'useEffect') {
+      reactEffectBindings.add(element.name.text)
+    }
+  }
+}
+
+const isReactEffectCall = (node: ts.CallExpression) =>
+  (ts.isIdentifier(node.expression) &&
+    reactEffectBindings.has(node.expression.text)) ||
+  (ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === 'useEffect' &&
+    ts.isIdentifier(node.expression.expression) &&
+    reactNamespaces.has(node.expression.expression.text))
+
+const isInside = (node: ts.Node, ancestor: ts.Node) => {
+  for (
+    let current: ts.Node | undefined = node.parent;
+    current;
+    current = current.parent
+  ) {
+    if (current === ancestor) return true
+  }
+  return false
+}
+
+const clients: QueryClient[] = []
+
+const render = (ui: ReactElement) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity } },
+  })
+  clients.push(client)
+  return {
+    ...baseRender(
+      <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+    ),
+    client,
+  }
+}
+
+afterEach(() => {
+  clients.splice(0).forEach((client) => client.clear())
+})
+
 vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
   const actual = await vi.importActual<
     typeof import('../../src/features/resources-master/resourcesMaster.api')
@@ -98,10 +186,56 @@ vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
 })
 
 describe('ResourcesMasterScreen connected read wiring', () => {
-  it('lists resources on mount', async () => {
+  it('synchronizes latest criteria refs only from committed effects', () => {
+    expect(screenAst.parseDiagnostics).toEqual([])
+    const effectCallbacks = new Set<ts.FunctionLikeDeclaration>()
+    const assignments: ts.BinaryExpression[] = []
+    const latestValues = new Map([
+      ['searchTextRef', 'searchText'],
+      ['hierarchyFiltersRef', 'hierarchyFilters'],
+    ])
+
+    const visit = (node: ts.Node) => {
+      if (ts.isCallExpression(node) && isReactEffectCall(node)) {
+        const [callback] = node.arguments
+        if (callback && ts.isFunctionLike(callback))
+          effectCallbacks.add(callback)
+      }
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isPropertyAccessExpression(node.left) &&
+        ts.isIdentifier(node.left.expression) &&
+        node.left.name.text === 'current' &&
+        latestValues.has(node.left.expression.text)
+      ) {
+        assignments.push(node)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(screenAst)
+
+    for (const [refName, latestValue] of latestValues) {
+      const refAssignments = assignments.filter(
+        (assignment) =>
+          ts.isIdentifier(assignment.left.expression) &&
+          assignment.left.expression.text === refName,
+      )
+      expect(refAssignments).toHaveLength(1)
+      const [assignment] = refAssignments
+      expect(ts.isIdentifier(assignment.right)).toBe(true)
+      if (!ts.isIdentifier(assignment.right)) continue
+      expect(assignment.right.text).toBe(latestValue)
+      expect(
+        [...effectCallbacks].some((callback) => isInside(assignment, callback)),
+      ).toBe(true)
+    }
+  })
+
+  it('lists resources on mount through an isolated Query client', async () => {
     const api = fakeApi()
     factory.mockReturnValue(api)
-    render(<ResourcesMasterScreen />)
+    const { client } = render(<ResourcesMasterScreen />)
 
     expect(await screen.findByText('Cable UTP')).toBeVisible()
     expect(api.listResources).toHaveBeenCalledWith({
@@ -109,6 +243,12 @@ describe('ResourcesMasterScreen connected read wiring', () => {
       cursor: undefined,
       pageSize: 20,
     })
+    expect(
+      client.getQueryCache().find({
+        queryKey: ['resources-master', 'list', '', 'all', null],
+        exact: true,
+      }),
+    ).toBeDefined()
   })
 
   it('never offers a status selector — the list is always active-only', async () => {
@@ -161,7 +301,6 @@ describe('ResourcesMasterScreen connected read wiring', () => {
         await vi.advanceTimersByTimeAsync(250)
       })
 
-      expect(screen.getByText('Motor 1/2 HP')).toBeVisible()
       expect(api.searchResources).toHaveBeenCalledWith({
         lifecycle: 'ACTIVE',
         searchText: 'Motor',
@@ -358,6 +497,46 @@ describe('ResourcesMasterScreen connected read wiring', () => {
       resolveContinuation?.(page([summary('r2', 'Motor 1/2 HP')]))
       await continuation
     })
+  })
+
+  it('retains deduped rows through a partial error and retries its cursor', async () => {
+    const api = fakeApi({
+      listResources: vi
+        .fn()
+        .mockResolvedValueOnce(
+          page([summary('r1', 'Cable UTP')], false, 'cursor-2'),
+        )
+        .mockRejectedValueOnce(new Error('private continuation detail'))
+        .mockResolvedValueOnce(
+          page(
+            [summary('r1', 'Cable UTP'), summary('r2', 'Motor 1/2 HP')],
+            true,
+          ),
+        ),
+    })
+    factory.mockReturnValue(api)
+    const user = userEvent.setup()
+    render(<ResourcesMasterScreen />)
+
+    expect(await screen.findByText('Cable UTP')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    expect(
+      await screen.findByText('No se pudo cargar la página siguiente.'),
+    ).toBeVisible()
+    expect(screen.getByText('Cable UTP')).toBeVisible()
+    expect(document.body.textContent).not.toContain(
+      'private continuation detail',
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Reintentar continuación' }),
+    )
+    expect(await screen.findByText('Motor 1/2 HP')).toBeVisible()
+    expect(screen.getAllByText('Cable UTP')).toHaveLength(1)
+    expect(api.listResources.mock.calls.slice(1)).toEqual([
+      [{ lifecycle: 'ACTIVE', pageSize: 20, cursor: 'cursor-2' }],
+      [{ lifecycle: 'ACTIVE', pageSize: 20, cursor: 'cursor-2' }],
+    ])
   })
 
   it('confirms an exhausted empty result instead of guessing', async () => {

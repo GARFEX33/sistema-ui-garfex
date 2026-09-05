@@ -1,19 +1,12 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createResourcesMasterConvexApi,
   type ResourcesMasterApi,
 } from './resourcesMaster.api'
 import {
-  createResourcesMasterListController,
-  type ResourceListController,
-  type ResourceListState,
-} from './useResourcesMasterList'
+  useResourcesMasterListQuery,
+  type ResourcesListCriteria,
+} from './useResourcesMasterListQuery'
 import { useResourcesHierarchy } from './useResourcesHierarchy'
 import type { ResourceId, ResourceSummary } from './resourcesMaster.types'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
@@ -26,8 +19,6 @@ import { PageHeader } from '../../shared/ui/PageHeader'
 import { WorkCard } from '../../shared/ui/WorkCard'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
 
-const PAGE_SIZE = 20
-
 const diagnosticsLabel: Record<
   ResourceSummary['classificationStatus']['state'],
   string
@@ -35,35 +26,6 @@ const diagnosticsLabel: Record<
   EFFECTIVE: 'Efectivo',
   INERT: 'Inerte',
   BROKEN_REFERENCE: 'Referencia rota',
-}
-
-type ResourceFilters = {
-  searchText: string
-  claseRecursoId?: ResourceId
-  familiaRecursoId?: ResourceId
-  tipoRecursoId?: ResourceId
-}
-
-const emptySubscribe = () => () => undefined
-
-function useResourceListSnapshot(
-  controller: ResourceListController<ResourceSummary> | null,
-) {
-  const snapshotRef = useRef<ResourceListState<ResourceSummary> | null>(
-    controller?.getState() ?? null,
-  )
-  const subscribe = (listener: () => void) => {
-    if (!controller) return emptySubscribe()
-    return controller.subscribe(() => {
-      snapshotRef.current = controller.getState()
-      listener()
-    })
-  }
-  return useSyncExternalStore(
-    subscribe,
-    () => snapshotRef.current,
-    () => snapshotRef.current,
-  )
 }
 
 const project = (items: readonly { id: ResourceId; nombre: string }[]) =>
@@ -76,14 +38,15 @@ export function ResourcesMasterScreen() {
   const { registerCommand } = useKeyboardController()
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [searchText, setSearchText] = useState('')
+  const searchTextRef = useRef(searchText)
   const hierarchy = useResourcesHierarchy(api)
   const hierarchyFilters = useMemo(() => {
     if (hierarchy.selection.typeId !== undefined)
-      return { tipoRecursoId: hierarchy.selection.typeId }
+      return { typeId: hierarchy.selection.typeId }
     if (hierarchy.selection.familyId !== undefined)
-      return { familiaRecursoId: hierarchy.selection.familyId }
+      return { familyId: hierarchy.selection.familyId }
     if (hierarchy.selection.classId !== undefined)
-      return { claseRecursoId: hierarchy.selection.classId }
+      return { classId: hierarchy.selection.classId }
     return {}
   }, [
     hierarchy.selection.classId,
@@ -91,40 +54,31 @@ export function ResourcesMasterScreen() {
     hierarchy.selection.typeId,
   ])
   const hierarchyFiltersRef = useRef(hierarchyFilters)
-  hierarchyFiltersRef.current = hierarchyFilters
   const searchRestartTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hierarchyInitialized = useRef(false)
-  const [controller] = useState<ResourceListController<ResourceSummary>>(() =>
-    createResourcesMasterListController<ResourceSummary>({
-      filters: { searchText: '' },
-      adapter: {
-        load: ({ filters, cursor }) => {
-          const { searchText, ...hierarchyFilter } = filters as ResourceFilters
-          const input = {
-            lifecycle: 'ACTIVE' as const,
-            ...hierarchyFilter,
-            cursor,
-            pageSize: PAGE_SIZE,
-          }
-          return searchText
-            ? api.searchResources({ ...input, searchText })
-            : api.listResources(input)
-        },
-      },
-    }),
-  )
-  const state = useResourceListSnapshot(controller)
+  const [criteria, setCriteria] = useState<ResourcesListCriteria>({
+    searchText: '',
+  })
+  const { items, status, isDone, loadMore, retry } =
+    useResourcesMasterListQuery(api, criteria)
+
+  useEffect(() => {
+    searchTextRef.current = searchText
+  }, [searchText])
+
+  useEffect(() => {
+    hierarchyFiltersRef.current = hierarchyFilters
+  }, [hierarchyFilters])
 
   useEffect(() => {
     const trimmed = searchText.trim()
     const id = setTimeout(
       () => {
         searchRestartTimer.current = null
-        controller.setFilters({
+        setCriteria({
           searchText: trimmed,
           ...hierarchyFiltersRef.current,
         })
-        void controller.start()
       },
       trimmed ? 250 : 0,
     )
@@ -133,7 +87,7 @@ export function ResourcesMasterScreen() {
       clearTimeout(id)
       if (searchRestartTimer.current === id) searchRestartTimer.current = null
     }
-  }, [searchText, controller])
+  }, [searchText])
 
   useEffect(() => {
     if (!hierarchyInitialized.current) {
@@ -144,12 +98,11 @@ export function ResourcesMasterScreen() {
       clearTimeout(searchRestartTimer.current)
       searchRestartTimer.current = null
     }
-    controller.setFilters({
-      searchText: searchText.trim(),
+    setCriteria({
+      searchText: searchTextRef.current.trim(),
       ...hierarchyFilters,
     })
-    void controller.start()
-  }, [controller, hierarchyFilters])
+  }, [hierarchyFilters])
 
   const focusSearchCommand = useMemo(
     () => ({
@@ -171,15 +124,12 @@ export function ResourcesMasterScreen() {
     [focusSearchCommand, registerCommand],
   )
 
-  const items = state?.items ?? []
-  const status = state?.status ?? 'initial-loading'
   const isLoading = status === 'initial-loading'
   const isInitialError = status === 'initial-error'
   const isPartialError = status === 'partial-error'
   const isEmpty = status === 'empty'
   const showLoadMore =
-    !!state &&
-    !state.isDone &&
+    !isDone &&
     items.length > 0 &&
     (status === 'ready' || status === 'loading-more')
 
@@ -194,9 +144,7 @@ export function ResourcesMasterScreen() {
             Recursos maestros
           </h1>
         }
-        action={
-          <CrearRecursoSurface api={api} onCreated={() => controller.start()} />
-        }
+        action={<CrearRecursoSurface api={api} onCreated={() => undefined} />}
       />
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <WorkCard aria-labelledby="resources-hierarchy-title">
@@ -369,7 +317,9 @@ export function ResourcesMasterScreen() {
               <Button
                 variant="outline"
                 type="button"
-                onPress={() => controller.retry()}
+                onPress={() => {
+                  void retry()
+                }}
               >
                 Reintentar
               </Button>
@@ -384,7 +334,9 @@ export function ResourcesMasterScreen() {
               <Button
                 variant="outline"
                 type="button"
-                onPress={() => controller.retry()}
+                onPress={() => {
+                  void retry()
+                }}
               >
                 Reintentar continuación
               </Button>
@@ -396,7 +348,9 @@ export function ResourcesMasterScreen() {
               type="button"
               className="mt-3"
               isDisabled={status === 'loading-more'}
-              onPress={() => controller.continue()}
+              onPress={() => {
+                void loadMore()
+              }}
             >
               Cargar más…
             </Button>

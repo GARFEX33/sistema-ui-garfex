@@ -14,6 +14,8 @@ export type ResourceListQueryStatus =
   | 'initial-loading'
   | 'empty'
   | 'ready'
+  | 'loading-more'
+  | 'partial-error'
   | 'initial-error'
 
 type EffectiveFilter = Readonly<{
@@ -144,9 +146,13 @@ export function useResourcesMasterListQuery(
       ? 'initial-error'
       : !hasPages && query.isPending
         ? 'initial-loading'
-        : !items.length && isDone
-          ? 'empty'
-          : 'ready'
+        : hasPages && query.isError
+          ? 'partial-error'
+          : hasPages && query.isFetchingNextPage
+            ? 'loading-more'
+            : !items.length && isDone
+              ? 'empty'
+              : 'ready'
 
   const isActive = () =>
     activeQuery !== undefined && activeQueryRef.current === activeQuery

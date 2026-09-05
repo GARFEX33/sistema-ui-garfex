@@ -5,7 +5,7 @@
 - **Date:** 2026-09-24
 - **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
 - **Change / delivery:** `adopt-query-zod` / local `feature-branch-chain`; individual branch names are recorded by their commits.
-- **Current state:** A, B, C1, and C2 completed; D is the next pending work unit.
+- **Current state:** A, B, C1, C2, and D completed; E is the next pending work unit.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
 - **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
@@ -152,3 +152,29 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Count:** 350 authored lines (327 additions, 23 deletions), below the 400-line budget.
 - **Review focus:** key identity from `QueryCache.find({ exact: true })`, stale-action guards, continuation promise sharing/finally cleanup, and manual-initial retry marker lifetime.
 - **Commit verdict:** commit-ready as one C2 work unit; no commit created in delegated scope.
+
+## Slice D — screen migration
+
+- **Work unit:** D only; E was not started.
+- **RED:** Added a fresh per-render `QueryClient` screen harness and asserted the canonical active-list query. `pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` exited 1: the screen listed through the legacy controller but the isolated Query cache had no canonical query.
+- **GREEN:** Replaced only screen list-controller projection with `useResourcesMasterListQuery`, using one committed criteria state for debounced search plus deepest hierarchy selection. The hook now projects `loading-more` and `partial-error` from its private Query state without returning an observer result or error.
+- **TRIANGULATE:** Screen coverage retains the 249/250 ms debounce, immediate clear, pending-debounce cancellation, deepest payload, loading CTA disable, empty, initial retry, roles/copy/classes, spatial search contract, and adds deduped rows retained through continuation failure and semantic retry. The focused command exited 0: 2 files / 24 tests passed.
+- **REFACTOR:** Removed only superseded controller/snapshot wiring; `useResourcesMasterList.ts` remains untouched as the rollback seam. Targeted Prettier retained formatting only.
+
+### Slice D validation and rollback
+
+- **Focused validation:** `pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` exited 0 — 2 files / 24 tests passed.
+- **Static validation:** targeted ESLint and Prettier checks for the D source/test files, `pnpm exec tsc --noEmit -p tsconfig.json`, and `git diff --check` exited 0.
+- **Runtime harness:** N/A — D is component and hook wiring; the browser regression is explicitly deferred to E.
+- **Rollback boundary:** restore `ResourcesMasterScreen.tsx` list-controller and `useSyncExternalStore` wiring, then remove D-only screen tests/evidence. Preserve `useResourcesMasterList.ts`, its tests, and all C1/C2 hook behavior.
+- **Post-create refresh:** intentionally deferred to E. D supplies only the compile-safe no-op `onCreated` callback after removing the legacy controller; it does not call `refetchActive()` and does not claim E completion.
+- **Count:** 357 authored lines (261 additions, 96 deletions), below the 400-line budget.
+- **Commit verdict:** D is commit-ready as one work unit; no commit was created in delegated scope.
+
+### Slice D correction — render-phase latest-value refs
+
+- **Review finding:** `searchTextRef.current` and `hierarchyFiltersRef.current` were assigned during render, so an interrupted render could leak speculative criteria into a later debounce or hierarchy commit.
+- **Correction:** Each latest-value ref now synchronizes in its own committed effect before the dependent debounce or immediate hierarchy criteria effect; hierarchy still cancels a pending debounce and commits the latest committed search value immediately.
+- **Regression:** The existing screen test parses `ResourcesMasterScreen.tsx` as TSX with TypeScript parent nodes, finds exactly one `.current` assignment for each ref structurally, and requires each to be inside a React committed-effect callback. Effect ordering and debounce behavior remain covered by the existing behavioral cases.
+- **Completion gate:** The Slice D task rows remain complete because the required focused Vitest command passed with 2 files / 25 tests; targeted lint/Prettier, `pnpm exec tsc --noEmit -p tsconfig.json`, and `git diff --check` also passed.
+- **Final current diff count:** **357 authored lines** (261 additions, 96 deletions), below the 400-line budget.
