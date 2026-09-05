@@ -3,9 +3,9 @@
 ## Status
 
 - **Date:** 2026-09-24
-- **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
+- **Executors:** SDD apply for Slice A; bounded project workers and verifiers for B through E2 plus reconciliation and quality gates.
 - **Change / delivery:** `adopt-query-zod` / local `feature-branch-chain`; individual branch names are recorded by their commits.
-- **Current state:** A, B, C1, C2, D, E1a, E1b, and E2 browser coverage completed; parent final verification and lifecycle reconciliation remain pending.
+- **Current state:** Implementation, bounded reviews, three-way reconciliation, inherited quality fixes, and final all-green verification are complete; canonical sync and archive remain pending.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
 - **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
@@ -235,3 +235,11 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Decision:** The combined requirement lives in the Catálogo delta until sync: Catálogo retains only its direct feature-local `catalogoAdmin/jerarquia` access for approved navigation, reads, and Clase/Familia/Tipo creation; React Query remains prohibited in Catálogo and is authorized only as ephemeral, non-authoritative feature-local remote state for the current Resources Master list pilot.
 - **Merge-order evidence:** Applying `catalog-hierarchy-base` before `adopt-query-zod` preserves Catálogo's direct exception and narrows Query to the Resources pilot during reconciliation; applying `adopt-query-zod` before the revised Catálogo delta preserves the same Query boundary while restoring the same direct Catálogo exception. Both orders retain the prohibitions on frontend backend/API and persistence, global/domain stores (including Zustand/Redux), transversal Convex, speculative shared wrappers, and frontend domain authority.
 - **Canonical disposition:** `openspec/specs/frontend-foundation/spec.md` is intentionally unchanged; the sync phase owns its canonical update.
+
+## Parent final verification and rollback disposition
+
+- **Final gate:** all required local verification is green: 359/359 unit tests, typecheck, lint with zero warnings, format check, build (with nonfatal Zod annotation/chunk-size warnings), four-file runtime-bundle verification, and focused Resources E2E 7/7. The worktree was clean at receipt time. The command/result table and ordered review receipts are in `verify-report.md`.
+- **Review receipt:** A, B, C1, C1 evidence, C2, C2 evidence, D, E1a, E1b architecture, E1b evidence, E2, reconciliation, the lint fix, ordinary formatting, and the user-authorized 970-line `size:exception` formatting-only commit have recorded local dispositions. The exception is accepted as formatting-only and does not change the behavior review boundary.
+- **Rollback:** this final record changes documentation only. Remove this report, these final progress lines, and the two parent task receipts to undo the receipt; functional rollback remains independently bounded per slice in the preceding evidence. No migration, persistent cache, or backend state is introduced by this record.
+- **Lifecycle boundary:** verification and receipt are complete locally. No sync or archive was performed or claimed.
+- **External follow-up (not a Query/Zod blocker):** `openspec/changes/catalog-hierarchy-base/tasks.md` retains unrelated stale Unit 4 pending prose and `Totales reconciliados` counts (8 remaining; 65/57/8 checkboxes). Leave that file unchanged for separate ownership.
