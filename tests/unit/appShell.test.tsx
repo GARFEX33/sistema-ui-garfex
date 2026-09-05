@@ -10,15 +10,15 @@ import { useKeyboardController } from '../../src/shared/keyboard/keyboardControl
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
 
 const resourcesMasterApiFactory = vi.hoisted(() => vi.fn())
-vi.mock(
-  '../../src/features/resources-master/resourcesMaster.api',
-  async () => {
-    const actual = await vi.importActual<
-      typeof import('../../src/features/resources-master/resourcesMaster.api')
-    >('../../src/features/resources-master/resourcesMaster.api')
-    return { ...actual, createResourcesMasterConvexApi: resourcesMasterApiFactory }
-  },
-)
+vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../src/features/resources-master/resourcesMaster.api')
+  >('../../src/features/resources-master/resourcesMaster.api')
+  return {
+    ...actual,
+    createResourcesMasterConvexApi: resourcesMasterApiFactory,
+  }
+})
 
 const resourceSummary = (id: string, nombre: string) => ({
   id,
@@ -51,6 +51,64 @@ function stubResourcesMasterApi() {
     updateResource: vi.fn(),
     activateResource: vi.fn(),
     deactivateResource: vi.fn(),
+    listContextClasses: vi.fn(async () => ({
+      items: [
+        {
+          id: 'class-1',
+          clave: 'MATERIAL',
+          nombre: 'Material',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        },
+        {
+          id: 'class-2',
+          clave: 'SERVICIO',
+          nombre: 'Servicio',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        },
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
+    listContextFamilies: vi.fn(async () => ({
+      items: [
+        {
+          id: 'family-1',
+          claseRecursoId: 'class-1',
+          clave: 'CABLE',
+          nombre: 'Cable',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        },
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
+    listContextTypes: vi.fn(async () => ({
+      items: [
+        {
+          id: 'type-1',
+          familiaRecursoId: 'family-1',
+          clave: 'UTP',
+          nombre: 'UTP',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+          aggregateStatus: 'CLEAN',
+          violations: [],
+        },
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
   } as ResourcesMasterApi
   resourcesMasterApiFactory.mockReturnValue(api)
   return api
@@ -298,17 +356,62 @@ describe('sidebar triangulation', () => {
 })
 
 describe('resources maestros keyboard navigation', () => {
-  it('moves focus between the search box and the first resource row with ArrowDown/ArrowUp', async () => {
+  it('navigates Resources spatially through hierarchy, search, and resource rows', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    const sidebar = await screen.findByRole('link', {
+      name: 'Recursos maestros',
+    })
+    const material = await screen.findByRole('button', { name: 'Material' })
+    expect(material).toHaveAttribute('data-spatial-level', 'class')
+    const service = screen.getByRole('button', { name: 'Servicio' })
+    const search = screen.getByPlaceholderText('Nombre del recurso')
+
+    sidebar.focus()
+    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
+    expect(material).toHaveFocus()
+    fireEvent.keyDown(material, { key: 'ArrowDown' })
+    expect(service).toHaveFocus()
+    fireEvent.keyDown(service, { key: 'ArrowUp' })
+    expect(material).toHaveFocus()
+    await screen.findByText('Cable')
+    fireEvent.keyDown(material, { key: 'ArrowRight' })
+    const family = screen.getByRole('button', { name: 'Cable' })
+    expect(family).toHaveFocus()
+    await screen.findByText('UTP')
+    fireEvent.keyDown(family, { key: 'ArrowRight' })
+    const type = screen.getByRole('button', { name: 'UTP' })
+    expect(type).toHaveFocus()
+    fireEvent.keyDown(type, { key: 'ArrowRight' })
+    expect(search).toHaveFocus()
+    await screen.findByText('Cable UTP')
+    const firstRow = document.querySelector<HTMLElement>('[data-resource-row]')!
+
+    fireEvent.keyDown(search, { key: 'ArrowDown' })
+    expect(firstRow).toHaveFocus()
+    fireEvent.keyDown(firstRow, { key: 'ArrowUp' })
+    expect(search).toHaveFocus()
+    fireEvent.keyDown(search, { key: 'ArrowLeft' })
+    expect(type).toHaveFocus()
+    search.focus()
+    fireEvent.keyDown(search, { key: 'Escape' })
+    expect(type).toHaveFocus()
+    firstRow.focus()
+    fireEvent.keyDown(firstRow, { key: 'ArrowLeft' })
+    expect(type).toHaveFocus()
+    firstRow.focus()
+    fireEvent.keyDown(firstRow, { key: 'Escape' })
+    expect(type).toHaveFocus()
+  })
+
+  it('does not capture Resources spatial keys while the search input is composing', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
     await screen.findByText('Cable UTP')
     const search = screen.getByPlaceholderText('Nombre del recurso')
     search.focus()
-    fireEvent.keyDown(search, { key: 'ArrowDown' })
-    const firstRow = document.querySelector('[data-resource-row]')
-    expect(document.activeElement).toBe(firstRow)
-    fireEvent.keyDown(firstRow!, { key: 'ArrowUp' })
-    expect(document.activeElement).toBe(search)
+    fireEvent.keyDown(search, { key: 'ArrowDown', isComposing: true })
+    expect(search).toHaveFocus()
   })
 
   it('jumps to the search box with B from anywhere on the screen', async () => {
@@ -316,7 +419,9 @@ describe('resources maestros keyboard navigation', () => {
     renderAt('/recursos')
     await screen.findByText('Cable UTP')
     const search = screen.getByPlaceholderText('Nombre del recurso')
-    const firstRow = document.querySelector('[data-resource-row]') as HTMLElement
+    const firstRow = document.querySelector(
+      '[data-resource-row]',
+    ) as HTMLElement
     firstRow.focus()
     fireEvent.keyDown(document, { key: 'b' })
     expect(document.activeElement).toBe(search)

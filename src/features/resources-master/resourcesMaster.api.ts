@@ -42,7 +42,8 @@ export type ResourceListOperation =
   | 'catalogoAdmin/recursos:listarRecursosResumen'
   | 'catalogoAdmin/recursos:buscarRecursosResumen'
 
-export type ResourceDetailOperation = 'catalogoAdmin/recursos:obtenerDetalleRecurso'
+export type ResourceDetailOperation =
+  'catalogoAdmin/recursos:obtenerDetalleRecurso'
 
 export type ResourceCreateOperation = 'catalogoAdmin/recursos:crearRecurso'
 
@@ -125,7 +126,9 @@ export interface ResourcesMasterApi {
   listUnitPolicies: (
     input: ResourceUnitPolicyListInput,
   ) => Promise<ResourceContextListPage<ResourceUnitPolicy>>
-  getUnit: (input: ResourceUnitDetailInput) => Promise<ResourceUnitDetail | null>
+  getUnit: (
+    input: ResourceUnitDetailInput,
+  ) => Promise<ResourceUnitDetail | null>
   listAttributeAssignments: (
     input: ResourceAttributeAssignmentListInput,
   ) => Promise<ResourceContextListPage<ResourceAttributeAssignment>>
@@ -151,9 +154,7 @@ const bad = (): never => {
 const definedId = (value: ResourceId): value is ResourceId =>
   value !== undefined && value !== null
 
-const classificationStatus = (
-  value: unknown,
-): ResourceClassificationStatus => {
+const classificationStatus = (value: unknown): ResourceClassificationStatus => {
   if (
     !record(value) ||
     (value.state !== 'EFFECTIVE' &&
@@ -424,7 +425,9 @@ const unitDetail = (value: unknown): ResourceUnitDetail => {
     ...(value.descripcion === undefined
       ? {}
       : { descripcion: value.descripcion as string }),
-    ...(value.simbolo === undefined ? {} : { simbolo: value.simbolo as string }),
+    ...(value.simbolo === undefined
+      ? {}
+      : { simbolo: value.simbolo as string }),
     activo: value.activo,
     revision: value.revision,
     effective: value.effective,
@@ -448,7 +451,9 @@ const attributeSelections = ['SELECTED', 'SHADOWED', 'SUPPRESSED', 'NONE']
 
 const attributeDataTypes = ['TEXTO', 'NUMERO', 'BOOLEANO', 'OPCION']
 
-const attributeAssignmentItem = (value: unknown): ResourceAttributeAssignment => {
+const attributeAssignmentItem = (
+  value: unknown,
+): ResourceAttributeAssignment => {
   if (
     !record(value) ||
     !definedId(value.id) ||
@@ -477,7 +482,8 @@ const attributeAssignmentItem = (value: unknown): ResourceAttributeAssignment =>
     ...(value.tipoRecursoId === undefined
       ? {}
       : { tipoRecursoId: value.tipoRecursoId }),
-    aplicabilidad: value.aplicabilidad as ResourceAttributeAssignment['aplicabilidad'],
+    aplicabilidad:
+      value.aplicabilidad as ResourceAttributeAssignment['aplicabilidad'],
     participaIdentidad: value.participaIdentidad,
     orden: value.orden,
     activo: value.activo,
@@ -495,7 +501,9 @@ export function parseAttributeAssignmentsPage(
   return { ...result, items: result.items.map(attributeAssignmentItem) }
 }
 
-const attributeDefinitionItem = (value: unknown): ResourceAttributeDefinition => {
+const attributeDefinitionItem = (
+  value: unknown,
+): ResourceAttributeDefinition => {
   if (
     !record(value) ||
     !definedId(value.id) ||
@@ -629,7 +637,10 @@ export function parseResourceChangeResult(
   return { disposition: value.disposition, item: resourceSummary(value.item) }
 }
 
-const paginationOpts = (input: { cursor?: string | null; pageSize: number }) => ({
+const paginationOpts = (input: {
+  cursor?: string | null
+  pageSize: number
+}) => ({
   numItems: input.pageSize,
   cursor: input.cursor ?? null,
 })
@@ -639,6 +650,10 @@ const listFilterArgs = (filters: ResourceListFilters) => {
   if (filters.lifecycle !== undefined) result.lifecycle = filters.lifecycle
   if (filters.tipoRecursoId !== undefined)
     result.tipoRecursoId = filters.tipoRecursoId
+  else if (filters.familiaRecursoId !== undefined)
+    result.familiaRecursoId = filters.familiaRecursoId
+  else if (filters.claseRecursoId !== undefined)
+    result.claseRecursoId = filters.claseRecursoId
   if (filters.scope !== undefined) result.scope = filters.scope
   return result
 }
@@ -719,7 +734,10 @@ const queryReference = (
 ) => makeFunctionReference<'query', Record<string, unknown>, unknown>(name)
 
 const mutationReference = (
-  name: ResourceCreateOperation | ResourceUpdateOperation | ResourceLifecycleOperation,
+  name:
+    | ResourceCreateOperation
+    | ResourceUpdateOperation
+    | ResourceLifecycleOperation,
 ) => makeFunctionReference<'mutation', Record<string, unknown>, unknown>(name)
 
 const listResourcesReference: ResourceQueryReference = queryReference(
@@ -740,9 +758,8 @@ const updateResourceReference: ResourceMutationReference = mutationReference(
 const activateResourceReference: ResourceMutationReference = mutationReference(
   'catalogoAdmin/recursos:activarRecurso',
 )
-const deactivateResourceReference: ResourceMutationReference = mutationReference(
-  'catalogoAdmin/recursos:desactivarRecurso',
-)
+const deactivateResourceReference: ResourceMutationReference =
+  mutationReference('catalogoAdmin/recursos:desactivarRecurso')
 const listContextClassesReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/jerarquia:listarClases',
 )
@@ -758,9 +775,8 @@ const listUnitPoliciesReference: ResourceQueryReference = queryReference(
 const getUnitReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/unidades:obtenerUnidad',
 )
-const listAttributeAssignmentsReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/atributos:listarAsignacionesAtributo',
-)
+const listAttributeAssignmentsReference: ResourceQueryReference =
+  queryReference('catalogoAdmin/atributos:listarAsignacionesAtributo')
 const getAttributeDefinitionReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/atributos:obtenerDefinicionAtributo',
 )
@@ -880,7 +896,10 @@ export function createResourcesMasterApi(
         ownership: input.ownership,
       })
       return parseResourceCreated(
-        await transport.invoke('catalogoAdmin/recursos:crearRecurso', requestArgs),
+        await transport.invoke(
+          'catalogoAdmin/recursos:crearRecurso',
+          requestArgs,
+        ),
       )
     },
     async updateResource(input) {

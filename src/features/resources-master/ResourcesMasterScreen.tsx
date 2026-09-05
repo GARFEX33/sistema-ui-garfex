@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import {
   createResourcesMasterConvexApi,
   type ResourcesMasterApi,
@@ -8,16 +14,17 @@ import {
   type ResourceListController,
   type ResourceListState,
 } from './useResourcesMasterList'
-import type { ResourceSummary } from './resourcesMaster.types'
+import { useResourcesHierarchy } from './useResourcesHierarchy'
+import type { ResourceId, ResourceSummary } from './resourcesMaster.types'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
 import { isValidFocusCandidate } from '../../shared/keyboard/focusRestoration'
 import { CrearRecursoSurface } from './CrearRecursoSurface'
 import { Button } from '../../shared/ui/Button'
 import { Field } from '../../shared/ui/Field'
+import { HierarchyNavigator } from '../../shared/ui/HierarchyNavigator'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { WorkCard } from '../../shared/ui/WorkCard'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
-import './resourcesMaster.css'
 
 const PAGE_SIZE = 20
 
@@ -30,7 +37,12 @@ const diagnosticsLabel: Record<
   BROKEN_REFERENCE: 'Referencia rota',
 }
 
-type ResourceFilters = { searchText: string }
+type ResourceFilters = {
+  searchText: string
+  claseRecursoId?: ResourceId
+  familiaRecursoId?: ResourceId
+  tipoRecursoId?: ResourceId
+}
 
 const emptySubscribe = () => () => undefined
 
@@ -54,6 +66,9 @@ function useResourceListSnapshot(
   )
 }
 
+const project = (items: readonly { id: ResourceId; nombre: string }[]) =>
+  items.map((item) => ({ id: item.id as string, label: item.nombre }))
+
 export function ResourcesMasterScreen() {
   const [api] = useState<ResourcesMasterApi>(() =>
     createResourcesMasterConvexApi(),
@@ -61,24 +76,39 @@ export function ResourcesMasterScreen() {
   const { registerCommand } = useKeyboardController()
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [searchText, setSearchText] = useState('')
+  const hierarchy = useResourcesHierarchy(api)
+  const hierarchyFilters = useMemo(() => {
+    if (hierarchy.selection.typeId !== undefined)
+      return { tipoRecursoId: hierarchy.selection.typeId }
+    if (hierarchy.selection.familyId !== undefined)
+      return { familiaRecursoId: hierarchy.selection.familyId }
+    if (hierarchy.selection.classId !== undefined)
+      return { claseRecursoId: hierarchy.selection.classId }
+    return {}
+  }, [
+    hierarchy.selection.classId,
+    hierarchy.selection.familyId,
+    hierarchy.selection.typeId,
+  ])
+  const hierarchyFiltersRef = useRef(hierarchyFilters)
+  hierarchyFiltersRef.current = hierarchyFilters
+  const searchRestartTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hierarchyInitialized = useRef(false)
   const [controller] = useState<ResourceListController<ResourceSummary>>(() =>
     createResourcesMasterListController<ResourceSummary>({
       filters: { searchText: '' },
       adapter: {
         load: ({ filters, cursor }) => {
-          const current = filters as ResourceFilters
-          return current.searchText
-            ? api.searchResources({
-                lifecycle: 'ACTIVE',
-                searchText: current.searchText,
-                cursor,
-                pageSize: PAGE_SIZE,
-              })
-            : api.listResources({
-                lifecycle: 'ACTIVE',
-                cursor,
-                pageSize: PAGE_SIZE,
-              })
+          const { searchText, ...hierarchyFilter } = filters as ResourceFilters
+          const input = {
+            lifecycle: 'ACTIVE' as const,
+            ...hierarchyFilter,
+            cursor,
+            pageSize: PAGE_SIZE,
+          }
+          return searchText
+            ? api.searchResources({ ...input, searchText })
+            : api.listResources(input)
         },
       },
     }),
@@ -89,13 +119,37 @@ export function ResourcesMasterScreen() {
     const trimmed = searchText.trim()
     const id = setTimeout(
       () => {
-        controller.setFilters({ searchText: trimmed })
-        controller.start()
+        searchRestartTimer.current = null
+        controller.setFilters({
+          searchText: trimmed,
+          ...hierarchyFiltersRef.current,
+        })
+        void controller.start()
       },
       trimmed ? 250 : 0,
     )
-    return () => clearTimeout(id)
+    searchRestartTimer.current = id
+    return () => {
+      clearTimeout(id)
+      if (searchRestartTimer.current === id) searchRestartTimer.current = null
+    }
   }, [searchText, controller])
+
+  useEffect(() => {
+    if (!hierarchyInitialized.current) {
+      hierarchyInitialized.current = true
+      return
+    }
+    if (searchRestartTimer.current !== null) {
+      clearTimeout(searchRestartTimer.current)
+      searchRestartTimer.current = null
+    }
+    controller.setFilters({
+      searchText: searchText.trim(),
+      ...hierarchyFilters,
+    })
+    void controller.start()
+  }, [controller, hierarchyFilters])
 
   const focusSearchCommand = useMemo(
     () => ({
@@ -140,8 +194,95 @@ export function ResourcesMasterScreen() {
             Recursos maestros
           </h1>
         }
-        controls={
-          <div className="w-full max-w-md">
+        action={
+          <CrearRecursoSurface api={api} onCreated={() => controller.start()} />
+        }
+      />
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <WorkCard aria-labelledby="resources-hierarchy-title">
+          <h2 id="resources-hierarchy-title" className="sr-only">
+            Jerarquía de recursos
+          </h2>
+          <HierarchyNavigator
+            columns={[
+              {
+                id: 'classes',
+                label: 'Clases',
+                items: project(hierarchy.classes.items),
+                selectedId: hierarchy.selection.classId as string | undefined,
+                state: hierarchy.classes,
+                onSelect: hierarchy.selectClass,
+                onContinue: hierarchy.continueClasses,
+                onRetry: hierarchy.retryClasses,
+                hasChildren: true,
+                spatial: {
+                  id: (item) => `resources.class.${item.id}`,
+                  column: 'class',
+                  metadata: { 'data-spatial-level': 'class' },
+                },
+                labels: {
+                  loading: 'Cargando…',
+                  empty: 'No hay clases activas.',
+                  retry: 'Reintentar clases',
+                  partial: 'No se pudieron cargar más clases.',
+                  retryContinuation: 'Reintentar continuación de clases',
+                  loadMore: 'Cargar más clases…',
+                },
+              },
+              {
+                id: 'families',
+                label: 'Familias',
+                items: project(hierarchy.families.items),
+                selectedId: hierarchy.selection.familyId as string | undefined,
+                waitingLabel: 'Seleccioná una Clase.',
+                state: hierarchy.families,
+                onSelect: hierarchy.selectFamily,
+                onContinue: hierarchy.continueFamilies,
+                onRetry: hierarchy.retryFamilies,
+                hasChildren: true,
+                spatial: {
+                  id: (item) => `resources.family.${item.id}`,
+                  column: 'family',
+                  metadata: { 'data-spatial-level': 'family' },
+                },
+                labels: {
+                  loading: 'Cargando…',
+                  empty: 'No hay familias activas.',
+                  retry: 'Reintentar familias',
+                  partial: 'No se pudieron cargar más familias.',
+                  retryContinuation: 'Reintentar continuación de familias',
+                  loadMore: 'Cargar más familias…',
+                },
+              },
+              {
+                id: 'types',
+                label: 'Tipos',
+                items: project(hierarchy.types.items),
+                selectedId: hierarchy.selection.typeId as string | undefined,
+                waitingLabel: 'Seleccioná una Familia.',
+                state: hierarchy.types,
+                onSelect: hierarchy.selectType,
+                onContinue: hierarchy.continueTypes,
+                onRetry: hierarchy.retryTypes,
+                spatial: {
+                  id: (item) => `resources.type.${item.id}`,
+                  column: 'type',
+                  metadata: { 'data-spatial-level': 'type' },
+                },
+                labels: {
+                  loading: 'Cargando…',
+                  empty: 'No hay tipos activos.',
+                  retry: 'Reintentar tipos',
+                  partial: 'No se pudieron cargar más tipos.',
+                  retryContinuation: 'Reintentar continuación de tipos',
+                  loadMore: 'Cargar más tipos…',
+                },
+              },
+            ]}
+          />
+        </WorkCard>
+        <WorkCard aria-labelledby="resources-list-title">
+          <div className="mb-3 w-full max-w-md">
             <Field label="Buscar" htmlFor="resources-search">
               <input
                 ref={searchInputRef}
@@ -155,121 +296,113 @@ export function ResourcesMasterScreen() {
               />
             </Field>
           </div>
-        }
-        action={
-          <CrearRecursoSurface api={api} onCreated={() => controller.start()} />
-        }
-      />
-      <WorkCard
-        className="mt-3"
-        aria-labelledby="resources-list-title"
-      >
-        <h2 id="resources-list-title" className="sr-only">
-          Listado de recursos
-        </h2>
-        <table className="w-full border-collapse text-left">
-          <thead className="border-b border-border">
-            <tr>
-              <th
-                scope="col"
-                className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-text-muted"
-              >
-                Nombre
-              </th>
-              <th
-                scope="col"
-                className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-text-muted"
-              >
-                Código
-              </th>
-              <th
-                scope="col"
-                className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-text-muted"
-              >
-                Diagnóstico
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((resource) => (
-              <tr
-                key={resource.id as string}
-                className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-accent"
-                tabIndex={0}
-                data-resource-row
-                data-spatial-id={`resource.${resource.id}`}
-              >
-                <td className="border-b border-border px-2 py-3">
-                  {resource.nombre}
-                </td>
-                <td className="border-b border-border px-2 py-3">
-                  {resource.identificadorTecnico}
-                </td>
-                <td className="border-b border-border px-2 py-3">
-                  {diagnosticsLabel[resource.classificationStatus.state]}
-                </td>
+          <h2 id="resources-list-title" className="sr-only">
+            Listado de recursos
+          </h2>
+          <table className="w-full border-collapse text-left">
+            <thead className="border-b border-border">
+              <tr>
+                <th
+                  scope="col"
+                  className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-text-muted"
+                >
+                  Nombre
+                </th>
+                <th
+                  scope="col"
+                  className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-text-muted"
+                >
+                  Código
+                </th>
+                <th
+                  scope="col"
+                  className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-text-muted"
+                >
+                  Diagnóstico
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {isLoading && (
-          <p
-            className="mt-4 text-sm leading-6 text-text-secondary"
-            role="status"
-          >
-            Cargando…
-          </p>
-        )}
-        {isEmpty && (
-          <p
-            className="mt-4 text-sm leading-6 text-text-secondary"
-            role="status"
-          >
-            No hay recursos para este filtro.
-          </p>
-        )}
-        {isInitialError && (
-          <div
-            className="mt-4 space-y-3 text-sm leading-6 text-text-secondary"
-            role="alert"
-          >
-            <p>No se pudieron cargar los recursos.</p>
+            </thead>
+            <tbody>
+              {items.map((resource) => (
+                <tr
+                  key={resource.id as string}
+                  className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-accent"
+                  tabIndex={0}
+                  data-resource-row
+                  data-spatial-id={`resource.${resource.id}`}
+                >
+                  <td className="border-b border-border px-2 py-3">
+                    {resource.nombre}
+                  </td>
+                  <td className="border-b border-border px-2 py-3">
+                    {resource.identificadorTecnico}
+                  </td>
+                  <td className="border-b border-border px-2 py-3">
+                    {diagnosticsLabel[resource.classificationStatus.state]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {isLoading && (
+            <p
+              className="mt-4 text-sm leading-6 text-text-secondary"
+              role="status"
+            >
+              Cargando…
+            </p>
+          )}
+          {isEmpty && (
+            <p
+              className="mt-4 text-sm leading-6 text-text-secondary"
+              role="status"
+            >
+              No hay recursos para este filtro.
+            </p>
+          )}
+          {isInitialError && (
+            <div
+              className="mt-4 space-y-3 text-sm leading-6 text-text-secondary"
+              role="alert"
+            >
+              <p>No se pudieron cargar los recursos.</p>
+              <Button
+                variant="outline"
+                type="button"
+                onPress={() => controller.retry()}
+              >
+                Reintentar
+              </Button>
+            </div>
+          )}
+          {isPartialError && (
+            <div
+              className="mt-4 space-y-3 text-sm leading-6 text-text-secondary"
+              role="alert"
+            >
+              <p>No se pudo cargar la página siguiente.</p>
+              <Button
+                variant="outline"
+                type="button"
+                onPress={() => controller.retry()}
+              >
+                Reintentar continuación
+              </Button>
+            </div>
+          )}
+          {showLoadMore && (
             <Button
               variant="outline"
               type="button"
-              onPress={() => controller.retry()}
+              className="mt-3"
+              isDisabled={status === 'loading-more'}
+              onPress={() => controller.continue()}
             >
-              Reintentar
+              Cargar más…
             </Button>
-          </div>
-        )}
-        {isPartialError && (
-          <div
-            className="mt-4 space-y-3 text-sm leading-6 text-text-secondary"
-            role="alert"
-          >
-            <p>No se pudo cargar la página siguiente.</p>
-            <Button
-              variant="outline"
-              type="button"
-              onPress={() => controller.retry()}
-            >
-              Reintentar continuación
-            </Button>
-          </div>
-        )}
-        {showLoadMore && (
-          <Button
-            variant="outline"
-            type="button"
-            className="mt-3"
-            isDisabled={status === 'loading-more'}
-            onPress={() => controller.continue()}
-          >
-            Cargar más…
-          </Button>
-        )}
-      </WorkCard>
+          )}
+        </WorkCard>
+      </div>
     </section>
   )
 }

@@ -20,11 +20,11 @@ const summary = (
   ...overrides,
 })
 
-const page = (
-  items: object[],
-  isDone = true,
-  continueCursor = '',
-) => ({ page: items, isDone, continueCursor })
+const page = (items: object[], isDone = true, continueCursor = '') => ({
+  page: items,
+  isDone,
+  continueCursor,
+})
 
 const fakeApi = (
   overrides: Partial<ResourcesMasterApi> = {},
@@ -37,19 +37,65 @@ const fakeApi = (
     updateResource: vi.fn(),
     activateResource: vi.fn(),
     deactivateResource: vi.fn(),
+    listContextClasses: vi.fn(async () => ({
+      items: [
+        {
+          id: 'class-1',
+          clave: 'MATERIAL',
+          nombre: 'Material',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        },
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
+    listContextFamilies: vi.fn(async () => ({
+      items: [
+        {
+          id: 'family-1',
+          claseRecursoId: 'class-1',
+          clave: 'CABLE',
+          nombre: 'Cable',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        },
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
+    listContextTypes: vi.fn(async () => ({
+      items: [
+        {
+          id: 'type-1',
+          familiaRecursoId: 'family-1',
+          clave: 'UTP',
+          nombre: 'UTP',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+          aggregateStatus: 'CLEAN',
+          violations: [],
+        },
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
     ...overrides,
   }) as ResourcesMasterApi
 
 const factory = vi.hoisted(() => vi.fn())
-vi.mock(
-  '../../src/features/resources-master/resourcesMaster.api',
-  async () => {
-    const actual = await vi.importActual<
-      typeof import('../../src/features/resources-master/resourcesMaster.api')
-    >('../../src/features/resources-master/resourcesMaster.api')
-    return { ...actual, createResourcesMasterConvexApi: factory }
-  },
-)
+vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../src/features/resources-master/resourcesMaster.api')
+  >('../../src/features/resources-master/resourcesMaster.api')
+  return { ...actual, createResourcesMasterConvexApi: factory }
+})
 
 describe('ResourcesMasterScreen connected read wiring', () => {
   it('lists resources on mount', async () => {
@@ -127,6 +173,136 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     }
   })
 
+  it('starts mount once, debounces non-empty search once, and clears immediately', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const api = fakeApi()
+      factory.mockReturnValue(api)
+      render(<ResourcesMasterScreen />)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(api.listResources).toHaveBeenCalledTimes(1)
+
+      fireEvent.change(screen.getByLabelText('Buscar'), {
+        target: { value: ' Motor ' },
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(249)
+      })
+      expect(api.searchResources).not.toHaveBeenCalled()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(api.searchResources).toHaveBeenCalledTimes(1)
+      expect(api.searchResources).toHaveBeenLastCalledWith({
+        lifecycle: 'ACTIVE',
+        searchText: 'Motor',
+        cursor: undefined,
+        pageSize: 20,
+      })
+
+      fireEvent.change(screen.getByLabelText('Buscar'), {
+        target: { value: '' },
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(api.listResources).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('restarts once with the deepest hierarchy filter and cancels a pending search', async () => {
+    const api = fakeApi()
+    factory.mockReturnValue(api)
+    render(<ResourcesMasterScreen />)
+
+    await screen.findByRole('button', { name: 'Material' })
+    await waitFor(() => expect(api.listResources).toHaveBeenCalledTimes(1))
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      fireEvent.change(screen.getByLabelText('Buscar'), {
+        target: { value: ' Motor ' },
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(api.searchResources).not.toHaveBeenCalled()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Material' }))
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(api.searchResources).toHaveBeenCalledTimes(1)
+      expect(api.searchResources).toHaveBeenLastCalledWith({
+        lifecycle: 'ACTIVE',
+        claseRecursoId: 'class-1',
+        searchText: 'Motor',
+        cursor: undefined,
+        pageSize: 20,
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(150)
+      })
+      expect(api.searchResources).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('applies the selected class as the one server filter to list and search', async () => {
+    const api = fakeApi({
+      searchResources: vi.fn(async () =>
+        page([summary('r2', 'Cable industrial')]),
+      ),
+    })
+    factory.mockReturnValue(api)
+    render(<ResourcesMasterScreen />)
+
+    await screen.findByText('Material')
+    fireEvent.click(screen.getByRole('button', { name: 'Material' }))
+    await waitFor(() =>
+      expect(api.listResources).toHaveBeenLastCalledWith({
+        lifecycle: 'ACTIVE',
+        claseRecursoId: 'class-1',
+        cursor: undefined,
+        pageSize: 20,
+      }),
+    )
+
+    expect(await screen.findByText('Cable')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Cable' }))
+    expect(await screen.findByText('UTP')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'UTP' }))
+    await waitFor(() =>
+      expect(api.listResources).toHaveBeenLastCalledWith({
+        lifecycle: 'ACTIVE',
+        tipoRecursoId: 'type-1',
+        cursor: undefined,
+        pageSize: 20,
+      }),
+    )
+
+    fireEvent.change(screen.getByLabelText('Buscar'), {
+      target: { value: 'Cable' },
+    })
+    await waitFor(() =>
+      expect(api.searchResources).toHaveBeenCalledWith({
+        lifecycle: 'ACTIVE',
+        tipoRecursoId: 'type-1',
+        searchText: 'Cable',
+        cursor: undefined,
+        pageSize: 20,
+      }),
+    )
+  })
+
   it('loads the next page on demand without dropping the first page', async () => {
     const api = fakeApi({
       listResources: vi
@@ -151,7 +327,9 @@ describe('ResourcesMasterScreen connected read wiring', () => {
   })
 
   it('disables continuation while the next page is loading', async () => {
-    let resolveContinuation: ((value: ReturnType<typeof page>) => void) | undefined
+    let resolveContinuation:
+      | ((value: ReturnType<typeof page>) => void)
+      | undefined
     const continuation = new Promise<ReturnType<typeof page>>((resolve) => {
       resolveContinuation = resolve
     })

@@ -81,10 +81,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         return
       }
       if (event.currentTarget.dataset.spatialId === 'sidebar.recursos') {
-        const firstResource = boundaryRoot.querySelector<HTMLElement>(
-          '[data-resource-row][data-spatial-id]',
+        const firstClass = boundaryRoot.querySelector<HTMLElement>(
+          '[data-spatial-level="class"][data-spatial-id]',
         )
-        focusRow(firstResource)
+        focusRow(firstClass)
+        firstClass?.click()
         return
       }
       focusSpatialTarget({
@@ -103,20 +104,39 @@ export function AppShell({ children }: { children: ReactNode }) {
         event.metaKey ||
         event.altKey ||
         event.shiftKey ||
-        !/^Arrow(?:Up|Down|Left|Right)$/.test(event.key)
+        event.nativeEvent.isComposing ||
+        event.nativeEvent.keyCode === 229 ||
+        !/^(?:Arrow(?:Up|Down|Left|Right)|Escape)$/.test(event.key)
       )
         return
       const target = event.target
       const boundaryRoot = workspaceMainRef.current
       if (!(target instanceof HTMLElement) || !boundaryRoot) return
+      const focusDeepestResourcesHierarchy = () => {
+        for (const level of ['type', 'family', 'class']) {
+          const selected = boundaryRoot.querySelector<HTMLElement>(
+            `[data-spatial-level="${level}"][aria-pressed="true"]`,
+          )
+          if (selected) {
+            focusRow(selected)
+            return
+          }
+        }
+      }
       if (target.dataset.spatialId === 'resources.search') {
-        if (event.key !== 'ArrowDown') return
-        event.preventDefault()
-        focusRow(
-          boundaryRoot.querySelector<HTMLElement>(
-            '[data-resource-row][data-spatial-id]',
-          ),
-        )
+        if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
+              '[data-resource-row][data-spatial-id]',
+            ),
+          )
+          return
+        }
+        if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+          event.preventDefault()
+          focusDeepestResourcesHierarchy()
+        }
         return
       }
       if (target.getAttribute('role') === 'tab') {
@@ -188,10 +208,71 @@ export function AppShell({ children }: { children: ReactNode }) {
           focusRow(rows[next] ?? null)
           return
         }
+        if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+          focusDeepestResourcesHierarchy()
+        }
+        return
+      }
+      const resourcesHierarchyRow = target.closest<HTMLElement>(
+        '[data-spatial-level]',
+      )
+      if (resourcesHierarchyRow) {
+        event.preventDefault()
+        const level = resourcesHierarchyRow.dataset.spatialLevel!
+        const move = (candidate: HTMLElement | null) => {
+          focusRow(candidate)
+          candidate?.click()
+        }
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          const rows = [
+            ...boundaryRoot.querySelectorAll<HTMLElement>(
+              `[data-spatial-level="${level}"]`,
+            ),
+          ]
+          const index = rows.indexOf(resourcesHierarchyRow)
+          move(
+            rows[
+              Math.max(
+                0,
+                Math.min(
+                  rows.length - 1,
+                  index + (event.key === 'ArrowDown' ? 1 : -1),
+                ),
+              )
+            ] ?? null,
+          )
+          return
+        }
+        if (event.key === 'ArrowRight') {
+          if (level === 'type') {
+            focusRow(
+              boundaryRoot.querySelector<HTMLElement>(
+                '[data-spatial-id="resources.search"]',
+              ),
+            )
+            return
+          }
+          const child = level === 'class' ? 'family' : 'type'
+          move(
+            boundaryRoot.querySelector<HTMLElement>(
+              `[data-spatial-level="${child}"][data-spatial-id]`,
+            ),
+          )
+          return
+        }
         if (event.key === 'ArrowLeft') {
+          if (level === 'class') {
+            focusRow(
+              document.querySelector<HTMLElement>(
+                '[data-spatial-id="sidebar.recursos"]',
+              ),
+            )
+            return
+          }
+          const parent = level === 'type' ? 'family' : 'class'
           focusRow(
-            document.querySelector<HTMLElement>(
-              '[data-spatial-id="sidebar.recursos"]',
+            boundaryRoot.querySelector<HTMLElement>(
+              `[data-spatial-level="${parent}"][aria-pressed="true"]`,
             ),
           )
         }

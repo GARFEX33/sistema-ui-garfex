@@ -25,7 +25,10 @@ const summary = (extra: Record<string, unknown> = {}) => ({
   ...extra,
 })
 
-const nativePage = (items: unknown[] = [summary()], overrides: Record<string, unknown> = {}) => ({
+const nativePage = (
+  items: unknown[] = [summary()],
+  overrides: Record<string, unknown> = {},
+) => ({
   page: items,
   isDone: false,
   continueCursor: 'opaque-next',
@@ -35,7 +38,9 @@ const nativePage = (items: unknown[] = [summary()], overrides: Record<string, un
 describe('resources master API boundary', () => {
   it('parses a valid list page and rejects malformed envelopes', () => {
     expect(parseResourceListPage(nativePage()).page[0]?.id).toBe('resource-1')
-    expect(() => parseResourceListPage({ isDone: false, continueCursor: 'x' })).toThrow()
+    expect(() =>
+      parseResourceListPage({ isDone: false, continueCursor: 'x' }),
+    ).toThrow()
     expect(() => parseResourceListPage(nativePage([{}]))).toThrow()
     expect(() =>
       parseResourceListPage({ page: [], isDone: false, continueCursor: null }),
@@ -43,16 +48,28 @@ describe('resources master API boundary', () => {
   })
 
   it('rejects a resource summary missing required fields', () => {
-    expect(() => parseResourceListPage(nativePage([summary({ activo: undefined })]))).toThrow()
-    expect(() => parseResourceListPage(nativePage([summary({ revision: '1' })]))).toThrow()
     expect(() =>
-      parseResourceListPage(nativePage([summary({ classificationStatus: { state: 'WRONG', reasons: [] } })])),
+      parseResourceListPage(nativePage([summary({ activo: undefined })])),
     ).toThrow()
-    expect(() => parseResourceListPage(nativePage([summary({ tipoRecursoId: null })]))).toThrow()
+    expect(() =>
+      parseResourceListPage(nativePage([summary({ revision: '1' })])),
+    ).toThrow()
+    expect(() =>
+      parseResourceListPage(
+        nativePage([
+          summary({ classificationStatus: { state: 'WRONG', reasons: [] } }),
+        ]),
+      ),
+    ).toThrow()
+    expect(() =>
+      parseResourceListPage(nativePage([summary({ tipoRecursoId: null })])),
+    ).toThrow()
   })
 
   it('accepts an optional organizacionId when present and valid', () => {
-    const result = parseResourceListPage(nativePage([summary({ organizacionId: 'org-1' })]))
+    const result = parseResourceListPage(
+      nativePage([summary({ organizacionId: 'org-1' })]),
+    )
     expect(result.page[0]).toMatchObject({ organizacionId: 'org-1' })
   })
 
@@ -75,10 +92,19 @@ describe('resources master API boundary', () => {
   })
 
   it('validates created and generic change-result envelopes', () => {
-    expect(parseResourceCreated({ disposition: 'CREATED', item: summary() }).item.id).toBe('resource-1')
-    expect(() => parseResourceCreated({ disposition: 'OTHER', item: summary() })).toThrow()
-    expect(parseResourceChangeResult({ disposition: 'UPDATED', item: summary() }).disposition).toBe('UPDATED')
-    expect(() => parseResourceChangeResult({ disposition: '', item: summary() })).toThrow()
+    expect(
+      parseResourceCreated({ disposition: 'CREATED', item: summary() }).item.id,
+    ).toBe('resource-1')
+    expect(() =>
+      parseResourceCreated({ disposition: 'OTHER', item: summary() }),
+    ).toThrow()
+    expect(
+      parseResourceChangeResult({ disposition: 'UPDATED', item: summary() })
+        .disposition,
+    ).toBe('UPDATED')
+    expect(() =>
+      parseResourceChangeResult({ disposition: '', item: summary() }),
+    ).toThrow()
   })
 
   it('lists resources translating pageSize/cursor into native paginationOpts', async () => {
@@ -86,7 +112,12 @@ describe('resources master API boundary', () => {
     const api = createResourcesMasterApi({ invoke })
 
     await api.listResources({ pageSize: 20 })
-    await api.listResources({ pageSize: 20, cursor: 'prev-cursor', lifecycle: 'ACTIVE', tipoRecursoId: 'type-1' })
+    await api.listResources({
+      pageSize: 20,
+      cursor: 'prev-cursor',
+      lifecycle: 'ACTIVE',
+      tipoRecursoId: 'type-1',
+    })
 
     expect(invoke.mock.calls).toEqual([
       [
@@ -104,11 +135,78 @@ describe('resources master API boundary', () => {
     ])
   })
 
+  it('serializes exactly the deepest hierarchy filter before pagination for list and search', async () => {
+    const invoke = vi.fn().mockResolvedValue(nativePage())
+    const api = createResourcesMasterApi({ invoke })
+    const hierarchy = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+    }
+
+    await api.listResources({
+      pageSize: 20,
+      lifecycle: 'ACTIVE',
+      claseRecursoId: 'class-1',
+    })
+    await api.listResources({
+      pageSize: 20,
+      lifecycle: 'ACTIVE',
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+    })
+    await api.listResources({ pageSize: 20, lifecycle: 'ACTIVE', ...hierarchy })
+    await api.searchResources({
+      pageSize: 20,
+      lifecycle: 'ACTIVE',
+      searchText: 'cable',
+      ...hierarchy,
+    })
+
+    expect(invoke.mock.calls).toEqual([
+      [
+        'catalogoAdmin/recursos:listarRecursosResumen',
+        {
+          paginationOpts: { numItems: 20, cursor: null },
+          lifecycle: 'ACTIVE',
+          claseRecursoId: 'class-1',
+        },
+      ],
+      [
+        'catalogoAdmin/recursos:listarRecursosResumen',
+        {
+          paginationOpts: { numItems: 20, cursor: null },
+          lifecycle: 'ACTIVE',
+          familiaRecursoId: 'family-1',
+        },
+      ],
+      [
+        'catalogoAdmin/recursos:listarRecursosResumen',
+        {
+          paginationOpts: { numItems: 20, cursor: null },
+          lifecycle: 'ACTIVE',
+          tipoRecursoId: 'type-1',
+        },
+      ],
+      [
+        'catalogoAdmin/recursos:buscarRecursosResumen',
+        {
+          paginationOpts: { numItems: 20, cursor: null },
+          lifecycle: 'ACTIVE',
+          tipoRecursoId: 'type-1',
+          searchText: 'cable',
+        },
+      ],
+    ])
+  })
+
   it('rejects an empty search text before calling transport', async () => {
     const invoke = vi.fn()
     const api = createResourcesMasterApi({ invoke })
 
-    await expect(api.searchResources({ pageSize: 10, searchText: '   ' })).rejects.toThrow()
+    await expect(
+      api.searchResources({ pageSize: 10, searchText: '   ' }),
+    ).rejects.toThrow()
     expect(invoke).not.toHaveBeenCalled()
   })
 
@@ -118,22 +216,29 @@ describe('resources master API boundary', () => {
 
     await api.searchResources({ pageSize: 10, searchText: 'cable' })
 
-    expect(invoke).toHaveBeenCalledWith('catalogoAdmin/recursos:buscarRecursosResumen', {
-      paginationOpts: { numItems: 10, cursor: null },
-      searchText: 'cable',
-    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:buscarRecursosResumen',
+      {
+        paginationOpts: { numItems: 10, cursor: null },
+        searchText: 'cable',
+      },
+    )
   })
 
   it('rejects a missing resourceId before calling transport for detail', async () => {
     const invoke = vi.fn()
     const api = createResourcesMasterApi({ invoke })
 
-    await expect(api.getResourceDetail({ recursoId: undefined })).rejects.toThrow()
+    await expect(
+      api.getResourceDetail({ recursoId: undefined }),
+    ).rejects.toThrow()
     expect(invoke).not.toHaveBeenCalled()
   })
 
   it('creates a resource sending every required field and the ownership envelope', async () => {
-    const invoke = vi.fn().mockResolvedValue({ disposition: 'CREATED', item: summary() })
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'CREATED', item: summary() })
     const api = createResourcesMasterApi({ invoke })
 
     await api.createResource({
@@ -158,7 +263,9 @@ describe('resources master API boundary', () => {
   })
 
   it('updates a resource sending only editable fields, never immutable ones', async () => {
-    const invoke = vi.fn().mockResolvedValue({ disposition: 'UPDATED', item: summary() })
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'UPDATED', item: summary() })
     const api = createResourcesMasterApi({ invoke })
 
     await api.updateResource({
@@ -167,23 +274,37 @@ describe('resources master API boundary', () => {
       nombre: 'Cable UTP cat6',
     })
 
-    expect(invoke).toHaveBeenCalledWith('catalogoAdmin/recursos:actualizarRecurso', {
-      recursoId: 'resource-1',
-      expectedRevision: 1,
-      nombre: 'Cable UTP cat6',
-    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:actualizarRecurso',
+      {
+        recursoId: 'resource-1',
+        expectedRevision: 1,
+        nombre: 'Cable UTP cat6',
+      },
+    )
   })
 
   it('activates and deactivates sending only recursoId and expectedRevision', async () => {
-    const invoke = vi.fn().mockResolvedValue({ disposition: 'ACTIVATED', item: summary() })
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'ACTIVATED', item: summary() })
     const api = createResourcesMasterApi({ invoke })
 
     await api.activateResource({ recursoId: 'resource-1', expectedRevision: 2 })
-    await api.deactivateResource({ recursoId: 'resource-1', expectedRevision: 2 })
+    await api.deactivateResource({
+      recursoId: 'resource-1',
+      expectedRevision: 2,
+    })
 
     expect(invoke.mock.calls).toEqual([
-      ['catalogoAdmin/recursos:activarRecurso', { recursoId: 'resource-1', expectedRevision: 2 }],
-      ['catalogoAdmin/recursos:desactivarRecurso', { recursoId: 'resource-1', expectedRevision: 2 }],
+      [
+        'catalogoAdmin/recursos:activarRecurso',
+        { recursoId: 'resource-1', expectedRevision: 2 },
+      ],
+      [
+        'catalogoAdmin/recursos:desactivarRecurso',
+        { recursoId: 'resource-1', expectedRevision: 2 },
+      ],
     ])
   })
 
@@ -198,7 +319,10 @@ describe('resources master API boundary', () => {
     ...extra,
   })
 
-  const contextPage = (items: unknown[] = [contextItem()], overrides: Record<string, unknown> = {}) => ({
+  const contextPage = (
+    items: unknown[] = [contextItem()],
+    overrides: Record<string, unknown> = {},
+  ) => ({
     items,
     continuationCursor: null,
     isExhausted: true,
@@ -211,27 +335,39 @@ describe('resources master API boundary', () => {
 
     const result = await api.listContextClasses({ pageSize: 20 })
 
-    expect(invoke).toHaveBeenCalledWith('catalogoAdmin/jerarquia:listarClases', {
-      modo: 'ACTIVE',
-      pageSize: 20,
-    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/jerarquia:listarClases',
+      {
+        modo: 'ACTIVE',
+        pageSize: 20,
+      },
+    )
     expect(result.items[0]?.id).toBe('class-1')
     expect(() => parseContextClassesPage(contextPage([{}]))).toThrow()
-    expect(parseContextClassesPage(contextPage()).items[0]?.effective).toBe(true)
+    expect(parseContextClassesPage(contextPage()).items[0]?.effective).toBe(
+      true,
+    )
   })
 
   it('lists context families under a class, rejecting a missing claseRecursoId', async () => {
-    const invoke = vi.fn().mockResolvedValue(
-      contextPage([contextItem({ id: 'family-1', claseRecursoId: 'class-1' })]),
-    )
+    const invoke = vi
+      .fn()
+      .mockResolvedValue(
+        contextPage([
+          contextItem({ id: 'family-1', claseRecursoId: 'class-1' }),
+        ]),
+      )
     const api = createResourcesMasterApi({ invoke })
 
     await api.listContextFamilies({ claseRecursoId: 'class-1' })
 
-    expect(invoke).toHaveBeenCalledWith('catalogoAdmin/jerarquia:listarFamilias', {
-      claseRecursoId: 'class-1',
-      modo: 'ACTIVE',
-    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/jerarquia:listarFamilias',
+      {
+        claseRecursoId: 'class-1',
+        modo: 'ACTIVE',
+      },
+    )
     expect(() =>
       parseContextFamiliesPage(contextPage([contextItem({ id: 'family-1' })])),
     ).toThrow()
@@ -261,7 +397,9 @@ describe('resources master API boundary', () => {
     })
     expect(() =>
       parseContextTypesPage(
-        contextPage([contextItem({ id: 'type-1', familiaRecursoId: 'family-1' })]),
+        contextPage([
+          contextItem({ id: 'type-1', familiaRecursoId: 'family-1' }),
+        ]),
       ),
     ).toThrow()
     await expect(
@@ -290,12 +428,18 @@ describe('resources master API boundary', () => {
 
     const result = await api.listUnitPolicies({ tipoRecursoId: 'type-1' })
 
-    expect(invoke).toHaveBeenCalledWith('catalogoAdmin/unidades:listarPoliticasUnidad', {
-      tipoRecursoId: 'type-1',
-      paraTipoRecursoId: 'type-1',
-      modo: 'ACTIVE',
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/unidades:listarPoliticasUnidad',
+      {
+        tipoRecursoId: 'type-1',
+        paraTipoRecursoId: 'type-1',
+        modo: 'ACTIVE',
+      },
+    )
+    expect(result.items[0]).toMatchObject({
+      unidadId: 'unit-1',
+      principal: true,
     })
-    expect(result.items[0]).toMatchObject({ unidadId: 'unit-1', principal: true })
     expect(() =>
       parseUnitPoliciesPage(contextPage([policyItem({ selection: 'WRONG' })])),
     ).toThrow()
@@ -321,9 +465,12 @@ describe('resources master API boundary', () => {
 
     const result = await api.getUnit({ unidadId: 'unit-1' })
 
-    expect(invoke).toHaveBeenCalledWith('catalogoAdmin/unidades:obtenerUnidad', {
-      unidadId: 'unit-1',
-    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/unidades:obtenerUnidad',
+      {
+        unidadId: 'unit-1',
+      },
+    )
     expect(result).toMatchObject({ nombre: 'Metro cúbico', simbolo: 'm³' })
 
     invoke.mockResolvedValueOnce(null)
@@ -353,10 +500,14 @@ describe('resources master API boundary', () => {
   })
 
   it('lists attribute assignments for a type, rejecting malformed items and a missing tipoRecursoId', async () => {
-    const invoke = vi.fn().mockResolvedValue(contextPage([attributeAssignment()]))
+    const invoke = vi
+      .fn()
+      .mockResolvedValue(contextPage([attributeAssignment()]))
     const api = createResourcesMasterApi({ invoke })
 
-    const result = await api.listAttributeAssignments({ tipoRecursoId: 'type-1' })
+    const result = await api.listAttributeAssignments({
+      tipoRecursoId: 'type-1',
+    })
 
     expect(invoke).toHaveBeenCalledWith(
       'catalogoAdmin/atributos:listarAsignacionesAtributo',
@@ -400,11 +551,16 @@ describe('resources master API boundary', () => {
       'catalogoAdmin/atributos:obtenerDefinicionAtributo',
       { definicionAtributoId: 'definicion-1' },
     )
-    expect(result).toMatchObject({ nombre: 'Granulometría', tipoDato: 'OPCION' })
+    expect(result).toMatchObject({
+      nombre: 'Granulometría',
+      tipoDato: 'OPCION',
+    })
 
     invoke.mockResolvedValueOnce(null)
     expect(
-      await api.getAttributeDefinition({ definicionAtributoId: 'definicion-1' }),
+      await api.getAttributeDefinition({
+        definicionAtributoId: 'definicion-1',
+      }),
     ).toBeNull()
 
     invoke.mockResolvedValueOnce(attributeDefinition({ tipoDato: 'WRONG' }))
@@ -442,7 +598,9 @@ describe('resources master API boundary', () => {
     )
     expect(result.items[0]).toMatchObject({ nombre: 'Fina' })
     expect(() =>
-      parseAttributeOptionsPage(contextPage([attributeOption({ nombre: undefined })])),
+      parseAttributeOptionsPage(
+        contextPage([attributeOption({ nombre: undefined })]),
+      ),
     ).toThrow()
     await expect(
       api.listAttributeOptions({ definicionAtributoId: undefined as never }),

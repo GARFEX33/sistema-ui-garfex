@@ -64,6 +64,8 @@ export interface ResourceListPage<T> {
 
 export interface ResourceListFilters {
   lifecycle?: ResourceLifecycle
+  claseRecursoId?: ResourceId
+  familiaRecursoId?: ResourceId
   tipoRecursoId?: ResourceId
   scope?: ResourceScope
 }
@@ -150,7 +152,8 @@ export interface ResourceContextListInput {
   pageSize?: number
 }
 
-export interface ResourceContextFamilyListInput extends ResourceContextListInput {
+export interface ResourceContextFamilyListInput
+  extends ResourceContextListInput {
   claseRecursoId: ResourceId
 }
 
@@ -228,11 +231,16 @@ export interface ResourceAttributeAssignment {
   selection: ResourceAttributeSelection
 }
 
-export interface ResourceAttributeAssignmentListInput extends ResourceContextListInput {
+export interface ResourceAttributeAssignmentListInput
+  extends ResourceContextListInput {
   tipoRecursoId: ResourceId
 }
 
-export type ResourceAttributeDataType = 'TEXTO' | 'NUMERO' | 'BOOLEANO' | 'OPCION'
+export type ResourceAttributeDataType =
+  | 'TEXTO'
+  | 'NUMERO'
+  | 'BOOLEANO'
+  | 'OPCION'
 
 export interface ResourceAttributeDefinition {
   id: ResourceId
@@ -263,6 +271,7 @@ export interface ResourceAttributeOption {
   effectiveReasons: string[]
 }
 
-export interface ResourceAttributeOptionListInput extends ResourceContextListInput {
+export interface ResourceAttributeOptionListInput
+  extends ResourceContextListInput {
   definicionAtributoId: ResourceId
 }
