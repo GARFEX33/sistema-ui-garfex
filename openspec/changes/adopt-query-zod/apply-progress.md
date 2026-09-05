@@ -3,9 +3,9 @@
 ## Status
 
 - **Date:** 2026-09-24
-- **Executors:** SDD apply for Slice A; bounded project workers for B and C1.
-- **Change / current branch:** `adopt-query-zod` / `feat/adopt-query-zod-03-query-hook`.
-- **Current state:** A, B and C1 completed; C2 is the next pending work unit.
+- **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
+- **Change / current branch:** `adopt-query-zod` / `feat/adopt-query-zod-05-query-actions`.
+- **Current state:** A, B, C1, and C2 completed; D is the next pending work unit.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
 - **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
@@ -135,7 +135,20 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Count:** 382 authored lines (362 additions, 20 deletions), below the 400-line limit.
 - **Commit verdict:** C1 is commit-ready based on its focused tests, targeted lint/format checks, typecheck and diff check. Repository-wide lint/format failures are pre-existing and outside this work unit; they remain documented without blocking this scoped verdict.
 
-## Slice C2 — actions and concurrency
+## Historical Slice C2 — actions and concurrency
 
-- **Status:** Pending; no C2 code or tests are present in C1.
-- **Required coverage before completion:** key-scoped manual retry and continuation state, cross-key races, duplicate CTA suppression, cursor reuse, partial-error recovery, semantic void action promises, and observer-local refetch.
+- **Status:** Completed; D was not started. This evidence is chronological: RED predates C2 implementation, and the review correction/final validation follows the original GREEN/TRIANGULATE/REFACTOR record.
+- **RED:** Added controlled-promise hook cases before implementation. `pnpm test -- tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` exited 1: 31 files, 345 passed / 4 failed; the C2 failures included `mounted.result.current.loadMore is not a function` and unmet action-race expectations.
+- **GREEN:** Added only `loadMore`, `retry`, and `refetchActive`, each returning a semantic `Promise<void>`. The hook stores continuation/manual-initial markers in a `WeakMap` keyed by React Query's cached canonical query object, so stale key-A callbacks/finally handlers cannot mutate key B.
+- **TRIANGULATE:** Controlled A/B criteria races prove manual-retry and continuation finally-order isolation; duplicate continuation sharing, failed-cursor reuse, retained valid pages, void action results, mounted-key-only refetch, one automatic initial retry, and zero automatic continuation retries are covered.
+- **REFACTOR:** Prettier retained feature-local bookkeeping and the C1 read projection; test cleanup clears local clients, restores the focus override with `focusManager.setFocused(undefined)`, and retains the online baseline.
+
+### Slice C2 verification and rollback
+
+- Final focused review-correction command: `pnpm exec vitest run tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` exited 0 — 2 files / 35 tests passed. This direct Vitest invocation replaces the script form that ran the whole suite.
+- Targeted `pnpm exec eslint src/features/resources-master/useResourcesMasterListQuery.ts tests/unit/useResourcesMasterListQuery.test.tsx`, targeted `pnpm exec prettier --check src/features/resources-master/useResourcesMasterListQuery.ts tests/unit/useResourcesMasterListQuery.test.tsx`, `pnpm typecheck`, and `git diff --check` each exited 0.
+- Runtime harness: N/A — D remains the first screen consumer; controlled adapter sequencing covers this feature-local hook boundary.
+- **Rollback boundary:** remove C2 actions/bookkeeping and their C2 tests, then restore the C1 three-field return shape and four C2 task boxes. Provider A and transport B remain independent; no UI, cache writes, dependency, backend, or migration change exists.
+- **Count:** 348 authored lines (326 additions, 22 deletions), below the 400-line budget.
+- **Review focus:** key identity from `QueryCache.find({ exact: true })`, stale-action guards, continuation promise sharing/finally cleanup, and manual-initial retry marker lifetime.
+- **Commit verdict:** commit-ready as one C2 work unit; no commit created in delegated scope.

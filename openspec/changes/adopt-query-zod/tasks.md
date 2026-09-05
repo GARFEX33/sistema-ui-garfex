@@ -62,10 +62,10 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 **Focused verification:** `pnpm test -- tests/unit/useResourcesMasterListQuery.test.tsx tests/unit/resourcesMasterApi.test.ts` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun the focused command and `pnpm typecheck`. **Runtime harness:** N/A — D remains the first screen consumer; adapter call sequencing and semantic action promises are covered in isolation.
 
-- [ ] **RED:** Add failing hook cases for key-scoped manual retry and continuation state, cross-key races, duplicate CTA suppression, cursor reuse after partial failure, partial-error recovery with retained pages, semantic void action promises, and observer-local refetch. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add public `loadMore`, `retry`, and `refetchActive` semantic actions without exposing Query observer results or private errors; keep C1 key, payload, initial page parameter, next-page derivation, and read projection unchanged. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Prove a key change cannot inherit or clear another key's manual-retry/continuation state; prove repeated CTA activation shares one continuation, retries reuse the failed cursor, partial errors retain valid pages, action promises resolve `void`, and refetch targets only the mounted observer key. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Encapsulate per-key action/concurrency bookkeeping and preserve C1's private failure marker and `useMemo` read model; clear locally created test clients and rerun the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing hook cases for key-scoped manual retry and continuation state, cross-key races, duplicate CTA suppression, cursor reuse after partial failure, partial-error recovery with retained pages, semantic void action promises, and observer-local refetch. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Add public `loadMore`, `retry`, and `refetchActive` semantic actions without exposing Query observer results or private errors; keep C1 key, payload, initial page parameter, next-page derivation, and read projection unchanged. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Prove a key change cannot inherit or clear another key's manual-retry/continuation state; prove repeated CTA activation shares one continuation, retries reuse the failed cursor, partial errors retain valid pages, action promises resolve `void`, and refetch targets only the mounted observer key. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Encapsulate per-key action/concurrency bookkeeping and preserve C1's private failure marker and `useMemo` read model; clear locally created test clients and rerun the focused command. <!-- sdd-owner: implementation -->
 
 ## D — Criterio atómico y wiring de pantalla (280–380 lines)
 
