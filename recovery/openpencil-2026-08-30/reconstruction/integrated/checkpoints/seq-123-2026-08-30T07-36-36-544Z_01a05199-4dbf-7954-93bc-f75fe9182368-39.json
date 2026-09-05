@@ -1,0 +1,17 @@
+{
+  "seq": 123,
+  "source_session": "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+  "source_line": 39,
+  "timestamp": "2026-08-30T07:39:00.366Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":20,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1321\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":21,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: UpdateNode { node_id: NodeId(\\\"n1322\\\"), x: None, y: None, width: None, height: None, name: Some(\\\"90 Futuro · XML y precios · Foundation frame\\\"), fill_hex: None, page_id: Some(\\\"n1321\\\") }\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":22,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n1378\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"90 Futuro · XML y precios\\\\\\\"}\\\", page_id: Some(\\\"n1321\\\") }\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":23,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: InsertAuthoredSubtree { nodes: [Text(TextNode { base: PenNodeBase { id: \\\"n1430\\\", name: Some(\\\"Nota backlog\\\"), role: None, explain: None, x: Some(72.0), y: Some(120.0), rotation: None, constraints: None, opacity: None, enabled: None, visible: None, locked: None, flip_x: None, flip_y: None, mask_type: None, blend_mode: None, theme: None }, width: Some(Number(900.0)), height: Some(Number(18.0)), limits: SizeLimits { min_width: None, max_width: None, min_height: None, max_height: None }, content: Plain(\\\"Referencia de backlog · no pertenece a la etapa actual.\\\"), font_family: None, font_size: Some(12.0), font_weight: Some(Number(700)), font_style: None, letter_spacing: None, line_height: None, text_align: None, text_align_vertical: None, text_growth: None, underline: None, strikethrough: None, fill: Some([Solid(SolidFillBody { color: \\\"#7C0000\\\", explain: None, opacity: None, blend_mode: None })]), effects: None, state: None, bindings: None, events: None, lifecycle: None, semantics: None, gestures: None, route: None })], parent_id: NodeId(\\\"n1322\\\"), page_id: Some(\\\"n1321\\\") }\"}],\"isError\":true}}\n",
+      "stderr": ""
+    }
+  }
+}

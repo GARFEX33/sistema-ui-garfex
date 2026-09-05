@@ -86,24 +86,6 @@ describe('sidebar keyboard navigation', () => {
     const inbox = await screen.findByRole('link', { name: 'Bandeja' })
     const catalog = screen.getByRole('link', { name: 'Catálogo' })
     expect(screen.getAllByRole('link')).toHaveLength(2)
-    const rects = new Map<HTMLElement, DOMRect>([
-      [inbox, { left: 24, top: 108, right: 224, bottom: 148 } as DOMRect],
-      [catalog, { left: 24, top: 564, right: 224, bottom: 604 } as DOMRect],
-    ])
-    const rectSpy = vi
-      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function () {
-        return (
-          rects.get(this) ??
-          ({ left: 0, top: 0, right: 0, bottom: 0 } as DOMRect)
-        )
-      })
-    const clientRectsSpy = vi
-      .spyOn(HTMLElement.prototype, 'getClientRects')
-      .mockImplementation(function () {
-        const rect = rects.get(this)
-        return (rect ? [rect] : []) as unknown as DOMRectList
-      })
     inbox.focus()
     fireEvent.keyDown(inbox, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
@@ -116,8 +98,6 @@ describe('sidebar keyboard navigation', () => {
     fireEvent.keyDown(inbox, { key: 'End' })
     expect(document.activeElement).toBe(catalog)
     expect(screen.getByText('Familias')).not.toHaveAttribute('data-spatial-id')
-    clientRectsSpy.mockRestore()
-    rectSpy.mockRestore()
   })
 
   it('does not cancel native Enter or Tab traversal and keeps focus on ArrowRight without a target', async () => {
@@ -258,7 +238,7 @@ describe('sidebar triangulation', () => {
     catalog.focus()
     fireEvent.keyDown(catalog, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(catalog)
-    expect(rectSpy).toHaveBeenCalled()
+    expect(rectSpy).not.toHaveBeenCalled()
     clientSpy.mockRestore()
     rectSpy.mockRestore()
   })

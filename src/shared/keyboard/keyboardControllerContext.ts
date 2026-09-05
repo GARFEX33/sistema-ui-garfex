@@ -7,14 +7,24 @@ export type ContextualActionId =
   | 'catalog.new-class'
   | 'catalog.new-family'
   | 'catalog.new-type'
+  | 'catalog.edit-attribute'
+  | 'catalog.manage-options'
+
+export type KeyboardActionTarget = {
+  root: () => HTMLElement | null
+  open: (opener: HTMLElement | null) => void
+}
 
 export type ContextualAction = {
   id: ContextualActionId
   surface: KeyboardSurface
   key: string
+  keys?: readonly string[]
+  shortcut?: string
   label: string
   root: () => HTMLElement | null
   isAvailable: () => boolean
+  canHandle?: (event: KeyboardEvent) => boolean
   run: (opener: HTMLElement | null) => void
 }
 

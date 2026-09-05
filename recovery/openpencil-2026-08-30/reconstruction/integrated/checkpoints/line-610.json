@@ -1,0 +1,6 @@
+{
+  "source_line": 610,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: unknown tool: layout_lint\"}],\"isError\":true}"
+}

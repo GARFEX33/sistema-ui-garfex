@@ -1,0 +1,17 @@
+{
+  "seq": 127,
+  "source_session": "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+  "source_line": 57,
+  "timestamp": "2026-08-30T07:40:32.636Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":100,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: MoveNode { node_id: NodeId(\\\"n1503\\\"), target_parent: NodeId(\\\"\\\"), page_id: Some(\\\"n1321\\\"), index: Some(0) }\"}],\"isError\":true}}\n{\"pageCount\":7,\"activePageIndex\":6,\"pages\":[{\"id\":\"n380\",\"name\":\"01 Referencia de marca\"},{\"id\":\"n465\",\"name\":\"02 Tokens de interfaz\"},{\"id\":\"n564\",\"name\":\"03 Fundamentos UX\"},{\"id\":\"n1424\",\"name\":\"04 Mapa operativo\"},{\"id\":\"n1426\",\"name\":\"05 Maestro de Recursos\"},{\"id\":\"n1428\",\"name\":\"06 Flujo XML y precios\"},{\"id\":\"n1430\",\"name\":\"06 Recursos y catálogos\"}]}\n",
+      "stderr": ""
+    }
+  }
+}

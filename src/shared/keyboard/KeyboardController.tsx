@@ -51,13 +51,15 @@ export function KeyboardControllerProvider({
         state.registry.register({
           id: action.id,
           key: action.key,
-          shortcut: action.key.toUpperCase(),
+          keys: action.keys,
+          shortcut: action.shortcut ?? action.key.toUpperCase(),
           label: action.label,
           group: 'Catálogo',
           scope: 'active-surface',
           surface: action.surface,
           root: action.root,
           isAvailable: action.isAvailable,
+          canHandle: action.canHandle,
           action: action.run,
         }),
       registerOverlay: (root) => {
@@ -90,8 +92,8 @@ export function KeyboardControllerProvider({
             : undefined
       const command = id
         ? state.registry.getSnapshot().find((candidate) => candidate.id === id)
-        : state.registry.resolve('n', state.activeSurface)
-      if (!command) return
+        : state.registry.resolve(event.key, state.activeSurface)
+      if (!command || (command.canHandle && !command.canHandle(event))) return
       event.preventDefault()
       command.action(opener)
     }

@@ -194,7 +194,7 @@ El sistema MUST tratar Familia→Clase y Tipo→Familia como relaciones inmutabl
 
 ### Requirement: Integración de Catálogo subordinada al contrato Keyboard First canónico
 
-Los controles, composites y overlays aprobados de Catálogo MUST ser operables por teclado, MUST tener nombre accesible y foco visible conforme a WCAG 2.2 AA, y MUST consumir sin redefinir ni debilitar la especificación canónica `keyboard-interaction` y la sección 11 del brief. En Catálogo, `Tab` y `Shift+Tab` MUST conservar el recorrido nativo entre zonas; las flechas sin modificar MUST navegar por geometría física entre controles elegibles; la edición y el IME MUST suspender la navegación espacial y los atajos de una sola tecla; `N` MUST activar exactamente la acción contextual real y habilitada `Nueva Clase`, `Nueva Familia` o `Nuevo Tipo`; `?` MUST resolverse globalmente por su carácter semántico; el `Ctrl/Cmd+K` exacto de la plataforma MUST seguir abriendo Command Palette; y `Ctrl+N` MUST permanecer sin captura. La palette, la ayuda y las pistas `kbd` de CTA MUST derivarse del registro de comandos. La contención de foco sólo MAY existir dentro de un modal o diálogo activo, y su cierre MUST restaurar el foco conforme al contrato canónico. `E` y `Del` MUST permanecer ausentes mientras no exista capacidad aprobada de edición o borrado.
+Los controles, composites y overlays aprobados de Catálogo MUST ser operables por teclado, MUST tener nombre accesible y foco visible conforme a WCAG 2.2 AA, y MUST consumir sin redefinir ni debilitar la especificación canónica `keyboard-interaction` y la sección 11 del brief. En Catálogo, `Tab` y `Shift+Tab` MUST conservar el recorrido nativo entre zonas; las flechas sin modificar MUST navegar por geometría física entre controles elegibles; la edición y el IME MUST suspender la navegación espacial y los atajos de una sola tecla; `N` MUST conservarse exclusivamente para la acción contextual real `Nueva Clase`; `?` MUST resolverse por su carácter semántico; el `Ctrl/Cmd+K` exacto de la plataforma MUST seguir abriendo Command Palette; y `Ctrl+N` MUST permanecer sin captura. La contención de foco sólo MAY existir dentro de un modal o diálogo activo, y su cierre MUST restaurar el foco conforme al contrato canónico.
 
 Un composite local MAY mantener un único punto de tabulación o estado roving únicamente para representar su item activo. Ese mecanismo MUST permanecer subordinado al arbitraje, la elegibilidad y la geometría física canónicos; MUST NOT elegir destinos por índice, orden DOM, texto u orden declarado de columnas; MUST NOT capturar `Tab`; y MUST NOT instalar un orden roving para el documento. `Enter` MUST activar sólo el control enfocado que exponga una acción real.
 
@@ -222,20 +222,19 @@ Un composite local MAY mantener un único punto de tabulación o estado roving �
 - AND no abre una acción Nueva ni la ayuda contextual
 - AND preserva la edición, la composición y cualquier consumo anterior del evento
 
-#### Scenario: N activa la creación contextual real
+#### Scenario: N conserva únicamente Nueva Clase real
 
-- GIVEN Catálogo activo sin edición, IME ni overlay de mayor precedencia
-- AND el registro expone una acción contextual real, visible y habilitada para el nivel vigente
+- GIVEN Catálogo activo con la acción real `Nueva Clase` visible y habilitada, sin edición, IME ni overlay de mayor precedencia
 - WHEN el usuario presiona `N` o `n` sin modificadores
-- THEN se activa exactamente `Nueva Clase` sin selección, `Nueva Familia` con Clase seleccionada o `Nuevo Tipo` con Familia seleccionada
-- AND la misma entrada del registro alimenta la palette, la ayuda y la pista `kbd` de la CTA
+- THEN se activa la misma acción `Nueva Clase` expuesta por la superficie
+- AND `N` no se reasigna a Nueva Familia, Nuevo Tipo, Nuevo Recurso ni otra acción
 
-#### Scenario: No se anticipan acciones o atajos inexistentes
+#### Scenario: No se anticipan acciones o atajos de niveles inexistentes
 
-- GIVEN que Recurso, edición y borrado permanecen fuera del alcance
+- GIVEN que una superficie aprobada de Nueva Familia o Nuevo Tipo todavía no existe, o que Recurso permanece fuera del alcance
 - WHEN el usuario recorre los controles, presiona `Enter` o consulta los comandos disponibles
-- THEN Catálogo no fabrica un atajo, control, comando, ruta, diálogo ni mutación para completar esas capacidades ausentes
-- AND `E` y `Del` no se registran ni se muestran
+- THEN Catálogo no fabrica un atajo, control, comando, ruta, diálogo ni mutación para completar esa capacidad ausente
+- AND una futura acción real de Familia o Tipo sólo podrá activarse cuando su superficie y mecanismo estén aprobados, y no adquirirá el atajo `N`
 - AND no aparece ninguna acción de Recurso en este cambio
 
 #### Scenario: Ayuda por carácter semántico

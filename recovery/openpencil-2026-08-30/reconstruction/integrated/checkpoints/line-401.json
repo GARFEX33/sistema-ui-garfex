@@ -1,0 +1,14 @@
+{
+  "source_line": 401,
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+}

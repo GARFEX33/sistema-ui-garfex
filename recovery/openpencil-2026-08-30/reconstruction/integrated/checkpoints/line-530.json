@@ -1,0 +1,16 @@
+{
+  "source_line": 530,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[]}"
+        }
+      ]
+    }
+  }
+}

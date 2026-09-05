@@ -1,0 +1,17 @@
+{
+  "seq": 260,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1486,
+  "timestamp": "2026-08-30T19:26:11.556Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "Error: read_nodes: {\"content\":[{\"type\":\"text\",\"text\":\"Error: page not found: n2032\"}],\"isError\":true}\n    at c (/tmp/polish-05a-grid.js:1:999)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async apply (/tmp/polish-05a-grid.js:2:68)\n    at async /tmp/polish-05a-grid.js:13:24\n"
+    }
+  }
+}

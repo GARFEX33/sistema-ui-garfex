@@ -1,0 +1,11 @@
+{
+  "status": "blocked",
+  "target": "fresh OpenPencil document, page id 0, Page 1",
+  "requestedReplayThroughSourceLine": 1565,
+  "requests": [],
+  "results": [],
+  "reason": "OpenPencil MCP proxy returned 'MCP not initialized' for status, connect, and tool search. No replay mutation or save was attempted.",
+  "placeholderPreservedAs": "reconstruction/attempts/placeholder.op",
+  "rootOutputReplaced": false,
+  "screenshotsExported": false
+}

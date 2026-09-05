@@ -1,0 +1,17 @@
+{
+  "seq": 118,
+  "source_session": "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+  "source_line": 29,
+  "timestamp": "2026-08-30T07:37:33.069Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 2,
+      "signal": null,
+      "stdout": "",
+      "stderr": "/bin/bash: -c: line 2: unexpected EOF while looking for matching `)'\n"
+    }
+  }
+}

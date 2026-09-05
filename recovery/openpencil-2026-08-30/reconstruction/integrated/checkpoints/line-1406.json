@@ -1,0 +1,10 @@
+{
+  "source_line": 1406,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/apply-dashboard-focus.js",
+    "operation": "write"
+  }
+}

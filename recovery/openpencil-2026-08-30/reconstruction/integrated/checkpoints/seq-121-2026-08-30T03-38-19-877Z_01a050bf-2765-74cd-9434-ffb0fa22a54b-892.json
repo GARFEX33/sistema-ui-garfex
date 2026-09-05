@@ -1,0 +1,9 @@
+{
+  "seq": 121,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 892,
+  "timestamp": "2026-08-30T07:35:55.876Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n1430\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"Unidades y\\\\\\\\ncompatibilidades\\\\\\\",\\\\\\\"fontSize\\\\\\\":14}\\\", page_id: Some(\\\"n1317\\\") }\"}],\"isError\":true}"
+}

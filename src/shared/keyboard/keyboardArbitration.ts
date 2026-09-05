@@ -2,6 +2,8 @@ export type KeyboardPlatform = 'mac' | 'other'
 export type KeyboardAction =
   | 'command-palette'
   | 'contextual-new'
+  | 'contextual-edit'
+  | 'contextual-options'
   | 'contextual-help'
   | 'spatial-navigation'
   | null
@@ -23,6 +25,8 @@ export type KeyboardReason =
   | 'reserved-browser-command'
   | 'command-palette'
   | 'contextual-new'
+  | 'contextual-edit'
+  | 'contextual-options'
   | 'contextual-help'
   | 'no-action'
 export interface KeyboardArbitrationDecision {
@@ -90,6 +94,16 @@ export function arbitrateKeyboardEvent(
   if (lowerKey === 'n') {
     if (!event.ctrlKey && !event.metaKey && !event.altKey)
       return decision('global', 'contextual-new', 'contextual-new')
+    return decision('none', 'modifier')
+  }
+  if (lowerKey === 'e' || key === 'Enter') {
+    if (!event.ctrlKey && !event.metaKey && !event.altKey)
+      return decision('global', 'contextual-edit', 'contextual-edit')
+    return decision('none', 'modifier')
+  }
+  if (lowerKey === 'o') {
+    if (!event.ctrlKey && !event.metaKey && !event.altKey)
+      return decision('global', 'contextual-options', 'contextual-options')
     return decision('none', 'modifier')
   }
   if (key === '?') {

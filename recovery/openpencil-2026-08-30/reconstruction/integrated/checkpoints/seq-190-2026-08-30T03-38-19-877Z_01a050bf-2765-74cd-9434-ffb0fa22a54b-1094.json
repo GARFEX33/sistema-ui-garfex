@@ -1,0 +1,17 @@
+{
+  "seq": 190,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1094,
+  "timestamp": "2026-08-30T17:47:05.885Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n1817\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"Espacio de trabajo + Capa de comandos + Contexto\\\\\\\"}\\\", page_id: Some(\\\"n1683\\\") }\"}],\"isError\":true}\n    at call (/tmp/translate-concepts.js:1:407)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async /tmp/translate-concepts.js:7:108\n"
+    }
+  }
+}

@@ -140,7 +140,6 @@ export function CatalogCreateSurface({
   const parentRef = useRef<ParentContext | null>(null)
   const wasOpen = useRef(false)
   const submittingRef = useRef(false)
-  const requestGenerationRef = useRef(0)
   const completedDraftRef = useRef<string | null>(null)
   const isOpenRef = useRef(isOpen)
   const { registerCommand, registerOverlay } = useKeyboardController()
@@ -151,15 +150,9 @@ export function CatalogCreateSurface({
     setErrorMessage(null)
     setDraft((current) => ({ ...current, [field]: value }))
   }
-  const close = useCallback(() => {
-    requestGenerationRef.current += 1
-    submittingRef.current = false
-    setIsSubmitting(false)
-    setIsOpen(false)
-  }, [])
+  const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
-      requestGenerationRef.current += 1
       const capturedParent = parent
         ? Object.freeze({ id: parent.id, label: parent.label })
         : null
@@ -210,9 +203,6 @@ export function CatalogCreateSurface({
       parent: parentRef.current,
     })
     const draftKey = draftIdentity(draft)
-    const requestGeneration = requestGenerationRef.current
-    const isCurrentRequest = () =>
-      requestGenerationRef.current === requestGeneration && isOpenRef.current
     submittingRef.current = true
     setIsSubmitting(true)
     setErrorMessage(null)
@@ -224,24 +214,20 @@ export function CatalogCreateSurface({
         createFamily,
         createType,
       )
-      if (!result || !isCurrentRequest()) return
+      if (!result) return
       if (result.disposition !== 'CREATED')
         throw new Error('Invalid catalog hierarchy response')
       completedDraftRef.current = draftKey
       await onCreated?.()
-      if (!isCurrentRequest()) return
       const successMessage = `${copy.noun} “${snapshot.name}” ${level === 'type' ? 'creado' : 'creada'}.`
       if (onSuccess) onSuccess(successMessage)
       else showLocalSuccess(successMessage)
       close()
     } catch (error) {
-      if (isCurrentRequest())
-        setErrorMessage(creationErrorMessage(error, snapshot.key, level))
+      setErrorMessage(creationErrorMessage(error, snapshot.key, level))
     } finally {
-      if (isCurrentRequest()) {
-        submittingRef.current = false
-        setIsSubmitting(false)
-      }
+      submittingRef.current = false
+      setIsSubmitting(false)
     }
   }
 
@@ -358,7 +344,12 @@ export function CatalogCreateSurface({
           >
             <form
               className="catalog-dialog-form"
-              onKeyDown={handleDialogKeyDown}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+                  event.preventDefault()
+                  close()
+                }
+              }}
               onSubmit={(event) => {
                 event.preventDefault()
                 void submit()

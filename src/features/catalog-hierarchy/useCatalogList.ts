@@ -1,6 +1,10 @@
 import type { CatalogListPage, OpaqueCursor } from './catalogHierarchy.types'
 
-export type CatalogListOperation = 'classes' | 'families' | 'types'
+export type CatalogListOperation =
+  | 'classes'
+  | 'families'
+  | 'types'
+  | 'attributes'
 export type CatalogListStatus =
   | 'waiting-for-parent'
   | 'initial-loading'

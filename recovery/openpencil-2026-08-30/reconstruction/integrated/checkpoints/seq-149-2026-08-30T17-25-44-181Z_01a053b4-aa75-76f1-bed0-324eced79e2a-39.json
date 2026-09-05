@@ -1,0 +1,17 @@
+{
+  "seq": 149,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 39,
+  "timestamp": "2026-08-30T17:28:32.081Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":41,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"results\\\":[{\\\"binding\\\":\\\"b0\\\",\\\"nodeId\\\":\\\"n1475\\\"}],\\\"nodeCount\\\":45}\"}]}}",
+      "stderr": ""
+    }
+  }
+}

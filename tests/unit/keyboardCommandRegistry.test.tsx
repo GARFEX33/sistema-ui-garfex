@@ -26,4 +26,27 @@ describe('keyboard command registry', () => {
     removeReplacement()
     expect(registry.getSnapshot()).toEqual([])
   })
+
+  it('resolves registered shortcut aliases within the active surface', () => {
+    const registry = createKeyboardCommandRegistry()
+    const root = document.createElement('button')
+    const command = {
+      id: 'catalog.edit-attribute',
+      key: 'e',
+      keys: ['e', 'Enter'],
+      shortcut: 'Enter / E',
+      label: 'Editar atributo',
+      group: 'Catálogo',
+      scope: 'active-surface' as const,
+      surface: 'catalog' as const,
+      root: () => root,
+      isAvailable: () => true,
+      action: () => undefined,
+    }
+    registry.register(command)
+
+    expect(registry.resolve('e', 'catalog')).toBe(command)
+    expect(registry.resolve('Enter', 'catalog')).toBe(command)
+    expect(registry.resolve('e', 'bandeja')).toBeUndefined()
+  })
 })

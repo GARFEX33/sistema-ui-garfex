@@ -1,0 +1,6 @@
+{
+  "source_line": 441,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n982\\\"), patch_json: \\\"{\\\\\\\"fontSize\\\\\\\":12}\\\", page_id: Some(\\\"n465\\\") }\"}],\"isError\":true}"
+}

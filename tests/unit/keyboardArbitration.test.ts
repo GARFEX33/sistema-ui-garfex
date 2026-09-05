@@ -206,6 +206,20 @@ describe('global command keyboard arbitration', () => {
       ).reason,
     ).toBe('reserved-browser-command')
   })
+  it('recognizes unmodified attribute action shortcuts without claiming modified keys', () => {
+    expect(
+      arbitrateKeyboardEvent(keyEvent({ key: 'e', ctrlKey: false })).action,
+    ).toBe('contextual-edit')
+    expect(
+      arbitrateKeyboardEvent(keyEvent({ key: 'Enter', ctrlKey: false })).action,
+    ).toBe('contextual-edit')
+    expect(
+      arbitrateKeyboardEvent(keyEvent({ key: 'o', ctrlKey: false })).action,
+    ).toBe('contextual-options')
+    expect(
+      arbitrateKeyboardEvent(keyEvent({ key: 'e', ctrlKey: true })).reason,
+    ).toBe('modifier')
+  })
   it('preserves exact platform Ctrl/Cmd+K without side effects', () => {
     const windows = keyEvent({ key: 'k', ctrlKey: true })
     expect(shouldOpenGlobalCommand(windows, { platform: 'other' })).toBe(true)

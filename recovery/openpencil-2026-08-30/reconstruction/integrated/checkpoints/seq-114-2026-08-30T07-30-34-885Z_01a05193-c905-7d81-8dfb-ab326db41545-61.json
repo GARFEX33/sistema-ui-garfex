@@ -1,0 +1,17 @@
+{
+  "seq": 114,
+  "source_session": "2026-08-30T07-30-34-885Z_01a05193-c905-7d81-8dfb-ab326db41545",
+  "source_line": 61,
+  "timestamp": "2026-08-30T07:34:05.837Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":60,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1317\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":61,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"layout\\\":[{\\\"id\\\":\\\"n1425\\\",\\\"name\\\":\\\"Frame\\\",\\\"type\\\":\\\"frame\\\",\\\"x\\\":0,\\\"y\\\":0,\\\"width\\\":1200,\\\"height\\\":800}]}\"}]}}",
+      "stderr": ""
+    }
+  }
+}

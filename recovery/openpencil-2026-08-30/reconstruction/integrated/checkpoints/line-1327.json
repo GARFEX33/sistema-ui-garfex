@@ -1,0 +1,6 @@
+{
+  "source_line": 1327,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: SetActivePage { index: 6 }\"}],\"isError\":true}"
+}

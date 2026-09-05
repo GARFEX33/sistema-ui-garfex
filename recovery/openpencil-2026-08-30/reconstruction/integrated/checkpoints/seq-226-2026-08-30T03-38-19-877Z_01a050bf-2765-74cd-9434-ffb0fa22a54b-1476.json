@@ -1,0 +1,17 @@
+{
+  "seq": 226,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1476,
+  "timestamp": "2026-08-30T19:24:27.075Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "0 /tmp/op-texts.json\n",
+      "stderr": "<anonymous_script>:1\nError: page not found: n2032\n^\n\nSyntaxError: Unexpected token 'E', \"Error: pag\"... is not valid JSON\n    at JSON.parse (<anonymous>)\n    at c (/tmp/inspect-op-texts.js:1:404)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async /tmp/inspect-op-texts.js:2:107\n\nNode.js v24.19.0\n"
+    }
+  }
+}

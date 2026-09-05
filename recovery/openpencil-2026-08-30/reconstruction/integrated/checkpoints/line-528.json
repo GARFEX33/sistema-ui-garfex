@@ -1,0 +1,16 @@
+{
+  "source_line": 528,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[{\"type\":\"frame\",\"id\":\"n402\",\"name\":\"HTML Import\",\"width\":1440.0,\"height\":\"fit_content\",\"layout\":\"vertical\",\"fill\":[{\"type\":\"solid\",\"color\":\"#ffffff\"}],\"children\":[{\"type\":\"frame\",\"id\":\"n403\",\"name\":\"div\",\"width\":1440.0,\"height\":980.0,\"minHeight\":980.0,\"layout\":\"vertical\",\"padding\":56.0,\"fill\":[{\"type\":\"solid\",\"color\":\"#f7f6f3\"}],\"children\":[{\"type\":\"frame\",\"id\":\"n404\",\"name\":\"div\",\"width\":\"fill_container\",\"height\":\"fit_content\",\"layout\":\"horizontal\",\"padding\":[0.0,0.0,32.0,0.0],\"justifyContent\":\"space_between\",\"alignItems\":\"end\",\"children\":\"...\"},{\"type\":\"frame\",\"id\":\"n414\",\"name\":\"div\",\"width\":\"fill_container\",\"height\":\"fit_content\",\"layout\":\"horizontal\",\"gap\":24.0,\"padding\":[0.0,0.0,24.0,0.0],\"children\":\"...\"},{\"type\":\"frame\",\"id\":\"n427\",\"name\":\"div\",\"width\":\"fill_container\",\"height\":\"fit_content\",\"layout\":\"horizontal\",\"gap\":24.0,\"padding\":[0.0,0.0,24.0,0.0],\"children\":\"...\"},{\"type\":\"frame\",\"id\":\"n440\",\"name\":\"div\",\"width\":\"fill_container\",\"height\":\"fit_content\",\"layout\":\"horizontal\",\"gap\":24.0,\"children\":\"...\"}]}]}]}"
+        }
+      ]
+    }
+  }
+}

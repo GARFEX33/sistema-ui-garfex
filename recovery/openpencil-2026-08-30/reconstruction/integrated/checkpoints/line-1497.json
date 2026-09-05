@@ -1,0 +1,10 @@
+{
+  "source_line": 1497,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/polish-05b-05c.js",
+    "operation": "write"
+  }
+}

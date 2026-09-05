@@ -1,0 +1,16 @@
+{
+  "source_line": 223,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"pageCount\":3,\"activePageIndex\":0,\"pages\":[{\"id\":\"n6\",\"name\":\"01 Brand Reference\"},{\"id\":\"n2\",\"name\":\"02 UI Tokens\"},{\"id\":\"n4\",\"name\":\"03 UX Foundation\"}]}"
+        }
+      ]
+    }
+  }
+}

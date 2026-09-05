@@ -1,0 +1,6 @@
+{
+  "source_line": 573,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: failed to read htmlPath \\\"/tmp/openpencil-svg-test.html\\\": No such file or directory (os error 2)\"}],\"isError\":true}"
+}

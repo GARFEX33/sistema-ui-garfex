@@ -1,0 +1,16 @@
+{
+  "source_line": 670,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodeCount\":\"2\",\"wrote\":\"true\"}"
+        }
+      ]
+    }
+  }
+}

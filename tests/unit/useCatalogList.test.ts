@@ -179,6 +179,32 @@ describe('catalog list sequence', () => {
     ])
   })
 
+  it('continues after a nonexhausted empty attributes page', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(page([], 'next'))
+      .mockResolvedValueOnce(page([{ id: 'a', label: 'A' }], null, true))
+    const sequence = createCatalogListSequence({
+      operation: 'attributes',
+      parentId: 'type-1',
+      adapter: adapter(load),
+    })
+
+    await sequence.start()
+    expect(sequence.getState()).toMatchObject({
+      status: 'ready',
+      items: [],
+      isExhausted: false,
+    })
+    await sequence.continue()
+
+    expect(sequence.getState()).toMatchObject({
+      status: 'ready',
+      items: [{ id: 'a', label: 'A' }],
+      isExhausted: true,
+    })
+  })
+
   it.each([
     ['families', 'undefined', undefined],
     ['families', 'null', null],
@@ -186,6 +212,9 @@ describe('catalog list sequence', () => {
     ['types', 'undefined', undefined],
     ['types', 'null', null],
     ['types', 'empty string', ''],
+    ['attributes', 'undefined', undefined],
+    ['attributes', 'null', null],
+    ['attributes', 'empty string', ''],
   ] as const)(
     'waits for a dependent %s parent when it is %s without calling',
     async (operation, _label, parentId) => {

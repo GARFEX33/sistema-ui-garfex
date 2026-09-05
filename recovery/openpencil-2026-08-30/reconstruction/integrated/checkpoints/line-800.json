@@ -1,0 +1,6 @@
+{
+  "source_line": 800,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: index is required\"}],\"isError\":true}"
+}

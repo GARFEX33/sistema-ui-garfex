@@ -1,0 +1,17 @@
+{
+  "seq": 153,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 57,
+  "timestamp": "2026-08-30T17:30:36.072Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "3 top_level_nodes\\\":\\\"n1426|Frame|frame\\\"\n4 top_level_nodes\\\":\\\"n1428|Frame|frame\\\"\n5 top_level_nodes\\\":\\\"n1432||text;n1433||text;n1434||text;n1435||text;n1436||text;n1437||text;n1438||text;n1439||text;n1440||text;n1441||text;n1442||text;n1443||text;n1444||text;n1445||text;n1446||text;n1447||text;n1448||text;n1449||text;n1450||text;n1451||text;n1452||text;n1453||text;n1454||text;n1455||text;n1456||text;n1457||text;n1458||text;n1459||text;n1460||text;n1461||text;n1462||text;n1463||text;n1464||text;n1465||text;n1466||rectangle;n1467||rectangle;n1468||rectangle;n1469||rectangle;n1470||rectangle;n1471||rectangle;n1472||rectangle;n1473||rectangle;n1474||rectangle;n1476|Board B · Flujo continuo|frame\\\"\n",
+      "stderr": ""
+    }
+  }
+}

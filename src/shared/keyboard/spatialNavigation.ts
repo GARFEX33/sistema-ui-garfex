@@ -109,8 +109,6 @@ export interface FocusSpatialTargetOptions {
   boundaryRoot: HTMLElement
   activeOverlayRoot?: HTMLElement | null
   candidates?: readonly HTMLElement[]
-  candidateFilter?: (element: HTMLElement) => boolean
-  onMoved?: (target: HTMLElement) => void
   measure?: SpatialMeasure
   viewport?: SpatialRect
 }
@@ -224,8 +222,6 @@ export function focusSpatialTarget({
   boundaryRoot,
   activeOverlayRoot = null,
   candidates,
-  candidateFilter,
-  onMoved,
   measure = defaultMeasure,
   viewport,
 }: FocusSpatialTargetOptions): SpatialFocusResult {
@@ -241,13 +237,11 @@ export function focusSpatialTarget({
     (activeOverlayRoot && !contains(activeOverlayRoot, origin))
   )
     return { status: 'no-candidate' }
-  const pool = (
-    candidates ?? [
-      ...(activeOverlayRoot ?? boundaryRoot).querySelectorAll<HTMLElement>(
-        '[data-spatial-id]',
-      ),
-    ]
-  ).filter((element) => !candidateFilter || candidateFilter(element))
+  const pool = candidates ?? [
+    ...(activeOverlayRoot ?? boundaryRoot).querySelectorAll<HTMLElement>(
+      '[data-spatial-id]',
+    ),
+  ]
   const counts = new Map<string, number>()
   for (const element of pool) {
     const id = spatialId(element)
@@ -289,6 +283,6 @@ export function focusSpatialTarget({
   target.focus({ preventScroll: true })
   if (document.activeElement !== target)
     return { status: 'focus-failed', id: selected.id }
-  onMoved?.(target)
+  target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   return { status: 'moved', id: selected.id }
 }

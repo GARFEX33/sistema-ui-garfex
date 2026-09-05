@@ -1,0 +1,17 @@
+{
+  "seq": 42,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 413,
+  "timestamp": "2026-08-30T06:07:17.834Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "/tmp/garfex-flat/garfex-color-positivo.svg 56 440x111\n/tmp/garfex-flat/garfex-blanco-negativo.svg 56 440x111\n/tmp/garfex-flat/garfex-negro-positivo.svg 56 440x111\n/tmp/garfex-flat/garfex-g-color-positivo.svg 6 71.2x71.2\n/tmp/garfex-flat/garfex-g-blanco-negativo.svg 6 71.2x71.2\n/tmp/garfex-flat/garfex-g-negro-positivo.svg 6 71.2x71.2\n",
+      "stderr": ""
+    }
+  }
+}

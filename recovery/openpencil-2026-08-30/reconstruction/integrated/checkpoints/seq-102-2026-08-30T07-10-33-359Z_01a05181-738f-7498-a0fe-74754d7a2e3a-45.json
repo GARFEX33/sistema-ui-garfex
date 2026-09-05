@@ -1,0 +1,17 @@
+{
+  "seq": 102,
+  "source_session": "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a",
+  "source_line": 45,
+  "timestamp": "2026-08-30T07:13:28.823Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":181,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: SetNodeText { node_id: NodeId(\\\"n1367\\\"), text: \\\"Identidad técnica\\\\nClasificación\\\\nAtributos dinámicos\\\\nUnidades / compatibilidades\\\\nEstado · Precios\\\\nHistorial / documentos\\\" }\"}],\"isError\":true}}\n",
+      "stderr": ""
+    }
+  }
+}

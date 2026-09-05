@@ -1,0 +1,6 @@
+{
+  "source_line": 589,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: item n1312 is not a page or node in the document\"}],\"isError\":true}"
+}

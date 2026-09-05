@@ -1,0 +1,13 @@
+{
+  "seq": 203,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1295,
+  "timestamp": "2026-08-30T18:53:49.575Z",
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/apply-minimal-keyboard-focus.js",
+    "operation": "write"
+  }
+}

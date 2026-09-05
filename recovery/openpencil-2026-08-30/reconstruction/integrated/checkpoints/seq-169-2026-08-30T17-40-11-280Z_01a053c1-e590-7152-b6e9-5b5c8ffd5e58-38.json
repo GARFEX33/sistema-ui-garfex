@@ -1,0 +1,17 @@
+{
+  "seq": 169,
+  "source_session": "2026-08-30T17-40-11-280Z_01a053c1-e590-7152-b6e9-5b5c8ffd5e58",
+  "source_line": 38,
+  "timestamp": "2026-08-30T17:41:40.514Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "/tmp/04A-campo-operacion.png:        empty\n/tmp/04B-flujo-continuo.png:         empty\n/tmp/04C-intencion-estructurada.png: empty\n",
+      "stderr": "jq: error (at <stdin>:0): Invalid numeric literal at line 1, column 6 (while parsing 'Error: item n1735 is not a page or node in the document')\njq: error (at <stdin>:0): Invalid numeric literal at line 1, column 6 (while parsing 'Error: item n1736 is not a page or node in the document')\njq: error (at <stdin>:0): Invalid numeric literal at line 1, column 6 (while parsing 'Error: item n1955 is not a page or node in the document')\n"
+    }
+  }
+}

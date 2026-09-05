@@ -2,7 +2,7 @@
 
 ## 1. Estado, propósito y resultado
 
-**Estado actual:** `implemented-and-verified-with-opt-in-connected-check`
+**Estado:** `designed-with-runtime-gates-and-frozen-visual-checkpoint`
 
 Este diseño convierte la propuesta, el contrato nominal Convex, las especificaciones activas, el plan de tareas, el progreso de aplicación, las autoridades OpenPencil y el contrato Keyboard First ya sincronizado en una arquitectura implementable para la capacidad workstation de Catálogo.
 
@@ -15,23 +15,23 @@ El resultado sigue siendo una sola capacidad de producto en `/catalogo`:
 5. operar todos los flujos reales aprobados mediante teclado o mouse, usando la infraestructura Keyboard First compartida;
 6. mantener el backend externo como única autoridad de datos, validación efectiva y persistencia.
 
-La capacidad actual incluye lectura Convex y creación contextual de Clase, Familia y Tipo con padres inmutables, protección contra respuestas de creación stale y navegación de flechas basada en geometría física. La verificación conectada contra la autoridad local es explícitamente opt-in; las pruebas ordinarias no dependen de esa autoridad. Los registros históricos de cortes, gates y checkpoints que siguen abajo conservan su fecha y no describen el estado actual.
+El diseño no afirma que la capacidad conectada esté terminada. El Corte local 1 dejó una frontera no mutante y un checkpoint visual parcial. La evidencia disposable ya verifica el permiso público de `crearClase`, `crearFamilia` y `crearTipo`; la implementación de Familia/Tipo no ha comenzado y requiere una decisión explícita de apply, además de los gates de conexión restantes.
 
 ## 2. Autoridades, precedencia y evidencia conservada
 
 Las decisiones se interpretan con la siguiente precedencia. Una fuente de evidencia no amplía por sí misma el alcance de otra.
 
-| Autoridad                                                   | Uso en este diseño                                                                         | Límite                                                                                                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `openspec/changes/catalog-hierarchy-base/proposal.md`       | Intención de producto, jerarquía, alcance, exclusiones, rollout y gates                    | No demuestra comportamiento runtime ni copy concreto                                                                                     |
-| `openspec/changes/catalog-hierarchy-base/api-contract.md`   | Nombres de funciones, argumentos nominales y formas declaradas de respuesta                | `function-spec` no demuestra URL, versión cliente, primitivas wire completas, autenticación, permisos, datos, errores ni paginación real |
-| `openspec/changes/catalog-hierarchy-base/specs/**`          | Requisitos observables de Catálogo y deltas de frontend/Bandeja                            | No autoriza capacidades fuera del cambio                                                                                                 |
-| `openspec/specs/keyboard-interaction/spec.md`               | Arbitraje, elegibilidad DOM, geometría física, atajos y ciclo de foco permanentes          | Catálogo consume este contrato; no lo redefine                                                                                           |
-| `openspec/specs/frontend-foundation/spec.md`                | Feature-first, calidad estricta y documentación Keyboard First canónica                    | El delta activo de Catálogo debe reconciliarse sobre esta versión ya sincronizada                                                        |
-| `docs/erp-first-stage-design-brief.md`, sección 11          | Única documentación canónica de la filosofía Keyboard First                                | Este documento sólo registra la integración de Catálogo por referencia                                                                   |
-| `openspec/changes/catalog-hierarchy-base/tasks.md`          | Cuatro cortes locales, TDD, gates y límites de rollback                                    | Los checkmarks históricos no sustituyen una autorización posterior ni prueban fidelidad visual actual                                    |
-| `openspec/changes/catalog-hierarchy-base/apply-progress.md` | Evidencia real del Corte local 1 y sus limitaciones                                        | No acredita lectura o creación Convex conectadas ni cierre global                                                                        |
-| Resumen Engram `sdd/catalog-hierarchy-base/design`          | Confirma `/catalogo`, adapter inyectable, parsers, cursores, selección descendente y gates | Es un resumen, no reemplaza este documento durable                                                                                       |
+| Autoridad | Uso en este diseño | Límite |
+|---|---|---|
+| `openspec/changes/catalog-hierarchy-base/proposal.md` | Intención de producto, jerarquía, alcance, exclusiones, rollout y gates | No demuestra comportamiento runtime ni copy concreto |
+| `openspec/changes/catalog-hierarchy-base/api-contract.md` | Nombres de funciones, argumentos nominales y formas declaradas de respuesta | `function-spec` no demuestra URL, versión cliente, primitivas wire completas, autenticación, permisos, datos, errores ni paginación real |
+| `openspec/changes/catalog-hierarchy-base/specs/**` | Requisitos observables de Catálogo y deltas de frontend/Bandeja | No autoriza capacidades fuera del cambio |
+| `openspec/specs/keyboard-interaction/spec.md` | Arbitraje, elegibilidad DOM, geometría física, atajos y ciclo de foco permanentes | Catálogo consume este contrato; no lo redefine |
+| `openspec/specs/frontend-foundation/spec.md` | Feature-first, calidad estricta y documentación Keyboard First canónica | El delta activo de Catálogo debe reconciliarse sobre esta versión ya sincronizada |
+| `docs/erp-first-stage-design-brief.md`, sección 11 | Única documentación canónica de la filosofía Keyboard First | Este documento sólo registra la integración de Catálogo por referencia |
+| `openspec/changes/catalog-hierarchy-base/tasks.md` | Cuatro cortes locales, TDD, gates y límites de rollback | Los checkmarks históricos no sustituyen una autorización posterior ni prueban fidelidad visual actual |
+| `openspec/changes/catalog-hierarchy-base/apply-progress.md` | Evidencia real del Corte local 1 y sus limitaciones | No acredita lectura o creación Convex conectadas ni cierre global |
+| Resumen Engram `sdd/catalog-hierarchy-base/design` | Confirma `/catalogo`, adapter inyectable, parsers, cursores, selección descendente y gates | Es un resumen, no reemplaza este documento durable |
 
 ### 2.1 Autoridad OpenPencil aprobada
 
@@ -39,14 +39,14 @@ La evidencia visual aprobada de Catálogo es el documento corregido `design-cata
 
 Roots verificados y aprobados relevantes:
 
-| Página                                    | Page id |    Root | Autoridad                                        |
-| ----------------------------------------- | ------: | ------: | ------------------------------------------------ |
-| `05A Configuración · Taller del catálogo` | `n1509` | `n1510` | Composición workstation base y jerarquía         |
-| `05D Alta · Nueva Clase`                  | `n2417` | `n2418` | Alta de Clase y comparación 1440×980             |
-| `05E Alta · Nueva Familia`                | `n2486` | `n2487` | Alta de Familia con Clase no editable            |
-| `05F Alta · Nuevo Tipo`                   | `n2555` | `n2556` | Alta de Tipo con Familia no editable             |
-| `05G Estado · Carga y vacío`              | `n2624` | `n2625` | Loading, espera dependiente y vacío              |
-| `05H Estado · Continuación y error`       | `n2673` | `n2674` | Continuación, datos parciales, error y reintento |
+| Página | Page id | Root | Autoridad |
+|---|---:|---:|---|
+| `05A Configuración · Taller del catálogo` | `n1509` | `n1510` | Composición workstation base y jerarquía |
+| `05D Alta · Nueva Clase` | `n2417` | `n2418` | Alta de Clase y comparación 1440×980 |
+| `05E Alta · Nueva Familia` | `n2486` | `n2487` | Alta de Familia con Clase no editable |
+| `05F Alta · Nuevo Tipo` | `n2555` | `n2556` | Alta de Tipo con Familia no editable |
+| `05G Estado · Carga y vacío` | `n2624` | `n2625` | Loading, espera dependiente y vacío |
+| `05H Estado · Continuación y error` | `n2673` | `n2674` | Continuación, datos parciales, error y reintento |
 
 `design-recovered.op` permanece como evidencia de recuperación, no como diseño funcional final de la jerarquía corregida. La copia read-only `recovery/openpencil-2026-08-30/final/design-catalog-hierarchy-edit-2026-08-31.op` fue registrada como respaldo byte-idéntico. Ninguno de esos archivos se edita, genera React ni se convierte en coordenadas fijas desde este diseño.
 
@@ -282,13 +282,13 @@ La feature no auto-selecciona el primer item, no encadena consultas dependientes
 
 Las transiciones son atómicas:
 
-| Evento                                      | Estado resultante               | Efecto de lectura                                                                       |
-| ------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------- |
-| Seleccionar Clase `C`                       | `class=C`, `family=∅`, `type=∅` | inicia una nueva secuencia de Familias para `C`; invalida la anterior y todos sus Tipos |
-| Seleccionar Familia `F` que pertenece a `C` | `class=C`, `family=F`, `type=∅` | inicia una nueva secuencia de Tipos para `F`; invalida la anterior                      |
-| Seleccionar Tipo `T` que pertenece a `F`    | `class=C`, `family=F`, `type=T` | habilita lectura contextual no editable                                                 |
-| Intentar seleccionar Familia de otra Clase  | sin cambio                      | no consulta ni presenta descendientes cruzados                                          |
-| Intentar seleccionar Tipo de otra Familia   | sin cambio                      | no consulta ni presenta descendientes cruzados                                          |
+| Evento | Estado resultante | Efecto de lectura |
+|---|---|---|
+| Seleccionar Clase `C` | `class=C`, `family=∅`, `type=∅` | inicia una nueva secuencia de Familias para `C`; invalida la anterior y todos sus Tipos |
+| Seleccionar Familia `F` que pertenece a `C` | `class=C`, `family=F`, `type=∅` | inicia una nueva secuencia de Tipos para `F`; invalida la anterior |
+| Seleccionar Tipo `T` que pertenece a `F` | `class=C`, `family=F`, `type=T` | habilita lectura contextual no editable |
+| Intentar seleccionar Familia de otra Clase | sin cambio | no consulta ni presenta descendientes cruzados |
+| Intentar seleccionar Tipo de otra Familia | sin cambio | no consulta ni presenta descendientes cruzados |
 
 Cambiar un padre invalida inmediatamente la pertenencia contextual de los descendientes, aunque una respuesta anterior siga en vuelo. El descarte de esa respuesta se resuelve mediante el guard de secuencia de la sección 13.
 
@@ -331,15 +331,15 @@ El reintento repite la operación fallida del mismo contexto vigente. Si el padr
 
 Los nombres siguientes son estados técnicos internos, no copy nuevo.
 
-| Estado técnico       | Condición                                                   | Presentación autorizada                                                             |
-| -------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `waiting-for-parent` | Familia sin Clase o Tipo sin Familia                        | región dependiente estable; no se consulta                                          |
-| `initial-loading`    | primera solicitud vigente sin items validados               | `aria-busy` aplicable, indicador neutral, sin filas ficticias y con foco preservado |
-| `empty`              | página válida con cero items y `isExhausted === true`       | tratamiento vacío aprobado; nunca antes del agotamiento                             |
-| `ready`              | existe al menos una página válida y no hay solicitud activa | items validados; ninguna garantía de orden inventada                                |
-| `loading-more`       | continuación explícita de una secuencia con items           | conserva los items existentes; no agrega placeholders que parezcan datos            |
-| `partial-error`      | falla una continuación después de páginas válidas           | conserva datos parciales, no afirma agotamiento y ofrece reintento explícito        |
-| `initial-error`      | falla la primera solicitud sin datos válidos                | región estable, mensaje neutral y recuperación explícita                            |
+| Estado técnico | Condición | Presentación autorizada |
+|---|---|---|
+| `waiting-for-parent` | Familia sin Clase o Tipo sin Familia | región dependiente estable; no se consulta |
+| `initial-loading` | primera solicitud vigente sin items validados | `aria-busy` aplicable, indicador neutral, sin filas ficticias y con foco preservado |
+| `empty` | página válida con cero items y `isExhausted === true` | tratamiento vacío aprobado; nunca antes del agotamiento |
+| `ready` | existe al menos una página válida y no hay solicitud activa | items validados; ninguna garantía de orden inventada |
+| `loading-more` | continuación explícita de una secuencia con items | conserva los items existentes; no agrega placeholders que parezcan datos |
+| `partial-error` | falla una continuación después de páginas válidas | conserva datos parciales, no afirma agotamiento y ofrece reintento explícito |
+| `initial-error` | falla la primera solicitud sin datos válidos | región estable, mensaje neutral y recuperación explícita |
 
 Los estados aprobados provienen de `n2625` y `n2674`. No clasifican permisos, autenticación, cursor inválido u otras causas no demostradas. No muestran texto técnico o backend crudo.
 
@@ -433,9 +433,8 @@ Un composite de Clases, Familias o Tipos puede mantener un item activo y un punt
 
 - `Tab` y `Shift+Tab` permanecen nativos entre zonas y pueden entrar o salir del navegador jerárquico sin contención no modal.
 - Edición, formularios, autocomplete, `contenteditable`, descendientes editables e IME tienen prioridad y suspenden flechas espaciales y atajos de una tecla.
-- `N`/`n` sin modificadores activa exactamente la acción contextual real, visible y habilitada del registro: `Nueva Clase`, `Nueva Familia` o `Nuevo Tipo` según la selección; nunca Recurso ni una acción ficticia.
-- `?` se detecta global y semánticamente mediante `event.key === "?"`, incluidos los modificadores necesarios de la distribución activa; no se usa `event.code` ni la posición física de `/`.
-- La palette, la ayuda y las pistas `kbd` de CTA derivan del registro compartido; `E` y `Del` permanecen ausentes hasta que exista una capacidad real aprobada.
+- `N`/`n` sin modificadores activa únicamente la acción real, visible y habilitada `Nueva Clase` en Catálogo; nunca Nueva Familia, Nuevo Tipo, Recurso o una acción ficticia.
+- `?` se detecta semánticamente mediante `event.key === "?"`, incluidos los modificadores necesarios de la distribución activa; no se usa `event.code` ni la posición física de `/`.
 - Windows/Linux conserva el `Ctrl+K` exacto y macOS el `Cmd+K` exacto, sin `Shift`, `Alt` ni el modificador de plataforma opuesto.
 - `Ctrl+N` queda intacto: Catálogo y GARFEX no lo capturan, cancelan ni reutilizan.
 - `Enter` activa sólo el control enfocado cuando expone una acción real.
@@ -476,21 +475,21 @@ Reglas de aislamiento:
 
 ## 20. Cambios de archivos previstos
 
-| Superficie                                                | Cambio permitido                                                     | Restricción                                            |
-| --------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| `src/app/routes/catalogo.tsx`                             | conservar entrada `/catalogo`                                        | sin lógica de dominio ni datos                         |
-| `src/app/shell/AppShell.tsx`                              | conservar destinos reales Bandeja/Catálogo e integración transversal | sin rediseño visual, cliente Convex o acciones futuras |
-| `src/app/routeTree.gen.ts`                                | regeneración mecánica cuando corresponda                             | no editar como contrato manual                         |
-| `src/features/catalog-hierarchy/catalogHierarchyState.ts` | selección, pertenencia y resets                                      | sin store global ni persistencia                       |
-| `src/features/catalog-hierarchy/catalogHierarchy.api.ts`  | adapter inyectable, llamadas 1:1 y parsers                           | sólo después del gate runtime                          |
-| `src/features/catalog-hierarchy/useCatalogList.ts`        | cursor, secuencia, stale guard, dedupe y estados parciales           | sin orden, prefetch o retries inventados               |
-| `src/features/catalog-hierarchy/HierarchyBrowser.tsx`     | tres regiones accesibles                                             | sin Recurso ni auto-selección                          |
-| `src/features/catalog-hierarchy/HierarchyReadPanel.tsx`   | lectura y padre no editable                                          | sin update/activate/deactivate                         |
-| `src/features/catalog-hierarchy/NuevaClaseSurface.tsx`    | conservar checkpoint no mutante; conectar sólo en Corte 3 autorizado | visual parcial congelada hasta decisión explícita      |
-| `src/features/catalog-hierarchy/CatalogCreateDialog.tsx`  | altas Familia/Tipo en Corte 4                                        | roots aprobados y padres inmutables                    |
-| `src/shared/keyboard/**`                                  | reutilización; corrección transversal demostrada por RED             | nunca fork o regla exclusiva de Catálogo               |
-| `storybook/catalog-hierarchy/**`                          | fixtures poblados y estados aprobados                                | nunca importable por runtime                           |
-| `tests/**`                                                | evidencia contractual, interacción, arquitectura y navegador         | separar fake, estructural y conectado                  |
+| Superficie | Cambio permitido | Restricción |
+|---|---|---|
+| `src/app/routes/catalogo.tsx` | conservar entrada `/catalogo` | sin lógica de dominio ni datos |
+| `src/app/shell/AppShell.tsx` | conservar destinos reales Bandeja/Catálogo e integración transversal | sin rediseño visual, cliente Convex o acciones futuras |
+| `src/app/routeTree.gen.ts` | regeneración mecánica cuando corresponda | no editar como contrato manual |
+| `src/features/catalog-hierarchy/catalogHierarchyState.ts` | selección, pertenencia y resets | sin store global ni persistencia |
+| `src/features/catalog-hierarchy/catalogHierarchy.api.ts` | adapter inyectable, llamadas 1:1 y parsers | sólo después del gate runtime |
+| `src/features/catalog-hierarchy/useCatalogList.ts` | cursor, secuencia, stale guard, dedupe y estados parciales | sin orden, prefetch o retries inventados |
+| `src/features/catalog-hierarchy/HierarchyBrowser.tsx` | tres regiones accesibles | sin Recurso ni auto-selección |
+| `src/features/catalog-hierarchy/HierarchyReadPanel.tsx` | lectura y padre no editable | sin update/activate/deactivate |
+| `src/features/catalog-hierarchy/NuevaClaseSurface.tsx` | conservar checkpoint no mutante; conectar sólo en Corte 3 autorizado | visual parcial congelada hasta decisión explícita |
+| `src/features/catalog-hierarchy/CatalogCreateDialog.tsx` | altas Familia/Tipo en Corte 4 | roots aprobados y padres inmutables |
+| `src/shared/keyboard/**` | reutilización; corrección transversal demostrada por RED | nunca fork o regla exclusiva de Catálogo |
+| `storybook/catalog-hierarchy/**` | fixtures poblados y estados aprobados | nunca importable por runtime |
+| `tests/**` | evidencia contractual, interacción, arquitectura y navegador | separar fake, estructural y conectado |
 
 No se prevén cambios backend, migraciones, `.op`, `recovery/**` ni fixtures de Bandeja.
 
@@ -530,20 +529,20 @@ Cada comportamiento nuevo sigue, en orden, **RED → GREEN → TRIANGULATE → R
 
 ### 22.1 Matriz por responsabilidad
 
-| Responsabilidad                             | Capa primaria                             | Evidencia requerida                                                              |
-| ------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| Resets Clase/Familia/Tipo y rechazo cruzado | unitarias puras                           | transiciones atómicas y ausencia de consulta sin padre                           |
-| Nombres de funciones, args y payloads       | unitarias de adapter con spy              | llamada 1:1 y ausencia de campos no autorizados                                  |
-| Parsers `unknown` y DTOs                    | unitarias                                 | aceptación nominal y rechazo de forma/nivel/padre inválidos                      |
-| Cursores y secuencias                       | unitarias de hook                         | mismo cursor/operación/padre, agotamiento, stale guard y dedupe                  |
-| Datos parciales y retry                     | RTL + hook                                | preservación de items válidos y reintento contextual explícito                   |
-| Tab nativo y estado local representacional  | RTL                                       | no `preventDefault` para Tab, entrada/salida del composite                       |
-| Geometría, RTL, scroll y portales           | unitarias compartidas + Playwright        | rectángulos reales y overlay activo                                              |
-| `N`, `?`, Ctrl/Cmd+K y Ctrl+N               | arbitraje + RTL + Playwright              | precedencia y comandos exactos                                                   |
-| Diálogos y foco                             | RTL + Playwright                          | foco inicial, contención modal, Escape/Cancelar y restauración/fallback          |
-| Fixtures y Bandeja                          | arquitectura + runtime bundle + regresión | ninguna fuga a `src/**` ni cliente en Bandeja                                    |
-| Visual aprobado                             | Storybook + Playwright 1440×980           | comparación contra root correspondiente, sin afirmar fidelidad por estructura    |
-| Exclusiones                                 | arquitectura                              | sin Recurso, update/activate/deactivate, storage, Query/store o responsive/touch |
+| Responsabilidad | Capa primaria | Evidencia requerida |
+|---|---|---|
+| Resets Clase/Familia/Tipo y rechazo cruzado | unitarias puras | transiciones atómicas y ausencia de consulta sin padre |
+| Nombres de funciones, args y payloads | unitarias de adapter con spy | llamada 1:1 y ausencia de campos no autorizados |
+| Parsers `unknown` y DTOs | unitarias | aceptación nominal y rechazo de forma/nivel/padre inválidos |
+| Cursores y secuencias | unitarias de hook | mismo cursor/operación/padre, agotamiento, stale guard y dedupe |
+| Datos parciales y retry | RTL + hook | preservación de items válidos y reintento contextual explícito |
+| Tab nativo y estado local representacional | RTL | no `preventDefault` para Tab, entrada/salida del composite |
+| Geometría, RTL, scroll y portales | unitarias compartidas + Playwright | rectángulos reales y overlay activo |
+| `N`, `?`, Ctrl/Cmd+K y Ctrl+N | arbitraje + RTL + Playwright | precedencia y comandos exactos |
+| Diálogos y foco | RTL + Playwright | foco inicial, contención modal, Escape/Cancelar y restauración/fallback |
+| Fixtures y Bandeja | arquitectura + runtime bundle + regresión | ninguna fuga a `src/**` ni cliente en Bandeja |
+| Visual aprobado | Storybook + Playwright 1440×980 | comparación contra root correspondiente, sin afirmar fidelidad por estructura |
+| Exclusiones | arquitectura | sin Recurso, update/activate/deactivate, storage, Query/store o responsive/touch |
 
 ### 22.2 Evidencia histórica preservada
 
@@ -577,15 +576,16 @@ Antes de añadir o ejecutar integración conectada, el padre debe verificar y re
 
 La verificación disposable completada aporta evidencia runtime acotada, sin cambiar estas condiciones: una copia temporal con Convex `1.45.0` usó estado aislado local al cwd y puertos `33210`/`33211`; las funciones y el esquema se publicaron sólo allí. La ejecución administrativa confirmó lecturas vacías con la envolvente nominal, una cadena autorizada Clase→Familia→Tipo de entidades inactivas creada una sola vez, coincidencia de `obtener*`, relaciones padre, `activo:false`, `revision:1`, omisión de `descripcion` cuando no se envió, estados de efectividad inactiva y paginación real de primera/segunda página en el mismo contexto. También confirmó que la autoridad `3210` permaneció vacía bajo lectura anónima. No se conservan IDs, credenciales ni valores de cursor como datos durables.
 
-La verificación pública adicional, independiente de la lectura administrativa, usó un `ConvexHttpClient` plano contra el endpoint disposable con `auth:none`, cero llamadas `setAuth` y sin inyección de token, clave administrativa, credencial ni header. Ejecutó exactamente `crearClase`, `crearFamilia` y `crearTipo` en una única cadena inactiva y aislada; las tres devolvieron `CREATED`, con relaciones padre exactas, `activo:false`, `revision:1`, y Tipo con `NOT_EVALUATED` y cero violaciones. Esta evidencia cerró la incertidumbre de permiso público para esas tres creaciones sólo en el disposable y habilitó la decisión explícita de apply. El frontend final fija Convex `1.45.0`, conecta lectura y creación contextual de Clase/Familia/Tipo y documenta la URL local únicamente como ejemplo no secreto; no convierte la prueba disposable en un despliegue del producto. La autoridad `3210` no fue consultada ni mutada durante aquella verificación. El deployment disposable final y la instancia anterior involucrada en el incidente de credenciales fueron destruidos completamente; no se conserva ninguna credencial expuesta, los paths temporales están ausentes y los puertos `33210`/`33211` están cerrados. Verificador independiente y cleanup: PASS.
+La verificación pública adicional, independiente de la lectura administrativa, usó un `ConvexHttpClient` plano contra el endpoint disposable con `auth:none`, cero llamadas `setAuth` y sin inyección de token, clave administrativa, credencial ni header. Ejecutó exactamente `crearClase`, `crearFamilia` y `crearTipo` en una única cadena inactiva y aislada; las tres devolvieron `CREATED`, con relaciones padre exactas, `activo:false`, `revision:1`, y Tipo con `NOT_EVALUATED` y cero violaciones. Esta evidencia cierra la incertidumbre de permiso público para esas tres creaciones sólo en el disposable: no es un despliegue del producto, no configura el paquete frontend ni una URL efectiva, y no verifica el transporte frontend. La implementación de Familia/Tipo sigue sin comenzar y requiere una decisión explícita de apply; la autoridad `3210` no fue consultada ni mutada en esta verificación. El deployment disposable final y la instancia anterior involucrada en el incidente de credenciales fueron destruidos completamente; no se conserva ninguna credencial expuesta, los paths temporales están ausentes y los puertos `33210`/`33211` están cerrados. Verificador independiente y cleanup: PASS.
 
-Las puertas históricas quedaron cerradas sólo para las seis operaciones autorizadas. El diseño final mantiene estas prohibiciones:
+La evidencia nominal de `function-spec`, un fake unitario, una story o un build no satisface estas puertas. Mientras permanezcan abiertas:
 
-- no se configura una URL de producción ni una credencial;
-- no se ejecuta mutación conectada dentro de la suite predeterminada;
-- no se añaden Recursos, update, delete, activate, deactivate ni lifecycle;
-- no se sustituye la autoridad con fixtures, storage o no-op engañoso;
-- Storybook y pruebas conservan sus datos poblados fuera del runtime.
+- no se añade una versión supuesta de Convex;
+- no se configura una URL inventada;
+- no se conecta lectura ni creación de Familia/Tipo;
+- no se ejecuta mutación de producto;
+- no se sustituye la ausencia con fixtures, storage o no-op engañoso;
+- no se presenta Catálogo como capacidad conectada completa.
 
 ## 24. Rollout y rollback integral
 
@@ -604,27 +604,27 @@ Si una operación conectada resulta incompatible, se retira o deshabilita el wir
 
 ## 25. Matriz de amenazas de alcance y mitigaciones
 
-| Amenaza                             | Consecuencia                            | Mitigación de diseño                                                |
-| ----------------------------------- | --------------------------------------- | ------------------------------------------------------------------- |
-| Respuesta tardía de otro padre      | descendientes cruzados                  | token monotónico y comparación operación/padre antes de aplicar     |
-| Reutilizar cursor entre secuencias  | páginas incoherentes                    | cursor propiedad de operación, padre y filtros originales           |
-| Página con padre incorrecto         | contaminación de contexto               | parser/guard rechaza la página y conserva datos válidos             |
-| Duplicados entre páginas            | filas repetidas o reordenadas           | dedupe por `id`, una representación y sin sort local                |
-| Fallo de continuación               | pérdida de trabajo visible              | preservar páginas válidas, no afirmar agotamiento y retry explícito |
-| Respuesta wire inesperada           | datos inseguros en React                | `unknown` hasta parser; sin coerción ni `any`                       |
-| Alta con padre mutable              | ruptura de invariante                   | snapshot inmutable por solicitud y padre read-only                  |
-| Doble confirmación                  | mutación duplicada                      | bloqueo de confirmación mientras la solicitud está activa           |
-| Inventar posición tras crear        | orden falso                             | sin inserción optimista; invalidar y releer                         |
-| Fuga de fixtures                    | datos ficticios en runtime              | roots separados y guardas de imports/bundle                         |
-| Convex en Bandeja                   | ampliación accidental                   | cliente y adapter sólo dentro de la feature Catálogo                |
-| Fork de teclado local               | precedencia y foco incompatibles        | reutilizar arbitraje, elegibilidad, geometría y restauración shared |
-| Roving como autoridad               | navegación por índice/DOM               | estado local sólo representacional                                  |
-| Trampa de foco no modal             | usuario bloqueado                       | contención exclusiva de diálogo activo                              |
-| Rediseño durante reconciliación     | pérdida del checkpoint aprobado/parcial | freeze visual y autorización explícita para retomarlo               |
-| Expandir a Recurso o administración | scope creep                             | guardas arquitectónicas y ausencia de rutas/adapter/actions         |
-| Infraestructura preventiva          | doble autoridad y complejidad           | adapter directo feature-local; sin Query/store/facade               |
-| Inferir permisos o errores          | UX falsa                                | gates parent-owned y copy neutral aprobado                          |
-| Mutación sin procedimiento seguro   | datos no recuperables                   | autorización separada y entorno no productivo verificado            |
+| Amenaza | Consecuencia | Mitigación de diseño |
+|---|---|---|
+| Respuesta tardía de otro padre | descendientes cruzados | token monotónico y comparación operación/padre antes de aplicar |
+| Reutilizar cursor entre secuencias | páginas incoherentes | cursor propiedad de operación, padre y filtros originales |
+| Página con padre incorrecto | contaminación de contexto | parser/guard rechaza la página y conserva datos válidos |
+| Duplicados entre páginas | filas repetidas o reordenadas | dedupe por `id`, una representación y sin sort local |
+| Fallo de continuación | pérdida de trabajo visible | preservar páginas válidas, no afirmar agotamiento y retry explícito |
+| Respuesta wire inesperada | datos inseguros en React | `unknown` hasta parser; sin coerción ni `any` |
+| Alta con padre mutable | ruptura de invariante | snapshot inmutable por solicitud y padre read-only |
+| Doble confirmación | mutación duplicada | bloqueo de confirmación mientras la solicitud está activa |
+| Inventar posición tras crear | orden falso | sin inserción optimista; invalidar y releer |
+| Fuga de fixtures | datos ficticios en runtime | roots separados y guardas de imports/bundle |
+| Convex en Bandeja | ampliación accidental | cliente y adapter sólo dentro de la feature Catálogo |
+| Fork de teclado local | precedencia y foco incompatibles | reutilizar arbitraje, elegibilidad, geometría y restauración shared |
+| Roving como autoridad | navegación por índice/DOM | estado local sólo representacional |
+| Trampa de foco no modal | usuario bloqueado | contención exclusiva de diálogo activo |
+| Rediseño durante reconciliación | pérdida del checkpoint aprobado/parcial | freeze visual y autorización explícita para retomarlo |
+| Expandir a Recurso o administración | scope creep | guardas arquitectónicas y ausencia de rutas/adapter/actions |
+| Infraestructura preventiva | doble autoridad y complejidad | adapter directo feature-local; sin Query/store/facade |
+| Inferir permisos o errores | UX falsa | gates parent-owned y copy neutral aprobado |
+| Mutación sin procedimiento seguro | datos no recuperables | autorización separada y entorno no productivo verificado |
 
 ### 25.1 Amenazas operativas no aplicables
 

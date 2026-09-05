@@ -1,0 +1,634 @@
+{
+  "target": "/workspace/recovery/openpencil-2026-08-30/reconstruction/seed-replay.op",
+  "source_line_limit": 1565,
+  "records": 198,
+  "mutations": 79,
+  "chunks": [
+    {
+      "file": "chunk-001.js",
+      "source_ranges": [
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 209,
+          "seq": 11
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 211,
+          "seq": 12
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 213,
+          "seq": 13
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 215,
+          "seq": 14
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 217,
+          "seq": 15
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 221,
+          "seq": 17
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 225,
+          "seq": 19
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 227,
+          "seq": 20
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 229,
+          "seq": 21
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 235,
+          "seq": 22
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 242,
+          "seq": 24
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 248,
+          "seq": 26
+        }
+      ],
+      "mutation_tools": [
+        "dynamic tools.call",
+        "openpencil_add_page",
+        "openpencil_delete_node",
+        "openpencil_rename_page"
+      ],
+      "expected_ids": [
+        "n10",
+        "n6",
+        "n8"
+      ],
+      "sha256": "48ce3ee7ffbdcaed9b1235620a48ac03848045b683080f68759913f25dd00b9c",
+      "bytes": 17017
+    },
+    {
+      "file": "chunk-002.js",
+      "source_ranges": [
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 250,
+          "seq": 27
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 252,
+          "seq": 28
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 258,
+          "seq": 30
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 262,
+          "seq": 32
+        }
+      ],
+      "mutation_tools": [
+        "dynamic tools.call",
+        "openpencil_set_design_md"
+      ],
+      "expected_ids": [
+        "n2",
+        "n4",
+        "n6"
+      ],
+      "sha256": "0d1ed1c8b6a2b042699e8388cc34ee0d0899de3149de18b5739c916af8e9a3e2",
+      "bytes": 18618
+    },
+    {
+      "file": "chunk-003.js",
+      "source_ranges": [
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 325,
+          "seq": 39
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 357,
+          "seq": 46
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 369,
+          "seq": 47
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 370,
+          "seq": 48
+        }
+      ],
+      "mutation_tools": [
+        "dynamic tools.call",
+        "openpencil_set_active_page"
+      ],
+      "expected_ids": [
+        "n380",
+        "n381",
+        "n388",
+        "n395",
+        "n465",
+        "n466"
+      ],
+      "sha256": "d780364f892d80cd91d63abf002c4e802ef38f3b614c7768d914f0d4ad99f625",
+      "bytes": 15988
+    },
+    {
+      "file": "chunk-004.js",
+      "source_ranges": [
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 372,
+          "seq": 49
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 378,
+          "seq": 53
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 415,
+          "seq": 57
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 421,
+          "seq": 59
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 439,
+          "seq": 62
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 441,
+          "seq": 63
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 459,
+          "seq": 65
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 465,
+          "seq": 67
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 512,
+          "seq": 71
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 516,
+          "seq": 73
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 532,
+          "seq": 79
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 551,
+          "seq": 85
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 573,
+          "seq": 89
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 577,
+          "seq": 90
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 581,
+          "seq": 91
+        }
+      ],
+      "mutation_tools": [
+        "dynamic tools.call",
+        "openpencil_batch_design",
+        "openpencil_import_html",
+        "openpencil_import_svg",
+        "openpencil_set_active_page",
+        "openpencil_set_selection_set",
+        "openpencil_update_node"
+      ],
+      "expected_ids": [
+        "n1033",
+        "n1035",
+        "n1059",
+        "n1073",
+        "n1082",
+        "n1086",
+        "n1090",
+        "n1108",
+        "n1113",
+        "n1114",
+        "n1126",
+        "n1170",
+        "n1183",
+        "n1227",
+        "n1240",
+        "n1284",
+        "n1290",
+        "n1291",
+        "n1297",
+        "n1298",
+        "n1304",
+        "n1305",
+        "n380",
+        "n403",
+        "n465",
+        "n564",
+        "n565",
+        "n749",
+        "n807",
+        "n865",
+        "n873",
+        "n881",
+        "n889",
+        "n982"
+      ],
+      "sha256": "fe71e9c4b421a9c180f16c395fb1af27bae3d06f4fe1e9b51aa9c2277cb1af48",
+      "bytes": 18199
+    },
+    {
+      "file": "chunk-005.js",
+      "source_ranges": [
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 598,
+          "seq": 94
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 604,
+          "seq": 96
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 670,
+          "seq": 110
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 684,
+          "seq": 114
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 743,
+          "seq": 125
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 745,
+          "seq": 126
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 747,
+          "seq": 127
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 749,
+          "seq": 128
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 751,
+          "seq": 129
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 753,
+          "seq": 130
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 800,
+          "seq": 133
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 802,
+          "seq": 134
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 835,
+          "seq": 136
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 837,
+          "seq": 137
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 884,
+          "seq": 141
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 892,
+          "seq": 142
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 892,
+          "seq": 143
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 916,
+          "seq": 144
+        }
+      ],
+      "mutation_tools": [
+        "openpencil_batch_design",
+        "openpencil_import_html",
+        "openpencil_move_node",
+        "openpencil_set_active_page",
+        "openpencil_update_node"
+      ],
+      "expected_ids": [
+        "n1115",
+        "n1121",
+        "n1123",
+        "n1126",
+        "n1127",
+        "n1132",
+        "n1135",
+        "n1140",
+        "n1159",
+        "n1168",
+        "n1172",
+        "n1178",
+        "n1180",
+        "n1183",
+        "n1184",
+        "n1189",
+        "n1192",
+        "n1197",
+        "n1216",
+        "n1225",
+        "n1229",
+        "n1235",
+        "n1237",
+        "n1240",
+        "n1241",
+        "n1246",
+        "n1249",
+        "n1254",
+        "n1273",
+        "n1282",
+        "n1285",
+        "n1287",
+        "n1290",
+        "n1292",
+        "n1294",
+        "n1297",
+        "n1299",
+        "n1301",
+        "n1304",
+        "n1306",
+        "n1308",
+        "n1311",
+        "n1312",
+        "n1313",
+        "n1314",
+        "n1315",
+        "n1316",
+        "n1317",
+        "n1321",
+        "n1388",
+        "n1430",
+        "n1431",
+        "n1503",
+        "n380"
+      ],
+      "sha256": "db7001c4ecd1fd15be717ed07ffb95db588cbcc14d3b94b552b975d6ab71bebb",
+      "bytes": 18315
+    },
+    {
+      "file": "chunk-006.js",
+      "source_ranges": [
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 916,
+          "seq": 145
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 923,
+          "seq": 146
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 967,
+          "seq": 147
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1036,
+          "seq": 152
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1040,
+          "seq": 154
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1046,
+          "seq": 156
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1048,
+          "seq": 157
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1052,
+          "seq": 159
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1064,
+          "seq": 161
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1066,
+          "seq": 162
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1072,
+          "seq": 165
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1106,
+          "seq": 168
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1106,
+          "seq": 169
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1106,
+          "seq": 170
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1106,
+          "seq": 171
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1119,
+          "seq": 175
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1175,
+          "seq": 176
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1175,
+          "seq": 177
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1214,
+          "seq": 182
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1278,
+          "seq": 183
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1327,
+          "seq": 185
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1351,
+          "seq": 186
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1412,
+          "seq": 189
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1445,
+          "seq": 193
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1539,
+          "seq": 197
+        },
+        {
+          "session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b.jsonl",
+          "line": 1565,
+          "seq": 198
+        }
+      ],
+      "mutation_tools": [
+        "openpencil_delete_page",
+        "openpencil_rename_page",
+        "openpencil_reorder_page",
+        "openpencil_replace_node",
+        "openpencil_set_active_page",
+        "openpencil_update_node",
+        "set_active_page",
+        "set_design_md"
+      ],
+      "expected_ids": [
+        "n1317",
+        "n1319",
+        "n1321",
+        "n1381",
+        "n1504",
+        "n1645",
+        "n1683",
+        "n1685",
+        "n1687",
+        "n1689",
+        "n1737",
+        "n1819",
+        "n1856",
+        "n1927",
+        "n2",
+        "n2002",
+        "n2032",
+        "n2081",
+        "n2117",
+        "n2118",
+        "n2136",
+        "n2191",
+        "n2265",
+        "n2284",
+        "n2330",
+        "n2337",
+        "n2390",
+        "n2400",
+        "n2472",
+        "n2477",
+        "n2577",
+        "n3",
+        "n380",
+        "n4",
+        "n465",
+        "n5",
+        "n564"
+      ],
+      "sha256": "89db557410f5ab15d2ac4c32fc097427bc04923d008b014f70dcaf29dd94af3c",
+      "bytes": 14458
+    }
+  ]
+}

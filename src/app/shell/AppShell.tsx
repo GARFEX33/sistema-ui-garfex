@@ -8,6 +8,11 @@ import { KeyboardHelpDialog } from './KeyboardHelpDialog'
 import { useKeyboardCommands } from '../../shared/keyboard/keyboardControllerContext'
 import { focusSpatialTarget } from '../../shared/keyboard/spatialNavigation'
 
+function focusRow(candidate: HTMLElement | null) {
+  candidate?.focus({ preventScroll: true })
+  candidate?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+}
+
 function GlobalHelpTrigger() {
   const command = useKeyboardCommands().find(
     (candidate) => candidate.id === 'global.contextual-help',
@@ -41,25 +46,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   const workspaceMainRef = useRef<HTMLElement | null>(null)
 
   const handleSidebarKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLAnchorElement>) => {
+    (event: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
         return
       const links = sidebarLinks.current.filter(
         (link): link is HTMLAnchorElement => link !== null,
       )
-      if (event.key === 'Home' || event.key === 'End') {
+      if (
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'Home' ||
+        event.key === 'End'
+      ) {
         event.preventDefault()
-        links[event.key === 'Home' ? 0 : links.length - 1]?.focus()
-        return
-      }
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        const result = focusSpatialTarget({
-          origin: event.currentTarget,
-          direction: event.key === 'ArrowUp' ? 'up' : 'down',
-          boundaryRoot: appShellRef.current ?? event.currentTarget,
-          candidates: links,
-        })
-        if (result.status === 'moved') event.preventDefault()
+        const nextIndex =
+          event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? links.length - 1
+              : index + (event.key === 'ArrowDown' ? 1 : -1)
+        links[nextIndex]?.focus()
         return
       }
       if (event.key !== 'ArrowRight') return
@@ -67,14 +73,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       const boundaryRoot = workspaceMainRef.current
       if (!boundaryRoot) return
       if (event.currentTarget.dataset.spatialId === 'sidebar.catalogo') {
-        focusSpatialTarget({
-          origin: event.currentTarget,
-          direction: 'right',
-          boundaryRoot,
-          candidateFilter: (candidate) =>
-            candidate.dataset.catalogLevel === 'classes',
-          onMoved: (target) => target.click(),
-        })
+        const firstClass = boundaryRoot.querySelector<HTMLElement>(
+          '[data-catalog-level="classes"][data-spatial-id]',
+        )
+        focusRow(firstClass)
+        firstClass?.click()
         return
       }
       focusSpatialTarget({
@@ -99,6 +102,47 @@ export function AppShell({ children }: { children: ReactNode }) {
       const target = event.target
       const boundaryRoot = workspaceMainRef.current
       if (!(target instanceof HTMLElement) || !boundaryRoot) return
+      if (target.getAttribute('role') === 'tab') {
+        if (
+          event.key === 'ArrowDown' &&
+          target.dataset.spatialId === 'catalog.tab.attributes'
+        ) {
+          event.preventDefault()
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
+              '[data-catalog-level="attributes"][data-spatial-id]',
+            ),
+          )
+          return
+        }
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        const tabs = [
+          ...boundaryRoot.querySelectorAll<HTMLElement>('[role="tab"]'),
+        ]
+        const index = tabs.indexOf(target)
+        if (event.key === 'ArrowLeft' && index === 0) {
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
+              '[data-catalog-level="types"][aria-pressed="true"]',
+            ),
+          )
+          return
+        }
+        const nextIndex = Math.max(
+          0,
+          Math.min(
+            tabs.length - 1,
+            index + (event.key === 'ArrowRight' ? 1 : -1),
+          ),
+        )
+        const nextTab = tabs[nextIndex]
+        if (nextTab && nextTab !== target) {
+          focusRow(nextTab)
+          nextTab.click()
+        }
+        return
+      }
       const row = target.closest<HTMLElement>('[data-catalog-level]')
       if (!row) {
         if (
@@ -123,20 +167,40 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
       event.preventDefault()
       const level = row.dataset.catalogLevel!
-      const activateHierarchyTarget = (candidate: HTMLElement) =>
-        candidate.click()
+      const move = (candidate: HTMLElement | null) => {
+        focusRow(candidate)
+        candidate?.click()
+      }
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        focusSpatialTarget({
-          origin: row,
-          direction: event.key === 'ArrowUp' ? 'up' : 'down',
-          boundaryRoot,
-          candidateFilter: (candidate) =>
-            candidate.dataset.catalogLevel === level,
-          onMoved: activateHierarchyTarget,
-        })
+        const rows = [
+          ...boundaryRoot.querySelectorAll<HTMLElement>(
+            `[data-catalog-level="${level}"]`,
+          ),
+        ]
+        const index = rows.indexOf(row)
+        if (level === 'attributes' && event.key === 'ArrowUp' && index === 0) {
+          focusRow(
+            boundaryRoot.querySelector<HTMLElement>(
+              '[data-spatial-id="catalog.tab.attributes"]',
+            ),
+          )
+          return
+        }
+        const next = Math.max(
+          0,
+          Math.min(
+            rows.length - 1,
+            index + (event.key === 'ArrowDown' ? 1 : -1),
+          ),
+        )
+        move(rows[next] ?? null)
         return
       }
       if (event.key === 'ArrowRight') {
+        if (level === 'types') {
+          move(boundaryRoot.querySelector<HTMLElement>('#catalog-summary-tab'))
+          return
+        }
         const child =
           level === 'classes'
             ? 'families'
@@ -144,41 +208,38 @@ export function AppShell({ children }: { children: ReactNode }) {
               ? 'types'
               : null
         if (child)
-          focusSpatialTarget({
-            origin: row,
-            direction: 'right',
-            boundaryRoot,
-            candidateFilter: (candidate) =>
-              candidate.dataset.catalogLevel === child,
-            onMoved: activateHierarchyTarget,
-          })
+          move(
+            boundaryRoot.querySelector<HTMLElement>(
+              `[data-catalog-level="${child}"][data-spatial-id]`,
+            ),
+          )
         return
       }
-      if (level === 'classes') {
-        const links = sidebarLinks.current.filter(
-          (link): link is HTMLAnchorElement => link !== null,
+      if (level === 'attributes') {
+        move(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-catalog-level="types"][aria-pressed="true"]',
+          ),
         )
-        const activeRoute = links.find(
-          (link) => link.getAttribute('aria-current') === 'page',
+      } else if (level === 'types') {
+        move(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-catalog-level="families"][aria-pressed="true"]',
+          ),
         )
-        focusSpatialTarget({
-          origin: row,
-          direction: 'left',
-          boundaryRoot: appShellRef.current ?? boundaryRoot,
-          candidates: activeRoute ? [activeRoute] : links,
-        })
-        return
+      } else if (level === 'families') {
+        move(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-catalog-level="classes"][aria-pressed="true"]',
+          ),
+        )
+      } else {
+        focusRow(
+          document.querySelector<HTMLElement>(
+            '[data-spatial-id="sidebar.catalogo"]',
+          ),
+        )
       }
-      const parentLevel = level === 'types' ? 'families' : 'classes'
-      focusSpatialTarget({
-        origin: row,
-        direction: 'left',
-        boundaryRoot,
-        candidateFilter: (candidate) =>
-          candidate.dataset.catalogLevel === parentLevel &&
-          candidate.getAttribute('aria-pressed') === 'true',
-        onMoved: activateHierarchyTarget,
-      })
     },
     [],
   )
@@ -245,7 +306,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               }}
               to="/bandeja"
               data-spatial-id="sidebar.bandeja"
-              onKeyDown={handleSidebarKeyDown}
+              onKeyDown={(event) => handleSidebarKeyDown(event, 0)}
               activeProps={{ className: 'navigation-link is-active' }}
               className="navigation-link"
             >
@@ -268,7 +329,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               }}
               to="/catalogo"
               data-spatial-id="sidebar.catalogo"
-              onKeyDown={handleSidebarKeyDown}
+              onKeyDown={(event) => handleSidebarKeyDown(event, 1)}
               activeProps={{ className: 'navigation-link is-active' }}
               className="navigation-link navigation-catalog-link"
             >

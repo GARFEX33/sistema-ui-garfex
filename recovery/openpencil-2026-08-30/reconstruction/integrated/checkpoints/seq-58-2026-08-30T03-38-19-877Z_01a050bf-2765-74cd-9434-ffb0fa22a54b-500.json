@@ -1,0 +1,17 @@
+{
+  "seq": 58,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 500,
+  "timestamp": "2026-08-30T06:16:07.161Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+}

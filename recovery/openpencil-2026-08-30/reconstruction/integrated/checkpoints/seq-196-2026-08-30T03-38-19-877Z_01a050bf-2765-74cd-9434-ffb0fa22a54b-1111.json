@@ -1,0 +1,17 @@
+{
+  "seq": 196,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 1111,
+  "timestamp": "2026-08-30T17:51:47.189Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "SyntaxError: Unexpected token 'E', \"Error: ite\"... is not valid JSON\n    at JSON.parse (<anonymous>)\n    at call (/tmp/export-concepts-final2.js:2:431)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async /tmp/export-concepts-final2.js:3:62\n"
+    }
+  }
+}

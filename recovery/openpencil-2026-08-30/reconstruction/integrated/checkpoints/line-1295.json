@@ -1,0 +1,10 @@
+{
+  "source_line": 1295,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/apply-minimal-keyboard-focus.js",
+    "operation": "write"
+  }
+}

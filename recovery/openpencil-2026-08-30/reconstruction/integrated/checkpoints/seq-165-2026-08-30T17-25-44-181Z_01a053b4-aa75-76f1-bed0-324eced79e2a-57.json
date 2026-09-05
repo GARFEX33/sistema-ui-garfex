@@ -1,0 +1,17 @@
+{
+  "seq": 165,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 57,
+  "timestamp": "2026-08-30T17:30:36.072Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "3 top_level_nodes\\\":\\\"n1426|Frame|frame\\\"\n4 top_level_nodes\\\":\\\"n1428|Frame|frame\\\"\n5 top_level_nodes\\\":\\\"n1430|Frame|frame\\\"\n",
+      "stderr": ""
+    }
+  }
+}

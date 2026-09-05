@@ -1,0 +1,17 @@
+{
+  "seq": 99,
+  "source_session": "2026-08-30T07-10-33-359Z_01a05181-738f-7498-a0fe-74754d7a2e3a",
+  "source_line": 43,
+  "timestamp": "2026-08-30T07:13:16.998Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":170,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"fill_ref\\\":\\\"\\\",\\\"height\\\":\\\"980\\\",\\\"kind\\\":\\\"path\\\",\\\"name\\\":\\\"04 Mapa operativo · Foundation frame\\\",\\\"parent_id\\\":\\\"n1328\\\",\\\"stroke_ref\\\":\\\"\\\",\\\"width\\\":\\\"1440\\\",\\\"x\\\":\\\"799\\\",\\\"y\\\":\\\"341\\\"}\"}]}}\n{\"jsonrpc\":\"2.0\",\"id\":171,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"fill_ref\\\":\\\"\\\",\\\"height\\\":\\\"980\\\",\\\"kind\\\":\\\"path\\\",\\\"name\\\":\\\"05 Maestro de Recursos · Foundation frame\\\",\\\"parent_id\\\":\\\"n1328\\\",\\\"stroke_ref\\\":\\\"\\\",\\\"width\\\":\\\"1440\\\",\\\"x\\\":\\\"811\\\",\\\"y\\\":\\\"339\\\"}\"}]}}\n{\"jsonrpc\":\"2.0\",\"id\":172,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"fill_ref\\\":\\\"\\\",\\\"height\\\":\\\"980\\\",\\\"kind\\\":\\\"path\\\",\\\"name\\\":\\\"06 Flujo XML y precios · Foundation frame\\\",\\\"parent_id\\\":\\\"n1328\\\",\\\"stroke_ref\\\":\\\"\\\",\\\"width\\\":\\\"1440\\\",\\\"x\\\":\\\"824\\\",\\\"y\\\":\\\"341\\\"}\"}]}}\n",
+      "stderr": ""
+    }
+  }
+}

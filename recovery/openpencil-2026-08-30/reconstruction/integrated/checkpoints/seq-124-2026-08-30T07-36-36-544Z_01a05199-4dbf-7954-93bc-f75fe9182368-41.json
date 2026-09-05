@@ -1,0 +1,17 @@
+{
+  "seq": 124,
+  "source_session": "2026-08-30T07-36-36-544Z_01a05199-4dbf-7954-93bc-f75fe9182368",
+  "source_line": 41,
+  "timestamp": "2026-08-30T07:39:05.129Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{'jsonrpc': '2.0', 'id': 30, 'result': {'content': [{'type': 'text', 'text': '{\"wrote\":\"true\"}'}]}}\n",
+      "stderr": ""
+    }
+  }
+}

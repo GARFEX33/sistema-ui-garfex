@@ -1,0 +1,10 @@
+{
+  "source_line": 1385,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/build-selector-palette-states.js",
+    "operation": "write"
+  }
+}

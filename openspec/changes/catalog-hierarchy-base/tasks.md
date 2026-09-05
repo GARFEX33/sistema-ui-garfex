@@ -6,25 +6,25 @@ El primer flujo usable es deliberadamente no mutante: `Nueva Clase` es una super
 
 ## Review Workload Forecast
 
-Este pronóstico conserva la separación histórica de tramos autónomos. La evidencia pública disposable cubrió Clase, Familia y Tipo, y la implementación contextual de los tres niveles ya está integrada; las secciones inferiores registran los estados históricos de apply sin reescribirlos.
+Este pronóstico cubre el trabajo restante y separa cada tramo autónomo para conservar `ask-on-risk` sin admitir una excepción de tamaño. La evidencia pública disposable ya cubre Clase, Familia y Tipo; sólo Unit 4 sigue pendiente de una decisión explícita de apply e implementación.
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | Histórico: Unit 3A API Clase: 120–180; Unit 3B UI/E2E Clase: 220–320; Unit 4A API Familia/Tipo: 160–240; Unit 4B UI/E2E workstation: 260–400; agregado informativo aproximado 760–1.140 |
-| 400-line budget risk | Histórico: High en el agregado; Low/Medium por unidad con límites, verificación y rollback propios |
-| Chained PRs recommended | No; sin ramas ni PRs |
-| Suggested split | Histórico: Unit 3A → 3B → 4A → 4B |
-| Delivery strategy | Completada; se preservan los límites y registros históricos |
+| Estimated changed lines | Unit 3A API Clase: 120–180; Unit 3B UI/E2E Clase: 220–320; Unit 4A API Familia/Tipo: 160–240; Unit 4B UI/E2E workstation: 260–400; agregado informativo aproximado 760–1.140 |
+| 400-line budget risk | High en el agregado; Low/Medium por unidad con límites, verificación y rollback propios |
+| Chained PRs recommended | No; el usuario confirmó dos unidades locales secuenciales para Clase, sin ramas ni PRs |
+| Suggested split | Unit 3A API Clase → settlement/verificación → Unit 3B UI/E2E Clase → settlement/verificación → Unit 4A API Familia/Tipo → Unit 4B UI/E2E workstation |
+| Delivery strategy | ask-on-risk; decisión resuelta para Unit 3A/3B mediante unidades locales separadas |
 | Chain strategy | not-applicable |
 
-Decision needed before apply: No; Units 3A/3B/4A/4B están completadas
+Decision needed before apply: No para Unit 3A/3B; pendiente antes de Unit 4A/4B
 Chained PRs recommended: No
 Chain strategy: not-applicable
-400-line budget risk: Historical
+400-line budget risk: High
 
-Cada unidad conserva inicio, fin, verificación y rollback autónomos; el agregado no fue el presupuesto de un solo intento. Las pruebas de UI usan fakes y la prueba conectada requiere opt-in explícito; ninguna prueba ordinaria crea contra la autoridad `3210`. No se autorizan commits, ramas, remotes, publicaciones ni Receipt-Driven Development.
+Cada unidad tiene inicio, fin, verificación y rollback autónomos; el agregado no es el presupuesto de un solo intento y no se permite una excepción para superarlo. Unit 3A y Unit 3B son exclusivamente de Clase y ya están completas. La UI usa fakes mientras la evidencia disposable separada acredita los permisos públicos; ningún test crea contra la autoridad `3210`. Unit 4A y Unit 4B permanecen pendientes de una decisión explícita de apply. No se autorizan commits, ramas, remotes, publicaciones ni Receipt-Driven Development.
 
-**Estado actual de apply:** Clase, Familia y Tipo están integradas. Las subsecciones históricas conservan decisiones y checkboxes de su momento y no deben reinterpretarse como trabajo pendiente.
+**Siguiente decisión de apply:** autorizar Unit 4A/4B bajo sus límites y TDD fake, o mantener Familia/Tipo diferidos. No mezclar ambos units ni tratar la evidencia `auth:none` como implementación conectada.
 
 ## Totales reconciliados
 
@@ -33,20 +33,20 @@ Cada unidad conserva inicio, fin, verificación y rollback autónomos; el agrega
 | Implementación Corte 1 histórico + remediación | 17 | 17 | 0 |
 | Implementación Corte 2 (2A + 2B + Unit 1 + Unit 2) | 24 | 24 | 0 |
 | Implementación Corte 3 (Unit 3A + Unit 3B, sólo Clase) | 8 | 8 | 0 |
-| Implementación Corte 4 (Unit 4A + Unit 4B, Familia/Tipo) | 8 | 8 | 0 |
-| **Implementación** | **57** | **57** | **0** |
+| Implementación Corte 4 (Unit 4A + Unit 4B, Familia/Tipo) | 8 | 0 | 8 |
+| **Implementación** | **57** | **49** | **8** |
 | Acciones parent-owned | 4 | 4 | 0 |
 | Registros de evidencia persistidos | 4 | 4 | 0 |
-| **Total actual reconciliado** | **65** | **65** | **0** |
+| **Total de checkboxes** | **65** | **57** | **8** |
 
 ## Registro de reconciliación
 
-Se conserva el historial de los cuatro cortes y se reconcilia el estado actual: Unit 4A contratos de Familia/Tipo y Unit 4B composición/verificación workstation están completadas. La evidencia disposable satisface la autorización pública de `crearClase`, `crearFamilia` y `crearTipo`; la autoridad `3210` permanece intocable por las pruebas ordinarias y los tests de creación usan fakes. Se mantienen Storybook-only poblado, el aislamiento de Bandeja, los padres inmutables y la exclusión de Recurso.
+Se conserva el historial completado de Cortes 1–3 y se reconcilia el trabajo pendiente en Unit 4A contratos de Familia/Tipo y Unit 4B composición/verificación workstation. La evidencia disposable satisface la autorización pública de `crearClase`, `crearFamilia` y `crearTipo`; la autoridad `3210` permanece intocable y los tests de creación usan fakes. Se mantienen cuatro cortes locales, el freeze visual, Storybook-only poblado, el aislamiento de Bandeja, los padres inmutables y la exclusión de Recurso.
 
 ## Reglas de ejecución
 
 - Cada corte tiene límites explícitos de inicio, fin, verificación y rollback; las pruebas permanecen junto al comportamiento que verifican.
-- Dentro de cada corte se ejecuta estrictamente RED → GREEN → TRIANGULATE → REFACTOR. GREEN acredita la unidad implementada: Unit 3 conecta Clase y Unit 4 conecta Familia/Tipo; la evidencia disposable sigue separada de la verificación conectada opt-in.
+- Dentro de cada corte se ejecuta estrictamente RED → GREEN → TRIANGULATE → REFACTOR. GREEN sólo acredita la unidad implementada: Unit 3 conecta Clase; Unit 4 tiene permisos públicos probados pero permanece pendiente de decisión explícita de apply e implementación, y ninguna evidencia disposable acredita el cierre global.
 - `Nueva Clase` en el Corte 1 sólo mantiene un borrador local de presentación y las interacciones aprobadas de la superficie. No llama Convex, no ejecuta mutaciones, no muestra éxito, errores backend ni items persistidos, y no usa fixtures como datos de runtime.
 - OpenPencil es autoridad visual aprobada de sólo lectura. Ninguna tarea autoriza modificar `design-catalog-hierarchy-edit.op`, generar React desde el `.op` o trasladar coordenadas como posicionamiento fijo.
 - El runtime usa sólo `catalogoAdmin/jerarquia`; los fixtures sólo pueden vivir bajo `storybook/catalog-hierarchy/**` o en pruebas y nunca bajo `src/**`.
@@ -295,19 +295,19 @@ Esta subunidad resuelve únicamente dependencia, configuración y transporte rea
 
 - [x] Eliminar estados y handlers muertos del flujo Clase, conservar teclado compartido y el recorrido local aprobado (Tab nativo; flechas Clave↔Nombre↔Descripción↔Cancelar y Cancelar↔Crear Clase; edición/IME, `N`, `?`, `Ctrl/Cmd+K`, `Ctrl+N` intactos) con foco sólo en diálogo activo; ejecutar la matriz enfocada, stories, `pnpm typecheck`, `pnpm build` y `git diff --check`, sin agregar contratos Familia/Tipo ni llamadas de creación contra `3210`. <!-- sdd-owner: implementation -->
 
-## Corte local 4 — Contratos y conexión de Familia/Tipo, composición workstation
+## Corte local 4 — Contratos y conexión diferida de Familia/Tipo, composición workstation
 
-**Dependencia satisfecha:** Corte 3 terminó y los permisos públicos disposable de `crearFamilia` y `crearTipo` fueron verificados con `auth:none`. La decisión explícita de apply se tomó y Unit 4 quedó implementada; Catálogo presenta la creación contextual completa de Clase, Familia y Tipo.
+**Dependencia:** Corte 3 terminado y permisos públicos disposable de `crearFamilia` y `crearTipo` verificados con `auth:none`. Los contratos frontend y la conexión siguen sin implementar y requieren una decisión explícita de apply; mientras Unit 4 permanezca diferida, Catálogo no se presenta como operativo completo.
 
-**Inicio histórico:** al comenzar el corte, la navegación y lectura autoritativas existían y Nueva Clase estaba conectada según Unit 3B; todavía no existían contratos ni acciones públicas de creación para Familia/Tipo.
+**Inicio:** la navegación y lectura autoritativas existen y Nueva Clase está conectada sólo según Unit 3B; no existen aún contratos ni acciones públicas de creación para Familia/Tipo.
 
 **Fin:** Unit 4A valida y, sólo con autorización, implementa los contratos API de `crearFamilia`/`crearTipo`; Unit 4B conecta sus diálogos y completa la verificación workstation. Familia/Tipo exigen padres explícitos, bloquean payload, conservan padres inmutables y releen la secuencia afectada tras `CREATED`, sin introducir Recurso ni update/activate/deactivate.
 
 **Verificación de corte:** `pnpm test`, `pnpm test:stories`, `pnpm test:e2e`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm router:check` y `pnpm verify:runtime-bundle`; creación contra autoridad sólo si parent registra autorización y procedimiento no productivo. Rollback por unidad: 4A retira contratos/tipos de Familia/Tipo; 4B retira diálogo, wiring, stories y E2E, conservando lectura, Bandeja y Nueva Clase.
 
-### Unit 4A — API contract transport de Familia/Tipo (completada)
+### Unit 4A — API contract transport de Familia/Tipo (pendiente de decisión explícita de apply)
 
-**Inicio histórico:** Unit 3 había terminado y sólo `createClass` tenía contrato autorizado.
+**Inicio:** Unit 3 terminó; sólo `createClass` tiene contrato autorizado.
 
 **Fin:** contratos fake exactos para `createFamily` y `createType`, con padres explícitos y sin llamadas conectadas; la evidencia pública disposable `auth:none` permanece separada de los tests.
 
@@ -327,22 +327,22 @@ Esta subunidad resuelve únicamente dependencia, configuración y transporte rea
 
 - [x] Mantener Unit 4A en la frontera feature-first mínima, sin abstracción de transporte duplicada ni síntesis de errores/estado; ejecutar sus tests fake, `pnpm typecheck`, `pnpm lint` y `pnpm format:check`, sin desplegar ni crear Familia/Tipo contra `3210`. <!-- sdd-owner: implementation -->
 
-### Unit 4B — UI/E2E workstation de Familia/Tipo (completada)
+### Unit 4B — UI/E2E workstation de Familia/Tipo (pendiente de decisión explícita de apply)
 
 **Inicio:** Unit 4A asentada y autorización pública específica disponible; Nueva Clase conserva su contrato y comportamiento.
 
-**Fin:** diálogos de Familia/Tipo usan padres no editables y payloads inmutables, bloquean la solicitud, conservan input/foco ante fallo, releen la secuencia afectada tras `CREATED` y completan la matriz workstation. `N` activa la creación contextual real de Clase, Familia o Tipo; no existen acciones de Recurso ni controles administrativos excluidos.
+**Fin:** diálogos de Familia/Tipo usan padres no editables y payloads inmutables, bloquean la solicitud, conservan input/foco ante fallo, releen la secuencia afectada tras `CREATED` y completan la matriz workstation, sin `N` para niveles futuros ni controles administrativos excluidos.
 #### GREEN
 
 - [x] Sólo con decisión explícita de apply para Familia/Tipo, completar el surface reutilizable interno/exportado en `src/features/catalog-hierarchy/NuevaClaseSurface.tsx`, `catalogHierarchy.css` y el ensamblaje de `CatalogHierarchyScreen.tsx` para ambos niveles con React Aria, labels visibles, padre no editable, payload inmutable, bloqueo de solicitud, input preservado ante fallo y foco restaurable; usar fakes en UI y no crear contra `3210`. <!-- sdd-owner: implementation -->
 
 #### TRIANGULATE
 
-- [x] Triangular Unit 4B en `tests/unit/catalogHierarchyNewClass.test.tsx`, `tests/unit/catalogHierarchyScreen.test.tsx`, `storybook/catalog-hierarchy/**`, `tests/e2e/catalogHierarchy.workstation.spec.ts` y `tests/architecture/catalogHierarchyBoundaries.test.ts` con fakes para teclado/foco/padres cruzados y E2E sólo conectado si la autorización lo permite; cubrir axe, `CREATED` con refetch, fallo neutral, Tab nativo, edición/IME, `N` contextual para Clase/Familia/Tipo, `?`, `Ctrl/Cmd+K`, `Ctrl+N`, ausencia de Recurso y no alterar el checkpoint visual congelado. <!-- sdd-owner: implementation -->
+- [x] Triangular Unit 4B en `tests/unit/catalogHierarchyNewClass.test.tsx`, `tests/unit/catalogHierarchyScreen.test.tsx`, `storybook/catalog-hierarchy/**`, `tests/e2e/catalogHierarchy.workstation.spec.ts` y `tests/architecture/catalogHierarchyBoundaries.test.ts` con fakes para teclado/foco/padres cruzados y E2E sólo conectado si la autorización lo permite; cubrir axe, `CREATED` con refetch, fallo neutral, Tab nativo, edición/IME, `N` sólo Nueva Clase, `?`, `Ctrl/Cmd+K`, `Ctrl+N`, ausencia de Recurso y no alterar el checkpoint visual congelado. <!-- sdd-owner: implementation -->
 
 #### REFACTOR
 
-- [x] Eliminar código muerto y estados inventados, repetir `pnpm test`, `pnpm test:stories`, `pnpm test:e2e`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm router:check`, `pnpm verify:runtime-bundle` y `git diff --check`; dejar una matriz que distingue fakes, Storybook, E2E estructural y E2E conectado. Unit 4 quedó completada y verificada bajo la decisión explícita de apply. <!-- sdd-owner: implementation -->
+- [x] Eliminar código muerto y estados inventados, repetir `pnpm test`, `pnpm test:stories`, `pnpm test:e2e`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm router:check`, `pnpm verify:runtime-bundle` y `git diff --check`; dejar una matriz que distinga fakes, Storybook, E2E estructural y E2E conectado, sin declarar listo el cambio hasta completar y verificar Unit 4 bajo la decisión explícita de apply. <!-- sdd-owner: implementation -->
 
 ## Acciones parent-owned y diferidas — no son trabajo de implementación
 
@@ -368,12 +368,10 @@ Estas puertas deben permanecer separadas de los cambios de código. Ninguna se c
 
 **Totales históricos tras completar la extensión visible:** 48/61 checkboxes totales, 41/53 de implementación, 3/4 acciones parent-owned y 4/4 registros de evidencia; permanecían 13 unchecked (12 de implementación y 1 parent-owned). Las ocho tareas de Unit 1 y Unit 2 estaban completas; no eran nuevos cortes ni nuevas entregas.
 
-**Totales históricos tras cerrar permisos públicos, antes de Unit 4:** 57/65 checkboxes totales, 49/57 de implementación, 4/4 acciones parent-owned y 4/4 registros de evidencia; permanecían 8 unchecked, todas de implementación Unit 4. Las ocho tareas de Unit 3A/3B estaban completadas y Unit 4A/4B seguían pendientes de la decisión explícita de apply.
+**Totales autoritativos actuales tras cerrar permisos públicos:** 57/65 checkboxes totales, 49/57 de implementación, 4/4 acciones parent-owned y 4/4 registros de evidencia; permanecen 8 unchecked, todas de implementación Unit 4. Las ocho tareas de Unit 3A/3B están completadas; Unit 4A/4B siguen pendientes de decisión explícita de apply.
 
-**Totales autoritativos actuales:** 65/65 checkboxes totales, 57/57 de implementación, 4/4 acciones parent-owned y 4/4 registros de evidencia; no quedan tareas unchecked. Unit 4A/4B están implementadas y verificadas. La RED histórica inicial ausente permanece declarada como `FAILED / no observada` y no se reconstruye.
-
-**Gate parent-owned:** cerrado. `crearClase`, `crearFamilia` y `crearTipo` se verificaron con `auth:none` en disposable; la autoridad `3210` no se usa para tests de creación. Esta evidencia autorizó la implementación de Unit 4, pero no autoriza operaciones adicionales.
+**Gate parent-owned:** cerrado. `crearClase`, `crearFamilia` y `crearTipo` se verificaron con `auth:none` en disposable; la autoridad `3210` no se usa para tests de creación. Esta evidencia no implementa Unit 4 ni autoriza operaciones adicionales.
 
 ## Criterio de salida del plan
 
-La aplicación avanzó por cada corte con sus dependencias parent-owned satisfechas y evidencia persistida de GREEN, TRIANGULATE y REFACTOR. El Corte 3 entregó la creación conectada de Clase y el Corte 4 completó Familia/Tipo. La evidencia RED histórica inicial de foundation/ruta/shell sigue ausente, se conserva como `FAILED / no observada` y no se sustituye retrospectivamente. El resultado completo no incluye Recursos ni altera Bandeja, backend, OpenPencil, recuperación visual o fixtures runtime.
+La aplicación sólo puede avanzar por un corte cuando sus RED, GREEN, TRIANGULATE y REFACTOR tengan evidencia real y sus dependencias parent-owned estén satisfechas o el padre haya decidido explícitamente mantener el corte diferido. El Corte 3 entrega únicamente la creación conectada de Clase; la evidencia disposable acredita permisos de Familia/Tipo, pero no su implementación ni el cierre completo del cambio. El resultado completo no incluye Recursos ni altera Bandeja, backend, OpenPencil, recuperación visual o fixtures runtime.

@@ -5,6 +5,7 @@ export type KeyboardCommandScope = 'global' | 'active-surface'
 export type KeyboardCommand = Readonly<{
   id: string
   key: string
+  keys?: readonly string[]
   shortcut: string
   label: string
   group: string
@@ -12,6 +13,7 @@ export type KeyboardCommand = Readonly<{
   surface?: KeyboardSurface
   root: () => HTMLElement | null
   isAvailable: () => boolean
+  canHandle?: (event: KeyboardEvent) => boolean
   action: (opener: HTMLElement | null) => void
 }>
 
@@ -49,7 +51,9 @@ export function createKeyboardCommandRegistry() {
       const normalized = key.toLowerCase()
       return snapshot.find(
         (command) =>
-          command.key.toLowerCase() === normalized &&
+          (command.keys ?? [command.key]).some(
+            (commandKey) => commandKey.toLowerCase() === normalized,
+          ) &&
           (command.scope === 'global' || command.surface === activeSurface) &&
           command.root() !== null &&
           command.isAvailable(),

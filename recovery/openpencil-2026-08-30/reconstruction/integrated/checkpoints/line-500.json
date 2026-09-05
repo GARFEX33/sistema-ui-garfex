@@ -1,0 +1,14 @@
+{
+  "source_line": 500,
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 1,
+      "signal": null,
+      "stdout": "",
+      "stderr": "/bin/bash: line 1: cd: /tmp/svgflatten: No such file or directory\n"
+    }
+  }
+}

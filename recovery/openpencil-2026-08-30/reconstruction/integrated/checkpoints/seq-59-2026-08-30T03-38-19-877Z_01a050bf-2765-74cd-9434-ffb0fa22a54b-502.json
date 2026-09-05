@@ -1,0 +1,17 @@
+{
+  "seq": 59,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 502,
+  "timestamp": "2026-08-30T06:16:22.439Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "garfex-g-color-positivo {\n  sameSize: true,\n  width: 400,\n  height: 400,\n  diffChannels: 4585,\n  max: 197\n}\ngarfex-g-blanco-negativo {\n  sameSize: true,\n  width: 400,\n  height: 400,\n  diffChannels: 10092,\n  max: 255\n}\ngarfex-g-negro-positivo {\n  sameSize: true,\n  width: 400,\n  height: 400,\n  diffChannels: 3415,\n  max: 132\n}\n",
+      "stderr": ""
+    }
+  }
+}

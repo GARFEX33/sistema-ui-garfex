@@ -1,0 +1,6 @@
+{
+  "source_line": 1351,
+  "kind": "script",
+  "ok": false,
+  "error": "Error: Error: index must be a u32, got \"-1\""
+}

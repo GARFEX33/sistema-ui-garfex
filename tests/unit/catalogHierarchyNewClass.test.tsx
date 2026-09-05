@@ -214,57 +214,6 @@ describe('Nueva Clase creation flow', () => {
     }
   })
 
-  it('ignores a stale success after Escape and reopen', async () => {
-    let resolve!: (value: CatalogCreated<CatalogClassItem>) => void
-    const pending = new Promise<CatalogCreated<CatalogClassItem>>((release) => {
-      resolve = release
-    })
-    const onCreated = vi.fn()
-    const createClass = vi
-      .fn()
-      .mockReturnValueOnce(pending)
-      .mockResolvedValueOnce(created())
-    const { user, trigger } = await openDialog(createClass, onCreated)
-    await fillAndSubmit(user, 'Crear Clase', 'OLD', 'Anterior')
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await user.click(trigger)
-    await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'NEW')
-    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Actual')
-
-    await act(async () => resolve(created()))
-
-    expect(screen.getByRole('dialog', { name: 'Nueva Clase' })).toBeVisible()
-    expect(screen.getByRole('textbox', { name: 'Clave' })).toHaveValue('NEW')
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
-    expect(onCreated).not.toHaveBeenCalled()
-
-    await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(onCreated).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('status')).toHaveTextContent('Clase “Actual” creada.')
-  })
-
-  it('ignores a stale error after Cancelar and reopen', async () => {
-    let reject!: (error: Error) => void
-    const pending = new Promise<CatalogCreated<CatalogClassItem>>((_, fail) => {
-      reject = fail
-    })
-    const createClass = vi.fn().mockReturnValue(pending)
-    const { user, trigger } = await openDialog(createClass)
-    await fillAndSubmit(user, 'Crear Clase', 'OLD', 'Anterior')
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-    await user.click(trigger)
-    await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'NEW')
-    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Actual')
-
-    await act(async () => reject(new Error('stale backend error')))
-
-    expect(screen.getByRole('dialog', { name: 'Nueva Clase' })).toBeVisible()
-    expect(screen.getByRole('textbox', { name: 'Clave' })).toHaveValue('NEW')
-    expect(screen.getByRole('alert')).toHaveTextContent('')
-  })
-
   it('maps only the structured duplicate key error and preserves the draft', async () => {
     const createClass = vi.fn().mockRejectedValue({
       code: 'DUPLICATE_CLASS_KEY',

@@ -1,0 +1,6 @@
+{
+  "source_line": 211,
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: RenamePage { index: 0, name: \\\"01 Brand Reference\\\" }\"}],\"isError\":true}"
+}

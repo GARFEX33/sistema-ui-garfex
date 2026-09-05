@@ -438,12 +438,17 @@ test.describe('Catálogo workstation 1440×980', () => {
       nombre,
       revision: 1,
     })
+    let releaseAttributeList!: () => void
+    const attributeListGate = new Promise<void>((resolve) => {
+      releaseAttributeList = resolve
+    })
     await page.route('http://127.0.0.1:3210/**', async (route) => {
       if (route.request().method() !== 'POST') {
         await route.fulfill({ status: 204 })
         return
       }
       const { path } = route.request().postDataJSON() as { path: string }
+      if (path.endsWith(':listarAsignacionesAtributo')) await attributeListGate
       const value = path.endsWith(':listarClases')
         ? {
             continuationCursor: null,
@@ -461,18 +466,50 @@ test.describe('Catálogo workstation 1440×980', () => {
                 },
               ],
             }
-          : {
-              continuationCursor: null,
-              isExhausted: true,
-              items: [
-                {
-                  ...item('type-1', 'Tuberías'),
-                  aggregateStatus: 'NOT_EVALUATED',
-                  familiaRecursoId: 'family-1',
-                  violations: [],
-                },
-              ],
-            }
+          : path.endsWith(':listarAsignacionesAtributo')
+            ? {
+                continuationCursor: null,
+                isExhausted: true,
+                items: [
+                  {
+                    id: 'assignment-1',
+                    definicionAtributoId: 'definition-1',
+                    tipoRecursoId: 'type-1',
+                    activo: true,
+                    effective: true,
+                    effectiveReasons: [],
+                    selection: 'SELECTED',
+                    aplicabilidad: 'REQUIRED',
+                    participaIdentidad: false,
+                    orden: 1,
+                    revision: 1,
+                    familiaRecursoId: 'family-1',
+                  },
+                ],
+              }
+            : path.endsWith(':obtenerDefinicionAtributo')
+              ? {
+                  id: 'definition-1',
+                  nombre: 'Presión nominal',
+                  clave: 'PRESION',
+                  tipoDato: 'NUMERO',
+                  activo: true,
+                  effective: true,
+                  effectiveReasons: [],
+                  revision: 1,
+                }
+              : {
+                  continuationCursor: null,
+                  isExhausted: true,
+                  items: [
+                    {
+                      ...item('type-1', 'Tuberías'),
+                      aggregateStatus: 'NOT_EVALUATED',
+                      familiaRecursoId: 'family-1',
+                      violations: [],
+                    },
+                  ],
+                }
       await route.fulfill(response(value))
     })
 
@@ -513,8 +550,42 @@ test.describe('Catálogo workstation 1440×980', () => {
     await page.keyboard.press('ArrowRight')
     await expect(firstType).toBeFocused()
     await expect(firstType).toHaveAttribute('aria-pressed', 'true')
+    const summaryTab = page.getByRole('tab', { name: 'Resumen' })
+    const attributesTab = page.getByRole('tab', { name: 'Atributos' })
+    const firstAttribute = page.locator(
+      '[data-spatial-id="catalog.row.attributes.assignment-1"]',
+    )
     await page.keyboard.press('ArrowRight')
+    await expect(summaryTab).toBeFocused()
+    await expect(summaryTab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByText('Cargando resumen de atributos…')).toBeVisible()
+    await attributesTab.click()
+    await expect(attributesTab).toBeFocused()
+    await expect(attributesTab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByText('Cargando atributos…')).toBeVisible()
+    releaseAttributeList()
+    await expect(firstAttribute).toHaveAttribute(
+      'data-catalog-level',
+      'attributes',
+    )
+    await expect(firstAttribute).toHaveAttribute('tabindex', '0')
+    await expect(attributesTab).toHaveAttribute('tabindex', '0')
+    await expect(summaryTab).toHaveAttribute('tabindex', '-1')
+    await page.keyboard.press('ArrowRight')
+    await expect(attributesTab).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(firstAttribute).toBeFocused()
+    await page.keyboard.press('ArrowUp')
+    await expect(attributesTab).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(summaryTab).toBeFocused()
+    await expect(summaryTab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('table')).toContainText('Presión nominal')
+    await expect(summaryTab).toHaveAttribute('tabindex', '0')
+    await expect(attributesTab).toHaveAttribute('tabindex', '-1')
+    await page.keyboard.press('ArrowLeft')
     await expect(firstType).toBeFocused()
+    await expect(firstType).toHaveAttribute('aria-pressed', 'true')
     await page.keyboard.press('ArrowLeft')
     await expect(firstFamily).toBeFocused()
     await page.keyboard.press('ArrowLeft')
@@ -579,6 +650,634 @@ test.describe('Catálogo workstation 1440×980', () => {
     await expect(
       page.getByRole('button', { name: 'Nueva Familia' }),
     ).toBeVisible()
+  })
+
+  test('covers contextual attribute assignment, definition creation, and safe retry', async ({
+    page,
+  }) => {
+    const calls: Array<{ path: string; args: Record<string, unknown> }> = []
+    let assignmentListCalls = 0
+    let newAssignmentAttempts = 0
+    const response = (value: unknown) => ({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ status: 'success', value }),
+    })
+    const item = (id: string, nombre: string) => ({
+      activo: true,
+      clave: id,
+      effective: true,
+      effectiveReasons: [],
+      id,
+      nombre,
+      revision: 1,
+    })
+    const definition = (
+      id: string,
+      nombre: string,
+      clave: string,
+      tipoDato = 'TEXTO',
+    ) => ({
+      activo: false,
+      clave,
+      effective: false,
+      effectiveReasons: ['INACTIVE'],
+      id,
+      nombre,
+      revision: 1,
+      tipoDato,
+    })
+    const assignment = (id: string, definitionId: string, orden: number) => ({
+      activo: false,
+      aplicabilidad: 'OPTIONAL',
+      definicionAtributoId: definitionId,
+      effective: false,
+      effectiveReasons: ['INACTIVE'],
+      familiaRecursoId: 'family-1',
+      id,
+      orden,
+      participaIdentidad: false,
+      revision: 1,
+      selection: 'SELECTED',
+      tipoRecursoId: 'type-1',
+    })
+    await page.route('http://127.0.0.1:3210/**', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.fulfill({ status: 204 })
+        return
+      }
+      const body = route.request().postDataJSON() as {
+        path: string
+        args?: [Record<string, unknown>]
+      }
+      const args = body.args?.[0] ?? {}
+      if (body.path.endsWith(':crearDefinicionAtributo')) {
+        calls.push({ path: body.path, args })
+        await route.fulfill(
+          response({
+            disposition: 'CREATED',
+            item: definition(
+              'definition-new',
+              'Peso nominal',
+              'PESO',
+              'NUMERO',
+            ),
+          }),
+        )
+        return
+      }
+      if (body.path.endsWith(':crearAsignacionAtributo')) {
+        calls.push({ path: body.path, args })
+        const isNew = args.definicionAtributoId === 'definition-new'
+        if (isNew) newAssignmentAttempts += 1
+        await route.fulfill(
+          response(
+            isNew && newAssignmentAttempts === 1
+              ? { status: 'error', errorMessage: 'assignment unavailable' }
+              : {
+                  disposition: 'CREATED',
+                  item: assignment(
+                    isNew ? 'assignment-new' : 'assignment-existing',
+                    args.definicionAtributoId as string,
+                    isNew ? 6 : 5,
+                  ),
+                },
+          ),
+        )
+        return
+      }
+      if (body.path.endsWith(':listarAsignacionesAtributo'))
+        assignmentListCalls += 1
+      const value = body.path.endsWith(':listarClases')
+        ? {
+            continuationCursor: null,
+            isExhausted: true,
+            items: [item('class-1', 'Materiales')],
+          }
+        : body.path.endsWith(':listarFamilias')
+          ? {
+              continuationCursor: null,
+              isExhausted: true,
+              items: [
+                {
+                  ...item('family-1', 'Canalizaciones'),
+                  claseRecursoId: 'class-1',
+                },
+              ],
+            }
+          : body.path.endsWith(':listarTipos')
+            ? {
+                continuationCursor: null,
+                isExhausted: true,
+                items: [
+                  {
+                    ...item('type-1', 'Tuberías'),
+                    aggregateStatus: 'NOT_EVALUATED',
+                    familiaRecursoId: 'family-1',
+                    violations: [],
+                  },
+                ],
+              }
+            : body.path.endsWith(':listarDefinicionesAtributo')
+              ? {
+                  continuationCursor: null,
+                  isExhausted: true,
+                  items: [definition('definition-existing', 'Peso', 'PESO')],
+                }
+              : body.path.endsWith(':listarAsignacionesAtributo')
+                ? {
+                    continuationCursor: null,
+                    isExhausted: true,
+                    items:
+                      assignmentListCalls === 1
+                        ? [
+                            assignment(
+                              'assignment-prior',
+                              'definition-prior',
+                              4,
+                            ),
+                          ]
+                        : assignmentListCalls === 2
+                          ? [
+                              assignment(
+                                'assignment-existing',
+                                'definition-existing',
+                                5,
+                              ),
+                            ]
+                          : [assignment('assignment-new', 'definition-new', 6)],
+                  }
+                : body.path.endsWith(':obtenerDefinicionAtributo')
+                  ? args.definicionAtributoId === 'definition-new'
+                    ? definition(
+                        'definition-new',
+                        'Peso nominal',
+                        'PESO',
+                        'NUMERO',
+                      )
+                    : definition(
+                        args.definicionAtributoId as string,
+                        'Peso',
+                        'PESO',
+                      )
+                  : null
+      await route.fulfill(response(value))
+    })
+
+    await page.goto('/catalogo')
+    await page.getByRole('button', { name: 'Materiales' }).click()
+    await page.getByRole('button', { name: 'Canalizaciones' }).click()
+    await page.getByRole('button', { name: 'Tuberías' }).click()
+    await page.getByRole('tab', { name: 'Resumen' }).click()
+    await page.getByRole('tab', { name: 'Atributos' }).click()
+    const trigger = page.getByRole('button', { name: 'Asignar atributo' })
+    await expect(trigger).toBeVisible()
+    await page.keyboard.press('n')
+
+    const dialog = page.getByRole('dialog', { name: 'Asignar atributo' })
+    await expect(dialog).toBeVisible()
+    await expect(
+      dialog.getByRole('searchbox', { name: 'Buscar atributo' }),
+    ).toBeFocused()
+    await expect(
+      dialog.getByText('Canalizaciones', { exact: true }),
+    ).toBeVisible()
+    await expect(dialog.getByText('Tuberías', { exact: true })).toBeVisible()
+    await expect(dialog.getByRole('textbox', { name: 'Familia' })).toHaveCount(
+      0,
+    )
+    await expect(dialog.getByRole('textbox', { name: 'Tipo' })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Nuevo Tipo' })).toHaveCount(
+      0,
+    )
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(page.getByRole('tab', { name: 'Atributos' })).toBeFocused()
+
+    await trigger.click()
+    await dialog.getByRole('button', { name: /Peso/ }).click()
+    await dialog.getByRole('button', { name: 'Guardar asignación' }).click()
+    await expect.poll(() => calls.length).toBe(1)
+    expect(calls[0]).toEqual({
+      path: 'catalogoAdmin/atributos:crearAsignacionAtributo',
+      args: {
+        activo: false,
+        aplicabilidad: 'OPTIONAL',
+        definicionAtributoId: 'definition-existing',
+        familiaRecursoId: 'family-1',
+        orden: 5,
+        participaIdentidad: false,
+        tipoRecursoId: 'type-1',
+      },
+    })
+    await expect(dialog).toHaveCount(0)
+    await expect.poll(() => assignmentListCalls).toBe(2)
+    await expect(page.getByRole('status')).toHaveText(
+      'Atributo “Peso” asignado.',
+    )
+
+    await trigger.click()
+    await dialog.getByRole('button', { name: 'Crear atributo nuevo' }).click()
+    await dialog.getByRole('textbox', { name: 'Clave' }).fill(' PESO ')
+    await dialog.getByRole('textbox', { name: 'Nombre' }).fill(' Peso nominal ')
+    await dialog.getByRole('button', { name: 'Cambiar tipo' }).click()
+    await dialog
+      .getByRole('combobox', { name: 'Tipo de dato' })
+      .selectOption('NUMERO')
+    await dialog.getByRole('button', { name: 'Continuar' }).click()
+    await expect(dialog.getByText('2 Asignación')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+    await expect(dialog.getByText('Resumen de definición')).toBeVisible()
+    expect(calls).toHaveLength(1)
+    await dialog.getByRole('button', { name: 'Crear y asignar' }).click()
+    await expect.poll(() => calls.length).toBe(3)
+    expect(calls.slice(1)).toEqual([
+      {
+        path: 'catalogoAdmin/atributos:crearDefinicionAtributo',
+        args: {
+          activo: false,
+          clave: 'PESO',
+          nombre: 'Peso nominal',
+          tipoDato: 'NUMERO',
+        },
+      },
+      {
+        path: 'catalogoAdmin/atributos:crearAsignacionAtributo',
+        args: {
+          activo: false,
+          aplicabilidad: 'OPTIONAL',
+          definicionAtributoId: 'definition-new',
+          familiaRecursoId: 'family-1',
+          orden: 6,
+          participaIdentidad: false,
+          tipoRecursoId: 'type-1',
+        },
+      },
+    ])
+    await expect(dialog.getByRole('alert')).toContainText(
+      'La definición fue creada, pero no se asignó al Tipo.',
+    )
+    await dialog.getByRole('button', { name: 'Reintentar asignación' }).click()
+    await expect.poll(() => calls.length).toBe(4)
+    expect(calls[3]).toEqual({
+      path: 'catalogoAdmin/atributos:crearAsignacionAtributo',
+      args: {
+        activo: false,
+        aplicabilidad: 'OPTIONAL',
+        definicionAtributoId: 'definition-new',
+        familiaRecursoId: 'family-1',
+        orden: 6,
+        participaIdentidad: false,
+        tipoRecursoId: 'type-1',
+      },
+    })
+    expect(
+      calls.filter((call) => call.path.endsWith(':crearDefinicionAtributo')),
+    ).toHaveLength(1)
+    expect(
+      calls.filter((call) => call.path.endsWith(':crearAsignacionAtributo')),
+    ).toHaveLength(3)
+    await expect(dialog).toHaveCount(0)
+    await expect.poll(() => assignmentListCalls).toBe(3)
+    await expect(page.getByRole('status')).toHaveText(
+      'Atributo “Peso nominal” creado y asignado.',
+    )
+  })
+
+  test('manages an OPCION attribute administrative options', async ({
+    page,
+  }) => {
+    const calls: Array<{ path: string; args: Record<string, unknown> }> = []
+    let deactivationAttempts = 0
+    const options: Array<Record<string, unknown>> = []
+    const response = (value: unknown) => ({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ status: 'success', value }),
+    })
+    const error = (code: string) => ({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({
+        errorData: { code },
+        errorMessage: 'secret dependency detail',
+        status: 'error',
+      }),
+    })
+    const item = (id: string, nombre: string) => ({
+      activo: false,
+      clave: id,
+      effective: false,
+      effectiveReasons: ['INACTIVE'],
+      id,
+      nombre,
+      revision: 1,
+    })
+    const color = () => ({
+      activo: false,
+      clave: 'ACR',
+      effective: false,
+      effectiveReasons: ['INACTIVE'],
+      id: 'definition-color',
+      nombre: 'Color',
+      revision: 1,
+      tipoDato: 'OPCION',
+    })
+    await page.route('http://127.0.0.1:3210/**', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.fulfill({ status: 204 })
+        return
+      }
+      const body = route.request().postDataJSON() as {
+        path: string
+        args?: [Record<string, unknown>]
+      }
+      const args = body.args?.[0] ?? {}
+      if (body.path.endsWith(':listarOpcionesAtributo')) {
+        await route.fulfill(
+          response({
+            continuationCursor: null,
+            isExhausted: true,
+            items: options,
+          }),
+        )
+        return
+      }
+      if (body.path.endsWith(':crearOpcionAtributo')) {
+        calls.push({ path: body.path, args })
+        const created = {
+          activo: args.activo,
+          clave: args.clave,
+          definicionAtributoId: 'definition-color',
+          effective: args.activo,
+          effectiveReasons: args.activo ? [] : ['INACTIVE'],
+          id: `option-${options.length + 1}`,
+          nombre: args.nombre,
+          revision: 1,
+          ...(args.descripcion ? { descripcion: args.descripcion } : {}),
+        }
+        options.push(created)
+        await route.fulfill(response({ disposition: 'CREATED', item: created }))
+        return
+      }
+      if (body.path.endsWith(':actualizarOpcionAtributo')) {
+        calls.push({ path: body.path, args })
+        const index = options.findIndex(
+          (option) => option.id === args.opcionAtributoId,
+        )
+        const updated = {
+          ...options[index],
+          descripcion: args.descripcion,
+          nombre: args.nombre,
+          revision: 2,
+        }
+        options[index] = updated
+        await route.fulfill(response({ disposition: 'UPDATED', item: updated }))
+        return
+      }
+      if (body.path.endsWith(':activarOpcionAtributo')) {
+        calls.push({ path: body.path, args })
+        const index = options.findIndex(
+          (option) => option.id === args.opcionAtributoId,
+        )
+        const activated = {
+          ...options[index],
+          activo: true,
+          effective: true,
+          effectiveReasons: [],
+          revision: 3,
+        }
+        options[index] = activated
+        await route.fulfill(
+          response({ disposition: 'UPDATED', item: activated }),
+        )
+        return
+      }
+      if (body.path.endsWith(':desactivarOpcionAtributo')) {
+        calls.push({ path: body.path, args })
+        deactivationAttempts += 1
+        if (deactivationAttempts === 1) {
+          await route.fulfill(error('ADMIN_DEPENDENCY_BLOCKED'))
+          return
+        }
+        const index = options.findIndex(
+          (option) => option.id === args.opcionAtributoId,
+        )
+        const deactivated = {
+          ...options[index],
+          activo: false,
+          effective: false,
+          effectiveReasons: ['INACTIVE'],
+          revision: 2,
+        }
+        options[index] = deactivated
+        await route.fulfill(
+          response({ disposition: 'UPDATED', item: deactivated }),
+        )
+        return
+      }
+      const value = body.path.endsWith(':listarClases')
+        ? {
+            continuationCursor: null,
+            isExhausted: true,
+            items: [item('class-1', 'Materiales')],
+          }
+        : body.path.endsWith(':listarFamilias')
+          ? {
+              continuationCursor: null,
+              isExhausted: true,
+              items: [
+                {
+                  ...item('family-1', 'Canalizaciones'),
+                  claseRecursoId: 'class-1',
+                },
+              ],
+            }
+          : body.path.endsWith(':listarTipos')
+            ? {
+                continuationCursor: null,
+                isExhausted: true,
+                items: [
+                  {
+                    ...item('type-1', 'Tuberías'),
+                    aggregateStatus: 'NOT_EVALUATED',
+                    familiaRecursoId: 'family-1',
+                    violations: [],
+                  },
+                ],
+              }
+            : body.path.endsWith(':listarAsignacionesAtributo')
+              ? {
+                  continuationCursor: null,
+                  isExhausted: true,
+                  items: [
+                    {
+                      activo: false,
+                      aplicabilidad: 'OPTIONAL',
+                      definicionAtributoId: 'definition-color',
+                      effective: false,
+                      effectiveReasons: ['INACTIVE'],
+                      familiaRecursoId: 'family-1',
+                      id: 'assignment-color',
+                      orden: 1,
+                      participaIdentidad: false,
+                      revision: 1,
+                      selection: 'SELECTED',
+                      tipoRecursoId: 'type-1',
+                    },
+                  ],
+                }
+              : body.path.endsWith(':obtenerDefinicionAtributo')
+                ? color()
+                : null
+      await route.fulfill(response(value))
+    })
+
+    await page.goto('/catalogo')
+    await page.getByRole('button', { name: 'Materiales' }).click()
+    await page.getByRole('button', { name: 'Canalizaciones' }).click()
+    await page.getByRole('button', { name: 'Tuberías' }).click()
+    await page.getByRole('tab', { name: 'Atributos' }).click()
+    await expect(page.getByRole('button', { name: 'Opciones' })).toHaveCount(0)
+    await expect(page.getByText('ACR · Opción')).toBeVisible()
+    await page.getByRole('button', { name: 'Mostrar detalle de Color' }).click()
+    const optionsTrigger = page.getByRole('button', { name: 'Opciones' })
+    await expect(optionsTrigger).toBeVisible()
+    await optionsTrigger.click()
+    const optionsDialog = page.getByRole('dialog', {
+      name: 'Opciones de Color',
+    })
+    await optionsDialog.getByRole('textbox', { name: 'Clave' }).fill('BLANCO')
+    await optionsDialog.getByRole('textbox', { name: 'Nombre' }).fill('Blanco')
+    await optionsDialog.getByRole('button', { name: 'Crear opción' }).click()
+    await expect(
+      optionsDialog.getByText('BLANCO', { exact: true }),
+    ).toBeVisible()
+    await optionsDialog.getByRole('textbox', { name: 'Clave' }).fill('NEGRO')
+    await optionsDialog.getByRole('textbox', { name: 'Nombre' }).fill('Negro')
+    await optionsDialog.getByRole('checkbox', { name: 'Crear activa' }).check()
+    await optionsDialog.getByRole('button', { name: 'Crear opción' }).click()
+    await expect(
+      optionsDialog.getByText('NEGRO', { exact: true }),
+    ).toBeVisible()
+    expect(calls).toEqual([
+      {
+        path: 'catalogoAdmin/atributos:crearOpcionAtributo',
+        args: {
+          activo: false,
+          clave: 'BLANCO',
+          definicionAtributoId: 'definition-color',
+          nombre: 'Blanco',
+        },
+      },
+      {
+        path: 'catalogoAdmin/atributos:crearOpcionAtributo',
+        args: {
+          activo: true,
+          clave: 'NEGRO',
+          definicionAtributoId: 'definition-color',
+          nombre: 'Negro',
+        },
+      },
+    ])
+
+    await optionsDialog.getByRole('button', { name: 'Editar Blanco' }).click()
+    await optionsDialog
+      .getByRole('textbox', { name: 'Nombre' })
+      .fill('Blanco cálido')
+    await optionsDialog
+      .getByRole('textbox', { name: 'Descripción' })
+      .fill('Tono claro y cálido.')
+    await optionsDialog.getByRole('button', { name: 'Guardar edición' }).click()
+    await expect.poll(() => calls.length).toBe(3)
+    expect(calls[2]).toEqual({
+      path: 'catalogoAdmin/atributos:actualizarOpcionAtributo',
+      args: {
+        descripcion: 'Tono claro y cálido.',
+        expectedRevision: 1,
+        nombre: 'Blanco cálido',
+        opcionAtributoId: 'option-1',
+      },
+    })
+    const refreshedOption = optionsDialog
+      .getByRole('button', { name: 'Editar Blanco cálido' })
+      .locator('xpath=ancestor::li')
+    await expect(refreshedOption).toContainText('Tono claro y cálido.')
+    await expect(
+      optionsDialog.getByRole('textbox', { name: 'Clave' }),
+    ).toHaveValue('')
+    await expect(
+      optionsDialog.getByRole('textbox', { name: 'Nombre' }),
+    ).toHaveValue('')
+    await expect(
+      optionsDialog.getByRole('textbox', { name: 'Descripción' }),
+    ).toHaveValue('')
+    await expect(
+      optionsDialog.getByRole('checkbox', { name: 'Crear activa' }),
+    ).not.toBeChecked()
+
+    await optionsDialog
+      .getByRole('button', { name: 'Activar Blanco cálido' })
+      .click()
+    await expect.poll(() => calls.length).toBe(4)
+    expect(calls[3]).toEqual({
+      path: 'catalogoAdmin/atributos:activarOpcionAtributo',
+      args: { expectedRevision: 2, opcionAtributoId: 'option-1' },
+    })
+    await expect(
+      optionsDialog.getByLabel('Estado de Blanco cálido'),
+    ).toHaveText('ActivaEfectiva')
+    const optionPreview = page.locator('.catalog-option-preview').first()
+    await expect(optionPreview).toContainText('Blanco cálido')
+    await expect(optionPreview).toContainText('Negro')
+    await expect(optionPreview).toContainText('2 activas · 0 inactivas')
+
+    await optionsDialog
+      .getByRole('button', { name: 'Desactivar Negro' })
+      .click()
+    const confirmation = optionsDialog.getByRole('alertdialog', {
+      name: 'Desactivar opción',
+    })
+    await expect(confirmation).toBeVisible()
+    await confirmation
+      .getByRole('button', { name: 'Desactivar opción' })
+      .click()
+    await expect(optionsDialog.getByRole('alert')).toContainText(
+      'No se puede desactivar esta opción porque está en uso por recursos, reglas o compatibilidad.',
+    )
+    await expect(optionsDialog.getByRole('alert')).not.toContainText(
+      'secret dependency detail',
+    )
+
+    await optionsDialog
+      .getByRole('button', { name: 'Desactivar Negro' })
+      .click()
+    await optionsDialog
+      .getByRole('alertdialog', { name: 'Desactivar opción' })
+      .getByRole('button', { name: 'Desactivar opción' })
+      .click()
+    await expect.poll(() => calls.length).toBe(6)
+    expect(calls.slice(4)).toEqual([
+      {
+        path: 'catalogoAdmin/atributos:desactivarOpcionAtributo',
+        args: { expectedRevision: 1, opcionAtributoId: 'option-2' },
+      },
+      {
+        path: 'catalogoAdmin/atributos:desactivarOpcionAtributo',
+        args: { expectedRevision: 1, opcionAtributoId: 'option-2' },
+      },
+    ])
+    await expect(optionsDialog.getByLabel('Estado de Negro')).toHaveText(
+      'InactivaNo efectiva',
+    )
+    await expect(optionPreview).toContainText('1 activa · 1 inactiva')
+    await expect(optionsDialog).toBeVisible()
   })
 
   test('passes axe at the approved workstation viewport', async ({ page }) => {

@@ -1,0 +1,9 @@
+{
+  "seq": 141,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 967,
+  "timestamp": "2026-08-30T17:11:18.589Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: host rejected command: PatchNodeData { node_id: NodeId(\\\"n1645\\\"), patch_json: \\\"{\\\\\\\"content\\\\\\\":\\\\\\\"La unidad “m” no coincide con la regla de la familia.\\\\\\\\nRevisá la equivalencia antes de publicar.\\\\\\\",\\\\\\\"fontSize\\\\\\\":13,\\\\\\\"lineHeight\\\\\\\":1.35}\\\", page_id: Some(\\\"n1317\\\") }\"}],\"isError\":true}"
+}

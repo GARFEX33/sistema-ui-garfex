@@ -1,0 +1,9 @@
+{
+  "seq": 48,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 439,
+  "timestamp": "2026-08-30T06:08:49.152Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"code\":-32602,\"message\":\"malformed tool call: unparseable or structured arguments\"}"
+}

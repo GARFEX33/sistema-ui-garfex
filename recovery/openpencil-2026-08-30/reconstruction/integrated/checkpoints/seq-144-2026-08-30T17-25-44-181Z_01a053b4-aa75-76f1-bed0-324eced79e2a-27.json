@@ -1,0 +1,17 @@
+{
+  "seq": 144,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 27,
+  "timestamp": "2026-08-30T17:26:33.832Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":10,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1317\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1319\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":12,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1504\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"wrote\\\":\\\"true\\\"}\"}]}}\n{\"jsonrpc\":\"2.0\",\"id\":14,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"wrote\\\":\\\"true\\\"}\"}]}}\n{\"jsonrpc\":\"2.0\",\"id\":15,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"wrote\\\":\\\"true\\\"}\"}]}}\n",
+      "stderr": ""
+    }
+  }
+}

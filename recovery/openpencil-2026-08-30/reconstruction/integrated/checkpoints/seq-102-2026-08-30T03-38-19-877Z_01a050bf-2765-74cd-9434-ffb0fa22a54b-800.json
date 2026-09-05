@@ -1,0 +1,9 @@
+{
+  "seq": 102,
+  "source_session": "2026-08-30T03-38-19-877Z_01a050bf-2765-74cd-9434-ffb0fa22a54b",
+  "source_line": 800,
+  "timestamp": "2026-08-30T07:18:30.691Z",
+  "kind": "mcp",
+  "ok": false,
+  "error": "Error: {\"content\":[{\"type\":\"text\",\"text\":\"Error: index is required\"}],\"isError\":true}"
+}

@@ -1,0 +1,10 @@
+{
+  "source_line": 1246,
+  "kind": "file",
+  "ok": true,
+  "observed": {
+    "kind": "file",
+    "path": "/tmp/build-keyboard-variants.js",
+    "operation": "write"
+  }
+}

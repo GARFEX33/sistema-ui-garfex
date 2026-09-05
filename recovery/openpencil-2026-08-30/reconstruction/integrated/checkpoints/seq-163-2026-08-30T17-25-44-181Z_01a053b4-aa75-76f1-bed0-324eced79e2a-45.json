@@ -1,0 +1,17 @@
+{
+  "seq": 163,
+  "source_session": "2026-08-30T17-25-44-181Z_01a053b4-aa75-76f1-bed0-324eced79e2a",
+  "source_line": 45,
+  "timestamp": "2026-08-30T17:29:28.498Z",
+  "kind": "shell",
+  "ok": true,
+  "observed": {
+    "kind": "shell",
+    "result": {
+      "code": 0,
+      "signal": null,
+      "stdout": "{\"jsonrpc\":\"2.0\",\"id\":60,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1683\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":61,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1685\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":62,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Error: pageId must be a known page id or u32 index, got \\\"n1687\\\"\"}],\"isError\":true}}\n{\"jsonrpc\":\"2.0\",\"id\":70,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"pageCount\\\":10,\\\"activePageIndex\\\":8,\\\"pages\\\":[{\\\"id\\\":\\\"n380\\\",\\\"name\\\":\\\"01 Referencia de marca\\\"},{\\\"id\\\":\\\"n465\\\",\\\"name\\\":\\\"02 Tokens de interfaz\\\"},{\\\"id\\\":\\\"n564\\\",\\\"name\\\":\\\"03 Fundamentos UX\\\"},{\\\"id\\\":\\\"n1425\\\",\\\"name\\\":\\\"04 Mapa operativo\\\"},{\\\"id\\\":\\\"n1427\\\",\\\"name\\\":\\\"05 Maestro de Recursos\\\"},{\\\"id\\\":\\\"n1429\\\",\\\"name\\\":\\\"06 Flujo XML y precios\\\"},{\\\"id\\\":\\\"n1431\\\",\\\"name\\\":\\\"06 Recursos y catálogos\\\"},{\\\"id\\\":\\\"n1433\\\",\\\"name\\\":\\\"04A Concepto · Campo de operación\\\"},{\\\"id\\\":\\\"n1435\\\",\\\"name\\\":\\\"04B Concepto · Flujo continuo\\\"},{\\\"id\\\":\\\"n1437\\\",\\\"name\\\":\\\"04C Concepto · Intención estructurada\\\"}]}\"}]}}",
+      "stderr": ""
+    }
+  }
+}

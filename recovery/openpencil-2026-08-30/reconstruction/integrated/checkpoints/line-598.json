@@ -1,0 +1,16 @@
+{
+  "source_line": 598,
+  "kind": "mcp",
+  "ok": true,
+  "observed": {
+    "kind": "mcp",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"results\":[],\"nodeCount\":70,\"applied\":false,\"hint\":\"Transaction rolled back: 3 operation(s) failed, so NONE of this batch was applied — the document is unchanged. Fix the failing line(s) and resend the whole corrected batch.\",\"errors\":[{\"line\":\"U(\\\"n1306\\\", {closed: true})\",\"error\":\"Update target not found: n1306\"},{\"line\":\"U(\\\"n1308\\\", {closed: true})\",\"error\":\"Update target not found: n1308\"},{\"line\":\"U(\\\"n1311\\\", {closed: true, fill: \\\"#F2D031\\\"})\",\"error\":\"Update target not found: n1311\"}]}"
+        }
+      ]
+    }
+  }
+}
