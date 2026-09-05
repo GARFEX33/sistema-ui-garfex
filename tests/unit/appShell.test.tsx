@@ -7,6 +7,54 @@ import { AppProviders } from '../../src/app/providers/AppProviders'
 import { createAppRouter } from '../../src/app/router'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 import { useKeyboardController } from '../../src/shared/keyboard/keyboardControllerContext'
+import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
+
+const resourcesMasterApiFactory = vi.hoisted(() => vi.fn())
+vi.mock(
+  '../../src/features/resources-master/resourcesMaster.api',
+  async () => {
+    const actual = await vi.importActual<
+      typeof import('../../src/features/resources-master/resourcesMaster.api')
+    >('../../src/features/resources-master/resourcesMaster.api')
+    return { ...actual, createResourcesMasterConvexApi: resourcesMasterApiFactory }
+  },
+)
+
+const resourceSummary = (id: string, nombre: string) => ({
+  id,
+  identificadorTecnico: `REC-${id}`,
+  nombre,
+  tipoRecursoId: 'tipo-1',
+  unidadId: 'unidad-1',
+  activo: true,
+  revision: 1,
+  classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
+})
+
+function stubResourcesMasterApi() {
+  const api = {
+    listResources: vi.fn(async () => ({
+      page: [
+        resourceSummary('r1', 'Cable UTP'),
+        resourceSummary('r2', 'Motor 1/2 HP'),
+      ],
+      isDone: true,
+      continueCursor: '',
+    })),
+    searchResources: vi.fn(async () => ({
+      page: [],
+      isDone: true,
+      continueCursor: '',
+    })),
+    getResourceDetail: vi.fn(async () => null),
+    createResource: vi.fn(),
+    updateResource: vi.fn(),
+    activateResource: vi.fn(),
+    deactivateResource: vi.fn(),
+  } as ResourcesMasterApi
+  resourcesMasterApiFactory.mockReturnValue(api)
+  return api
+}
 
 function renderAt(path: string) {
   const history = createMemoryHistory({ initialEntries: [path] })
@@ -52,7 +100,7 @@ describe('runtime shell and operations inbox entry', () => {
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
-    expect(screen.getAllByRole('link')).toHaveLength(2)
+    expect(screen.getAllByRole('link')).toHaveLength(3)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(storageSpy).not.toHaveBeenCalled()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
@@ -72,7 +120,7 @@ describe('runtime shell and operations inbox entry', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getAllByRole('link')).toHaveLength(2)
+    expect(screen.getAllByRole('link')).toHaveLength(3)
     expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
     expect(screen.getByText('CONFIGURACIÓN DEL MODELO')).toBeVisible()
     expect(screen.getByText('Configuración / Catálogo')).toBeVisible()
@@ -81,17 +129,22 @@ describe('runtime shell and operations inbox entry', () => {
 })
 
 describe('sidebar keyboard navigation', () => {
-  it('keeps only the two real links in the immediate group and handles local navigation', async () => {
+  it('keeps only the three real links in the immediate group and handles local navigation', async () => {
     renderAt('/bandeja')
     const inbox = await screen.findByRole('link', { name: 'Bandeja' })
+    const resources = screen.getByRole('link', { name: 'Recursos maestros' })
     const catalog = screen.getByRole('link', { name: 'Catálogo' })
-    expect(screen.getAllByRole('link')).toHaveLength(2)
+    expect(screen.getAllByRole('link')).toHaveLength(3)
     inbox.focus()
     fireEvent.keyDown(inbox, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(resources)
+    fireEvent.keyDown(resources, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(resources)
+    fireEvent.keyDown(resources, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(inbox)
     fireEvent.keyDown(catalog, { key: 'Home' })
     expect(document.activeElement).toBe(inbox)
@@ -241,6 +294,52 @@ describe('sidebar triangulation', () => {
     expect(rectSpy).not.toHaveBeenCalled()
     clientSpy.mockRestore()
     rectSpy.mockRestore()
+  })
+})
+
+describe('resources maestros keyboard navigation', () => {
+  it('moves focus between the search box and the first resource row with ArrowDown/ArrowUp', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('Cable UTP')
+    const search = screen.getByPlaceholderText('Nombre del recurso')
+    search.focus()
+    fireEvent.keyDown(search, { key: 'ArrowDown' })
+    const firstRow = document.querySelector('[data-resource-row]')
+    expect(document.activeElement).toBe(firstRow)
+    fireEvent.keyDown(firstRow!, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(search)
+  })
+
+  it('jumps to the search box with B from anywhere on the screen', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('Cable UTP')
+    const search = screen.getByPlaceholderText('Nombre del recurso')
+    const firstRow = document.querySelector('[data-resource-row]') as HTMLElement
+    firstRow.focus()
+    fireEvent.keyDown(document, { key: 'b' })
+    expect(document.activeElement).toBe(search)
+  })
+
+  it('does not steal B from an unrelated editing context', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('Cable UTP')
+    const input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    fireEvent.keyDown(input, { key: 'b' })
+    expect(document.activeElement).toBe(input)
+    input.remove()
+  })
+
+  it('does not fire B outside the recursos surface', async () => {
+    renderAt('/bandeja')
+    const inbox = await screen.findByRole('link', { name: 'Bandeja' })
+    inbox.focus()
+    fireEvent.keyDown(document, { key: 'b' })
+    expect(document.activeElement).toBe(inbox)
   })
 })
 

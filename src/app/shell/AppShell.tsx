@@ -80,6 +80,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         firstClass?.click()
         return
       }
+      if (event.currentTarget.dataset.spatialId === 'sidebar.recursos') {
+        const firstResource = boundaryRoot.querySelector<HTMLElement>(
+          '[data-resource-row][data-spatial-id]',
+        )
+        focusRow(firstResource)
+        return
+      }
       focusSpatialTarget({
         origin: event.currentTarget,
         direction: 'right',
@@ -102,6 +109,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       const target = event.target
       const boundaryRoot = workspaceMainRef.current
       if (!(target instanceof HTMLElement) || !boundaryRoot) return
+      if (target.dataset.spatialId === 'resources.search') {
+        if (event.key !== 'ArrowDown') return
+        event.preventDefault()
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-resource-row][data-spatial-id]',
+          ),
+        )
+        return
+      }
       if (target.getAttribute('role') === 'tab') {
         if (
           event.key === 'ArrowDown' &&
@@ -140,6 +157,43 @@ export function AppShell({ children }: { children: ReactNode }) {
         if (nextTab && nextTab !== target) {
           focusRow(nextTab)
           nextTab.click()
+        }
+        return
+      }
+      const resourceRow = target.closest<HTMLElement>('[data-resource-row]')
+      if (resourceRow) {
+        event.preventDefault()
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          const rows = [
+            ...boundaryRoot.querySelectorAll<HTMLElement>(
+              '[data-resource-row]',
+            ),
+          ]
+          const index = rows.indexOf(resourceRow)
+          if (event.key === 'ArrowUp' && index === 0) {
+            focusRow(
+              document.querySelector<HTMLElement>(
+                '[data-spatial-id="resources.search"]',
+              ),
+            )
+            return
+          }
+          const next = Math.max(
+            0,
+            Math.min(
+              rows.length - 1,
+              index + (event.key === 'ArrowDown' ? 1 : -1),
+            ),
+          )
+          focusRow(rows[next] ?? null)
+          return
+        }
+        if (event.key === 'ArrowLeft') {
+          focusRow(
+            document.querySelector<HTMLElement>(
+              '[data-spatial-id="sidebar.recursos"]',
+            ),
+          )
         }
         return
       }
@@ -250,14 +304,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [])
   const closeCommand = useCallback(() => setCommandOpen(false), [])
   const openHelp = useCallback(
-    (_surface: 'bandeja' | 'catalog', opener: HTMLElement | null) => {
+    (
+      _surface: 'bandeja' | 'catalog' | 'recursos',
+      opener: HTMLElement | null,
+    ) => {
       helpOpenerRef.current = opener?.isConnected ? opener : null
       setHelpOpen(true)
     },
     [],
   )
   const closeHelp = useCallback(() => setHelpOpen(false), [])
-  const activeSurface = pathname === '/catalogo' ? 'catalog' : 'bandeja'
+  const activeSurface =
+    pathname === '/catalogo'
+      ? 'catalog'
+      : pathname === '/recursos'
+        ? 'recursos'
+        : 'bandeja'
 
   useEffect(() => {
     if (commandOpen) {
@@ -312,7 +374,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               Bandeja
             </Link>
-            <span className="navigation-static">Recursos maestros</span>
+            <Link
+              ref={(link) => {
+                sidebarLinks.current[1] = link
+              }}
+              to="/recursos"
+              data-spatial-id="sidebar.recursos"
+              onKeyDown={(event) => handleSidebarKeyDown(event, 1)}
+              activeProps={{ className: 'navigation-link is-active' }}
+              className="navigation-link"
+            >
+              Recursos maestros
+            </Link>
             <span className="navigation-static">Compras</span>
             <span className="navigation-static is-current">Configuración</span>
             <p className="navigation-section-label model-navigation-label">
@@ -325,11 +398,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="navigation-static">Presentación…</span>
             <Link
               ref={(link) => {
-                sidebarLinks.current[1] = link
+                sidebarLinks.current[2] = link
               }}
               to="/catalogo"
               data-spatial-id="sidebar.catalogo"
-              onKeyDown={(event) => handleSidebarKeyDown(event, 1)}
+              onKeyDown={(event) => handleSidebarKeyDown(event, 2)}
               activeProps={{ className: 'navigation-link is-active' }}
               className="navigation-link navigation-catalog-link"
             >
@@ -343,7 +416,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="topbar-route">
               {pathname === '/catalogo'
                 ? 'Configuración / Catálogo'
-                : 'Entrada operativa / Bandeja'}
+                : pathname === '/recursos'
+                  ? 'Recursos maestros'
+                  : 'Entrada operativa / Bandeja'}
             </span>
             <div className="topbar-actions">
               <CommandEntry

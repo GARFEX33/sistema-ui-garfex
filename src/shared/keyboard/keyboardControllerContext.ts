@@ -1,7 +1,7 @@
 import { createContext, useContext, useSyncExternalStore } from 'react'
 import type { KeyboardCommand } from './keyboardCommandRegistry'
 
-export type KeyboardSurface = 'bandeja' | 'catalog'
+export type KeyboardSurface = 'bandeja' | 'catalog' | 'recursos'
 
 export type ContextualActionId =
   | 'catalog.new-class'
@@ -9,6 +9,7 @@ export type ContextualActionId =
   | 'catalog.new-type'
   | 'catalog.edit-attribute'
   | 'catalog.manage-options'
+  | 'resources.new-resource'
 
 export type KeyboardActionTarget = {
   root: () => HTMLElement | null

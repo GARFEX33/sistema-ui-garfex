@@ -86,7 +86,7 @@ test.describe('Catálogo workstation 1440×980', () => {
     await expect(
       page.getByRole('heading', { name: 'Catálogo', exact: true }),
     ).toBeVisible()
-    await expect(page.getByRole('link')).toHaveCount(2)
+    await expect(page.getByRole('link')).toHaveCount(3)
     await expect(page.getByRole('link', { name: 'Catálogo' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -97,7 +97,7 @@ test.describe('Catálogo workstation 1440×980', () => {
     for (const name of ['Clases', 'Familias', 'Tipos']) {
       await expect(page.getByRole('region', { name })).toBeVisible()
     }
-    await expect(page.getByRole('link')).toHaveCount(2)
+    await expect(page.getByRole('link')).toHaveCount(3)
 
     const trigger = page.getByRole('button', { name: 'Nueva Clase' })
     await trigger.click()

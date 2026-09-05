@@ -4,6 +4,7 @@ export type KeyboardAction =
   | 'contextual-new'
   | 'contextual-edit'
   | 'contextual-options'
+  | 'contextual-search'
   | 'contextual-help'
   | 'spatial-navigation'
   | null
@@ -27,6 +28,7 @@ export type KeyboardReason =
   | 'contextual-new'
   | 'contextual-edit'
   | 'contextual-options'
+  | 'contextual-search'
   | 'contextual-help'
   | 'no-action'
 export interface KeyboardArbitrationDecision {
@@ -104,6 +106,11 @@ export function arbitrateKeyboardEvent(
   if (lowerKey === 'o') {
     if (!event.ctrlKey && !event.metaKey && !event.altKey)
       return decision('global', 'contextual-options', 'contextual-options')
+    return decision('none', 'modifier')
+  }
+  if (lowerKey === 'b') {
+    if (!event.ctrlKey && !event.metaKey && !event.altKey)
+      return decision('global', 'contextual-search', 'contextual-search')
     return decision('none', 'modifier')
   }
   if (key === '?') {

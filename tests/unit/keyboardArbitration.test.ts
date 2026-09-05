@@ -217,7 +217,13 @@ describe('global command keyboard arbitration', () => {
       arbitrateKeyboardEvent(keyEvent({ key: 'o', ctrlKey: false })).action,
     ).toBe('contextual-options')
     expect(
+      arbitrateKeyboardEvent(keyEvent({ key: 'b', ctrlKey: false })).action,
+    ).toBe('contextual-search')
+    expect(
       arbitrateKeyboardEvent(keyEvent({ key: 'e', ctrlKey: true })).reason,
+    ).toBe('modifier')
+    expect(
+      arbitrateKeyboardEvent(keyEvent({ key: 'b', ctrlKey: true })).reason,
     ).toBe('modifier')
   })
   it('preserves exact platform Ctrl/Cmd+K without side effects', () => {

@@ -154,11 +154,9 @@ describe('catalog hierarchy boundaries', () => {
   })
 
   it('keeps only approved destinations and read-only visual authority', () => {
-    expect(shell.match(/<Link/g)).toHaveLength(2)
-    expect(shell).not.toMatch(
-      /to="\/(recursos|compras|atributos|presentaci[oó]n)/i,
-    )
-    expect(routes).not.toMatch(/recursos|atributos|presentaci[oó]n/i)
+    expect(shell.match(/<Link/g)).toHaveLength(3)
+    expect(shell).not.toMatch(/to="\/(compras|atributos|presentaci[oó]n)/i)
+    expect(routes).not.toMatch(/atributos|presentaci[oó]n/i)
     expect(
       readFileSync(
         join(process.cwd(), 'design-catalog-hierarchy-edit.op'),
