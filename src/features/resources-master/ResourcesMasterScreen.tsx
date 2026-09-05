@@ -59,7 +59,7 @@ export function ResourcesMasterScreen() {
   const [criteria, setCriteria] = useState<ResourcesListCriteria>({
     searchText: '',
   })
-  const { items, status, isDone, loadMore, retry } =
+  const { items, status, isDone, loadMore, retry, refetchActive } =
     useResourcesMasterListQuery(api, criteria)
 
   useEffect(() => {
@@ -144,7 +144,14 @@ export function ResourcesMasterScreen() {
             Recursos maestros
           </h1>
         }
-        action={<CrearRecursoSurface api={api} onCreated={() => undefined} />}
+        action={
+          <CrearRecursoSurface
+            api={api}
+            onCreated={() => {
+              void refetchActive()
+            }}
+          />
+        }
       />
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <WorkCard aria-labelledby="resources-hierarchy-title">

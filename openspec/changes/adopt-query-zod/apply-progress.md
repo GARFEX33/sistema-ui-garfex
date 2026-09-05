@@ -5,11 +5,11 @@
 - **Date:** 2026-09-24
 - **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
 - **Change / delivery:** `adopt-query-zod` / local `feature-branch-chain`; individual branch names are recorded by their commits.
-- **Current state:** A, B, C1, C2, and D completed; E is the next pending work unit.
+- **Current state:** A, B, C1, C2, D, and E1a completed; E1b and E2 are pending future-branch work units.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
 - **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
-- **Delivery boundary:** feature-branch chain `A → B → C1 → C2 → D → E`; every completed unit remains below 400 changed lines.
+- **Delivery boundary:** feature-branch chain `A → B → C1 → C2 → D → E1a → E1b → E2`; every completed unit remains below 400 changed lines.
 
 ## Completed implementation tasks and persisted evidence
 
@@ -178,3 +178,25 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Regression:** The existing screen test parses `ResourcesMasterScreen.tsx` as TSX with TypeScript parent nodes, finds exactly one `.current` assignment for each ref structurally, and requires each to be inside a React committed-effect callback. Effect ordering and debounce behavior remain covered by the existing behavioral cases.
 - **Completion gate:** The Slice D task rows remain complete because the required focused Vitest command passed with 2 files / 25 tests; targeted lint/Prettier, `pnpm exec tsc --noEmit -p tsconfig.json`, and `git diff --check` also passed.
 - **Final current diff count:** **357 authored lines** (261 additions, 96 deletions), below the 400-line budget.
+
+## Slice E1 scope split — reviewer finding
+
+- **Review finding:** The proposed E1 architecture guard was near the 400-line budget but still incomplete: it did not robustly resolve import bindings or member syntax, so aliases, namespace/computed members, Zod subpaths, and `defaultOptions` variants could evade or confuse its assertions. Patching that guard on this branch would combine the active-refresh behavior with an overstated architecture-hardening claim.
+- **Decision:** One honest split replaces E1. **E1a (current branch)** contains only active-observer post-create refetch behavior and its focused unit test. **E1b (future branch)** is pending and owns the full AST/binding-aware Query/Zod/Convex/provider/action guardrails. E2 now depends on E1b. No E1b or E2 implementation, branch creation, commit, dependency, or unrelated runtime change was made here.
+- **Restoration:** `tests/architecture/queryZodBoundaries.test.ts` was restored exactly to its HEAD state. Its existing provider/Convex boundary coverage remains a regression check; it is not E1a architecture hardening.
+
+## Slice E1a — active-observer post-create refetch
+
+- **Work unit:** E1a only. E1b architecture hardening, E2 browser regression, repository-wide verification, and parent lifecycle reconciliation/review remain unstarted.
+- **RED:** Added `tests/unit/resourcesMasterScreenRefetch.test.tsx` first. `pnpm exec vitest run tests/unit/resourcesMasterScreenRefetch.test.tsx` exited 1: 1 file / 1 failed test; the expected active-list refetch had 1 call instead of 2.
+- **GREEN:** Changed only the screen callback to `void refetchActive()` after `CrearRecursoSurface` invokes its existing confirmed-creation callback.
+- **TRIANGULATE:** The focused unit case seeds a distinct exact cache key and proves it remains unchanged and idle after confirmed creation.
+- **REFACTOR:** Kept the callback and fresh-`QueryClient` test harness minimal; no architecture guardrail code is part of E1a.
+
+### Slice E1a validation and rollback
+
+- `pnpm exec vitest run tests/unit/resourcesMasterScreenRefetch.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` exited 0 — 3 files / 26 tests passed. Restored-existing regression `pnpm exec vitest run tests/architecture/queryZodBoundaries.test.ts` exited 0 — 1 file / 1 test passed.
+- Targeted `pnpm exec eslint src/features/resources-master/ResourcesMasterScreen.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/queryZodBoundaries.test.ts`, targeted `pnpm exec prettier --check openspec/changes/adopt-query-zod/tasks.md openspec/changes/adopt-query-zod/apply-progress.md src/features/resources-master/ResourcesMasterScreen.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/queryZodBoundaries.test.ts`, direct `pnpm exec tsc --noEmit -p tsconfig.json`, and `git diff --check` each exited 0. Direct TypeScript checking avoids route generation outside this scoped work unit. Runtime harness: N/A — explicitly deferred to E2.
+- **Rollback boundary:** remove only the `onCreated` refresh callback, `tests/unit/resourcesMasterScreenRefetch.test.tsx`, and E1a task/progress evidence. Preserve the restored `tests/architecture/queryZodBoundaries.test.ts`, C1/C2 query behavior, and confirmed backend creations.
+- **Final E1a count:** **214 authored lines** (**183 additions**, **31 deletions**), below the 400-line budget.
+- **Commit verdict:** E1a is a single commit-ready work unit: required focused validation passed, no commit was created in delegated scope.

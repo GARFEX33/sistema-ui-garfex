@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field                   | Value                                                             |
-| ----------------------- | ----------------------------------------------------------------- |
-| Estimated changed lines | 1,120–1,570 total; each review slice is estimated below 400       |
-| 400-line budget risk    | High                                                              |
-| Chained PRs recommended | Yes                                                               |
-| Suggested split         | PR 1 (A) → PR 2 (B) → PR 3 (C1) → PR 4 (C2) → PR 5 (D) → PR 6 (E) |
-| Delivery strategy       | ask-on-risk                                                       |
-| Chain strategy          | feature-branch-chain                                              |
+| Field                   | Value                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| Estimated changed lines | 1,120–1,570 total; each review slice is estimated below 400                                  |
+| 400-line budget risk    | High                                                                                         |
+| Chained PRs recommended | Yes                                                                                          |
+| Suggested split         | PR 1 (A) → PR 2 (B) → PR 3 (C1) → PR 4 (C2) → PR 5 (D) → PR 6 (E1a) → PR 7 (E1b) → PR 8 (E2) |
+| Delivery strategy       | ask-on-risk                                                                                  |
+| Chain strategy          | feature-branch-chain                                                                         |
 
 Decision needed before apply: No — resolved by the user
 Chained PRs recommended: Yes
@@ -22,14 +22,16 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 ## Slice plan and boundaries
 
-| Slice                               | Estimate | Depends on            | Start → finish boundary                                                                             | Rollback boundary                                                                                                                                              |
-| ----------------------------------- | -------: | --------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A — provider                        |  140–210 | Verified prerequisite | No Query provider → stable per-mount provider with no consumers                                     | Remove the `AppProviders` wrapper/initializer and its tests; no persistent data exists.                                                                        |
-| B — list transport                  |  180–260 | Verified prerequisite | Manual list parser → Zod-backed `parseResourceListPage` with identical public DTO                   | Restore only the manual list-envelope/list-summary path in `resourcesMaster.api.ts`; leave non-list parsers untouched.                                         |
-| C1 — query identity and read model  |  220–320 | A, B                  | No hook → isolated `useInfiniteQuery` identity/read projection without screen consumer              | Remove `useResourcesMasterListQuery.ts` and its focused C1 tests; A may remain inert.                                                                          |
-| C2 — query actions and concurrency  |  260–360 | C1                    | C1 read model → key-scoped semantic actions and continuation/retry concurrency                      | Restore the C1 read-model return shape and remove only C2 action/concurrency code and tests.                                                                   |
-| D — screen migration                |  280–380 | C2                    | Manual list controller wired to screen → Query hook projects onto unchanged JSX                     | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests.      |
-| E — explicit refresh and guardrails |  220–340 | C2, D                 | No Query refresh/allowlist evidence → active-list refresh and complete boundary/regression evidence | Restore the `CrearRecursoSurface` callback to the previous controller start path and remove only E tests/guards; confirmed backend creations are not reverted. |
+| Slice                                                | Estimate | Depends on            | Start → finish boundary                                                                                                | Rollback boundary                                                                                                                                         |
+| ---------------------------------------------------- | -------: | --------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — provider                                         |  140–210 | Verified prerequisite | No Query provider → stable per-mount provider with no consumers                                                        | Remove the `AppProviders` wrapper/initializer and its tests; no persistent data exists.                                                                   |
+| B — list transport                                   |  180–260 | Verified prerequisite | Manual list parser → Zod-backed `parseResourceListPage` with identical public DTO                                      | Restore only the manual list-envelope/list-summary path in `resourcesMaster.api.ts`; leave non-list parsers untouched.                                    |
+| C1 — query identity and read model                   |  220–320 | A, B                  | No hook → isolated `useInfiniteQuery` identity/read projection without screen consumer                                 | Remove `useResourcesMasterListQuery.ts` and its focused C1 tests; A may remain inert.                                                                     |
+| C2 — query actions and concurrency                   |  260–360 | C1                    | C1 read model → key-scoped semantic actions and continuation/retry concurrency                                         | Restore the C1 read-model return shape and remove only C2 action/concurrency code and tests.                                                              |
+| D — screen migration                                 |  280–380 | C2                    | Manual list controller wired to screen → Query hook projects onto unchanged JSX                                        | Restore `createResourcesMasterListController` and `useSyncExternalStore` wiring in `ResourcesMasterScreen.tsx`; retain the existing controller and tests. |
+| E1a — active-observer post-create refetch            |   80–140 | C2, D                 | No confirmed-create refresh → refetch only the active observed list key with one focused unit test                     | Remove only the screen callback, E1a refetch test, and E1a evidence; confirmed backend creations are not reverted.                                        |
+| E1b — binding-aware architecture guardrails (future) |  260–380 | E1a                   | HEAD architecture guard → robust Query/Zod/Convex/provider/action boundary coverage, including syntax/binding variants | Restore the architecture guard and E1b evidence; E1a post-create behavior remains independently reviewable.                                               |
+| E2 — browser regression and lifecycle reconciliation |  180–280 | E1b                   | E1b guardrails → focused browser regression, final repository verification, and parent reconciliation/review receipts  | Remove only E2 E2E/verification evidence after deciding the parent lifecycle disposition; E1a/E1b remain independently reviewable.                        |
 
 ## A — Provider transversal mínimo (140–210 lines)
 
@@ -42,7 +44,7 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 ## B — Frontera Zod de la lista (180–260 lines)
 
-**Focused verification:** `pnpm test -- tests/unit/resourcesMasterApi.test.ts` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun that command and `pnpm typecheck`. **Runtime harness:** N/A — this is a transport-boundary-only slice; observable UI coverage belongs to D and E.
+**Focused verification:** `pnpm test -- tests/unit/resourcesMasterApi.test.ts` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun that command and `pnpm typecheck`. **Runtime harness:** N/A — this is a transport-boundary-only slice; observable UI coverage belongs to D, E1a, E1b, and E2.
 
 - [x] **RED:** Extend `tests/unit/resourcesMasterApi.test.ts` with failing list-only equivalence cases for opaque IDs, `organizacionId` absent/present, all three classification states, string-only reasons, ignored extra envelope/item/status fields, and invalid envelope/item/status values that expose exactly `Invalid resources master response` rather than payload or `ZodError`. <!-- sdd-owner: implementation -->
 - [x] **GREEN:** In `src/features/resources-master/resourcesMaster.api.ts`, add private Zod 4 schemas and an explicit projection used only by exported `parseResourceListPage`; retain its public return type and `bad()` seam, preserve references/copies and optionality, and do not change detail, context, creation, mutation, or transport parsers. <!-- sdd-owner: implementation -->
@@ -69,24 +71,42 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 ## D — Criterio atómico y wiring de pantalla (280–380 lines)
 
-**Focused verification:** `pnpm test -- tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun the focused command and `pnpm typecheck`. **Runtime harness:** N/A — the workstation browser regression is intentionally deferred to E, while the component flow is covered in this slice.
+**Focused verification:** `pnpm test -- tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` (RED is expected to fail before GREEN; GREEN/TRIANGULATE/REFACTOR must exit 0); after REFACTOR rerun the focused command and `pnpm typecheck`. **Runtime harness:** N/A — the workstation browser regression is intentionally deferred to E2, while the component flow is covered in this slice.
 
 - [x] **RED:** Adapted `tests/unit/resourcesMasterScreen.test.tsx` to mount a fresh isolated `QueryClient`; the focused screen+hook command failed before migration because the expected canonical query was absent. Existing observable regressions cover one initial read, 249/250 ms search debounce, empty-input 0 ms commit, hierarchy change cancelling a pending debounce, deepest-filter payload, unchanged copy/roles/CTA states, deduped continuation, and visible rows after partial error. <!-- sdd-owner: implementation -->
 - [x] **GREEN:** Updated `src/features/resources-master/ResourcesMasterScreen.tsx` to retain local input, API identity, hierarchy selection, command registration, JSX, copy, classes, and accessibility while replacing only list-controller projection with `useResourcesMasterListQuery.ts`; atomic committed criteria give the hook one consistent search-plus-hierarchy snapshot. <!-- sdd-owner: implementation -->
 - [x] **TRIANGULATE:** Screen cases cover repeated load-more activation while pending, `Reintentar` and `Reintentar continuación` routing to semantic hook actions, confirmed empty only after a valid done page, deduped retained rows through partial-error retry, and the existing keyboard spatial search contract without a new document listener. <!-- sdd-owner: implementation -->
 - [x] **REFACTOR:** Removed only superseded list-controller wiring from `src/features/resources-master/ResourcesMasterScreen.tsx`; `src/features/resources-master/useResourcesMasterList.ts` and its existing tests remain the rollback seam. No visual/Tailwind/shared-UI changes were made; reran focused validation. <!-- sdd-owner: implementation -->
 
-## E — Refresco activo, límites y regresión (220–340 lines)
+## E1a — Refresco post-creación del observador activo (80–140 lines)
 
-**Focused verification:** `pnpm test -- tests/unit/resourcesMasterScreenRefetch.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/architecture/queryZodBoundaries.test.ts tests/architecture/catalogHierarchyBoundaries.test.ts tests/architecture/keyboardBoundaries.test.ts` (RED is expected to fail before GREEN; final run must exit 0). **Runtime harness:** `pnpm test:e2e -- tests/e2e/resourcesMaster.workstation.spec.ts` must exit 0 while exercising no-focus-refetch, retained rows after continuation failure/retry, active-list-only post-create refresh, Keyboard First paths, and axe.
+**Focused verification:** `pnpm exec vitest run tests/unit/resourcesMasterScreenRefetch.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/useResourcesMasterListQuery.test.tsx` must exit 0. **Runtime harness:** N/A — browser regression is E2.
 
-- [ ] **RED:** Create failing `tests/unit/resourcesMasterScreenRefetch.test.tsx` cases proving a confirmed `CrearRecursoSurface` completion refetches only the currently observed key, never uses `useMutation`, cache writes, prefix invalidation, or refreshes a seeded different key; add expected focus/reconnect call-count cases to the focused query/screen tests. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Change only the `onCreated` callback in `src/features/resources-master/ResourcesMasterScreen.tsx` to fire-and-forget `refetchActive()` from the active list hook after the existing creation flow confirms success; do not edit `CrearRecursoSurface.tsx`, migrate submit state, or add optimistic/cache-edit behavior. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Create `tests/architecture/queryZodBoundaries.test.ts` assertions with file-level allowlists: React Query only in `src/app/providers/AppProviders.tsx` and `src/features/resources-master/useResourcesMasterListQuery.ts`; Zod only in `src/features/resources-master/resourcesMaster.api.ts`; no Query in Catálogo, hierarchy, forms, keyboard, Router, or `src/shared/**`; and no persistence, persister, broadcast, devtools, Zustand, Redux, shared wrapper, or Convex imports in `src/app/**`/the hook. Extend `tests/e2e/resourcesMaster.workstation.spec.ts` for no focus refetch, partial-error retention/retry, and active-list-only post-create refresh while preserving axe and keyboard paths. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Consolidate only duplicated test setup within their existing test files, preserve a fresh QueryClient per render/case, run the focused unit/architecture command and focused E2E command, then run `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, and `pnpm verify:runtime-bundle`. <!-- sdd-owner: implementation -->
+- [x] **RED:** Added a failing post-create unit case: the active observed key did not refetch after the confirmed callback (1 failed, expected 2 calls but received 1). <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Changed only `ResourcesMasterScreen` to fire-and-forget `refetchActive()` from `onCreated`; `CrearRecursoSurface`, mutations, cache writes, optimistic updates, and invalidation remain untouched. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** The focused unit test seeds a different exact key and proves it remains idle and unchanged after confirmed creation. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Kept the semantic callback and fresh-`QueryClient` test harness minimal; no architecture guardrail change belongs to E1a. <!-- sdd-owner: implementation -->
+
+## E1b — Guardrails de arquitectura conscientes de bindings (260–380 lines, future branch)
+
+**Status:** Pending; do not start on the E1a branch. E1b is the next future-branch work unit after E1a.
+
+**Focused verification:** Extend and run `pnpm exec vitest run tests/architecture/queryZodBoundaries.test.ts`; run the E1a refetch/screen/hook command as a regression. **Runtime harness:** N/A — browser regression is E2.
+
+- [ ] **RED:** Add failing architecture cases for aliased imports, namespace imports, computed/member syntax, Zod subpath imports, and provider `defaultOptions` forms that the current path/regex guard cannot safely classify. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement full AST and import-binding-aware Query/Zod/Convex/provider/action guardrails with exact production allowlists; detect aliases, namespace and computed members, Zod subpaths, provider construction, `defaultOptions`, observer exposure, mutations, cache writes, and prefix refreshes without false positives from comments or strings. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE:** Cover allowed and forbidden static, export-from, dynamic-import, and `require` forms, including binding aliases and computed accesses; verify the guard rejects bypasses while preserving approved provider/hook/API usage. <!-- sdd-owner: implementation -->
+- [ ] **REFACTOR:** Keep parsing and binding analysis local to the architecture test, retain explicit allowlists, and rerun the focused architecture plus E1a regression commands. <!-- sdd-owner: implementation -->
+
+## E2 — Regresión de navegador y reconciliación de ciclo de vida (180–280 lines)
+
+**Focused verification:** After E1b, `pnpm test:e2e -- tests/e2e/resourcesMaster.workstation.spec.ts` must exit 0 for no-focus-refetch, partial-error retention/retry, active-list-only post-create refresh, Keyboard First paths, and axe. Then run `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, and `pnpm verify:runtime-bundle`.
+
+- [ ] Extend the focused E2E regression; do not weaken axe or Keyboard First coverage. <!-- sdd-owner: implementation -->
+- [ ] Record final repository-wide verification, review receipts, rollback disposition, and parent three-way spec reconciliation before archive/sync. <!-- sdd-owner: parent -->
 
 ## Parent-owned delivery and lifecycle gates
 
-- [x] Before apply, choose and record the delivery chain strategy for the estimated 1,120–1,570-line total. The user selected `feature-branch-chain`; A, B, C1, C2, D and E remain separate review units so no combined A+B diff can exceed the 400-line budget. <!-- sdd-owner: parent -->
-- [ ] After slice E and before synchronizing or archiving either change, perform the required three-way reconciliation of `openspec/specs/frontend-foundation/spec.md`, `openspec/changes/catalog-hierarchy-base/specs/frontend-foundation/spec.md`, and `openspec/changes/adopt-query-zod/specs/frontend-foundation/spec.md`; retain both the Catálogo feature-local Convex exception and the Resources-only feature-local Query exception, keep Query prohibited in Catálogo, and record the merge-order resolution. <!-- sdd-owner: parent -->
-- [ ] Start or reuse bounded review for each completed A, B, C1, C2, D and E slice, checking its measured additions plus deletions against the 400-line budget, its focused command result, its runtime scenario result, and its stated rollback boundary before accepting the next slice. <!-- sdd-owner: parent -->
+- [x] Before apply, choose and record the delivery chain strategy for the estimated 1,120–1,570-line total. The user selected `feature-branch-chain`; A, B, C1, C2, D, E1a, E1b, and E2 remain separate review units so no combined A+B diff can exceed the 400-line budget. <!-- sdd-owner: parent -->
+- [ ] After slice E2 and before synchronizing or archiving either change, perform the required three-way reconciliation of `openspec/specs/frontend-foundation/spec.md`, `openspec/changes/catalog-hierarchy-base/specs/frontend-foundation/spec.md`, and `openspec/changes/adopt-query-zod/specs/frontend-foundation/spec.md`; retain both the Catálogo feature-local Convex exception and the Resources-only feature-local Query exception, keep Query prohibited in Catálogo, and record the merge-order resolution. <!-- sdd-owner: parent -->
+- [ ] Start or reuse bounded review for each completed A, B, C1, C2, D, E1a, E1b, and E2 slice, checking its measured additions plus deletions against the 400-line budget, its focused command result, its runtime scenario result, and its stated rollback boundary before accepting the next slice. <!-- sdd-owner: parent -->
