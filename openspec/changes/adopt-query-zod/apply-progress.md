@@ -5,7 +5,7 @@
 - **Date:** 2026-09-24
 - **Executors:** SDD apply for Slice A; bounded project workers for B through C2.
 - **Change / delivery:** `adopt-query-zod` / local `feature-branch-chain`; individual branch names are recorded by their commits.
-- **Current state:** A, B, C1, C2, D, E1a, and E1b completed; E2 is pending.
+- **Current state:** A, B, C1, C2, D, E1a, E1b, and E2 browser coverage completed; parent final verification and lifecycle reconciliation remain pending.
 - **Native attempt authority:** Slice A settled as complete; no Pi or Gentle tooling is modified by later project-only work.
 - **Structured status:** OpenSpec remains the artifact authority; `tasks.md` is the current task source of truth.
 - **Action-context warning:** None; every edit remained within the parent-authorized project surfaces.
@@ -218,3 +218,14 @@ The checklist below records the state immediately after Slice A and is supersede
 - **Rollback boundary:** remove only the AST architecture test and the E1b task/progress evidence; production Query/Zod behavior and E1a active-observer refresh remain unchanged.
 - **Count:** the architecture code/test work unit committed as `713157c` contains 397 authored lines (359 additions, 38 deletions), below the 400-line budget. This separate evidence update remains a small documentation-only child unit.
 - **Commit verdict:** architecture guard committed after focused verification; this evidence correction is ready as its own bounded child commit.
+
+## Slice E2 — browser regression coverage
+
+- **Scope:** Extended only `tests/e2e/resourcesMaster.workstation.spec.ts`; lifecycle reconciliation and repository-wide verification remain parent-owned.
+- **RED:** Strict TDD was not activated for this focused browser-test correction; no pre-implementation failure is claimed.
+- **GREEN:** `pnpm test:e2e -- tests/e2e/resourcesMaster.workstation.spec.ts` exited 0 — 7/7 browser tests passed in 7.5 s. The focus regression dispatches `visibilitychange` on `window` while `document.visibilityState` is `visible` and proves the active-list count is unchanged. The confirmed-create regression seeds and leaves a distinct UI search key inactive, snapshots its operation/key-specific request count with the active key immediately before creation, then proves only the active key increments and displays the created row.
+- **TRIANGULATE/REFACTOR:** Existing continuation-cursor assertions, Keyboard First spatial-path coverage, and axe coverage remain unchanged; mock additions reuse `mockResources` and supply only the wizard operations required for confirmed creation.
+- `pnpm exec eslint tests/e2e/resourcesMaster.workstation.spec.ts`, `pnpm exec prettier --check tests/e2e/resourcesMaster.workstation.spec.ts openspec/changes/adopt-query-zod/tasks.md openspec/changes/adopt-query-zod/apply-progress.md`, and `git diff --check -- tests/e2e/resourcesMaster.workstation.spec.ts openspec/changes/adopt-query-zod/tasks.md openspec/changes/adopt-query-zod/apply-progress.md` each exited 0.
+- **Count:** 180 authored lines (177 additions, 3 deletions), below the 400-line budget.
+- **Rollback boundary:** remove only the E2 window visibility, continuation-cursor, and active-key-only confirmed-create assertions/helpers plus this E2 task/evidence; Query runtime, E1a refresh behavior, Keyboard First coverage, axe coverage, and parent lifecycle work remain independent.
+- **Commit verdict:** no commit created in delegated scope; this is one bounded E2 browser-coverage work unit after focused browser and targeted static validation.

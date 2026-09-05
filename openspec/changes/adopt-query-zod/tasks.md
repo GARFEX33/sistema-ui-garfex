@@ -102,7 +102,7 @@ The aggregate forecast exceeds the 400-line review budget even though every auto
 
 **Focused verification:** After E1b, `pnpm test:e2e -- tests/e2e/resourcesMaster.workstation.spec.ts` must exit 0 for no-focus-refetch, partial-error retention/retry, active-list-only post-create refresh, Keyboard First paths, and axe. Then run `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, and `pnpm verify:runtime-bundle`.
 
-- [ ] Extend the focused E2E regression; do not weaken axe or Keyboard First coverage. <!-- sdd-owner: implementation -->
+- [x] Extend the focused E2E regression with the window-targeted visible `visibilitychange` listener check and operation/key-specific active-only create refresh counts; do not weaken axe, continuation, or Keyboard First coverage. <!-- sdd-owner: implementation -->
 - [ ] Record final repository-wide verification, review receipts, rollback disposition, and parent three-way spec reconciliation before archive/sync. <!-- sdd-owner: parent -->
 
 ## Parent-owned delivery and lifecycle gates
