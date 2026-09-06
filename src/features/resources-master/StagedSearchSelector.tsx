@@ -80,20 +80,6 @@ export function StagedSearchSelector<T>({
     <section
       aria-label={`${label}: selección por etapas`}
       className="grid gap-3"
-      onKeyDownCapture={(event) => {
-        if (
-          event.defaultPrevented ||
-          event.nativeEvent.isComposing ||
-          event.key !== 'Enter' ||
-          (event.target as HTMLElement).getAttribute('role') !== 'option'
-        )
-          return
-        const selected = visibleItems.find((item) => item.key === activeKey)
-        if (selected) {
-          event.preventDefault()
-          onConfirm(selected.item)
-        }
-      }}
     >
       <SearchField value={query} onChange={setQuery} className="grid gap-1">
         <Label className="text-[11px] font-bold tracking-[0.08em] text-text-primary">
@@ -106,9 +92,14 @@ export function StagedSearchSelector<T>({
             if (
               event.defaultPrevented ||
               event.nativeEvent.isComposing ||
+              event.ctrlKey ||
+              event.altKey ||
+              event.metaKey ||
+              event.shiftKey ||
               !['ArrowDown', 'ArrowUp'].includes(event.key)
             )
               return
+            event.preventDefault()
             listBoxRef.current?.focus()
           }}
         />

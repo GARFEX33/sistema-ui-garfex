@@ -250,3 +250,14 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Workload:** feature-branch-chain `PR3 → PR4A → 📍 PR4B → PR5`; final numstat remains below 399 A+D, with no commit or parent lifecycle action.
 - **Deviation:** none; the selector is feature-local, uses no global listener, API/query/hierarchy ownership, or consumer integration.
 - **Remaining:** retained unchecked implementation rows begin at PR5; parent-owned lifecycle rows remain byte-for-byte deferred.
+
+---
+## PR 4C — selector keyboard remediation
+- **State/status:** complete `pr4c-selector-keyboard-fix`; consumed authoritative OpenSpec `apply: ready`, native `proceed`, strict TDD, repo-local allowed roots, and no action-context warnings.
+- **Review correction:** removed the root Enter capture so React Aria `ListBox.onAction` confirms its focused action key, and gated filter arrows to unmodified keys with `preventDefault()` before local focus transfer.
+- **TDD Cycle Evidence**
+| Task | Safety net | RED | GREEN | TRIANGULATE/REFACTOR |
+| PR 4C keyboard | selector/model/keyboard 13/13 | focused option and modified-arrow tests failed | selector 5/5 | both arrow directions plus all modifiers; Prettier stayed green |
+- **Verification:** selector/model/keyboard 14/14; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- **Files/tasks:** changed only `StagedSearchSelector.tsx`, its unit test, and this record; existing PR4 RED/GREEN/TRIANGULATE rows remain visibly `[x]` after focused tests passed.
+- **Workload/deviation/remaining:** PR4C only, 91 A+D including this record (<180); no deviation, commit, PR5 work, or parent lifecycle action; exact remaining unchecked rows remain the retained PR5+ lines above.
