@@ -12,6 +12,7 @@ import type { ResourceId, ResourceSummary } from './resourcesMaster.types'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
 import { isValidFocusCandidate } from '../../shared/keyboard/focusRestoration'
 import { CrearRecursoSurface } from './CrearRecursoSurface'
+import { deriveInitialHierarchySnapshot } from './resourceCreation.model'
 import { Button } from '../../shared/ui/Button'
 import { Field } from '../../shared/ui/Field'
 import { HierarchyNavigator } from '../../shared/ui/HierarchyNavigator'
@@ -40,6 +41,20 @@ export function ResourcesMasterScreen() {
   const [searchText, setSearchText] = useState('')
   const searchTextRef = useRef(searchText)
   const hierarchy = useResourcesHierarchy(api)
+  const initialHierarchySnapshot = useMemo(
+    () =>
+      deriveInitialHierarchySnapshot(hierarchy.selection, {
+        classes: hierarchy.classes.items,
+        families: hierarchy.families.items,
+        types: hierarchy.types.items,
+      }),
+    [
+      hierarchy.classes.items,
+      hierarchy.families.items,
+      hierarchy.selection,
+      hierarchy.types.items,
+    ],
+  )
   const hierarchyFilters = useMemo(() => {
     if (hierarchy.selection.typeId !== undefined)
       return { typeId: hierarchy.selection.typeId }
@@ -147,6 +162,7 @@ export function ResourcesMasterScreen() {
         action={
           <CrearRecursoSurface
             api={api}
+            initialHierarchySnapshot={initialHierarchySnapshot}
             onCreated={() => {
               void refetchActive()
             }}

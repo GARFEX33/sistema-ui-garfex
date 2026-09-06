@@ -101,6 +101,7 @@ const fakeApi = (
   }) as ResourcesMasterApi
 
 const factory = vi.hoisted(() => vi.fn())
+const creationSurfaceProps = vi.hoisted(() => vi.fn())
 const screenSource = readFileSync(
   join(
     process.cwd(),
@@ -185,6 +186,13 @@ vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
   return { ...actual, createResourcesMasterConvexApi: factory }
 })
 
+vi.mock('../../src/features/resources-master/CrearRecursoSurface', () => ({
+  CrearRecursoSurface: (props: unknown) => {
+    creationSurfaceProps(props)
+    return null
+  },
+}))
+
 describe('ResourcesMasterScreen connected read wiring', () => {
   it('synchronizes latest criteria refs only from committed effects', () => {
     expect(screenAst.parseDiagnostics).toEqual([])
@@ -230,6 +238,35 @@ describe('ResourcesMasterScreen connected read wiring', () => {
         [...effectCallbacks].some((callback) => isInside(assignment, callback)),
       ).toBe(true)
     }
+  })
+
+  it('passes only the loaded hierarchy selection to the creation surface', async () => {
+    const api = fakeApi()
+    factory.mockReturnValue(api)
+    render(<ResourcesMasterScreen />)
+
+    await screen.findByRole('button', { name: 'Material' })
+    fireEvent.click(screen.getByRole('button', { name: 'Material' }))
+
+    await waitFor(() =>
+      expect(creationSurfaceProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          initialHierarchySnapshot: {
+            classItem: expect.objectContaining({ id: 'class-1' }),
+            familyItem: null,
+            typeItem: null,
+          },
+        }),
+      ),
+    )
+    const [props] = creationSurfaceProps.mock.lastCall as [
+      Record<string, unknown>,
+    ]
+    expect(Object.keys(props).sort()).toEqual([
+      'api',
+      'initialHierarchySnapshot',
+      'onCreated',
+    ])
   })
 
   it('lists resources on mount through an isolated Query client', async () => {

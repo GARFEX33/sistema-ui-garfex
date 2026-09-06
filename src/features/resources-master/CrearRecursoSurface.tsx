@@ -18,6 +18,10 @@ import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
 import { Field, FieldSeparator } from '../../shared/ui/Field'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
+import {
+  createInitialHierarchySnapshotCapture,
+  type InitialResourceHierarchySnapshot,
+} from './resourceCreation.model'
 import { useAutoClosingMessage } from './useAutoClosingMessage'
 import type {
   ResourceAttributeApplicability,
@@ -101,6 +105,7 @@ const contextFieldLabels: Record<ContextField, string> = {
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
+  initialHierarchySnapshot?: InitialResourceHierarchySnapshot
   onCreated?: () => void
 }
 
@@ -130,9 +135,14 @@ const key = (id: ResourceId) => String(id)
 
 export function CrearRecursoSurface({
   api,
+  initialHierarchySnapshot,
   onCreated,
 }: CrearRecursoSurfaceProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const initialHierarchySnapshotCaptureRef = useRef(
+    createInitialHierarchySnapshotCapture(initialHierarchySnapshot),
+  )
+  initialHierarchySnapshotCaptureRef.current.receive(initialHierarchySnapshot)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
@@ -172,6 +182,7 @@ export function CrearRecursoSurface({
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
       openerRef.current = opener?.isConnected ? opener : null
+      initialHierarchySnapshotCaptureRef.current.captureOnOpen()
       setStep(1)
       setClassId(null)
       setFamilyId(null)

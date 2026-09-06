@@ -75,9 +75,9 @@ All children inherit the no-go scope above. “N/A” runtime boundaries are lim
 
 **Review focus:** derive only loaded, continuous Clase→Familia→Tipo prefixes through one opaque-ID helper; capture the latest prop only on open; give the dialog data rather than screen setters. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourcesMasterScreen.test.tsx && pnpm typecheck`. **Runtime scenario:** open at depths 0/1/2/3 and verify the captured seed does not mutate background filters or callbacks. **Rollback:** remove snapshot derivation/capture and its tests, retaining the prototype form and remote list.
 
-- [ ] **RED:** Add failing prefix, cross-parent/stale, and capture-on-open assertions in `tests/unit/resourceCreation.model.test.ts` and `tests/unit/resourcesMasterScreen.test.tsx`; record the failing focused command. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add snapshot types, `resourceIdKey`, derivation/normalization helpers in `resourceCreation.model.ts`; derive loaded-item snapshots in `ResourcesMasterScreen.tsx`; and make `CrearRecursoSurface.tsx` capture the read-only `initialHierarchySnapshot` at opening without receiving hierarchy setters. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover all prefix depths and a changed closed-dialog prop versus an unchanged open-dialog seed, run the stated command, and commit the tested snapshot behavior with its consumers. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing prefix, cross-parent/stale, and capture-on-open assertions in `tests/unit/resourceCreation.model.test.ts` and `tests/unit/resourcesMasterScreen.test.tsx`; record the failing focused command. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Add snapshot types, `resourceIdKey`, derivation/normalization helpers in `resourceCreation.model.ts`; derive loaded-item snapshots in `ResourcesMasterScreen.tsx`; and make `CrearRecursoSurface.tsx` capture the read-only `initialHierarchySnapshot` at opening without receiving hierarchy setters. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Cover all prefix depths and a changed closed-dialog prop versus an unchanged open-dialog seed, run the stated command, and commit the tested snapshot behavior with its consumers. <!-- sdd-owner: implementation -->
 
 ### PR 2 — Reducer, navigation, and reset invariants (target: PR 1)
 
