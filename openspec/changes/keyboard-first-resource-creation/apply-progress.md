@@ -237,3 +237,16 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Verification:** focused Vitest 4/4, `pnpm typecheck`, `pnpm lint`, targeted Prettier check, and `git diff --check` passed.
 - **Files:** `stagedSearchSelector.model.ts`, `stagedSearchSelector.model.test.ts`, and this record; new attempt is 99 lines (90 source/test + 9 progress), below 399.
 - **Native handoff:** parent must settle token `sha256:0eed49d7c68fbea8e97e6211a295e29017c9c8fcddab3ea79c94a78f27962ef8` and remediate `sha256:c09d65095738c56a143d86867daff284a4cc0a23a614b4f0494f52ac27d6a1e4`.
+
+---
+## PR 4B — React Aria staged selector UI
+- **State/status:** complete `pr4b-selector-ui`; native `proceed`, authoritative OpenSpec artifacts, strict TDD, and repo-local allowed roots consumed without warnings.
+- **Boundary:** PR4A `3202c95` supplies the reused name-filter/active-repair model; PR4B adds only selector UI/tests/guard, not PR5 integration.
+- **Completed/persisted:** the original PR4 RED, GREEN, and TRIANGULATE/REFACTOR rows are visibly `[x]`; PR4A+4B jointly complete PR4.
+- **Files:** `StagedSearchSelector.tsx`, `StagedSearchSelector.test.tsx`, keyboard guard, `tasks.md`, and this cumulative record.
+- **TDD:** RED import failed; GREEN selector RTL passed; triangulation covered repair, continuation/retry, states, click/Enter, IME/defaultPrevented; Prettier refactor stayed green.
+- **Verification:** focused selector/model/keyboard Vitest 13/13 and `pnpm typecheck` passed; targeted ESLint, Prettier, and `git diff --check` passed.
+- **Runtime/rollback:** RTL keyboard scenario passed; remove only the selector, its tests, and guard assertion to roll back this seam.
+- **Workload:** feature-branch-chain `PR3 → PR4A → 📍 PR4B → PR5`; final numstat remains below 399 A+D, with no commit or parent lifecycle action.
+- **Deviation:** none; the selector is feature-local, uses no global listener, API/query/hierarchy ownership, or consumer integration.
+- **Remaining:** retained unchecked implementation rows begin at PR5; parent-owned lifecycle rows remain byte-for-byte deferred.

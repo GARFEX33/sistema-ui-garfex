@@ -11,6 +11,7 @@ const keyboardFiles = [
   'src/app/shell/CommandEntry.tsx',
   'src/app/shell/KeyboardHelpDialog.tsx',
   'src/features/catalog-hierarchy/NuevaClaseSurface.tsx',
+  'src/features/resources-master/StagedSearchSelector.tsx',
 ]
 const read = (file: string) => readFileSync(join(root, file), 'utf8')
 const source = keyboardFiles.map(read).join('\n')
@@ -46,8 +47,13 @@ describe('Keyboard First architecture boundaries', () => {
     expect(docNames).toEqual([])
   })
 
-  it('has exactly one shell-local document keyboard listener', () => {
-    expect(
+  it('keeps the staged selector free of document and window listeners', () => {
+    expect(read('src/features/resources-master/StagedSearchSelector.tsx')).not.toMatch(
+      /(?:document|window)\.(?:addEventListener|onkeydown)/,
+    )
+  })
+
+  it('has exactly one shell-local document keyboard listener', () => {    expect(
       keyboardFiles.filter((file) => /addEventListener\(['"]keydown/.test(read(file))),
     ).toEqual(['src/shared/keyboard/KeyboardController.tsx'])
     expect((source.match(/addEventListener\(['"]keydown/g) ?? []).length).toBe(1)

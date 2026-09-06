@@ -105,9 +105,9 @@ All children inherit the no-go scope above. “N/A” runtime boundaries are lim
 
 **Review focus:** local React Aria composite filters loaded names only, maintains one provisional candidate distinct from confirmation, and installs no global listener. **Command:** `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck`. **Runtime scenario:** RTL keyboard sequence filters, arrows, Enter, IME/defaultPrevented, retry, and continuation. **Rollback:** remove selector and selector-specific guard assertions only; do not alter `HierarchyNavigator`, shared UI, or `KeyboardController`.
 
-- [ ] **RED:** Add failing RTL and architecture assertions for Spanish name-only local filtering, active-key repair without confirmation, arrows/Enter, IME/defaultPrevented precedence, explicit retry/continuation, and no document/window listener. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Create `StagedSearchSelector.tsx` from local React Aria `SearchField`/`ListBox` and shared `Button`, including accessible loading/empty/error copy, controlled query, `Cargar más…`, and provisional `activeKey`; keep it inside `resources-master`. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing RTL and architecture assertions for Spanish name-only local filtering, active-key repair without confirmation, arrows/Enter, IME/defaultPrevented precedence, explicit retry/continuation, and no document/window listener. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Create `StagedSearchSelector.tsx` from local React Aria `SearchField`/`ListBox` and shared `Button`, including accessible loading/empty/error copy, controlled query, `Cargar más…`, and provisional `activeKey`; keep it inside `resources-master`. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->
 
 ### PR 5 — Staged Clase selection integrated vertically (target: PR 4)
 
