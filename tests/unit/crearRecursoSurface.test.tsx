@@ -6,6 +6,7 @@ import {
   within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CrearRecursoSurface } from '../../src/features/resources-master/CrearRecursoSurface'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
@@ -240,10 +241,13 @@ function fakeApi(
   } as ResourcesMasterApi
 }
 
-const renderSurface = (api: ResourcesMasterApi) =>
+const renderSurface = (
+  api: ResourcesMasterApi,
+  props: Omit<ComponentProps<typeof CrearRecursoSurface>, 'api'> = {},
+) =>
   render(
     <KeyboardControllerProvider activeSurface="recursos">
-      <CrearRecursoSurface api={api} />
+      <CrearRecursoSurface api={api} {...props} />
     </KeyboardControllerProvider>,
   )
 
@@ -252,6 +256,13 @@ const chooseOption = async (
   fieldLabel: string,
   optionName: string,
 ) => {
+  if (fieldLabel === 'Clase') {
+    const filter = screen.queryByRole('searchbox', { name: 'Clase' })
+    if (!filter)
+      await user.click(screen.getByRole('button', { name: /^Clase:/ }))
+    await user.click(await screen.findByRole('option', { name: optionName }))
+    return
+  }
   const trigger = screen.getByRole('button', { name: new RegExp(fieldLabel) })
   await user.click(trigger)
   const listbox = await screen.findByRole('listbox')
@@ -284,7 +295,12 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     renderSurface(api)
     fireEvent.keyDown(document, { key: 'n' })
     expect(screen.getByRole('dialog', { name: 'Nuevo recurso' })).toBeVisible()
-    await waitFor(() => expect(api.listContextClasses).toHaveBeenCalledWith({}))
+    await waitFor(() =>
+      expect(api.listContextClasses).toHaveBeenCalledWith({
+        cursor: undefined,
+        pageSize: 20,
+      }),
+    )
   })
 
   it('does not register the shortcut outside the recursos surface', () => {
@@ -320,30 +336,23 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     )
     expect(screen.getByText('* Obligatorio')).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Clase/ })).not.toHaveAttribute(
-      'aria-invalid',
-      'true',
-    )
-
     const next = screen.getByRole('button', { name: 'Siguiente' })
+    expect(next).toBeDisabled()
+    await chooseOption(user, 'Clase', 'Material')
     expect(next).toBeEnabled()
     await user.click(next)
 
-    const classTrigger = screen.getByRole('button', { name: /Clase/ })
+    const familyTrigger = screen.getByRole('button', { name: /Familia/ })
     const error = screen.getByRole('alert')
-    expect(error).toHaveTextContent('Seleccioná una Clase.')
-    expect(classTrigger).toHaveAttribute('aria-invalid', 'true')
-    expect(classTrigger).toHaveAttribute('aria-describedby', error.id)
-    expect(classTrigger).toHaveFocus()
-    expect(
-      screen.queryByText('Seleccioná una Familia.'),
-    ).not.toBeInTheDocument()
+    expect(error).toHaveTextContent('Seleccioná una Familia.')
+    expect(familyTrigger).toHaveAttribute('aria-invalid', 'true')
+    expect(familyTrigger).toHaveAttribute('aria-describedby', error.id)
+    expect(familyTrigger).toHaveFocus()
     expect(screen.getByText('1 Contexto')).toHaveAttribute(
       'aria-current',
       'step',
     )
 
-    await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
     await user.click(next)
@@ -490,6 +499,105 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     )
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     expect(trigger).toHaveFocus()
+  })
+})
+
+describe('CrearRecursoSurface — Clase staged', () => {
+  it('opens a depth-zero draft at Clase, filters loaded pages, continues, and confirms only by Enter', async () => {
+    const listContextClasses = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [classItem(), classItem({ id: 'class-2', nombre: 'Servicio' })],
+        continuationCursor: 'next-classes',
+        isExhausted: false,
+      })
+      .mockResolvedValueOnce({
+        items: [classItem(), classItem({ id: 'class-3', nombre: 'Equipo' })],
+        continuationCursor: null,
+        isExhausted: true,
+      })
+    const onCreated = vi.fn()
+    const api = fakeApi({ listContextClasses })
+    const user = userEvent.setup()
+    renderSurface(api, { onCreated })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    const filter = await screen.findByRole('searchbox', { name: 'Clase' })
+    await user.type(filter, 'equipo')
+    expect(screen.queryByText('Equipo')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+    expect(onCreated).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    const equipo = await screen.findByRole('option', { name: 'Equipo' })
+    equipo.focus()
+    await user.keyboard('{Enter}')
+
+    await waitFor(() =>
+      expect(api.listContextFamilies).toHaveBeenCalledWith({
+        claseRecursoId: 'class-3',
+      }),
+    )
+    const breadcrumb = screen.getByRole('button', { name: /Clase: Equipo/ })
+    expect(breadcrumb).toBeVisible()
+    await user.click(breadcrumb)
+    expect(screen.getByRole('searchbox', { name: 'Clase' })).toHaveValue(
+      'equipo',
+    )
+    expect(screen.getByRole('option', { name: 'Equipo' })).toBeVisible()
+    expect(onCreated).not.toHaveBeenCalled()
+  })
+
+  it('exposes Clase retry after the parent-gated initial retry is exhausted', async () => {
+    const api = fakeApi({
+      listContextClasses: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({
+          items: [classItem()],
+          continuationCursor: null,
+          isExhausted: true,
+        }),
+    })
+    const user = userEvent.setup()
+    renderSurface(api)
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }))
+    expect(
+      await screen.findByRole('option', { name: 'Material' }),
+    ).toBeVisible()
+  })
+
+  it('skips staged Clase for an inherited Class and makes it locally correctable from the breadcrumb', async () => {
+    const api = fakeApi()
+    const user = userEvent.setup()
+    renderSurface(api, {
+      initialHierarchySnapshot: {
+        classItem: classItem(),
+        familyItem: null,
+        typeItem: null,
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    expect(
+      screen.queryByRole('searchbox', { name: 'Clase' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Clase: Material/ }),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(api.listContextFamilies).toHaveBeenCalledWith({
+        claseRecursoId: 'class-1',
+      }),
+    )
+    expect(api.listContextClasses).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /Clase: Material/ }))
+    expect(await screen.findByRole('searchbox', { name: 'Clase' })).toHaveValue(
+      '',
+    )
   })
 })
 
@@ -803,9 +911,7 @@ describe('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
     await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1))
 
     await user.click(screen.getByRole('button', { name: 'Crear otro' }))
-    expect(screen.getByRole('button', { name: /Clase/ })).toHaveTextContent(
-      'Elegir Clase…',
-    )
+    expect(screen.getByRole('searchbox', { name: 'Clase' })).toBeVisible()
   })
 
   it('blocks a second submit while the first one is still in flight', async () => {

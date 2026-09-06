@@ -261,3 +261,15 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Verification:** selector/model/keyboard 14/14; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
 - **Files/tasks:** changed only `StagedSearchSelector.tsx`, its unit test, and this record; existing PR4 RED/GREEN/TRIANGULATE rows remain visibly `[x]` after focused tests passed.
 - **Workload/deviation/remaining:** PR4C only, 91 A+D including this record (<180); no deviation, commit, PR5 work, or parent lifecycle action; exact remaining unchecked rows remain the retained PR5+ lines above.
+
+---
+## PR 5 — Staged Clase selection integrated vertically
+- **State/status:** complete `pr5-class-stage`; consumed native `proceed` token `sha256:e3a2205f3f7351daf3d3b6c8956a50051dac7a6674322396ef5ad689cf62ea6c`, authoritative nested spec/designs, strict TDD, `apply: ready`, and `artifactStore: openspec`.
+- **Action context:** repo-local allowed surfaces only; no edit-root warning.
+- **Completed/persisted:** PR5 RED, GREEN, and TRIANGULATE/REFACTOR rows are `[x]` in `tasks.md`.
+- **Files:** `CrearRecursoSurface.tsx`, new `useResourceCreationFlow.ts`, `crearRecursoSurface.test.tsx`, tasks, and this record.
+- **TDD Cycle Evidence:** safety net 20/20; RED 3 new staged assertions failed; GREEN 23/23 surface tests; triangulation proved filter-no-confirm, continuation, retry, inherited skip, breadcrumb correction, and re-entry query/page preservation; Prettier refactor remained green.
+- **Verification:** focused surface/model/selector Vitest 53/53; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- **Runtime/rollback:** RTL keyboard filter → Cargar más → Enter confirmed only local Clase; remove the flow wrapper and replaced Clase region to roll back.
+- **Workload:** feature-branch-chain `PR4 → 📍 PR5 → PR6`; 392 A+D including this record, below 399; no commit, PR, review, receipt, or PR6 work.
+- **Deviation/remaining:** none; Familia/Tipo, Unit, attributes, APIs, screen callbacks, globals, and shared/CSS changes remain deferred to their owned slices.

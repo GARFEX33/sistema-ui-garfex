@@ -17,11 +17,13 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
 import { Field, FieldSeparator } from '../../shared/ui/Field'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
+import { StagedSearchSelector } from './StagedSearchSelector'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
 import {
   createInitialHierarchySnapshotCapture,
   type InitialResourceHierarchySnapshot,
 } from './resourceCreation.model'
+import { useResourceCreationFlow } from './useResourceCreationFlow'
 import { useAutoClosingMessage } from './useAutoClosingMessage'
 import type {
   ResourceAttributeApplicability,
@@ -170,7 +172,7 @@ export function CrearRecursoSurface({
   const [nombreError, setNombreError] = useState(false)
   const nombreRef = useRef<HTMLInputElement>(null)
 
-  const [classes, loadClasses] = useLevel<ResourceContextClassItem>()
+  const flow = useResourceCreationFlow(api)
   const [families, loadFamilies, clearFamilies] =
     useLevel<ResourceContextFamilyItem>()
   const [types, loadTypes, clearTypes] = useLevel<ResourceContextTypeItem>()
@@ -182,9 +184,10 @@ export function CrearRecursoSurface({
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
       openerRef.current = opener?.isConnected ? opener : null
-      initialHierarchySnapshotCaptureRef.current.captureOnOpen()
+      const prefix = initialHierarchySnapshotCaptureRef.current.captureOnOpen()
+      flow.begin(prefix)
       setStep(1)
-      setClassId(null)
+      setClassId(prefix.classItem?.id ?? null)
       setFamilyId(null)
       setTypeId(null)
       setUnitId(null)
@@ -201,9 +204,21 @@ export function CrearRecursoSurface({
       clearTypes()
       clearUnits()
       clearAttributes()
+      if (prefix.classItem)
+        void loadFamilies(() =>
+          api.listContextFamilies({ claseRecursoId: prefix.classItem!.id }),
+        )
       setIsOpen(true)
     },
-    [clearFamilies, clearTypes, clearUnits, clearAttributes],
+    [
+      api,
+      clearFamilies,
+      clearTypes,
+      clearUnits,
+      clearAttributes,
+      flow,
+      loadFamilies,
+    ],
   )
 
   const action = useMemo(
@@ -266,7 +281,6 @@ export function CrearRecursoSurface({
   useEffect(() => {
     if (isOpen) {
       wasOpen.current = true
-      void loadClasses(() => api.listContextClasses({}))
     } else if (wasOpen.current) {
       restoreFocusNextFrame(openerRef.current, [
         () => triggerRef.current,
@@ -278,9 +292,6 @@ export function CrearRecursoSurface({
       openerRef.current = null
       wasOpen.current = false
     }
-    // loadClasses is stable (useCallback with no deps); api is expected to be
-    // stable for the lifetime of the screen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const resetAttributesIfNeeded = () => {
@@ -293,7 +304,10 @@ export function CrearRecursoSurface({
       showMessage('Se limpiaron los atributos por cambio de Tipo')
   }
 
-  const selectClass = (id: ResourceId) => {
+  const selectClass = (item: ResourceContextClassItem) => {
+    const id = item.id
+    flow.confirmClass(item)
+    if (classId !== null && key(classId) === key(id)) return
     setContextError(null)
     setClassId(id)
     setFamilyId(null)
@@ -453,8 +467,7 @@ export function CrearRecursoSurface({
 
   const backToAttributes = () => setStep(2)
 
-  const selectedClassName =
-    classes.items.find((c) => key(c.id) === key(classId))?.nombre ?? ''
+  const selectedClassName = flow.state.draft.hierarchy.classItem?.nombre ?? ''
   const selectedFamilyName =
     families.items.find((f) => key(f.id) === key(familyId))?.nombre ?? ''
   const selectedTypeName =
@@ -591,61 +604,32 @@ export function CrearRecursoSurface({
 
             {step === 1 && (
               <>
-                <div className="resources-context-field">
-                  <Select
-                    aria-label="Clase"
-                    placeholder="Elegir Clase…"
-                    isDisabled={classes.status === 'loading'}
-                    isRequired
-                    selectedKey={classId === null ? null : key(classId)}
-                    onSelectionChange={(id) => {
-                      const item = classes.items.find((c) => key(c.id) === id)
-                      if (item) selectClass(item.id)
-                    }}
-                  >
-                    <Label>Clase *</Label>
-                    <SelectTriggerButton className="resources-select-trigger">
-                      <SelectValue />
-                      <span aria-hidden="true">▾</span>
-                    </SelectTriggerButton>
-                    <Popover>
-                      <ListBox items={classes.items}>
-                        {(item) => (
-                          <ListBoxItem
-                            id={key(item.id)}
-                            textValue={item.nombre}
-                          >
-                            {item.nombre}
-                          </ListBoxItem>
-                        )}
-                      </ListBox>
-                    </Popover>
-                  </Select>
-                  {contextError === 'class' && (
-                    <p
-                      id="resource-context-class-error"
-                      role="alert"
-                      className="resources-context-error"
-                    >
-                      {contextErrorMessages.class}
-                    </p>
-                  )}
-                  {classes.status === 'error' && (
-                    <p role="alert" className="resources-context-error">
-                      No se pudieron cargar las Clases.{' '}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void loadClasses(() => api.listContextClasses({}))
-                        }
-                      >
-                        Reintentar
-                      </button>
-                    </p>
-                  )}
+                <div hidden={flow.state.stage.kind !== 'class'}>
+                  <StagedSearchSelector
+                    label="Clase"
+                    items={flow.classes}
+                    itemKey={(item) => flow.classKey(item.id)}
+                    itemName={(item) => item.nombre}
+                    loadState={flow.classLoadState}
+                    onConfirm={selectClass}
+                    onLoadMore={() => void flow.continueClasses()}
+                    onRetry={() => void flow.retryClasses()}
+                  />
                 </div>
+                {selectedClassName && (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onPress={flow.enterClass}
+                  >
+                    Clase: {selectedClassName}
+                  </Button>
+                )}
 
-                <div className="resources-context-field">
+                <div
+                  className="resources-context-field"
+                  hidden={flow.state.stage.kind === 'class'}
+                >
                   <Select
                     aria-label="Familia"
                     placeholder="Elegir Familia…"
@@ -706,7 +690,10 @@ export function CrearRecursoSurface({
                   )}
                 </div>
 
-                <div className="resources-context-field">
+                <div
+                  className="resources-context-field"
+                  hidden={flow.state.stage.kind === 'class'}
+                >
                   <Select
                     aria-label="Tipo"
                     placeholder="Elegir Tipo…"
@@ -765,7 +752,10 @@ export function CrearRecursoSurface({
                   )}
                 </div>
 
-                <div className="resources-context-field">
+                <div
+                  className="resources-context-field"
+                  hidden={flow.state.stage.kind === 'class'}
+                >
                   <Select
                     aria-label="Unidad natural"
                     placeholder="Elegir Unidad natural…"
@@ -1099,7 +1089,7 @@ export function CrearRecursoSurface({
                 </Button>
                 <Button
                   type="button"
-                  isDisabled={classes.status !== 'ready'}
+                  isDisabled={flow.state.stage.kind === 'class'}
                   onPress={goToAttributes}
                 >
                   Siguiente
