@@ -1,0 +1,117 @@
+# Apply Progress — keyboard-first-resource-creation
+
+## Status
+
+- **State:** PR 1 implementation complete; corrective rerun remediates failed evidence revision `sha256:e45fd384188b7719ba96be92379421772d9755b7649429269cca1b2da7a734eb` with native correction token `sha256:48a0efe3fa94cab7c4445d34eb46296917992e92aaa5e8a6555c1587e4251946`.
+- **Structured status consumed:** native state `proceed`; proposal/spec/design/tasks done; apply ready; authoritative spec `openspec/changes/keyboard-first-resource-creation/specs/keyboard-first-resource-creation/spec.md`; `artifactStore: openspec`.
+- **Action context:** `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex`; all changes are within the parent-provided allowed edit surfaces. No action-context warnings or unsafe edit roots were found.
+- **Workload / PR boundary:** feature-branch-chain, PR 1 only (target: tracker). Code/test A+D is 322 (120 new model + 138 new model test + 11 surface + 16 screen + 37 screen test), below 399. No commit, branch, tracker, PR, review, or other parent lifecycle action was attempted.
+
+## Completed implementation tasks and persisted checkbox updates
+
+- [x] RED — persisted PR 1 RED checkbox in `tasks.md`.
+- [x] GREEN — persisted PR 1 GREEN checkbox in `tasks.md`.
+- [x] TRIANGULATE/REFACTOR — persisted PR 1 TRIANGULATE/REFACTOR checkbox in `tasks.md`.
+
+## Implementation
+
+- Added feature-local snapshot contracts, opaque-ID normalization through `resourceIdKey`, loaded-item derivation, continuous-prefix validation, and a capture seam that takes the latest closed prop only at `captureOnOpen()`.
+- `ResourcesMasterScreen` derives the data-only snapshot from its loaded hierarchy items and selection, then passes it to `CrearRecursoSurface` without hierarchy setters, criteria, or search setters.
+- `CrearRecursoSurface` receives the optional read-only prop and captures it at open without reseeding it while the dialog remains open; the legacy prototype form and all PR 2 reducer/selector work remain untouched.
+
+## Files changed
+
+- `src/features/resources-master/resourceCreation.model.ts`
+- `src/features/resources-master/ResourcesMasterScreen.tsx`
+- `src/features/resources-master/CrearRecursoSurface.tsx`
+- `tests/unit/resourceCreation.model.test.ts`
+- `tests/unit/resourcesMasterScreen.test.tsx`
+- `openspec/changes/keyboard-first-resource-creation/tasks.md`
+- `openspec/changes/keyboard-first-resource-creation/apply-progress.md`
+
+## TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 1 RED/GREEN | `resourceCreation.model.test.ts`, `resourcesMasterScreen.test.tsx` | Unit + RTL seam | Screen baseline: 13/13 passed | Model import failed because `resourceCreation.model` was absent; screen prop assertion failed because the prop was absent | Focused run passed 19/19, then typecheck passed | Added depths 0/1/2/3, absent/crossed/stale descendants, changed-closed versus unchanged-open capture, and data-only prop-boundary assertions; focused run passed 20/20 | Corrected parameterized test titles and formatted the model; rerun passed 20/20 plus typecheck |
+| Existing prototype regression | `crearRecursoSurface.test.tsx` | RTL | Pre-change baseline was not captured during the prior blocked attempt | N/A — no prototype behavior was changed | Post-change focused regression passed 20/20 | Existing 20-case surface matrix remained green | No behavior refactor needed |
+
+## Verification evidence
+
+- `pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx` — passed 13/13 before screen-test edits.
+- `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts` — RED failed because the module did not exist.
+- `pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx` — RED failed because `initialHierarchySnapshot` was not passed.
+- `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts` — capture-seam RED failed because `createInitialHierarchySnapshotCapture` did not exist.
+- `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourcesMasterScreen.test.tsx && pnpm typecheck` — final focused pass: 2 files, 20 tests passed; typecheck passed.
+- `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx` — passed 20/20.
+- Targeted ESLint — passed for all five PR 1 source/test files.
+- Targeted Prettier check and `git diff --check` — passed.
+- Scope audit — only the seven allowed files above changed; no prohibited API, query, shared UI, keyboard-controller, or global-state files changed.
+
+## Deviations from design
+
+- None. PR 1 deliberately retains the prototype’s three-step UI; its snapshot capture is a passive seam for PR 2 and later integration.
+- The prior blocker incorrectly required a root-level spec. The required nested authoritative spec was consumed in this corrective rerun.
+
+## Runtime and rollback
+
+- **Runtime scenario:** N/A for this passive snapshot/model seam; the pure tests exercise all depths and capture isolation, and the RTL screen seam verifies loaded snapshot data is passed without background hierarchy setters. PR 5 will consume the snapshot visibly in the dialog.
+- **Rollback boundary:** remove the model seam, screen prop derivation, surface capture ref, and their two focused test additions; retain the existing remote list and prototype form.
+
+## Remaining implementation tasks
+
+The following persisted implementation-owned `- [ ]` lines remain unchanged:
+- `- [ ] **RED:** Extend `tests/unit/resourceCreation.model.test.ts` with failing cases for `OPEN`, first-missing stage, breadcrumb/back navigation, Class/Family/Type cascades, same-ID preservation, omission/value preservation, and revision changes. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Implement `CreationStage`, `CreationDraft`, submit state, reducer events, validation predicates, and ID-keyed navigation/reset helpers in `resourceCreation.model.ts`, without Query/store ownership. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Add replacement-versus-reconfirmation and return-navigation matrices, run the stated command, and commit the directly tested state contract used by the hierarchy integration. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add deferred-promise failures in `tests/unit/resourceCreation.loaders.test.ts` for initial/continuation/retry states, parent/Tipo stale responses, cursor retry, repeated cursor, dedupe, and context invalidation. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Implement the feature-local dependent loader in `resourceCreation.loaders.ts` with injected identity, token/context/cursor guards, retained partial items, explicit retry state, and no React/global-query dependency. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Exercise out-of-order completions and duplicates across pages, run the stated command, and commit the reusable feature-local contract with its deterministic tests. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing RTL and architecture assertions for Spanish name-only local filtering, active-key repair without confirmation, arrows/Enter, IME/defaultPrevented precedence, explicit retry/continuation, and no document/window listener. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Create `StagedSearchSelector.tsx` from local React Aria `SearchField`/`ListBox` and shared `Button`, including accessible loading/empty/error copy, controlled query, `Cargar más…`, and provisional `activeKey`; keep it inside `resources-master`. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing `crearRecursoSurface.test.tsx` cases for depth-zero opening, Clase loading/retry/continuation, explicit Enter confirmation, local draft isolation, and the route breadcrumb. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** In `CrearRecursoSurface.tsx` and `useResourceCreationFlow.ts`, consume the reducer and existing parent-gated Clase controller, render `StagedSearchSelector`, and replace only the legacy Clase region with this single active path. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Verify re-entry preserves Clase pages/filter while no confirm occurs from filtering, run the stated command, and commit the vertical Clase behavior and tests together. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing surface cases for valid deep seeds starting at Unidad, invalid prefixes starting at Familia/Tipo, parent-scoped continuation, breadcrumb replacement, and stale descendant rejection. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Wire Familia and Tipo parent-gated controller instances through `useResourceCreationFlow.ts`, render their staged selectors in `CrearRecursoSurface.tsx`, and remove the corresponding old context controls in the same replacement. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Cover Class/Family/Type replacement and same-ID reconfirmation through the dialog, run the stated command, and commit one green staged hierarchy path. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing loader tests for policy filtering/dedupe, `getUnit` hydration, principal/selected ranking, null/inactive/ineffective exclusion, rejected hydration retry, stale Tipo rejection, and confirmed empty eligibility. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Extend `resourceCreation.loaders.ts` with policy paging, unique `Promise.allSettled` hydration, `UnitCandidate`, effective-detail filtering, failure retention, and token-guarded retry without using a general-unit list. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies and continuation after a valid candidate preserve first order and block only pending/failed resolution, then run the stated command and commit the tested resolver. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing surface tests for Unit-stage entry after Tipo, preferred-active-but-unconfirmed behavior, Enter/click confirmation, empty eligibility, partial error retry, and stale-Type invalidation. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Connect the PR 7 resolver in `useResourceCreationFlow.ts` and render an explicit Unit `StagedSearchSelector` in `CrearRecursoSurface.tsx`, dispatching `CONFIRM_UNIT` only from explicit action. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Demonstrate a continuation can coexist with an immediately confirmable hydrated candidate while pending/failed hydration cannot advance, run the stated command, and commit Unit behavior with its tests. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing resolver tests for multi-page assignments/options, effective/forbidden/not-applicable filtering, stable ordering, definition/option errors, stale Tipo responses, and zero applicable assignments. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Implement complete paged assignment/option resolution and definition hydration in `resourceCreation.loaders.ts`, with assignment/option dedupe, stable ordering, retry state, and current-token adoption checks. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Cover reordered arrivals and a required option with no effective options, run the stated command, and commit the directly tested resolver consumed by the attribute stage. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing surface cases for per-type controls, required focus/error, optional/conditional **Omitir**, raw-value preservation, backtracking, zero-applicable continuation, and Type replacement clearing prior Unit/attributes. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Create `ResourceAttributeStage.tsx` and compose it from `CrearRecursoSurface.tsx` with the PR 9 resolver and reducer, rendering one attribute at a time and recording values/omissions by assignment ID. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Verify all four value kinds and that omission removes—not empties—a value, run the stated command, and commit the attribute behavior plus its RED/GREEN evidence. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing surface tests for required trimmed Nombre, optional trimmed Descripción omission, field-focused error, guarded Enter/IME behavior, and preservation when returning from Resource data. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Add the Resource data presentation to `ResourceCreationDetails.tsx` and compose it in `CrearRecursoSurface.tsx` through the reducer’s data-confirmation stage without adding fields or normalizations. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Cover blank-versus-whitespace values and return navigation from data to attributes, run the stated command, and commit the data-stage behavior and tests together. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing `tests/unit/resourceCreation.payload.test.ts` cases for all attribute mappings, exact hierarchy/Unit IDs, trim semantics, optional description, GLOBAL ownership, and absence of omitted or empty optional values. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Implement `buildResourceCreateInput(draft)` and the typed review projection in `resourceCreation.model.ts` so both derive from the same object and no second payload mapping exists. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Compare each review projection field against the outgoing contract for text, number, boolean, and option values; run the stated command and commit the tested pure contract. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing surface tests for review/payload parity, disabled incomplete/submitting creation, duplicate-submit prevention, known administrative error with manual retry, and `CREATED` invoking `onCreated` exactly once. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Render review and success presentation in `ResourceCreationDetails.tsx`; in `CrearRecursoSurface.tsx`, submit only the PR 12 payload, retain known errors in review, and invoke the existing `onCreated={() => void refetchActive()}` path only on confirmed `CREATED`. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Assert the displayed review and API argument are equivalent for populated and omitted optional values, run the stated command, and commit submit behavior with its tests. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing surface tests for uncertain-result messaging, blocked identical replay, mutation-based revision unlock, no `onCreated`, one Escape closure, eligible opener restoration, and fallback focus. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Complete uncertain-result presentation and revision gating in `ResourceCreationDetails.tsx`/`CrearRecursoSurface.tsx`, retain overlay registration/focus restoration, and remove the replaced prototype result region and `resourcesMaster.css` only after its last consumer is gone. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Prove known-error, success, and uncertain outcomes remain distinct and no duplicate selectable prototype path exists, run the stated command, and commit the completed outcomes with their tests. <!-- sdd-owner: implementation -->`
+- `- [ ] **RED:** Add failing browser/refetch/architecture expectations for keyboard-only staged creation, local-filter continuation/dedupe, Escape opener/fallback, axe dialog states, active-query-only refresh, no global listener, feature-local imports, and runtime files below 500 lines. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Update only the named tests and guards to exercise the completed behavior, including `onCreated → refetchActive()` solely after `CREATED`, without broad invalidation, optimistic insertion, or production edits. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Run the stated browser/architecture command, remove duplicated assertions while retaining distinct end-to-end coverage, and commit the closure evidence with exact results. <!-- sdd-owner: implementation -->`
+- `- [ ] Run the complete final gate after PR 15: `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourceCreation.payload.test.ts tests/unit/resourceCreation.loaders.test.ts tests/unit/StagedSearchSelector.test.tsx tests/unit/crearRecursoSurface.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/keyboardBoundaries.test.ts tests/architecture/queryZodBoundaries.test.ts tests/architecture/catalogHierarchyBoundaries.test.ts tests/architecture/runtimeFixtureIsolation.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts && pnpm typecheck && pnpm lint && pnpm format:check && pnpm build`; record exact results and do not report unavailable gates as passed. <!-- sdd-owner: implementation -->`
+
+## Deferred parent-owned lifecycle actions
+
+- Create or reuse the draft/no-merge tracker and child chain, confirm targets and PR diagrams.
+- Start bounded review for each child with its review focus, rollback boundary, and evidence.
+- Sync the approved change to canonical OpenSpec after accepted verification.
+- Archive only through the repository OpenSpec archive workflow.
+
+## Next action
+
+Parent lifecycle should handle PR 1’s chain/review boundary. The next implementation slice is PR 2 only after the parent selects and authorizes it.
