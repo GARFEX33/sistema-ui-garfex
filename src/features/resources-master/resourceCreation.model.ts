@@ -118,3 +118,128 @@ export const normalizeInitialHierarchySnapshot = (
     depth: 3,
   }
 }
+
+export type CreationStage =
+  | { kind: 'class' }
+  | { kind: 'family' }
+  | { kind: 'type' }
+  | { kind: 'unit' }
+
+export type CreationDraft = Readonly<{
+  hierarchy: InitialResourceHierarchySnapshot
+  unitId: ResourceId | null
+  attributeIds: readonly ResourceId[]
+  revision: number
+}>
+
+export type CreationState = Readonly<{
+  draft: CreationDraft
+  stage: CreationStage
+}>
+
+export type CreationEvent =
+  | { type: 'OPEN'; prefix: NormalizedResourceHierarchyPrefix }
+  | { type: 'CONFIRM_CLASS'; item: ResourceContextClassItem }
+  | { type: 'CONFIRM_FAMILY'; item: ResourceContextFamilyItem }
+  | { type: 'CONFIRM_TYPE'; item: ResourceContextTypeItem }
+  | { type: 'NAVIGATE_TO_STAGE'; stage: CreationStage }
+  | { type: 'BACK' }
+
+const emptyDraft = (): CreationDraft => ({
+  hierarchy: emptySnapshot,
+  unitId: null,
+  attributeIds: [],
+  revision: 0,
+})
+
+export const createInitialCreationState = (): CreationState => ({
+  draft: emptyDraft(),
+  stage: { kind: 'class' },
+})
+
+const firstMissingStage = (
+  prefix: NormalizedResourceHierarchyPrefix,
+): CreationStage => {
+  if (prefix.depth === 0) return { kind: 'class' }
+  if (prefix.depth === 1) return { kind: 'family' }
+  if (prefix.depth === 2) return { kind: 'type' }
+  return { kind: 'unit' }
+}
+
+const hierarchyFromPrefix = (
+  prefix: NormalizedResourceHierarchyPrefix,
+): InitialResourceHierarchySnapshot => ({
+  classItem: prefix.classItem,
+  familyItem: prefix.familyItem,
+  typeItem: prefix.typeItem,
+})
+
+const clearDependentPlaceholders = (
+  draft: CreationDraft,
+  hierarchy: InitialResourceHierarchySnapshot,
+): CreationDraft => ({
+  ...draft,
+  hierarchy,
+  unitId: null,
+  attributeIds: [],
+  revision: draft.revision + 1,
+})
+
+const hasSameId = (
+  current: { id: ResourceId } | null,
+  next: { id: ResourceId },
+) => current !== null && resourceIdKey(current.id) === resourceIdKey(next.id)
+
+const backStage = (stage: CreationStage): CreationStage => {
+  if (stage.kind === 'family') return { kind: 'class' }
+  if (stage.kind === 'type') return { kind: 'family' }
+  if (stage.kind === 'unit') return { kind: 'type' }
+  return stage
+}
+
+export const resourceCreationReducer = (
+  state: CreationState,
+  event: CreationEvent,
+): CreationState => {
+  const { draft } = state
+
+  if (event.type === 'OPEN')
+    return {
+      draft: { ...emptyDraft(), hierarchy: hierarchyFromPrefix(event.prefix) },
+      stage: firstMissingStage(event.prefix),
+    }
+
+  if (event.type === 'NAVIGATE_TO_STAGE')
+    return { ...state, stage: event.stage }
+  if (event.type === 'BACK') return { ...state, stage: backStage(state.stage) }
+
+  if (event.type === 'CONFIRM_CLASS') {
+    const nextDraft = hasSameId(draft.hierarchy.classItem, event.item)
+      ? draft
+      : clearDependentPlaceholders(draft, {
+          classItem: event.item,
+          familyItem: null,
+          typeItem: null,
+        })
+    return { draft: nextDraft, stage: { kind: 'family' } }
+  }
+
+  if (event.type === 'CONFIRM_FAMILY') {
+    const nextDraft = hasSameId(draft.hierarchy.familyItem, event.item)
+      ? draft
+      : clearDependentPlaceholders(draft, {
+          ...draft.hierarchy,
+          familyItem: event.item,
+          typeItem: null,
+        })
+    return { draft: nextDraft, stage: { kind: 'type' } }
+  }
+
+  const nextDraft = hasSameId(draft.hierarchy.typeItem, event.item)
+    ? draft
+    : clearDependentPlaceholders(draft, {
+        ...draft.hierarchy,
+        typeItem: event.item,
+      })
+  return { draft: nextDraft, stage: { kind: 'unit' } }
+}

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createInitialCreationState,
   createInitialHierarchySnapshotCapture,
   deriveInitialHierarchySnapshot,
   normalizeInitialHierarchySnapshot,
+  resourceCreationReducer,
   resourceIdKey,
 } from '../../src/features/resources-master/resourceCreation.model'
 
@@ -134,5 +136,143 @@ describe('resource creation hierarchy snapshots', () => {
       typeItem: null,
       depth: 2,
     })
+  })
+})
+
+const open = (
+  prefix = normalizeInitialHierarchySnapshot({
+    classItem,
+    familyItem,
+    typeItem,
+  }),
+) =>
+  resourceCreationReducer(createInitialCreationState(), {
+    type: 'OPEN',
+    prefix,
+  })
+
+const populatedDraft = () => {
+  const state = open()
+
+  return {
+    ...state,
+    draft: {
+      ...state.draft,
+      unitId: 'unit-1',
+      attributeIds: ['attribute-1'],
+      revision: 4,
+    },
+  }
+}
+
+describe('resource creation navigation and hierarchy cascades', () => {
+  it.each([
+    [{ classItem: null, familyItem: null, typeItem: null }, 'class'],
+    [{ classItem, familyItem: null, typeItem: null }, 'family'],
+    [{ classItem, familyItem, typeItem: null }, 'type'],
+    [{ classItem, familyItem, typeItem }, 'unit'],
+  ] as const)('opens at the first missing %s stage', (snapshot, stage) => {
+    expect(open(normalizeInitialHierarchySnapshot(snapshot)).stage).toEqual({
+      kind: stage,
+    })
+  })
+
+  it('moves through breadcrumb and back navigation without mutating the draft', () => {
+    const before = populatedDraft()
+    let state = resourceCreationReducer(before, { type: 'BACK' })
+
+    expect(state.stage).toEqual({ kind: 'type' })
+    expect(state.draft).toBe(before.draft)
+
+    state = resourceCreationReducer(state, {
+      type: 'NAVIGATE_TO_STAGE',
+      stage: { kind: 'family' },
+    })
+    expect(state.stage).toEqual({ kind: 'family' })
+    expect(state.draft).toBe(before.draft)
+
+    state = resourceCreationReducer(state, { type: 'BACK' })
+    expect(state.stage).toEqual({ kind: 'class' })
+    expect(resourceCreationReducer(state, { type: 'BACK' }).stage).toEqual({
+      kind: 'class',
+    })
+  })
+
+  it.each([
+    [
+      'Class',
+      { type: 'CONFIRM_CLASS', item: { ...classItem, id: 'class-2' } },
+      {
+        classItem: { ...classItem, id: 'class-2' },
+        familyItem: null,
+        typeItem: null,
+      },
+      'family',
+    ],
+    [
+      'Family',
+      { type: 'CONFIRM_FAMILY', item: { ...familyItem, id: 'family-2' } },
+      {
+        classItem,
+        familyItem: { ...familyItem, id: 'family-2' },
+        typeItem: null,
+      },
+      'type',
+    ],
+    [
+      'Type',
+      { type: 'CONFIRM_TYPE', item: { ...typeItem, id: 'type-2' } },
+      { classItem, familyItem, typeItem: { ...typeItem, id: 'type-2' } },
+      'unit',
+    ],
+  ] as const)(
+    'replacing %s atomically clears its Unit and attribute placeholders',
+    (_, event, hierarchy, stage) => {
+      const before = populatedDraft()
+      const state = resourceCreationReducer(before, event)
+
+      expect(state).toMatchObject({
+        stage: { kind: stage },
+        draft: {
+          hierarchy,
+          unitId: null,
+          attributeIds: [],
+          revision: before.draft.revision + 1,
+        },
+      })
+    },
+  )
+
+  it.each([
+    { type: 'CONFIRM_CLASS', item: classItem },
+    { type: 'CONFIRM_FAMILY', item: familyItem },
+    { type: 'CONFIRM_TYPE', item: typeItem },
+  ] as const)('preserves descendants when %s is reconfirmed by ID', (event) => {
+    const before = populatedDraft()
+    const state = resourceCreationReducer(before, event)
+
+    expect(state.draft).toBe(before.draft)
+    expect(state.draft.revision).toBe(4)
+  })
+
+  it('increments revision only for a changed hierarchy parent', () => {
+    const opened = open()
+    const navigated = resourceCreationReducer(opened, {
+      type: 'NAVIGATE_TO_STAGE',
+      stage: { kind: 'type' },
+    })
+    const reconfirmed = resourceCreationReducer(navigated, {
+      type: 'CONFIRM_TYPE',
+      item: typeItem,
+    })
+    const replaced = resourceCreationReducer(reconfirmed, {
+      type: 'CONFIRM_TYPE',
+      item: { ...typeItem, id: 'type-2' },
+    })
+
+    expect(opened.draft.revision).toBe(0)
+    expect(navigated.draft.revision).toBe(0)
+    expect(reconfirmed.draft.revision).toBe(0)
+    expect(replaced.draft.revision).toBe(1)
   })
 })

@@ -115,3 +115,65 @@ The following persisted implementation-owned `- [ ]` lines remain unchanged:
 ## Next action
 
 Parent lifecycle should handle PR 1’s chain/review boundary. The next implementation slice is PR 2 only after the parent selects and authorizes it.
+
+---
+
+## PR 2A — Navigation and hierarchy cascade reducer (narrowed corrective apply)
+
+### Status
+
+- **State:** complete for delegated work unit `pr2a-navigation-cascades`; native attempt state consumed: `proceed` with evidence goal “Formatted RED/GREEN creation navigation and hierarchy cascade reducer under 399 review lines.” The parent owns attempt settlement for `sha256:f225997115a3c6cc9536f63b808f857b0c492591423425cfb20d9fb346fd16b8` and remediation receipt handling for `sha256:c5ece35f674e889b4dd290019f89f5ee238f13007513b707d1ff33bbc0f87041`.
+- **Structured status consumed:** native `gentle-ai sdd-status keyboard-first-resource-creation` reported `artifactStore: openspec`, proposal/spec/design/tasks/apply-progress present, `applyState: ready`, `nextRecommended: apply`, and no blocked reasons.
+- **Action context:** `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex`, with that workspace as the allowed edit root. Both edits are inside the delegated allowed surfaces; no action-context warning was found.
+- **Workload / PR boundary:** feature-branch-chain PR 2A only, targeting PR 1. `git diff --numstat` against `HEAD` is 265 A+D (125 model, 140 test), below the hard 399 limit. No commit, branch, PR, review, receipt, loader, or parent lifecycle action was attempted.
+
+### Completed delegated behavior
+
+- Reduced the prior broad candidate to a four-stage typed reducer: `class`, `family`, `type`, and `unit`.
+- `OPEN` derives the first missing stage from the normalized prefix at depths 0/1/2/3.
+- `BACK` follows `unit → type → family → class` and stays at Class; `NAVIGATE_TO_STAGE` provides explicit breadcrumb stage navigation without draft mutation.
+- `CONFIRM_CLASS`, `CONFIRM_FAMILY`, and `CONFIRM_TYPE` preserve descendants and revision for same-ID reconfirmation.
+- A changed hierarchy parent atomically clears the minimum Unit and attribute placeholders (`unitId`, `attributeIds`) and increments `revision` exactly once; navigation and same-ID reconfirmation do not increment it.
+- Explicitly deferred PR 2B behavior: attribute-value events, omission sets, resource-data/validation predicates, submit states/transitions, and uncertainty revision locking.
+
+### Persisted task checkbox update
+
+- No `tasks.md` checkbox was changed. Each existing PR 2 implementation row is broader than this authorized PR 2A split and explicitly includes deferred PR 2B behavior, so checking any such row would falsely report attribute/omission, validation, or submit work as complete. The task artifact remains byte-for-byte unchanged as directed; no completed delegated behavior lacks a matching narrowed task row.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 2A reducer slice | `tests/unit/resourceCreation.model.test.ts` | Unit | Broad candidate baseline: 20/20 passed | Replaced the broad tests with the narrowed 2A matrix before production edits; focused run failed 4 assertions because `NAVIGATE_TO_STAGE` was absent and the prior broad reducer did not clear the narrowed `unitId`/`attributeIds` placeholders | Replaced broad reducer behavior with the minimum four-stage navigation/cascade contract; focused run passed 18/18 | Matrix covers four OPEN depths, three changed-parent cascades, three same-ID reconfirmations, navigation/back preservation, and real-mutation revision behavior | Prettier formatted both files; the focused test stayed green |
+
+### Verification evidence
+
+- `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts` — final GREEN: 18/18 passed.
+- `pnpm typecheck` — passed (`pnpm router:generate && tsc -b`).
+- `pnpm exec eslint src/features/resources-master/resourceCreation.model.ts tests/unit/resourceCreation.model.test.ts` — passed.
+- `pnpm exec prettier --check src/features/resources-master/resourceCreation.model.ts tests/unit/resourceCreation.model.test.ts` — passed.
+- `git diff --check` — passed.
+- `git diff --numstat` — 265 A+D against `HEAD`, below 399.
+
+### Files changed
+
+- `src/features/resources-master/resourceCreation.model.ts`
+- `tests/unit/resourceCreation.model.test.ts`
+- `openspec/changes/keyboard-first-resource-creation/apply-progress.md`
+
+### Deviations and deferred scope
+
+- The existing broad candidate was deliberately reduced rather than compressed. The reducer retains only hierarchy navigation and the minimum dependent placeholders necessary to prove atomic cascades.
+- No loaders or PR 2B attribute/omission/resource-data/submit/uncertainty behavior was implemented.
+
+### Remaining implementation tasks
+
+The prior cumulative progress section preserves all remaining implementation-owned unchecked rows. The following exact PR 2 rows remain unchecked because they include deferred PR 2B scope:
+
+- `- [ ] **RED:** Extend \`tests/unit/resourceCreation.model.test.ts\` with failing cases for \`OPEN\`, first-missing stage, breadcrumb/back navigation, Class/Family/Type cascades, same-ID preservation, omission/value preservation, and revision changes. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Implement \`CreationStage\`, \`CreationDraft\`, submit state, reducer events, validation predicates, and ID-keyed navigation/reset helpers in \`resourceCreation.model.ts\`, without Query/store ownership. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Add replacement-versus-reconfirmation and return-navigation matrices, run the stated command, and commit the directly tested state contract used by the hierarchy integration. <!-- sdd-owner: implementation -->`
+
+### Next action
+
+Parent lifecycle should settle the supplied native attempt and maintain the PR 2A boundary. A future separately authorized PR 2B may add only the deferred attribute/omission/resource-data/submit behavior; loaders remain out of scope.
