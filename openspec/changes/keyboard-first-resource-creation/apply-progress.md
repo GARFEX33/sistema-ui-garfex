@@ -198,3 +198,18 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Files:** `resourceCreation.model.ts`, `resourceCreation.model.test.ts`, `tasks.md`, and this progress record.
 - **Deviation:** none; no UI, loaders, selectors, payload builder, or runtime surface changed.
 - **Remaining:** PR 3 and later implementation-owned rows remain unchecked exactly as retained in `tasks.md`; parent-owned chain/review/sync/archive rows remain byte-for-byte deferred.
+
+---
+## PR 3 — Generic stale-safe dependent paging contract
+- **State:** complete for `pr3-dependent-loader`; consumed native `proceed`, authoritative nested spec/designs, `artifactStore: openspec`, and repo-local context without warnings.
+- **Boundary:** feature-branch-chain PR 3 only (PR 2 → 📍 PR 3 → PR 4); 369 A+D below 399; no commit, branch, PR, review, receipt, or PR 4 work.
+- **Completed / persisted:** PR 3 RED, GREEN, and TRIANGULATE/REFACTOR rows are visibly `[x]` in `tasks.md`.
+- **Files:** `resourceCreation.loaders.ts`, `resourceCreation.loaders.test.ts`, `tasks.md`, and this cumulative progress record.
+- **Behavior:** generic injected-identity paging guards token/context/cursor adoption; retains/dedupes valid pages; explicit retries preserve cursors; repeated cursors are recoverable.
+- **Verification:** focused Vitest 5/5, `pnpm typecheck`, targeted ESLint, and targeted Prettier passed; pure-contract runtime scenario N/A.
+- **TDD Cycle Evidence:** RED import resolution failed; GREEN 4/4 passed; triangulated empty, dedupe, retry/repeat, and stale deferred contexts; refactor cached identity keys and reran 5/5.
+- **Deviation / rollback:** none; remove only the loader and its focused tests to roll back this seam.
+- **Remaining exact PR 4 RED:** `- [ ] **RED:** Add failing RTL and architecture assertions for Spanish name-only local filtering, active-key repair without confirmation, arrows/Enter, IME/defaultPrevented precedence, explicit retry/continuation, and no document/window listener. <!-- sdd-owner: implementation -->`
+- **Remaining exact PR 4 GREEN:** `- [ ] **GREEN:** Create \`StagedSearchSelector.tsx\` from local React Aria \`SearchField\`/\`ListBox\` and shared \`Button\`, including accessible loading/empty/error copy, controlled query, \`Cargar más…\`, and provisional \`activeKey\`; keep it inside \`resources-master\`. <!-- sdd-owner: implementation -->`
+- **Remaining exact PR 4 TRIANGULATE/REFACTOR:** `- [ ] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->`
+- **Deferred lifecycle:** parent owns chain targeting/review/receipts; parent-owned task rows remain untouched.
