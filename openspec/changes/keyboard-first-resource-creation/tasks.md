@@ -85,9 +85,9 @@ All children inherit the no-go scope above. “N/A” runtime boundaries are lim
 
 **Review focus:** typed local state preserves same-ID descendants, atomically clears only changed-parent dependents, and increments revision only on real mutations. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime scenario:** N/A — direct pure reducer matrix; PR 5 consumes it in the dialog after the shared loader/selector seams land. **Rollback:** revert reducer/events/navigation cases only, retaining PR 1’s captured snapshot.
 
-- [ ] **RED:** Extend `tests/unit/resourceCreation.model.test.ts` with failing cases for `OPEN`, first-missing stage, breadcrumb/back navigation, Class/Family/Type cascades, same-ID preservation, omission/value preservation, and revision changes. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement `CreationStage`, `CreationDraft`, submit state, reducer events, validation predicates, and ID-keyed navigation/reset helpers in `resourceCreation.model.ts`, without Query/store ownership. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Add replacement-versus-reconfirmation and return-navigation matrices, run the stated command, and commit the directly tested state contract used by the hierarchy integration. <!-- sdd-owner: implementation -->
+- [x] **RED:** Extend `tests/unit/resourceCreation.model.test.ts` with failing cases for `OPEN`, first-missing stage, breadcrumb/back navigation, Class/Family/Type cascades, same-ID preservation, omission/value preservation, and revision changes. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Implement `CreationStage`, `CreationDraft`, submit state, reducer events, validation predicates, and ID-keyed navigation/reset helpers in `resourceCreation.model.ts`, without Query/store ownership. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Add replacement-versus-reconfirmation and return-navigation matrices, run the stated command, and commit the directly tested state contract used by the hierarchy integration. <!-- sdd-owner: implementation -->
 
 ### PR 3 — Generic stale-safe dependent paging contract (target: PR 2)
 

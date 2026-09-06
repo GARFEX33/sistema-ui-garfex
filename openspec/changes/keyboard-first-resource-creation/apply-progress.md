@@ -177,3 +177,24 @@ The prior cumulative progress section preserves all remaining implementation-own
 ### Next action
 
 Parent lifecycle should settle the supplied native attempt and maintain the PR 2A boundary. A future separately authorized PR 2B may add only the deferred attribute/omission/resource-data/submit behavior; loaders remain out of scope.
+
+---
+
+## PR 2B — Deferred draft state, validation, and submit contract
+
+- **State / structured status:** completed delegated `pr2b-draft-state`; native state `proceed`, artifact store `openspec`, authoritative nested spec and both design artifacts consumed, apply ready.
+- **Action context:** repo-local `/home/garfex/PROGRAMACION/sistema-ui-garfex`; all four parent-authorized edit surfaces only; no unsafe-root warning.
+- **Workload / boundary:** feature-branch-chain PR 2B only after accepted `52ad7a1`; final effective PR 2 stays below 399 A+D; no commit, branch, PR, review, receipt, or PR 3 work.
+- **Completed task checkboxes:**
+  - [x] RED — persisted the original PR 2 RED row after the complete reducer contract was covered.
+  - [x] GREEN — persisted the original PR 2 GREEN row after implementation.
+  - [x] TRIANGULATE/REFACTOR — persisted the original PR 2 TRIANGULATE/REFACTOR row after focused verification.
+- **Behavior:** assignment-ID value map and explicit omissions are reciprocal, real-only revision changes preserve PR 2A navigation/cascades, Nombre trim validity is pure, and typed submit handles idle/submitting/known-error/created/uncertain with uncertainty revision lock.
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN | TRIANGULATE/REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 2B reducer | 18/18 | Five contracts, then uncertain-back failure | 23/23, then 25/25 | Type replacement/preservation; omission refactor green |
+- **Verification:** `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts` 25/25 passed; `pnpm typecheck`, targeted ESLint, and targeted Prettier passed.
+- **Files:** `resourceCreation.model.ts`, `resourceCreation.model.test.ts`, `tasks.md`, and this progress record.
+- **Deviation:** none; no UI, loaders, selectors, payload builder, or runtime surface changed.
+- **Remaining:** PR 3 and later implementation-owned rows remain unchecked exactly as retained in `tasks.md`; parent-owned chain/review/sync/archive rows remain byte-for-byte deferred.
