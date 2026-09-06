@@ -213,3 +213,27 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Remaining exact PR 4 GREEN:** `- [ ] **GREEN:** Create \`StagedSearchSelector.tsx\` from local React Aria \`SearchField\`/\`ListBox\` and shared \`Button\`, including accessible loading/empty/error copy, controlled query, \`Cargar más…\`, and provisional \`activeKey\`; keep it inside \`resources-master\`. <!-- sdd-owner: implementation -->`
 - **Remaining exact PR 4 TRIANGULATE/REFACTOR:** `- [ ] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->`
 - **Deferred lifecycle:** parent owns chain targeting/review/receipts; parent-owned task rows remain untouched.
+
+---
+## PR 4 — staged selector size-guard stop
+- **State / status:** blocked; consumed native `proceed`, authoritative nested spec/designs, strict TDD, and repo-local allowed roots without warnings.
+- **Workload / boundary:** PR 4 only (`PR 3 → 📍 PR 4 → PR 5`); an honest selector/test/guard attempt measured 412 A+D before progress, exceeding 399.
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN/TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 4 trial | Architecture 4/4 | Missing selector/import | 10/10 + typecheck | Trial removed for size |
+- **Persisted completion/files:** none; PR 4 rows remain visibly unchecked and only this progress record changed.
+- **Remaining exact rows:**
+- `- [ ] **RED:** Add failing RTL and architecture assertions for Spanish name-only local filtering, active-key repair without confirmation, arrows/Enter, IME/defaultPrevented precedence, explicit retry/continuation, and no document/window listener. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Create \`StagedSearchSelector.tsx\` from local React Aria \`SearchField\`/\`ListBox\` and shared \`Button\`, including accessible loading/empty/error copy, controlled query, \`Cargar más…\`, and provisional \`activeKey\`; keep it inside \`resources-master\`. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->`
+- **Next:** parent must provide a revised cohesive PR 4 slice or explicit `size:exception`; PR 5 and lifecycle actions remain deferred.
+
+---
+## PR 4A — pure staged-selector model (authorized split)
+- **State/boundary:** completed `pr4a-selector-model` only; PR 4B React Aria and PR 5 remain out of scope, with PR 4 rows intentionally unchecked.
+- **TDD:** RED import failed; GREEN focused Vitest passed 4/4; triangulation covers Spanish case/diacritic/name-only filtering and active repair branches; Prettier refactor rerun stayed green.
+- **Behavior:** pure loaded-display-name filtering plus provisional-key retention/repair only; no React, DOM, API, Query, global state, callback, or dedupe behavior was added.
+- **Verification:** focused Vitest 4/4, `pnpm typecheck`, `pnpm lint`, targeted Prettier check, and `git diff --check` passed.
+- **Files:** `stagedSearchSelector.model.ts`, `stagedSearchSelector.model.test.ts`, and this record; new attempt is 99 lines (90 source/test + 9 progress), below 399.
+- **Native handoff:** parent must settle token `sha256:0eed49d7c68fbea8e97e6211a295e29017c9c8fcddab3ea79c94a78f27962ef8` and remediate `sha256:c09d65095738c56a143d86867daff284a4cc0a23a614b4f0494f52ac27d6a1e4`.
