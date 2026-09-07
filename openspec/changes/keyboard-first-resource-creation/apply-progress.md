@@ -677,3 +677,21 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke `onCreated` or any create operation. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Delete the bounded legacy review, submit, payload, ownership, and result branches plus their obsolete tests while retaining the `onCreated → refetchActive()` seam unused by pending. <!-- sdd-owner: implementation -->
 - [ ] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->
+
+## PR 9C — test-cleanup budget stop
+
+- **Status / action context:** authoritative `gentle-ai.sdd-status@2` consumed: OpenSpec apply ready, strict TDD, repo-local allowed root, and no blockers.
+- **RED:** baseline was 25 passed/6 skipped for surface+architecture; temporarily enabling the skipped Paso 3 suite produced 20 passed/6 failed because the removed `Siguiente` path no longer exists. The full Playwright file also exposed the stale old-dialog assertion and the create/refetch scenario as expected failures (5 passed/2 failed).
+- **Budget:** deleting the required Paso 3 suite plus its exclusive Unit fixtures/helpers is 334 D + 3 A; deleting the stale create/refetch E2E is 116 D, and preserving the unrelated open/shortcut coverage requires 2 D + 2 A. The required test cleanup therefore reaches 454 A+D before this record, exceeding the hard 399 cap.
+- **Persisted tasks:** none changed; all aggregate PR 9 rows remain visibly unchecked until the final cleanup and close/back evidence can be completed within an authorized delivery boundary. Parent-owned rows remain untouched.
+- **Required delivery decision:** authorize a cohesive PR9C.1/PR9C.2 split (unit cleanup, then E2E cleanup) or explicitly accept an over-budget exception. No production/API/types/model/screen changes, commit, push, PR, review, receipt, or lifecycle action occurred.
+
+## PR 9C1 — skipped Paso 3 unit-suite deletion
+
+- **Status / action context:** native `gentle-ai.sdd-status@2` consumed: OpenSpec apply ready, strict TDD, repo-local allowed root, no blockers or warnings.
+- **Workload / boundary:** authorized auto-chain `PR 9C → 📍 PR 9C1 → PR 9C2`; no E2E, production, API, model, screen, tasks, commit, or lifecycle action.
+- **Deletion:** removed the skipped Paso 3 review/create suite and its exclusive `goToStep2`, `goToStep3`, `resourceSummary`, assignment/definition, and option fixtures; retained shared fake API mocks and active pending no-request proof.
+- **Tasks:** PR 9 aggregate rows remain visibly unchecked by direction; no persisted task checkbox changed.
+- **TDD Cycle Evidence:** safety net surface 20 passed/6 skipped; deletion-only RED is N/A because no replacement behavior test was authorized; GREEN focused surface/model/architecture 45/45; triangulation is the active pending no-request proof; Prettier refactor reran focused green.
+- **Verification:** full `pnpm test` 416/416; `pnpm typecheck`, targeted ESLint and Prettier, and `git diff --check` passed; source scan found no skipped Paso 3/helper symbols.
+- **Rollback:** restore only this test-suite cleanup; retain active staged hierarchy/Unit/pending tests.
