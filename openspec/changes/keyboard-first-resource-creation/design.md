@@ -1,199 +1,216 @@
-# Diseño — Creación de recursos Keyboard First
+# Diseño — Creador de recursos Keyboard First
 
-## Autoridad y guía de revisión
+`skill_resolution: paths-injected`
 
-Este archivo es la autoridad de arquitectura, alcance, invariantes, migración y límites de la propuesta aprobada para `keyboard-first-resource-creation`. Los contratos mecánicos verificables —tipos y transiciones de estado, algoritmos de loader, propiedad de teclado, contratos de componentes, matriz de pruebas y detalle de la cadena— están en [design-details.md](./design-details.md). Ambos artefactos son entradas requeridas para apply.
+## Autoridad y lectura
 
-### Índice de decisiones detalladas
+Este archivo fija la arquitectura, el alcance, la migración y el límite de integración de `keyboard-first-resource-creation`. Los contratos mecánicos de estado, loaders, foco, reconciliación y pruebas están en [design-details.md](./design-details.md). Proposal y spec prevalecen si un detalle histórico los contradice.
 
-| Decisión                                       | Detalle normativo                                                          |
-| ---------------------------------------------- | -------------------------------------------------------------------------- |
-| Snapshot inicial tipado y propiedad del estado | [§1](./design-details.md#1-snapshot-inicial-tipado-y-propiedad-del-estado) |
-| Máquina local de etapas                        | [§2](./design-details.md#2-máquina-local-de-etapas)                        |
-| Cargas paginadas y rechazo stale               | [§3](./design-details.md#3-cargas-paginadas-acumulación-y-rechazo-stale)   |
-| Selector staged feature-local                  | [§4](./design-details.md#4-selector-staged-feature-local)                  |
-| Propiedad de teclado y foco                    | [§5](./design-details.md#5-propiedad-exacta-de-teclado-y-foco)             |
-| Unidad natural desde políticas efectivas       | [§6](./design-details.md#6-unidad-natural-desde-políticas-efectivas)       |
-| Resolución secuencial de atributos             | [§7](./design-details.md#7-resolución-y-recorrido-secuencial-de-atributos) |
-| Datos, revisión, payload y resultados          | [esta sección](#datos-del-recurso-revisión-payload-y-resultados)           |
-| Estados visibles y accesibles                  | [esta sección](#estados-visibles-y-accesibles)                             |
+Esta revisión sustituye expresamente el diseño anterior de **Datos del recurso**, controles libres por tipo de atributo, payload legado y resolución frontend de `CONDITIONAL`.
 
-## Estado y alcance
+## Decisión dominante: flujo selection-only en dos capacidades
 
-La modificación queda limitada a `src/features/resources-master`, su composición desde `ResourcesMasterScreen` y las pruebas que verifican esa capacidad. No modifica Catálogo, backend/Convex, DTOs o endpoints públicos, dependencias, React Query global, rutas, URL, estado global, `KeyboardController`, AppShell, Pi/Gentle ni contratos de payload.
+La arquitectura tendrá una única composición feature-local, **ResourceCreationShell**, pero dos capacidades entregables separadas por una pared contractual:
 
-El árbol actual corresponde al prototipo alcanzado por `7c42860`: `CrearRecursoSurface.tsx` contiene una superficie de más de 1100 líneas con formulario de tres pasos, loaders de una página, payload y manejo de resultados. Se conservará su evidencia observable válida, pero no su forma monolítica ni la preselección implícita de Unidad.
+1. **Capacidad backend-independent disponible ahora:** shell GARFEX, rail, barra de comandos, selector search-list, Clase, Familia, Tipo, Unidad natural, invalidación jerárquica y borrador puro de selecciones activas/suspendidas.
+2. **Capacidad backend v1 bloqueada:** atributos dinámicos, evaluación, revisión autoritativa y creación desde selecciones.
 
-## Evidencia de repositorio que condiciona la arquitectura
+Tras confirmar Unidad natural, el bundle actual terminará honestamente en **Contrato pendiente**. No cargará las asignaciones/opciones legadas, no mostrará atributos simulados, no pedirá Nombre o Descripción y no llamará `crearRecurso`. Esta pared es parte del producto actual, no un fallback de error.
 
-- `ResourcesMasterScreen.tsx` posee la selección y los items cargados de Clase, Familia y Tipo mediante `useResourcesHierarchy(api)`; el diálogo recibe hoy sólo `api` y `onCreated`.
-- `useResourcesHierarchy.ts` y `parentGatedListController.ts` ya demuestran paginación explícita, acumulación, deduplicación y rechazo por token de respuestas de un padre anterior.
-- `resourcesMaster.api.ts` valida transporte antes de React y ya expone todas las operaciones necesarias. Los listados aceptan `cursor` y `pageSize`; las políticas reciben el Tipo tanto como `tipoRecursoId` como `paraTipoRecursoId` a través del adapter existente.
-- `ResourceCreateInput` exige Clase, Familia, Tipo, Unidad, Nombre, valores y ownership. El mapeo actual transporta `OPCION` con `opcionAtributoId` y nombre, `BOOLEANO` como boolean, `NUMERO` como number y `TEXTO` como string.
-- `Dialog`, `Button` y `Field` son las primitivas visuales compartidas aprobadas. `Dialog` aporta modal y contención de foco React Aria; la superficie registra el overlay y restaura el foco mediante las utilidades existentes.
-- `HierarchyNavigator` representa tres columnas y no coincide con un selector secuencial con filtro. No se reutilizará ni se modificará.
-- `KeyboardController.tsx` es el único listener global de `keydown` y ya cede ante overlays, edición, IME y `defaultPrevented`.
-- `resourcesMasterScreenRefetch.test.tsx` comprueba que `onCreated → refetchActive()` relee sólo la identidad observada. Ese contrato no se reemplaza por invalidación o escritura de cache.
-- `crearRecursoSurface.test.tsx` caracteriza payload, validación/foco, reset por Tipo, submit único, error administrativo, incertidumbre y restauración de foco. Las pruebas nuevas sustituyen la semántica de tres pasos por etapas sin perder esas garantías.
+Cuando existan los DTOs exactos, la misma shell continuará con evaluaciones autoritativas y una secuencia `Atributos · n de total` keyed por assignment ID. La integración se diseñará contra esos DTOs publicados; este diseño no declara interfaces de transporte provisionales.
 
-## Invariantes de arquitectura
+## Alcance y compatibilidad con `e52b9b2`
 
-- La pantalla entrega al diálogo un snapshot de sólo lectura; nunca setters de jerarquía, criterios de lista ni setters de búsqueda. Por construcción, el borrador no cambia el filtro ni la consulta del fondo.
-- El borrador, la navegación y el submit son locales al diálogo; no pertenecen a React Query ni a un store global.
-- La confirmación es explícita: filtrar, enfocar o preferir un candidato no cambia el borrador.
-- Toda adopción asíncrona dependiente se protege contra contexto stale; el filtro local nunca agrega parámetros al adapter ni dispara requests.
-- Una sola proyección pura construye el payload para review y submit. Tras `CREATED`, y sólo entonces, `onCreated` ejecuta `refetchActive()` para la identidad observada.
-- No se agrega listener global de teclado: React Aria, el diálogo y handlers locales guardados preservan IME, edición y `defaultPrevented`.
-- La capacidad se divide en seams feature-locales; ningún archivo nuevo supera 500 líneas y el shell queda aproximadamente entre 250 y 350 líneas.
+El runtime sigue centrado en `src/features/resources-master` y su composición mínima desde `ResourcesMasterScreen`. Se preservan las costuras compatibles ya implementadas:
 
-## Límites de componentes y archivos
+- snapshot local derivado y normalizado al abrir;
+- `resourceIdKey` y reducer feature-local;
+- `createParentGatedListController` para listas jerárquicas;
+- `createDependentLoader` como base paginada/stale-safe;
+- `StagedSearchSelector` y su modelo de filtro local;
+- trigger `N`, `Dialog`, registro de overlay y restauración de foco;
+- `onCreated → refetchActive()` como seam futuro, sin invocación mientras no exista creación v1 confirmada.
 
-La superficie final no debe sustituir un archivo de 1100 líneas por otro monolito.
+Se reemplazan, aunque ya tengan pruebas históricas:
 
-| Archivo                                                     | Responsabilidad                                                                     | Cambio                                                               |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `src/features/resources-master/ResourcesMasterScreen.tsx`   | Derivar snapshot desde selección/items y conservar `refetchActive`                  | modificación pequeña                                                 |
-| `src/features/resources-master/resourceCreation.model.ts`   | tipos locales, normalización, reducer, navegación, validación y payload/review puro | nuevo                                                                |
-| `src/features/resources-master/resourceCreation.loaders.ts` | loader dependiente, resolución de políticas/Unidad y atributos paginados            | nuevo                                                                |
-| `src/features/resources-master/useResourceCreationFlow.ts`  | instancias de controladores, efectos por etapa/token y comandos al reducer          | nuevo                                                                |
-| `src/features/resources-master/StagedSearchSelector.tsx`    | SearchField/ListBox local, filtro, candidato provisional, retry y Cargar más        | nuevo                                                                |
-| `src/features/resources-master/ResourceAttributeStage.tsx`  | control tipado de un único atributo y Omitir                                        | nuevo                                                                |
-| `src/features/resources-master/ResourceCreationDetails.tsx` | Datos, Review y Result como presentaciones pequeñas sobre contratos tipados         | nuevo                                                                |
-| `src/features/resources-master/CrearRecursoSurface.tsx`     | trigger, Dialog, breadcrumb, foco, teclado de etapa y composición                   | reemplazo gradual                                                    |
-| `src/features/resources-master/resourcesMaster.css`         | clases del prototipo                                                                | eliminar cuando no queden consumidores; lo nuevo usa Tailwind/tokens |
-| `src/shared/ui/*`                                           | primitivas existentes                                                               | reuso, sin cambio previsto                                           |
-| `src/shared/keyboard/*`, `src/app/shell/*`                  | arbitraje global                                                                    | sin cambio runtime                                                   |
+- el wizard `Paso 1/2/3` y los `Select` simultáneos;
+- la preselección implícita de Unidad;
+- los controles TEXTO, NUMERO, BOOLEANO u OPCION construidos desde contratos legados;
+- Nombre, Descripción y cualquier otro dato de negocio escrito manualmente;
+- `buildValores`, el payload `ResourceCreateInput`, `ownership` y `api.createResource` dentro del Creador;
+- errores/disposiciones inferidos desde `crearRecurso`;
+- la suposición de que `CONDITIONAL` equivale a opcional u omitible.
 
-No se modifica `resourcesMaster.api.ts` ni `resourcesMaster.types.ts` salvo que TypeScript obligue a exportar un alias ya existente; el diseño no requiere ese cambio. Los tipos de snapshot/modelo permanecen fuera de los DTOs públicos.
+`resourcesMaster.api.ts` puede conservar sus operaciones legadas para otros consumidores. El nuevo Creador no las usa como atajo y no las modifica antes del contrato backend v1.
 
-## Flujo de datos
+## Arquitectura feature-local
+
+| Límite | Responsabilidad | Promoción |
+| --- | --- | --- |
+| `CrearRecursoSurface.tsx` | Trigger/atajo, apertura/cierre, captura del opener y composición del diálogo | Permanece feature-local |
+| `ResourceCreationShell.tsx` | Layout GARFEX, una decisión dominante, foco por etapa y composición de rail/contenido/barra | Feature-local |
+| `CreationStageRail.tsx` | Contexto persistente y regreso a etapas confirmadas; agrupa todos los atributos en una sola entrada | Feature-local |
+| `CreationCommandBar.tsx` | Acciones disponibles y ayudas de teclas coherentes con la etapa | Feature-local |
+| `StagedSearchSelector.tsx` | SearchField + ListBox, filtro de páginas cargadas, candidato, confirmación y transferencia de foco | Reutilizable sólo dentro de `resources-master` |
+| `resourceCreation.model.ts` | Snapshot, reducer, invalidaciones, navegación y evaluación/fingerprint nulos en cada mutación | Feature-local |
+| `resourceCreation.selectionDraft.ts` | Modelo puro genérico de selecciones activas/suspendidas por assignment ID | Feature-local; no es un DTO |
+| `resourceCreation.loaders.ts` | Cargas dependientes paginadas, dedupe, retry y rechazo stale | Feature-local |
+| `useResourceCreationFlow.ts` | Une controladores/loaders con reducer sin guardar el borrador remotamente | Feature-local |
+| `ResourceCreationContractPending.tsx` | Fin honesto del recorrido disponible y explicación no accionable de la dependencia | Feature-local |
+| `ResourcesMasterScreen.tsx` | Entrega snapshot de sólo lectura y conserva el seam de refetch confirmado | Modificación mínima |
+
+No se reutiliza ni modifica `HierarchyNavigator`: tres columnas con selección inmediata no representan una sola decisión secuencial. Se reutilizan `Dialog`, `Button`, `Field` cuando exista búsqueda, React Aria y tokens semánticos. No se crea un componente `shared/ui` por esta única ocurrencia.
+
+Todos los archivos runtime de creación se mantendrán por debajo de 500 líneas. `CrearRecursoSurface` dejará de ser un segundo shell y quedará como coordinador del trigger/overlay.
+
+## Composición visual y jerarquía
+
+El diálogo se titula **Creador de recursos**; el trigger puede conservar **Nuevo recurso** y `N`. En toda etapa se muestran, en este orden:
+
+1. encabezado GARFEX;
+2. `CreationStageRail` compacto;
+3. título/pregunta de la única decisión dominante;
+4. búsqueda opcional fija sobre su lista;
+5. contador honesto de elementos cargados/visibles;
+6. estados de carga, vacío, error o contrato pendiente;
+7. `CreationCommandBar` persistente.
+
+El rail contiene Clase, Familia, Tipo y Unidad natural. Cuando backend v1 exista añade una sola entrada agregada `Atributos · n de total`; nunca una miga por asignación. Revisión/Resultado aparecen sólo cuando una evaluación real permita llegar a ellas. El contexto jerárquico confirmado continúa visible durante todos los atributos.
+
+Candidato enfocado y selección confirmada no comparten semántica: foco usa contorno y marcador de posición; una selección confirmada usa texto/check y queda reflejada en el rail. Ningún estado depende sólo del color.
+
+## Flujo de datos disponible ahora
 
 ```text
-useResourcesHierarchy selection + loaded items
-        │ deriveInitialHierarchySnapshot (screen, read-only)
+ResourcesMasterScreen hierarchy selection + loaded items
+        │ deriveInitialHierarchySnapshot (read-only)
         ▼
 CrearRecursoSurface.open()
-        │ normalize valid prefix + OPEN reducer event
+        │ capture + normalize continuous prefix
         ▼
-local CreationDraft/CreationStage
-        │
-        ├─ hierarchy controllers ── existing ResourcesMasterApi list methods
-        ├─ unit loader ──────────── listUnitPolicies pages → getUnit hydration
-        └─ attribute resolver ───── assignment pages → definitions → option pages
-        │                    (all guarded by context token)
-        ▼
-Staged selectors / one Attribute / Resource Data
-        │ explicit confirm or omit
-        ▼
-buildResourceCreateInput(draft) ── same projection feeds Review and submit
-        │
-        ▼
-api.createResource
-        ├─ CREATED ── result success ── onCreated ── refetchActive only
-        ├─ known admin error ────────── review + manual retry
-        └─ unknown result ───────────── uncertain; no refresh/no identical retry
+local reducer / useResourceCreationFlow
+        ├─ Clase   ─ current paginated hierarchy loader
+        ├─ Familia ─ current paginated hierarchy loader, keyed by Clase
+        ├─ Tipo    ─ current paginated hierarchy loader, keyed by Familia
+        └─ Unidad  ─ effective Type policies pages → getUnit detail
+                     (token/context/cursor guarded)
+        ▼ explicit Enter/click confirmation
+ResourceCreationContractPending
+        ├─ no attribute production request
+        ├─ no authoritative review
+        └─ no create action
 ```
 
-## Datos del Recurso, revisión, payload y resultados
+Cambiar un ancestro invalida descendientes en una sola transición. Cambiar Unidad invalida evaluación y fingerprint aunque ambos sean `null` en la capacidad actual. El snapshot nunca recibe setters de la pantalla, por lo que el filtro y la consulta activa quedan aislados.
 
-Datos del Recurso es una etapa propia antes de Revisión. Conserva la semántica actual:
+La búsqueda sólo filtra candidatos cargados. El contador dirá, por ejemplo, “3 coincidencias entre 20 opciones cargadas”; si existe cursor, **Cargar más…** permanece explícito. Nunca se afirma una búsqueda global.
 
-- `nombre.trim()` es obligatorio;
-- `descripcion.trim()` vacía se omite;
-- no se agregan campos ni normalizaciones.
+## Flujo futuro, bloqueado por backend v1
 
-`buildResourceCreateInput(draft)` será una función pura y será la única fuente tanto del review como de `api.createResource`. El review proyecta ese objeto junto con las etiquetas ya hidratadas; no reconstruye una segunda versión. Los opcionales omitidos o raw vacíos no aparecen.
+Una vez publicado y aceptado el contrato:
 
-El payload mantiene exactamente:
+```text
+confirmed hierarchy + Unit + active selection IDs
+        │
+        ▼
+evaluarCreacionDesdeSelecciones
+        │ response adopted only for current draft revision/request token
+        ▼
+normalized authoritative facts
+        ├─ status INCOMPLETE | VALID | INVALID
+        ├─ resolved assignment sequence and applicability
+        ├─ allowed-value validity used for reconciliation
+        ├─ issues
+        ├─ generated name + technical identity
+        └─ catalog fingerprint
+        │
+        ├─ reconcile active/suspended buckets by assignment ID
+        ├─ next pending selection → Atributos · n de total
+        └─ VALID/INVALID/INCOMPLETE review from response only
 
-```ts
-{
-  claseRecursoId,
-  familiaRecursoId,
-  tipoRecursoId,
-  unidadId,
-  nombre,
-  descripcion?,
-  valores,
-  ownership: { kind: 'GLOBAL' }
-}
+VALID current evaluation + required expected fingerprint
+        │ active selection IDs only
+        ▼
+crearRecursoDesdeSelecciones
+        │ transactional reevaluation
+        ▼
+explicit contractual disposition → UI result
 ```
 
-**Crear recurso** está deshabilitado si el borrador no es válido, una carga del Tipo sigue pendiente/fallida, `submit.status === 'submitting'` o una incertidumbre bloquea esa misma revisión. `SUBMIT_STARTED` captura `draft.revision`; activaciones posteriores no vuelven a llamar la API.
+El frontend no analiza expresiones `CONDITIONAL`, no calcula aplicabilidad, no genera nombre/identidad y no valida valores permitidos por su cuenta. Sólo aplica hechos explícitos ya normalizados desde la evaluación vigente. Cada confirmación, omisión o cambio elimina inmediatamente la evaluación y el fingerprint anteriores antes de iniciar otra evaluación.
 
-- `CREATED`: guarda el resumen, pasa a Resultado exitoso e invoca `onCreated` exactamente una vez.
-- error administrativo reconocido: permanece en Revisión, conserva borrador y permite retry manual.
-- error no reconocido: pasa a Resultado incierto, no llama `onCreated` y no muestra un retry de la misma escritura. Guarda `blockedRevision`; **Volver** permite corregir, pero Crear permanece bloqueado hasta que una mutación real incremente `draft.revision`. También ofrece **Cerrar y buscar en el listado**.
+## Pared contractual backend
 
-La pantalla conserva `onCreated={() => void refetchActive()}`. No se insertan recursos optimistas, no se usa `setQueryData`, no se invalida y no se releen otras identidades.
+Las responsabilidades están confirmadas, pero se difieren deliberadamente nombres de campos, interfaces TypeScript, schemas, nulabilidad, códigos de error y disposiciones. No se añadirá un “tipo aproximado”, endpoint falso ni mock productivo.
 
-## Estados visibles y accesibles
+La integración sólo puede comenzar cuando estén disponibles, para cada operación, el request/response exacto y ejemplos contractuales de:
 
-| Estado           | Presentación y capacidad                                                                                                                             |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| loading inicial  | `role=status`, selector/avance deshabilitado, foco permanece en heading o filtro cuando exista                                                       |
-| loading-more     | conserva candidatos/filtro/activo; botón de continuación deshabilitado                                                                               |
-| vacío filtrado   | explica que sólo se filtraron elementos cargados; permite cargar más si existe cursor                                                                |
-| vacío exhaustivo | `role=status`, no hay confirmación; Unidad/required option bloquean; cero atributos permite Datos                                                    |
-| initial-error    | `role=alert`, sin detalle privado, retry explícito                                                                                                   |
-| partial-error    | conserva datos ya cargados, `role=alert`, retry del mismo cursor; en hidratación de Unidad bloquea confirmación hasta completar                      |
-| required-error   | mensaje cercano, `aria-invalid`, `aria-describedby`, foco al control                                                                                 |
-| submitting       | acción disabled y estado «Creando recurso…»; cierre puede mantenerse disponible sólo si el contrato actual del Dialog lo permite sin duplicar submit |
-| known-error      | alerta recuperable en Revisión, borrador intacto                                                                                                     |
-| success          | Resultado con ID, identidad y estado; acciones Crear otro/Cerrar                                                                                     |
-| uncertain        | alerta terminal sin éxito/refetch ni retry idéntico; corregir exige cambiar el borrador                                                              |
+- `obtenerDefinicionAtributo`, incluido `modoCaptura: SELECCION | LIBRE | DERIVADO`;
+- `listarValoresPermitidosAtributo`, con identidad seleccionable y valor tipado;
+- `evaluarCreacionDesdeSelecciones`, con estados, fingerprint, asignaciones resueltas, incidencias, nombre e identidad;
+- `crearRecursoDesdeSelecciones`, con IDs, `expectedCatalogFingerprint`, errores y disposiciones explícitas.
 
-Se usarán tokens Light existentes y Tailwind. Los estados de error seguirán el precedente de texto secundario + semántica ARIA; no se inventa un color/error token. Candidatos cubren hover, foco visible, provisional activo y disabled con tokens `surface`, `surface-subtle`, `primary-subtle`, `border`, `focus` y texto semántico. No se agregan hex ni componentes shared por una sola ocurrencia. Dark y un rediseño responsive/touch siguen fuera de alcance; el Dialog mantiene su límite de viewport existente.
+En ese momento se hará una revisión corta de proposal/design si el contrato exige decisiones no previstas. Después se añadirán parsers de transporte antes de React y tests con dobles exactos limitados a pruebas. `crearRecurso` seguirá disponible pero no será llamado por esta capacidad.
 
-## Ambigüedades resueltas sin cambiar decisiones de producto
+## Accesibilidad, foco y movimiento
 
-1. **Cero atributos aplicables:** una resolución completa y vacía no es error y permite pasar a Datos; pending o error no permite hacerlo. Esto sigue el escenario aprobado que permite continuar cuando el contexto vigente no tiene requisitos pendientes.
-2. **`CONDITIONAL`:** se trata como no requerido para este flujo porque la especificación confirma que sólo `REQUIRED` bloquea y que todo no requerido ofrece **Omitir**. No se inventa evaluación frontend de condiciones.
-3. **Filtro y acentos:** el filtro es substring case-insensitive en español sobre `nombre` y conserva diacríticos; no se amplía a clave/símbolo ni backend.
-4. **Unidad con más páginas:** una continuación disponible no vuelve inelegible una candidata ya hidratada; una request/hidratación pendiente o fallida sí bloquea. La continuación sigue siendo explícita.
-5. **Unidad nula versus fallida:** `null`/inactiva/no efectiva se excluye como referencia confirmadamente no elegible; un rechazo de transporte es recuperable y bloquea hasta retry. Nunca se muestra el ID como Unidad inventada.
-6. **Retroceso desde inputs:** `ArrowLeft` conserva edición en inputs. La vuelta con esa tecla opera al enfocar lista, breadcrumb u otro control no editable; Tab/Shift+Tab siguen disponibles. Esto aplica la precedencia IME/edición confirmada.
-7. **Resultado incierto:** se permite volver para corregir como en la evidencia del prototipo, pero la misma revisión no puede reenviarse; sólo una mutación del borrador desbloquea una escritura nueva.
-8. **Orden de atributos paginados:** se completan todas las páginas antes de mostrar la secuencia, porque mostrar una página y luego insertar un atributo anterior por `orden` rompería preservación y review.
+- Búsqueda es el único control de escritura.
+- `ArrowDown` desde búsqueda entra en la lista; `ArrowUp` desde el primer candidato vuelve a búsqueda.
+- Una tecla imprimible desde lista enfoca búsqueda e incorpora el carácter, respetando IME y modificadores.
+- Flechas sólo cambian candidato; `Enter` confirma explícitamente.
+- `ArrowLeft` vuelve sólo fuera de edición; `Escape` vuelve una etapa y cierra únicamente desde Clase.
+- `Tab`/`Shift+Tab` y focus trap pertenecen a React Aria/Dialog.
+- No se añade listener `document`/`window`; el overlay mantiene inhibidos los atajos del fondo.
+- Al cerrar se restaura foco al opener conectado o al fallback accesible existente.
+- Rail, opciones y acciones tendrán objetivo interactivo mínimo de 44 CSS px, separaciones suficientes y foco visible con contorno/forma además de color. Se reutiliza `Button`; cualquier ajuste local de caja aumenta su hit area sin recrear su chrome.
+- El contenido enfocado no queda oculto por la barra sticky; el shell desplaza el cuerpo antes de enfocar cuando sea necesario.
+- No se requiere animación para comprender transiciones. Si se conserva una transición de Dialog o etapa, usará transform/opacity, será interrumpible y quedará anulada con `prefers-reduced-motion`.
+- GARFEX Light es el único modo implementado; no se inventan tokens Dark ni colores hex feature-locales.
 
-## Estrategia de migración desde `7c42860`
+## Migración desde la implementación actual
 
-1. Convertir primero el comportamiento vigente que se conserva en pruebas de caracterización: payload, error conocido, incertidumbre, submit único, overlay y restauración.
-2. Introducir snapshot/modelo/reducer y loaders como seams puros probados antes de conectarlos. No hacer cherry-pick ni revert total del prototipo.
-3. Sustituir en el archivo existente una región observable por vez: Contexto, Unidad, atributos, Datos/Revisión y Resultado. Cada sustitución elimina el estado/JSX antiguo en el mismo work unit; no queda una segunda superficie seleccionable ni un feature flag global.
-4. Mantener el adapter, `onCreated`, trigger `N`, Dialog y utilidades de foco durante toda la migración.
-5. Retirar las aserciones de «Paso 1/2/3» sólo en el mismo slice que agrega aserciones de ruta/etapa equivalentes.
-6. Eliminar `resourcesMaster.css` sólo después de retirar su último class hook y comprobar que no está importado. No mover esos estilos a shared.
-7. La cadena debe compilar y pasar sus pruebas enfocadas después de cada child PR. Si una extracción temporal no entrega comportamiento visible, su contrato puro probado constituye el work unit y permanece sólo en la feature.
+1. **Corte de seguridad:** después de Unidad, enrutar a `contract-pending`; creación y atributos legados dejan de ser alcanzables antes de cualquier refactor visual.
+2. Extraer `ResourceCreationShell`, `CreationStageRail` y `CreationCommandBar`; renombrar el diálogo y mantener trigger/overlay/foco.
+3. Completar Familia y Tipo con el patrón staged y controladores paginados/stale-safe ya usados por Clase; retirar sus `Select` simultáneos.
+4. Completar Unidad desde políticas efectivas + detalle, sin preselección ni lista global; retirar el loader de una página.
+5. Retirar por regiones el loader/UI de atributos legados, luego Datos/Revisión/submit/payload legado. Cada eliminación mantiene `contract-pending` como único final alcanzable.
+6. Introducir y probar el borrador puro active/suspended por assignment ID sin conectarlo a contratos productivos.
+7. Cerrar accesibilidad, arquitectura, Playwright y regresiones de aislamiento/refetch.
+8. Sólo después de backend v1: adapters exactos, reconciliación autoritativa, atributos SELECCION, revisión y create con fingerprint.
 
-## Rollback y despliegue
+No habrá feature flag, ruta nueva, estado global ni persistencia local. Cada corte TDD debe quedar por debajo de 400 líneas agregadas + eliminadas; si una sustitución honesta no cabe, se divide por región observable y se eleva el riesgo antes de exceder el límite.
 
-No hay migración de datos, persistencia frontend ni coordinación backend. El despliegue es el bundle frontend normal y no requiere flag.
+## Pruebas y rollout
 
-Rollback final:
+La capacidad backend-independent termina GREEN con:
 
-1. restaurar la implementación de `CrearRecursoSurface` anterior a la cadena;
-2. retirar `initialHierarchySnapshot` y su helper de `ResourcesMasterScreen`;
-3. retirar los archivos feature-locales y pruebas exclusivas del recorrido staged;
-4. conservar `resourcesMaster.api.ts`, DTOs/payload, `useResourcesMasterListQuery`, `refetchActive`, Catálogo, shared UI, Keyboard Controller y especificaciones canónicas.
+- pruebas puras de snapshot, navegación, cascadas, evaluación/fingerprint invalidados y buckets active/suspended;
+- pruebas de paginación/dedupe/retry/stale para jerarquía y Unidad;
+- RTL del selector para foco search↔list, escritura desde lista, Enter explícito, IME y ausencia de autoselección;
+- RTL del shell/rail/barra para una decisión dominante, back/Escape y contrato pendiente;
+- pantalla/refetch para snapshot aislado y seam `onCreated` no disparado por el final pendiente;
+- guards de un solo listener global, límites de imports y archivos runtime menores de 500 líneas;
+- Playwright sólo teclado + axe hasta Unidad y Contrato pendiente.
 
-En una cadena parcialmente integrada se revierte desde el último child hacia su padre. Cada child tiene el límite de rollback de la tabla de [detalle de cadena](./design-details.md#9-entrega-en-feature-branch-chain-y-presupuesto) y no debe mezclar cambios externos, de modo que no hay que revertir Catálogo ni consultas de Recursos.
+Los recorridos de atributos/revisión/create se añaden únicamente con fixtures conformes a DTOs backend v1 publicados. El despliegue actual es frontend normal y comunica la dependencia; no simula una capacidad completa.
 
-## Riesgos residuales y controles
+## Rollback y riesgos
 
-| Riesgo                                                        | Control de diseño                                                                  |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| IDs opacos comparados de forma inconsistente                  | helper único `resourceIdKey` en model/loader/selector                              |
-| Respuesta de Tipo anterior adopta Unidad/atributos            | token + contextKey + cursor en toda adopción, reset antes de request               |
-| Filtro parece global                                          | copy explícito, cero parámetros de búsqueda, continuación manual                   |
-| Active provisional se confunde con confirmado                 | estado separado, `onSelectionChange` no toca draft, sólo `onAction` confirma       |
-| Unidad parcialmente hidratada permite una decisión incompleta | fallos pendientes bloquean; null/no efectiva se excluye explícitamente             |
-| Orden de atributos cambia al llegar otra página               | resolver todas las páginas antes de construir etapas                               |
-| Resultado incierto se reenvía                                 | `blockedRevision` hasta una mutación real                                          |
-| Flechas/Enter compiten con edición o AppShell                 | React Aria local, guards IME/defaultPrevented, overlay, cero listener global nuevo |
-| Nuevo monolito                                                | límites de archivo, presenters enfocados y guard arquitectónico                    |
-| PR supera 400 líneas por retirar el prototipo                 | sustitución por regiones, medición `additions + deletions`, stop bajo ask-on-risk  |
+El rollback se hace en orden inverso por cortes feature-locales. No requiere migración de datos. Se preservan la API legada, Catálogo, `refetchActive`, shared UI, Keyboard Controller, rutas y consultas.
 
-## Criterio de cierre de diseño
+| Riesgo | Control |
+| --- | --- |
+| El código legado vuelve a habilitar creación | Guard arquitectónico: el Creador no referencia `api.createResource` ni construye `ResourceCreateInput` |
+| Se inventan DTOs para avanzar | Pared contractual y estado productivo `contract-pending` |
+| Una respuesta vieja cambia el contexto | Token + context key + cursor/revision antes de adoptar |
+| Candidato se confunde con confirmado | Estado y semántica separados; sólo action/Enter confirma |
+| Rail se satura con atributos | Una única entrada `Atributos · n de total` |
+| Se pierden selecciones reversibles | Buckets active/suspended keyed por assignment ID y reconciliación sólo desde hechos backend |
+| Foco compite con edición o AppShell | Handlers locales con guards, React Aria y cero listeners globales nuevos |
+| La extracción crea otro monolito | Límites atómicos feature-locales y guard `<500` líneas runtime |
 
-El diseño queda listo para `sdd-tasks`/apply cuando se mantengan estas invariantes: snapshot sólo lectura y normalizado; borrador local; etapas explícitas hasta Resultado; selector local React Aria; paginación/dedupe/stale guard; Unidad desde políticas + detalle; atributos secuenciales con omisión; una sola construcción de payload; refetch activo sólo tras `CREATED`; todos los estados y foco verificables; ningún cambio fuera del alcance confirmado.
+## Criterio de cierre
+
+El diseño backend-independent queda implementable cuando Clase → Familia → Tipo → Unidad funciona por selección explícita, paginada y stale-safe; el contexto permanece visible; la barra explica comandos; el teclado cumple la transferencia de foco; el final dice Contrato pendiente; y no existe una ruta productiva desde el Creador hacia captura manual, atributos legados, evaluación local o `crearRecurso`.
+
+La integración final continúa bloqueada hasta disponer de DTOs backend v1 exactos y sólo se cierra cuando revisión y creación provienen de evaluación autoritativa vigente con fingerprint obligatorio y disposición explícita.
