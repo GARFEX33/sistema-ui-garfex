@@ -124,24 +124,8 @@ const resourceSearchCall = (args: Record<string, unknown>) => ({
   args: resourceRequestArgs(args),
 })
 
-const matchesResourceCall = (call: RequestCall, expected: RequestCall) =>
-  call.path === expected.path &&
-  Object.keys(call.args).length === Object.keys(expected.args).length &&
-  Object.entries(expected.args).every(
-    ([key, value]) => JSON.stringify(call.args[key]) === JSON.stringify(value),
-  )
-
 const listCalls = (calls: readonly RequestCall[]) =>
   calls.filter(({ path }) => path.endsWith(':listarRecursosResumen'))
-
-async function chooseResourceContext(
-  page: Page,
-  label: string,
-  option: string,
-) {
-  await page.getByRole('button', { name: new RegExp(label) }).click()
-  await page.getByRole('option', { name: option, exact: true }).click()
-}
 
 test.describe('Recursos maestros workstation 1440×980', () => {
   test('lists all resources, scopes hierarchy filters and search, and keeps the spatial paths connected', async ({
@@ -301,14 +285,14 @@ test.describe('Recursos maestros workstation 1440×980', () => {
 
     await trigger.click()
     await expect(
-      page.getByRole('dialog', { name: 'Nuevo recurso' }),
+      page.getByRole('dialog', { name: 'Creador de recursos' }),
     ).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(trigger).toBeFocused()
 
     await page.keyboard.press('n')
     await expect(
-      page.getByRole('dialog', { name: 'Nuevo recurso' }),
+      page.getByRole('dialog', { name: 'Creador de recursos' }),
     ).toBeVisible()
   })
 
@@ -357,123 +341,6 @@ test.describe('Recursos maestros workstation 1440×980', () => {
           'cursor-2',
       ),
     ).toHaveLength(2)
-  })
-
-  test('refetches only the active list key after a confirmed resource creation', async ({
-    page,
-  }) => {
-    const activeListRequest = resourceListCall({
-      lifecycle: 'ACTIVE',
-      cursor: undefined,
-      pageSize: 20,
-    })
-    const inactiveSearchRequest = resourceSearchCall({
-      lifecycle: 'ACTIVE',
-      searchText: 'inactiva',
-      cursor: undefined,
-      pageSize: 20,
-    })
-    const activeListRequests: RequestCall[] = []
-    const inactiveSearchRequests: RequestCall[] = []
-    let creationConfirmed = false
-    const calls = await mockResources(page, (call) => {
-      if (matchesResourceCall(call, activeListRequest)) {
-        activeListRequests.push(call)
-        return response({
-          page: [
-            creationConfirmed
-              ? summary('r-created', 'Motor creado')
-              : summary('r1', 'Cable UTP'),
-          ],
-          isDone: true,
-          continueCursor: '',
-        })
-      }
-      if (matchesResourceCall(call, inactiveSearchRequest)) {
-        inactiveSearchRequests.push(call)
-        return response({
-          page: [summary('r-inactive', 'Resultado inactivo')],
-          isDone: true,
-          continueCursor: '',
-        })
-      }
-      if (call.path.endsWith(':listarPoliticasUnidad'))
-        return response({
-          continuationCursor: null,
-          isExhausted: true,
-          items: [
-            {
-              id: 'policy-1',
-              familiaRecursoId: 'family-1',
-              tipoRecursoId: 'type-1',
-              unidadId: 'unit-1',
-              principal: true,
-              activo: true,
-              revision: 1,
-              effective: true,
-              selected: true,
-              shadowed: false,
-              selection: 'SELECTED',
-            },
-          ],
-        })
-      if (call.path.endsWith(':obtenerUnidad'))
-        return response({
-          id: 'unit-1',
-          clave: 'UN',
-          nombre: 'Unidad',
-          simbolo: 'u',
-          activo: true,
-          revision: 1,
-          effective: true,
-        })
-      if (call.path.endsWith(':listarAsignacionesAtributo'))
-        return response({
-          continuationCursor: null,
-          isExhausted: true,
-          items: [],
-        })
-      if (call.path.endsWith(':crearRecurso')) {
-        creationConfirmed = true
-        return response({
-          disposition: 'CREATED',
-          item: summary('r-created', 'Motor creado'),
-        })
-      }
-      return undefined
-    })
-
-    await page.goto('/recursos')
-    const search = page.getByRole('searchbox', { name: 'Buscar' })
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
-    await search.fill('inactiva')
-    await expect.poll(() => inactiveSearchRequests).toHaveLength(1)
-    await expect(page.locator('[data-resource-row]')).toContainText(
-      'Resultado inactivo',
-    )
-    await search.fill('')
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
-    await page.getByRole('button', { name: 'Nuevo recurso' }).click()
-    await chooseResourceContext(page, 'Clase', 'Materiales')
-    await chooseResourceContext(page, 'Familia', 'Canalizaciones')
-    await chooseResourceContext(page, 'Tipo', 'Tuberías')
-    await page.getByRole('button', { name: 'Siguiente' }).click()
-    await page.getByRole('button', { name: 'Siguiente' }).click()
-    await page.getByLabel('Nombre').fill('Motor creado')
-    const activeCountBeforeCreate = activeListRequests.length
-    const inactiveCountBeforeCreate = inactiveSearchRequests.length
-    await page.getByRole('button', { name: 'Crear recurso' }).click()
-
-    await expect(page.getByText('✓ Recurso creado')).toBeVisible()
-    await expect
-      .poll(() => activeListRequests.length)
-      .toBe(activeCountBeforeCreate + 1)
-    await expect(page.locator('[data-resource-row]')).toContainText(
-      'Motor creado',
-    )
-    expect(inactiveSearchRequests).toHaveLength(inactiveCountBeforeCreate)
-    expect(listCalls(calls)).toContainEqual(activeListRequest)
-    expect(calls).toContainEqual(inactiveSearchRequest)
   })
 
   test('confirms an empty resource filter without guessing', async ({

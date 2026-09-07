@@ -121,9 +121,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 8. **Start → finish:** dead legacy submit/review/payload code remains → Creador contains no `buildResourceCreateInput`, `ResourceCreateInput`, `api.createResource`, ownership mapping, or legacy result path. **Discovery targets:** `src/features/resources-master/CrearRecursoSurface.tsx`, `src/features/resources-master/resourceCreation.model.ts`, any feature-local `ResourceCreationDetails*`/attribute stage files, and `tests/unit/resourceCreation*.test*`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** pending has Back/Close only and never invokes `onCreated`. **Rollback:** restore only this cleanup region; do not change `resourcesMaster.api.ts` or the legacy backend method.
 
-- [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke `onCreated` or any create operation. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Delete the bounded legacy review, submit, payload, ownership, and result branches plus their obsolete tests while retaining the `onCreated → refetchActive()` seam unused by pending. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke `onCreated` or any create operation. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Delete the bounded legacy review, submit, payload, ownership, and result branches plus their obsolete tests while retaining the `onCreated → refetchActive()` seam unused by pending. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->
 
 ### PR 10 — Pure active/suspended selection buckets
 

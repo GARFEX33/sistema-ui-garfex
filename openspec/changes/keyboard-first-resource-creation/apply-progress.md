@@ -695,3 +695,23 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **TDD Cycle Evidence:** safety net surface 20 passed/6 skipped; deletion-only RED is N/A because no replacement behavior test was authorized; GREEN focused surface/model/architecture 45/45; triangulation is the active pending no-request proof; Prettier refactor reran focused green.
 - **Verification:** full `pnpm test` 416/416; `pnpm typecheck`, targeted ESLint and Prettier, and `git diff --check` passed; source scan found no skipped Paso 3/helper symbols.
 - **Rollback:** restore only this test-suite cleanup; retain active staged hierarchy/Unit/pending tests.
+
+---
+
+## PR 9C2 — stale creation/refetch E2E deletion
+
+- **Status / action context:** authoritative `gentle-ai.sdd-status@2` consumed: OpenSpec `applyState: ready`, strict TDD, repo-local allowed root, no blockers or warnings. Final status remains `apply: ready` with 29/52 implementation tasks complete.
+- **Boundary / workload:** authorized auto-chain `PR 9C1 → 📍 PR 9C2`; only the stale E2E creation/refetch path, its exclusive helpers, task checkboxes, and this record changed. Final `git diff --numstat` is **25 A + 138 D = 163 A+D**, below 399. No production/API/model/screen/refetch-seam change, commit, push, PR, review, receipt, or lifecycle action occurred.
+- **Completed / persisted:** PR 9 RED, GREEN, and TRIANGULATE/REFACTOR checkboxes are visibly `[x]`; combined PR9A+B1+B2+C1+C2 removes the legacy production model/surface and obsolete tests while retaining the API facade/backend operation and unused `onCreated → refetchActive()` seam.
+- **Deletion:** removed the E2E create/refetch scenario, its `matchesResourceCall` and `chooseResourceContext` helpers, all legacy `Siguiente`/`Nombre`/`Crear recurso` expectations and create-triggered refetch mocks. Preserved current open/shortcut coverage, updating its dialog assertion to **Creador de recursos**.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net / RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- | --- |
+| PR9C2 deletion | `tests/e2e/resourcesMaster.workstation.spec.ts` | Playwright | Obsolete creation/refetch case timed out at its removed Clase chooser; the initial full file then exposed the old dialog-name assertion | After deletion and the current dialog-name update, the file passed 6/6 | Source scan found no legacy test path or non-API Creador payload/create symbols; existing unit/refetch seam passed; no refactor was needed |
+
+- **Verification:** `pnpm exec vitest run tests/unit tests/architecture` — 35 files, 388 passed; `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts` — 6/6 passed; `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check` passed. The pre-delete Playwright failure was an expected obsolete-test RED, not an environment failure.
+- **Source scan:** no `buildResourceCreateInput`, `ResourceCreateInput`, `.createResource(`, `ownership`, or `ResourceCreationDetails` remains in Creador production files outside API/types; `resourcesMaster.api.ts` and `.types.ts` retain the legacy create facade/operation. `tests/unit/resourcesMasterScreenRefetch.test.tsx` has no diff and passed in the unit suite.
+- **Deviation / rollback:** none. Restore only this E2E scenario/helpers and the two current dialog-name assertions to roll back; retain PR9’s production deletions.
+- **Remaining implementation tasks:** persisted unchecked work begins unchanged with `- [ ] **RED:** Add failing opaque-value tests for assignment-ID keying, active/suspended exclusivity, confirm, omit, suspend, restore, keep-suspended, active-only projection, hierarchy reset, Unit evaluation invalidation, and revision increments. <!-- sdd-owner: implementation -->`, `- [ ] **GREEN:** Implement generic \`SelectionBuckets<TSelection>\` and pure operations in \`resourceCreation.selectionDraft.ts\`; keep \`SelectionBuckets<never>\` in the current runtime and never introduce a transport DTO or local \`CONDITIONAL\` evaluator. <!-- sdd-owner: implementation -->`, and `- [ ] **TRIANGULATE/REFACTOR:** Prove definition-ID/index collisions cannot merge assignments and that omitted differs from unanswered, then run the focused command and record the pure-contract result. <!-- sdd-owner: implementation -->`; parent-owned lifecycle rows remain byte-for-byte deferred.
