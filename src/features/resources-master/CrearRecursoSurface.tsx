@@ -181,11 +181,35 @@ export function CrearRecursoSurface({
   const nombreRef = useRef<HTMLInputElement>(null)
 
   const flow = useResourceCreationFlow(api)
-  const [types, loadTypes, clearTypes] = useLevel<ResourceContextTypeItem>()
   const [units, loadUnits, clearUnits] = useLevel<UnitOption>()
   const [attributes, loadAttributes, clearAttributes] =
     useLevel<AttributeField>()
 
+  const loadUnitsForType = useCallback(
+    (typeId: ResourceId) =>
+      loadUnits(async () => {
+        const page = await api.listUnitPolicies({ tipoRecursoId: typeId })
+        const withNames = await Promise.all(
+          page.items
+            .filter((item) => item.effective)
+            .map(async (item) => {
+              const unit = await api.getUnit({ unidadId: item.unidadId })
+              return {
+                ...item,
+                nombre: unit?.nombre ?? key(item.unidadId),
+                simbolo: unit?.simbolo,
+              }
+            }),
+        )
+        const preselected =
+          withNames.find((item) => item.principal) ??
+          withNames.find((item) => item.selected) ??
+          null
+        if (preselected) setUnitId(preselected.unidadId)
+        return { items: withNames }
+      }),
+    [api, loadUnits],
+  )
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
@@ -207,16 +231,15 @@ export function CrearRecursoSurface({
       setContextError(null)
       setAttributeError(null)
       setNombreError(false)
-      clearTypes()
       clearUnits()
       clearAttributes()
-      if (prefix.familyItem)
-        void loadTypes(() =>
-          api.listContextTypes({ familiaRecursoId: prefix.familyItem!.id }),
-        )
+      if (prefix.typeItem) {
+        setTypeId(prefix.typeItem.id)
+        void loadUnitsForType(prefix.typeItem.id)
+      }
       setIsOpen(true)
     },
-    [api, clearTypes, clearUnits, clearAttributes, flow, loadTypes],
+    [clearUnits, clearAttributes, flow, loadUnitsForType],
   )
 
   const action = useMemo(
@@ -312,7 +335,6 @@ export function CrearRecursoSurface({
     setFamilyId(null)
     setTypeId(null)
     setUnitId(null)
-    clearTypes()
     clearUnits()
     resetAttributesIfNeeded()
   }
@@ -327,35 +349,18 @@ export function CrearRecursoSurface({
     setUnitId(null)
     clearUnits()
     resetAttributesIfNeeded()
-    void loadTypes(() => api.listContextTypes({ familiaRecursoId: item.id }))
   }
 
-  const selectType = (id: ResourceId) => {
+  const selectType = (item: ResourceContextTypeItem) => {
+    const id = item.id
+    flow.confirmType(item)
     setRailStageOverride(null)
+    if (typeId !== null && key(typeId) === key(id)) return
     setContextError(null)
     setTypeId(id)
     setUnitId(null)
     resetAttributesIfNeeded()
-    void loadUnits(async () => {
-      const page = await api.listUnitPolicies({ tipoRecursoId: id })
-      const effective = page.items.filter((item) => item.effective)
-      const withNames = await Promise.all(
-        effective.map(async (item) => {
-          const unit = await api.getUnit({ unidadId: item.unidadId })
-          return {
-            ...item,
-            nombre: unit?.nombre ?? key(item.unidadId),
-            simbolo: unit?.simbolo,
-          }
-        }),
-      )
-      const preselected =
-        withNames.find((item) => item.principal) ??
-        withNames.find((item) => item.selected) ??
-        null
-      if (preselected) setUnitId(preselected.unidadId)
-      return { items: withNames }
-    })
+    void loadUnitsForType(id)
   }
 
   const loadStep2 = (forTypeId: ResourceId) =>
@@ -472,8 +477,7 @@ export function CrearRecursoSurface({
 
   const selectedClassName = flow.state.draft.hierarchy.classItem?.nombre ?? ''
   const selectedFamilyName = flow.state.draft.hierarchy.familyItem?.nombre ?? ''
-  const selectedTypeName =
-    types.items.find((t) => key(t.id) === key(typeId))?.nombre ?? ''
+  const selectedTypeName = flow.state.draft.hierarchy.typeItem?.nombre ?? ''
   const selectedUnit = units.items.find((u) => key(u.unidadId) === key(unitId))
   const currentRailStage: CreationRailStage =
     step === 'contract-pending'
@@ -496,6 +500,10 @@ export function CrearRecursoSurface({
     }
     if (stage === 'family') {
       flow.enterFamily()
+      return
+    }
+    if (stage === 'type') {
+      flow.enterType()
       return
     }
     dialogRef.current
@@ -679,71 +687,27 @@ export function CrearRecursoSurface({
                   />
                 </div>
 
-                <div
-                  className="resources-context-field"
-                  hidden={flow.state.stage.kind !== 'type'}
-                >
-                  <Select
-                    aria-label="Tipo"
-                    placeholder="Elegir Tipo…"
-                    isDisabled={familyId === null || types.status === 'loading'}
-                    isRequired
-                    selectedKey={typeId === null ? null : key(typeId)}
-                    onSelectionChange={(id) => {
-                      const item = types.items.find((t) => key(t.id) === id)
-                      if (item) selectType(item.id)
-                    }}
-                  >
-                    <Label>Tipo *</Label>
-                    <SelectTriggerButton className="resources-select-trigger">
-                      <SelectValue />
-                      <span aria-hidden="true">▾</span>
-                    </SelectTriggerButton>
-                    <Popover>
-                      <ListBox items={types.items}>
-                        {(item) => (
-                          <ListBoxItem
-                            id={key(item.id)}
-                            textValue={item.nombre}
-                          >
-                            {item.nombre}
-                          </ListBoxItem>
-                        )}
-                      </ListBox>
-                    </Popover>
-                  </Select>
-                  {contextError === 'type' && (
-                    <p
-                      id="resource-context-type-error"
-                      role="alert"
-                      className="resources-context-error"
-                    >
-                      {contextErrorMessages.type}
-                    </p>
-                  )}
-                  {types.status === 'error' && (
-                    <p role="alert" className="resources-context-error">
-                      No se pudieron cargar los Tipos.{' '}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          familyId !== null &&
-                          void loadTypes(() =>
-                            api.listContextTypes({
-                              familiaRecursoId: familyId,
-                            }),
-                          )
-                        }
-                      >
-                        Reintentar
-                      </button>
-                    </p>
-                  )}
+                <div hidden={flow.state.stage.kind !== 'type'}>
+                  <StagedSearchSelector
+                    label="Tipo"
+                    items={flow.types}
+                    itemKey={(item) => flow.classKey(item.id)}
+                    itemName={(item) => item.nombre}
+                    confirmedKey={
+                      flow.state.draft.hierarchy.typeItem
+                        ? flow.classKey(flow.state.draft.hierarchy.typeItem.id)
+                        : null
+                    }
+                    loadState={flow.typeLoadState}
+                    onConfirm={selectType}
+                    onLoadMore={() => void flow.continueTypes()}
+                    onRetry={() => void flow.retryTypes()}
+                  />
                 </div>
 
                 <div
                   className="resources-context-field"
-                  hidden={flow.state.stage.kind !== 'type'}
+                  hidden={flow.state.stage.kind !== 'unit'}
                 >
                   <Select
                     aria-label="Unidad natural"
@@ -794,7 +758,10 @@ export function CrearRecursoSurface({
                       No se pudo cargar la Unidad natural.{' '}
                       <button
                         type="button"
-                        onClick={() => typeId !== null && selectType(typeId)}
+                        onClick={() =>
+                          flow.state.draft.hierarchy.typeItem &&
+                          selectType(flow.state.draft.hierarchy.typeItem)
+                        }
                       >
                         Reintentar
                       </button>
@@ -1082,7 +1049,7 @@ export function CrearRecursoSurface({
                 </Button>
                 <Button
                   type="button"
-                  isDisabled={flow.state.stage.kind !== 'type'}
+                  isDisabled={flow.state.stage.kind !== 'unit'}
                   onPress={goToAttributes}
                 >
                   Siguiente

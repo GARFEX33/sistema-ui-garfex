@@ -15,6 +15,7 @@ import {
 import type {
   ResourceContextClassItem,
   ResourceContextFamilyItem,
+  ResourceContextTypeItem,
   ResourceId,
 } from './resourcesMaster.types'
 
@@ -95,8 +96,27 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
       },
     }),
   )
+  const [types] = useState(() =>
+    createParentGatedListController<
+      ResourceContextTypeItem,
+      'types',
+      string | null
+    >({
+      operation: 'types',
+      requiresParent: () => true,
+      adapter: {
+        load: ({ parentId, cursor }) =>
+          api.listContextTypes({
+            familiaRecursoId: parentId,
+            cursor,
+            pageSize: PAGE_SIZE,
+          }),
+      },
+    }),
+  )
   const classState = useControllerState(classes)
   const familyState = useControllerState(families)
+  const typeState = useControllerState(types)
 
   const begin = useCallback(
     (prefix: NormalizedResourceHierarchyPrefix) => {
@@ -116,8 +136,12 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
           void families.start()
         }
       }
+      if (prefix.familyItem) {
+        types.setContext({ operation: 'types', parentId: prefix.familyItem.id })
+        void types.start()
+      }
     },
-    [classes, families],
+    [classes, families, types],
   )
   const enterClass = useCallback(() => {
     dispatch((current) =>
@@ -149,9 +173,30 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
     },
     [families, state.draft.hierarchy.classItem?.id],
   )
-  const confirmFamily = useCallback((item: ResourceContextFamilyItem) => {
+  const enterType = useCallback(() => {
     dispatch((current) =>
-      resourceCreationReducer(current, { type: 'CONFIRM_FAMILY', item }),
+      resourceCreationReducer(current, {
+        type: 'NAVIGATE_TO_STAGE',
+        stage: { kind: 'type' },
+      }),
+    )
+    if (types.getState().items.length === 0) void types.start()
+  }, [types])
+  const confirmFamily = useCallback(
+    (item: ResourceContextFamilyItem) => {
+      const changed = !sameId(state.draft.hierarchy.familyItem?.id, item.id)
+      dispatch((current) =>
+        resourceCreationReducer(current, { type: 'CONFIRM_FAMILY', item }),
+      )
+      if (!changed) return
+      types.setContext({ operation: 'types', parentId: item.id })
+      void types.start()
+    },
+    [state.draft.hierarchy.familyItem?.id, types],
+  )
+  const confirmType = useCallback((item: ResourceContextTypeItem) => {
+    dispatch((current) =>
+      resourceCreationReducer(current, { type: 'CONFIRM_TYPE', item }),
     )
   }, [])
 
@@ -160,8 +205,10 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
     begin,
     enterClass,
     enterFamily,
+    enterType,
     confirmClass,
     confirmFamily,
+    confirmType,
     classes: classState.items,
     classLoadState: selectorLoadState(classState),
     continueClasses: () => classes.continue(),
@@ -170,6 +217,10 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
     familyLoadState: selectorLoadState(familyState),
     continueFamilies: () => families.continue(),
     retryFamilies: () => families.retry(),
+    types: typeState.items,
+    typeLoadState: selectorLoadState(typeState),
+    continueTypes: () => types.continue(),
+    retryTypes: () => types.retry(),
     classKey: resourceIdKey,
   }
 }

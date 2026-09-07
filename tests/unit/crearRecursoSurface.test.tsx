@@ -470,6 +470,8 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await waitFor(() =>
       expect(api.listContextTypes).toHaveBeenCalledWith({
         familiaRecursoId: 'family-1',
+        cursor: undefined,
+        pageSize: 20,
       }),
     )
 
@@ -648,6 +650,27 @@ describe('CrearRecursoSurface — Clase staged', () => {
           continuationCursor: null,
           isExhausted: true,
         }),
+      listContextTypes: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({
+          items: [typeItem({ familiaRecursoId: 'family-2' })],
+          continuationCursor: 'more-types',
+          isExhausted: false,
+        })
+        .mockResolvedValueOnce({
+          items: [
+            typeItem({ familiaRecursoId: 'family-2' }),
+            typeItem({
+              id: 'type-2',
+              nombre: 'Mortero',
+              familiaRecursoId: 'family-2',
+            }),
+          ],
+          continuationCursor: null,
+          isExhausted: true,
+        }),
     })
     const user = userEvent.setup()
     renderSurface(api)
@@ -674,48 +697,142 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await waitFor(() =>
       expect(api.listContextTypes).toHaveBeenCalledWith({
         familiaRecursoId: 'family-2',
+        cursor: undefined,
+        pageSize: 20,
       }),
     )
-    expect(screen.getByRole('button', { name: /Tipo/ })).toBeVisible()
+    expect(screen.getByRole('searchbox', { name: 'Tipo' })).toBeVisible()
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }))
+    await screen.findByRole('option', { name: 'Arena' })
+    await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    expect(await screen.findByRole('option', { name: 'Mortero' })).toBeVisible()
+    expect(screen.getAllByRole('option', { name: 'Arena' })).toHaveLength(1)
   })
 
-  it('opens a valid Clase/Familia prefix at legacy Tipo and falls back safely', async () => {
+  it('rejects a stale Tipo page after confirming an alternative Familia', async () => {
+    let resolveOldTypes!: (page: {
+      items: ReturnType<typeof typeItem>[]
+      continuationCursor: null
+      isExhausted: boolean
+    }) => void
+    const api = fakeApi({
+      listContextFamilies: vi.fn(async () => ({
+        items: [familyItem(), familyItem({ id: 'family-2', nombre: 'Grava' })],
+        continuationCursor: null,
+        isExhausted: true,
+      })),
+      listContextTypes: vi.fn(({ familiaRecursoId }) =>
+        familiaRecursoId === 'family-1'
+          ? new Promise((resolve) => {
+              resolveOldTypes = resolve
+            })
+          : Promise.resolve({
+              items: [
+                typeItem({
+                  id: 'type-2',
+                  nombre: 'Mortero',
+                  familiaRecursoId: 'family-2',
+                }),
+              ],
+              continuationCursor: null,
+              isExhausted: true,
+            }),
+      ),
+    })
+    const user = userEvent.setup()
+    renderSurface(api)
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await user.click(screen.getByRole('button', { name: 'Familia: Áridos' }))
+    await chooseOption(user, 'Familia', 'Grava')
+    expect(await screen.findByRole('option', { name: 'Mortero' })).toBeVisible()
+
+    resolveOldTypes({
+      items: [typeItem({ familiaRecursoId: 'family-1' })],
+      continuationCursor: null,
+      isExhausted: true,
+    })
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('option', { name: 'Arena' }),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  it('preserves Tipo on Familia reconfirmation and clears Unidad after an alternative Tipo', async () => {
+    const api = fakeApi({
+      listContextTypes: vi.fn(async () => ({
+        items: [typeItem(), typeItem({ id: 'type-2', nombre: 'Mortero' })],
+        continuationCursor: null,
+        isExhausted: true,
+      })),
+      listUnitPolicies: vi.fn(async ({ tipoRecursoId }) => ({
+        items: tipoRecursoId === 'type-1' ? [unitPolicy()] : [],
+        continuationCursor: null,
+        isExhausted: true,
+      })),
+    })
+    const user = userEvent.setup()
+    renderSurface(api)
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    await screen.findByRole('button', { name: /Unidad natural/ })
+
+    await user.click(screen.getByRole('button', { name: 'Familia: Áridos' }))
+    await chooseOption(user, 'Familia', 'Áridos')
+    expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Tipo: Arena' })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: /Unidad: Metro cúbico/ }),
+    ).toBeVisible()
+
+    await user.click(screen.getByRole('option', { name: 'Mortero' }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /Unidad natural/ }),
+      ).toHaveTextContent('Elegir Unidad natural…'),
+    )
+  })
+
+  it('opens a valid deep prefix at Unidad and falls back to Tipo for an invalid Tipo', async () => {
     const user = userEvent.setup()
     const validApi = fakeApi()
     const valid = renderSurface(validApi, {
       initialHierarchySnapshot: {
         classItem: classItem(),
         familyItem: familyItem(),
-        typeItem: null,
+        typeItem: typeItem(),
       },
     })
 
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
-    const typeTrigger = screen.getByLabelText('Tipo')
-    expect(typeTrigger).toBeVisible()
-    expect(typeTrigger).toBeEnabled()
-    await waitFor(() =>
-      expect(validApi.listContextTypes).toHaveBeenCalledWith({
-        familiaRecursoId: 'family-1',
-      }),
-    )
+    const unit = await screen.findByRole('button', { name: /Unidad natural/ })
+    await waitFor(() => expect(unit).toBeEnabled())
+    expect(validApi.listUnitPolicies).toHaveBeenCalledWith({
+      tipoRecursoId: 'type-1',
+    })
     expect(
-      screen.queryByRole('searchbox', { name: 'Familia' }),
+      screen.queryByRole('searchbox', { name: 'Tipo' }),
     ).not.toBeInTheDocument()
     valid.unmount()
 
     renderSurface(fakeApi(), {
       initialHierarchySnapshot: {
         classItem: classItem(),
-        familyItem: familyItem({ claseRecursoId: 'other-class' }),
-        typeItem: typeItem(),
+        familyItem: familyItem(),
+        typeItem: typeItem({ familiaRecursoId: 'other-family' }),
       },
     })
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toBeVisible()
     expect(
-      await screen.findByRole('searchbox', { name: 'Familia' }),
-    ).toBeVisible()
-    expect(screen.getByLabelText('Tipo')).not.toBeVisible()
+      screen.queryByRole('button', { name: /Unidad natural/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('exposes Clase retry after the parent-gated initial retry is exhausted', async () => {

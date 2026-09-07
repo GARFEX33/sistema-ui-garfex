@@ -476,3 +476,19 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 
 - **Verification:** `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck && pnpm lint && pnpm format:check && git diff --check` passed (14/14); final `git diff --numstat` is 352 A+D.
 - **Remaining:** no PR 4 implementation rows remain; the exact next unchecked PR 5 rows remain in the previous PR 4 record. Parent-owned lifecycle rows are unchanged.
+
+---
+## PR 5B — staged Tipo integration
+- **Status:** authoritative OpenSpec `apply: ready`, `next: apply`; strict TDD; repo-local allowed root; no warnings.
+- **Boundary:** auto-chain / feature-branch-chain `PR5A → 📍 PR5B → PR6`; no Unit resolver/stage, API, shared/global/URL work, commit, review, or lifecycle action.
+- **Completed:** independent parent-gated Tipo controller; staged Tipo only after Familia; legacy parallel Tipo removed; valid deep prefix enters enabled Unidad.
+### TDD Cycle Evidence
+| Task | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- |
+| PR5B Tipo | Deep-prefix Unidad disabled | RTL 16 passed, 13 skipped | Retry, pagination/dedupe, stale Familia, reconfirmation/reset; local Unit loader extracted and rerun green |
+- **Verification:** focused surface/model/loader `48 passed, 13 skipped`; `pnpm typecheck`, targeted ESLint, Prettier check, and `git diff --check` passed.
+- **Tasks:** PR5 RED/GREEN/TRIANGULATE rows are `[x]`; combined PR5A+5B evidence now covers their stated behavior. Parent-owned rows unchanged.
+- **Files:** `useResourceCreationFlow.ts`, `CrearRecursoSurface.tsx`, surface RTL, tasks, and this record.
+- **Remaining:** `- [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, `getUnit` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->`
+- **Runtime/rollback:** RTL keyboard confirms staged hierarchy and stale rejection; browser N/A. Revert only the Tipo controller/surface/test wiring while retaining PR5A Familia.
+- **Budget:** 387 A+D including tasks/progress, under 399; no design deviation.

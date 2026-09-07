@@ -41,3 +41,5 @@ export const repairCandidateKey = <T extends StagedSelectorItem>(
     return preferredActiveKey
   return visibleItems[0]?.key ?? null
 }
+
+export const repairProvisionalActiveKey = repairCandidateKey
