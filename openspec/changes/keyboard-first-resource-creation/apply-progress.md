@@ -578,3 +578,13 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
   - `- [ ] **GREEN:** Connect the PR 6 resolver through \`useResourceCreationFlow.ts\`, render the staged Unit selector in \`CrearRecursoSurface.tsx\`, and dispatch \`CONFIRM_UNIT\` only from explicit confirmation. <!-- sdd-owner: implementation -->`
   - `- [ ] **TRIANGULATE/REFACTOR:** Cover load-more with immediately confirmable hydrated candidates versus pending/failed hydration that cannot advance, run the focused command, and record the runtime result. <!-- sdd-owner: implementation -->`
 - **Workload:** current diff `385 A + 8 D = 393 A+D`, below the hard 399 PR boundary.
+
+---
+
+## PR 7B — explicit staged Unidad natural decision
+
+- **Boundary:** commits `cf340aa` and `015ac14` jointly complete PR 7; backend, API, attributes, shared UI, and unrestricted Unit listing remain excluded.
+- **Behavior:** one staged `Unidad natural` selector consumes current Tipo candidates; preferred flags only focus, explicit Enter/click reaches Contract pending, and rail/pending returns preserve one authoritative stage.
+- **TDD:** rail and pending-back regressions failed before reducer-authoritative navigation; final focused surface/loader/model run passed 63 with 13 intentional skips.
+- **Verification:** full suite passed 419 with 13 skips; typecheck, targeted ESLint/Prettier, and diff checks passed. PR 7 rows are now `[x]`.
+- **Workload:** this evidence-only reconciliation stays below 120 A+D; no runtime source changes.

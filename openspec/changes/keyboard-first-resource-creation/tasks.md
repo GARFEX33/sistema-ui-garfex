@@ -105,9 +105,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 6. **Start → finish:** resolver without rendered choice → Unidad is a visible search-list decision whose preferred candidate is only focused and whose explicit Enter/click leads to pending. **Files:** `src/features/resources-master/useResourceCreationFlow.ts`, `src/features/resources-master/CrearRecursoSurface.tsx`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/crearRecursoSurface.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime:** confirm a hydrated eligible Unit by Enter; verify a global-unit list is never offered and pending/error blocks confirmation. **Rollback:** remove Unit flow/rendering only, retaining PR 6 resolver.
 
-- [ ] **RED:** Add failing RTL cases for Unit entry after Tipo, preferred-but-unconfirmed candidate, explicit Enter/click, eligible empty state, partial-error retry, and Type-change invalidation. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Connect the PR 6 resolver through `useResourceCreationFlow.ts`, render the staged Unit selector in `CrearRecursoSurface.tsx`, and dispatch `CONFIRM_UNIT` only from explicit confirmation. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover load-more with immediately confirmable hydrated candidates versus pending/failed hydration that cannot advance, run the focused command, and record the runtime result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing RTL cases for Unit entry after Tipo, preferred-but-unconfirmed candidate, explicit Enter/click, eligible empty state, partial-error retry, and Type-change invalidation. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Connect the PR 6 resolver through `useResourceCreationFlow.ts`, render the staged Unit selector in `CrearRecursoSurface.tsx`, and dispatch `CONFIRM_UNIT` only from explicit confirmation. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Cover load-more with immediately confirmable hydrated candidates versus pending/failed hydration that cannot advance, run the focused command, and record the runtime result. <!-- sdd-owner: implementation -->
 
 ### PR 8 — Remove legacy attribute and manual-capture regions behind the wall
 
