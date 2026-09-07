@@ -11,12 +11,13 @@ const surfaceSource = readFileSync(
 )
 
 describe('resource creation safety wall', () => {
-  it('keeps the Unidad continuation on the contract-pending boundary', () => {
+  it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {
     const continuation = surfaceSource.match(
       /const goToAttributes = \(\) => \{[\s\S]*?\n\s+const backToContext/,
     )?.[0]
 
     expect(continuation).toContain("setStep('contract-pending')")
     expect(continuation).not.toContain('loadStep2')
+    expect(surfaceSource).not.toContain('{step === 2 && (')
   })
 })

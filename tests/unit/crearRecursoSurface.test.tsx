@@ -483,10 +483,11 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('stops at Contrato pendiente after confirming Unidad without legacy calls', async () => {
+  it('stops at Contrato pendiente with only Volver and no reachable legacy controls or requests', async () => {
     const api = fakeApi()
+    const onCreated = vi.fn()
     const user = userEvent.setup()
-    renderSurface(api)
+    renderSurface(api, { onCreated })
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
     expect(
       screen.getByRole('dialog', { name: 'Creador de recursos' }),
@@ -513,12 +514,26 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.getAllByRole('heading').map((heading) => heading.textContent),
     ).toEqual(['Creador de recursos', 'Contrato pendiente'])
     expect(api.listAttributeAssignments).not.toHaveBeenCalled()
+    expect(api.getAttributeDefinition).not.toHaveBeenCalled()
+    expect(api.listAttributeOptions).not.toHaveBeenCalled()
     expect(api.createResource).not.toHaveBeenCalled()
+    expect(onCreated).not.toHaveBeenCalled()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Descripción')).not.toBeInTheDocument()
+    expect(screen.queryByText('TEXTO')).not.toBeInTheDocument()
+    expect(screen.queryByText('NUMERO')).not.toBeInTheDocument()
+    expect(screen.queryByText('BOOLEANO')).not.toBeInTheDocument()
+    expect(screen.queryByText('OPCION')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Crear recurso' }),
     ).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Comandos disponibles' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Volver'])
     await user.click(screen.getByRole('button', { name: 'Volver' }))
     expect(
       screen.queryByRole('heading', { name: 'Contrato pendiente' }),

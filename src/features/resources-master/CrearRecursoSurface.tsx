@@ -1,13 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Button as SelectTriggerButton,
-  Label,
-  ListBox,
-  ListBoxItem,
-  Popover,
-  Select,
-  SelectValue,
-} from 'react-aria-components'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
 import {
   isValidFocusCandidate,
@@ -106,25 +97,15 @@ export interface CrearRecursoSurfaceProps {
 }
 
 type LevelState<T> = {
-  status: 'idle' | 'loading' | 'ready' | 'error'
   items: T[]
 }
 
-const idleLevel = <T,>(): LevelState<T> => ({ status: 'idle', items: [] })
+const idleLevel = <T,>(): LevelState<T> => ({ items: [] })
 
 function useLevel<T>() {
   const [state, setState] = useState<LevelState<T>>(idleLevel)
-  const load = useCallback(async (fetcher: () => Promise<{ items: T[] }>) => {
-    setState({ status: 'loading', items: [] })
-    try {
-      const page = await fetcher()
-      setState({ status: 'ready', items: page.items })
-    } catch {
-      setState({ status: 'error', items: [] })
-    }
-  }, [])
   const clear = useCallback(() => setState(idleLevel), [])
-  return [state, load, clear] as const
+  return [state, clear] as const
 }
 
 const key = (id: ResourceId) => String(id)
@@ -166,13 +147,11 @@ export function CrearRecursoSurface({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [created, setCreated] = useState<ResourceSummary | null>(null)
   const [contextError, setContextError] = useState<ContextField | null>(null)
-  const [attributeError, setAttributeError] = useState<string | null>(null)
   const [nombreError, setNombreError] = useState(false)
   const nombreRef = useRef<HTMLInputElement>(null)
 
   const flow = useResourceCreationFlow(api)
-  const [attributes, loadAttributes, clearAttributes] =
-    useLevel<AttributeField>()
+  const [attributes, clearAttributes] = useLevel<AttributeField>()
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
@@ -192,7 +171,6 @@ export function CrearRecursoSurface({
       setSubmitError(null)
       setCreated(null)
       setContextError(null)
-      setAttributeError(null)
       setNombreError(false)
       clearAttributes()
       if (prefix.typeItem) setTypeId(prefix.typeItem.id)
@@ -237,26 +215,7 @@ export function CrearRecursoSurface({
         }
       }
     }
-    if (step === 2) {
-      dialogRef.current
-        ?.querySelectorAll<HTMLElement>('[data-resource-attribute]')
-        .forEach((container) => {
-          const control = container.querySelector<HTMLElement>('button, input')
-          const attributeKey = container.dataset.resourceAttribute
-          if (!control || !attributeKey) return
-          if (attributeError === attributeKey) {
-            control.setAttribute('aria-invalid', 'true')
-            control.setAttribute(
-              'aria-describedby',
-              `resource-attribute-${attributeKey}-error`,
-            )
-          } else {
-            control.removeAttribute('aria-invalid')
-            control.removeAttribute('aria-describedby')
-          }
-        })
-    }
-  }, [attributeError, contextError, step])
+  }, [contextError, step])
 
   useEffect(() => {
     if (step !== 1 || flow.state.stage.kind !== 'unit') return
@@ -286,7 +245,6 @@ export function CrearRecursoSurface({
       attributes.items.length > 0 || Object.keys(attributeValues).length > 0
     clearAttributes()
     setAttributeValues({})
-    setAttributeError(null)
     if (hadProgress)
       showMessage('Se limpiaron los atributos por cambio de Tipo')
   }
@@ -326,47 +284,6 @@ export function CrearRecursoSurface({
     resetAttributesIfNeeded()
   }
 
-  const loadStep2 = (forTypeId: ResourceId) =>
-    loadAttributes(async () => {
-      const page = await api.listAttributeAssignments({
-        tipoRecursoId: forTypeId,
-      })
-      const effective = page.items.filter(
-        (item) =>
-          item.effective &&
-          item.aplicabilidad !== 'FORBIDDEN' &&
-          item.aplicabilidad !== 'NOT_APPLICABLE',
-      )
-      const resolved = await Promise.all(
-        effective.map(async (assignment) => {
-          const definition = await api.getAttributeDefinition({
-            definicionAtributoId: assignment.definicionAtributoId,
-          })
-          if (!definition) return null
-          let options: ResourceAttributeOption[] = []
-          if (definition.tipoDato === 'OPCION') {
-            const optionsPage = await api.listAttributeOptions({
-              definicionAtributoId: assignment.definicionAtributoId,
-            })
-            options = optionsPage.items.filter((option) => option.effective)
-          }
-          const field: AttributeField = {
-            atributoRecursoId: assignment.id,
-            nombre: definition.nombre,
-            tipoDato: definition.tipoDato,
-            aplicabilidad: assignment.aplicabilidad,
-            orden: assignment.orden,
-            options,
-          }
-          return field
-        }),
-      )
-      const fields = resolved
-        .filter((field): field is AttributeField => field !== null)
-        .sort((left, right) => left.orden - right.orden)
-      return { items: fields }
-    })
-
   const goToAttributes = () => {
     const missing: ContextField | null =
       classId === null
@@ -399,47 +316,6 @@ export function CrearRecursoSurface({
     setRailStageOverride(null)
     returnToUnit()
     setStep(1)
-  }
-
-  const setAttributeValue = (atributoRecursoId: ResourceId, value: string) => {
-    const attributeKey = key(atributoRecursoId)
-    if (value !== '' && attributeError === attributeKey) setAttributeError(null)
-    setAttributeValues((current) => ({
-      ...current,
-      [attributeKey]: value,
-    }))
-  }
-
-  const attributesComplete =
-    attributes.status === 'ready' &&
-    attributes.items
-      .filter((field) => field.aplicabilidad === 'REQUIRED')
-      .every((field) => {
-        const value = attributeValues[key(field.atributoRecursoId)]
-        return value !== undefined && value !== ''
-      })
-
-  const goToReview = () => {
-    const missing = attributes.items.find(
-      (field) =>
-        field.aplicabilidad === 'REQUIRED' &&
-        (attributeValues[key(field.atributoRecursoId)] ?? '') === '',
-    )
-    if (missing) {
-      const attributeKey = key(missing.atributoRecursoId)
-      setAttributeError(attributeKey)
-      ;[
-        ...(dialogRef.current?.querySelectorAll<HTMLElement>(
-          '[data-resource-attribute]',
-        ) ?? []),
-      ]
-        .find((element) => element.dataset.resourceAttribute === attributeKey)
-        ?.querySelector<HTMLElement>('button, input')
-        ?.focus()
-      return
-    }
-    if (!attributesComplete) return
-    setStep(3)
   }
 
   const backToAttributes = () => setStep(2)
@@ -720,167 +596,6 @@ export function CrearRecursoSurface({
               </>
             )}
 
-            {step === 2 && (
-              <>
-                {attributes.status === 'loading' && (
-                  <p className="resources-context-error" role="status">
-                    Cargando atributos…
-                  </p>
-                )}
-                {attributes.status === 'error' && (
-                  <p role="alert" className="resources-context-error">
-                    No se pudieron cargar los atributos.{' '}
-                    <button
-                      type="button"
-                      onClick={() => typeId !== null && void loadStep2(typeId)}
-                    >
-                      Reintentar
-                    </button>
-                  </p>
-                )}
-                {attributes.status === 'ready' &&
-                  attributes.items.length === 0 && (
-                    <p className="resources-context-error" role="status">
-                      Este Tipo no tiene atributos configurados.
-                    </p>
-                  )}
-                {attributes.items.map((field) => {
-                  const fieldKey = key(field.atributoRecursoId)
-                  const required = field.aplicabilidad === 'REQUIRED'
-                  const label = required ? `${field.nombre} *` : field.nombre
-                  const value = attributeValues[fieldKey] ?? ''
-                  return (
-                    <div
-                      className="resources-context-field"
-                      data-resource-attribute={fieldKey}
-                      key={fieldKey}
-                    >
-                      {field.tipoDato === 'OPCION' && (
-                        <Select
-                          aria-label={label}
-                          placeholder="Elegir…"
-                          isRequired={required}
-                          selectedKey={value === '' ? null : value}
-                          onSelectionChange={(id) =>
-                            setAttributeValue(
-                              field.atributoRecursoId,
-                              String(id),
-                            )
-                          }
-                        >
-                          <Label>{label}</Label>
-                          <SelectTriggerButton className="resources-select-trigger">
-                            <SelectValue />
-                            <span aria-hidden="true">▾</span>
-                          </SelectTriggerButton>
-                          <Popover>
-                            <ListBox items={field.options}>
-                              {(option) => (
-                                <ListBoxItem
-                                  id={key(option.id)}
-                                  textValue={option.nombre}
-                                >
-                                  {option.nombre}
-                                </ListBoxItem>
-                              )}
-                            </ListBox>
-                          </Popover>
-                        </Select>
-                      )}
-                      {field.tipoDato === 'BOOLEANO' && (
-                        <Select
-                          aria-label={label}
-                          placeholder="Elegir…"
-                          isRequired={required}
-                          selectedKey={value === '' ? null : value}
-                          onSelectionChange={(id) =>
-                            setAttributeValue(
-                              field.atributoRecursoId,
-                              String(id),
-                            )
-                          }
-                        >
-                          <Label>{label}</Label>
-                          <SelectTriggerButton className="resources-select-trigger">
-                            <SelectValue />
-                            <span aria-hidden="true">▾</span>
-                          </SelectTriggerButton>
-                          <Popover>
-                            <ListBox>
-                              <ListBoxItem id="true" textValue="Sí">
-                                Sí
-                              </ListBoxItem>
-                              <ListBoxItem id="false" textValue="No">
-                                No
-                              </ListBoxItem>
-                            </ListBox>
-                          </Popover>
-                        </Select>
-                      )}
-                      {attributeError === fieldKey && (
-                        <p
-                          id={`resource-attribute-${fieldKey}-error`}
-                          role="alert"
-                          className="resources-context-error"
-                        >
-                          {field.tipoDato === 'OPCION' ||
-                          field.tipoDato === 'BOOLEANO'
-                            ? `Seleccioná ${field.nombre}.`
-                            : `Ingresá ${field.nombre}.`}
-                        </p>
-                      )}
-                      {field.tipoDato === 'TEXTO' && (
-                        <Field label={label} htmlFor={`attr-${fieldKey}`}>
-                          <input
-                            id={`attr-${fieldKey}`}
-                            type="text"
-                            aria-invalid={attributeError === fieldKey}
-                            aria-describedby={
-                              attributeError === fieldKey
-                                ? `resource-attribute-${fieldKey}-error`
-                                : undefined
-                            }
-                            className={fieldInputClass}
-                            required={required}
-                            value={value}
-                            onChange={(event) =>
-                              setAttributeValue(
-                                field.atributoRecursoId,
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </Field>
-                      )}
-                      {field.tipoDato === 'NUMERO' && (
-                        <Field label={label} htmlFor={`attr-${fieldKey}`}>
-                          <input
-                            id={`attr-${fieldKey}`}
-                            type="number"
-                            aria-invalid={attributeError === fieldKey}
-                            aria-describedby={
-                              attributeError === fieldKey
-                                ? `resource-attribute-${fieldKey}-error`
-                                : undefined
-                            }
-                            className={fieldInputClass}
-                            required={required}
-                            value={value}
-                            onChange={(event) =>
-                              setAttributeValue(
-                                field.atributoRecursoId,
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </Field>
-                      )}
-                    </div>
-                  )
-                })}
-              </>
-            )}
-
             {step === 'contract-pending' && <ResourceCreationContractPending />}
 
             {step === 3 && submitStatus === 'created' && created && (
@@ -1007,20 +722,6 @@ export function CrearRecursoSurface({
               <Button variant="outline" onPress={backToContext} type="button">
                 Volver
               </Button>
-            )}
-            {step === 2 && (
-              <>
-                <Button variant="outline" onPress={backToContext} type="button">
-                  Volver
-                </Button>
-                <Button
-                  type="button"
-                  isDisabled={attributes.status !== 'ready'}
-                  onPress={goToReview}
-                >
-                  Siguiente
-                </Button>
-              </>
             )}
             {step === 3 &&
               submitStatus !== 'created' &&
