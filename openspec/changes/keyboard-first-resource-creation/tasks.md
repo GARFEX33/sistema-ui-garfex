@@ -81,9 +81,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 3. **Start → finish:** Class-stage selector foundation → `StagedSearchSelector` fully enforces search↔list transfer, candidate-versus-confirmed separation, IME/event precedence, and honest loaded-page filtering. **Files:** `src/features/resources-master/StagedSearchSelector.tsx`, `src/features/resources-master/stagedSearchSelector.model.ts`, `tests/unit/StagedSearchSelector.test.tsx`, `tests/architecture/keyboardBoundaries.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck`. **Runtime:** type, ArrowDown, ArrowUp, printable-from-list, Enter, load-more, and retry without an automatic selection. **Rollback:** revert selector/model/selector tests only; retain the existing single global keyboard controller.
 
-- [ ] **RED:** Add failing RTL tests for Spanish loaded-name-only filtering and copy, ArrowDown search→list, ArrowUp first-item→search, printable list→search, Enter on focused item only, IME/defaultPrevented guards, and filter/page candidate repair without confirmation. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Refine `StagedSearchSelector.tsx` and its pure model to keep `candidateKey` distinct from `confirmedKey`, use local React Aria handlers only, announce loading/error/empty state, and leave continuation outside the listbox. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Add click/Enter parity, zero-visible-with-cursor, and continuation-preserves-query cases; run the focused command and record the keyboard runtime result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing RTL tests for Spanish loaded-name-only filtering and copy, ArrowDown search→list, ArrowUp first-item→search, printable list→search, Enter on focused item only, IME/defaultPrevented guards, and filter/page candidate repair without confirmation. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Refine `StagedSearchSelector.tsx` and its pure model to keep `candidateKey` distinct from `confirmedKey`, use local React Aria handlers only, announce loading/error/empty state, and leave continuation outside the listbox. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Add click/Enter parity, zero-visible-with-cursor, and continuation-preserves-query cases; run the focused command and record the keyboard runtime result. <!-- sdd-owner: implementation -->
 
 ### PR 5 — Staged Familia and Tipo integration
 

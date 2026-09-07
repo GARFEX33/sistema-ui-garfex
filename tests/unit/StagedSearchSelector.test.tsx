@@ -1,22 +1,18 @@
-import {
-  createEvent,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react'
+import { createEvent, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import {
   StagedSearchSelector,
   type SelectorLoadState,
 } from '../../src/features/resources-master/StagedSearchSelector'
+import { isPrintableStagedSelectorKey } from '../../src/features/resources-master/stagedSearchSelector.model'
 
 type Item = { id: string; nombre: string }
 type FixtureProps = {
   items?: readonly Item[]
   loadState?: SelectorLoadState
   preferredActiveKey?: string | null
+  confirmedKey?: string | null
   onConfirm?: (item: Item) => void
   onLoadMore?: () => void
   onRetry?: () => void
@@ -56,33 +52,43 @@ describe('StagedSearchSelector', () => {
     render(<Selector preferredActiveKey="cable" onConfirm={onConfirm} />)
 
     expect(
-      screen.getByText('Filtra por nombre entre los elementos cargados'),
+      screen.getByText('Busca solo entre las opciones cargadas'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Cable UTP' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    expect(
+      screen.getByText('2 opciones cargadas; búsqueda local por nombre.'),
+    ).toBeInTheDocument()
     await user.type(screen.getByRole('searchbox', { name: 'Clase' }), 'árb')
 
-    expect(screen.getByRole('option', { name: 'Árbol' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    expect(
+      screen.getByText('1 coincidencia entre 2 opciones cargadas.'),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('option', { name: 'Cable UTP' }),
     ).not.toBeInTheDocument()
     expect(onConfirm).not.toHaveBeenCalled()
   })
 
-  it('confirms an active option through Enter and a clicked option exactly once', async () => {
+  it('keeps the candidate separate from the confirmed option until exact Enter or click confirmation', async () => {
     const user = userEvent.setup()
     const keyboardConfirm = vi.fn()
-    render(<Selector onConfirm={keyboardConfirm} />)
+    render(
+      <Selector
+        confirmedKey="tree"
+        preferredActiveKey="cable"
+        onConfirm={keyboardConfirm}
+      />,
+    )
     const tree = screen.getByRole('option', { name: 'Árbol' })
-    await waitFor(() => expect(tree).toHaveAttribute('aria-selected', 'true'))
+    const cable = screen.getByRole('option', { name: 'Cable UTP' })
+
+    expect(tree).toHaveAttribute('aria-selected', 'true')
+    expect(cable).toHaveAttribute('aria-selected', 'false')
     tree.focus()
+    await user.keyboard(' ')
+    expect(keyboardConfirm).not.toHaveBeenCalled()
+    cable.focus()
     await user.keyboard('{Enter}')
-    expect(keyboardConfirm).toHaveBeenCalledWith(items[0])
+    expect(keyboardConfirm).toHaveBeenCalledWith(items[1])
 
     const clickConfirm = vi.fn()
     render(<Selector onConfirm={clickConfirm} />)
@@ -148,7 +154,6 @@ describe('StagedSearchSelector', () => {
     const tree = screen.getByRole('option', { name: 'Árbol' })
     const cable = screen.getByRole('option', { name: 'Cable UTP' })
 
-    await waitFor(() => expect(cable).toHaveAttribute('aria-selected', 'true'))
     screen.getByRole('listbox').focus()
     fireEvent.keyDown(screen.getByRole('listbox'), { key: 'ArrowUp' })
     expect(tree).toHaveFocus()
@@ -162,12 +167,54 @@ describe('StagedSearchSelector', () => {
     expect(onConfirm).toHaveBeenCalledWith(items[0])
   })
 
+  it('transfers focus between Search and the current candidate without confirmation', () => {
+    render(<Selector preferredActiveKey="cable" />)
+    const input = screen.getByRole('searchbox', { name: 'Clase' })
+    const tree = screen.getByRole('option', { name: 'Árbol' })
+    const cable = screen.getByRole('option', { name: 'Cable UTP' })
+
+    input.focus()
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(cable).toHaveFocus()
+    expect(tree).not.toHaveFocus()
+    tree.focus()
+    fireEvent.keyDown(tree, { key: 'ArrowUp' })
+    expect(input).toHaveFocus()
+  })
+
+  it('repairs the candidate when its preferred option arrives on a new page', () => {
+    const { rerender } = render(
+      <Selector
+        items={[]}
+        loadState={{ status: 'loading' }}
+        preferredActiveKey="cable"
+      />,
+    )
+
+    rerender(<Selector preferredActiveKey="cable" />)
+    const input = screen.getByRole('searchbox', { name: 'Clase' })
+    input.focus()
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+
+    expect(screen.getByRole('option', { name: 'Cable UTP' })).toHaveFocus()
+  })
+
+  it('returns printable list keys to Search', () => {
+    render(<Selector preferredActiveKey="tree" />)
+    const input = screen.getByRole('searchbox', { name: 'Clase' })
+    const tree = screen.getByRole('option', { name: 'Árbol' })
+
+    tree.focus()
+    fireEvent.keyDown(tree, { key: 'c' })
+    expect(input).toHaveFocus()
+    expect(input).toHaveValue('c')
+  })
+
   it('keeps modified filter arrows local and transfers only unmodified arrows', async () => {
     render(<Selector preferredActiveKey="cable" />)
     const input = screen.getByRole('searchbox', { name: 'Clase' })
-    const cable = screen.getByRole('option', { name: 'Cable UTP' })
+    const tree = screen.getByRole('option', { name: 'Árbol' })
 
-    await waitFor(() => expect(cable).toHaveAttribute('aria-selected', 'true'))
     input.focus()
     fireEvent.keyDown(input, { key: 'ArrowDown', ctrlKey: true })
     expect(input).toHaveFocus()
@@ -177,13 +224,26 @@ describe('StagedSearchSelector', () => {
     expect(input).toHaveFocus()
     fireEvent.keyDown(input, { key: 'ArrowUp', shiftKey: true })
     expect(input).toHaveFocus()
-    expect(cable).toHaveAttribute('aria-selected', 'true')
-
-    expect(fireEvent.keyDown(input, { key: 'ArrowUp' })).toBe(false)
-    expect(cable).toHaveFocus()
-    input.focus()
+    expect(fireEvent.keyDown(input, { key: 'ArrowUp' })).toBe(true)
+    expect(input).toHaveFocus()
     expect(fireEvent.keyDown(input, { key: 'ArrowDown' })).toBe(false)
-    expect(cable).toHaveFocus()
+    expect(screen.getByRole('option', { name: 'Cable UTP' })).toHaveFocus()
+
+    tree.focus()
+    fireEvent.keyDown(tree, { key: 'ArrowUp', ctrlKey: true })
+    expect(tree).toHaveFocus()
+    fireEvent.keyDown(tree, { key: 'ArrowUp', metaKey: true })
+    expect(tree).toHaveFocus()
+    fireEvent.keyDown(tree, { key: 'ArrowUp', altKey: true })
+    expect(tree).toHaveFocus()
+    fireEvent.keyDown(tree, { key: 'ArrowUp', shiftKey: true })
+    expect(tree).toHaveFocus()
+    fireEvent.keyDown(tree, { key: 'ArrowUp', isComposing: true })
+    expect(tree).toHaveFocus()
+    const preventedListArrow = createEvent.keyDown(tree, { key: 'ArrowUp' })
+    preventedListArrow.preventDefault()
+    fireEvent(tree, preventedListArrow)
+    expect(tree).toHaveFocus()
 
     input.focus()
     fireEvent.keyDown(input, { key: 'ArrowDown', isComposing: true })
@@ -192,5 +252,48 @@ describe('StagedSearchSelector', () => {
     prevented.preventDefault()
     fireEvent(input, prevented)
     expect(input).toHaveFocus()
+  })
+
+  it('recognizes printable list keys without treating IME or command chords as text', () => {
+    expect(
+      isPrintableStagedSelectorKey({
+        key: 'ñ',
+        isComposing: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        getModifierState: () => false,
+      }),
+    ).toBe(true)
+    expect(
+      isPrintableStagedSelectorKey({
+        key: 'a',
+        isComposing: true,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        getModifierState: () => false,
+      }),
+    ).toBe(false)
+    expect(
+      isPrintableStagedSelectorKey({
+        key: '@',
+        isComposing: false,
+        ctrlKey: true,
+        metaKey: false,
+        altKey: true,
+        getModifierState: (modifier) => modifier === 'AltGraph',
+      }),
+    ).toBe(true)
+    expect(
+      isPrintableStagedSelectorKey({
+        key: 'c',
+        isComposing: false,
+        ctrlKey: true,
+        metaKey: false,
+        altKey: true,
+        getModifierState: () => false,
+      }),
+    ).toBe(false)
   })
 })

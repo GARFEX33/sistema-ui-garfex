@@ -430,3 +430,49 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Verification:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx`, `pnpm typecheck`, targeted ESLint, targeted Prettier, `pnpm format:check`, and `git diff --check` all passed.
 - **Persisted tasks:** the three PR 3 implementation checkboxes remain visibly `[x]`; no task-plan content was changed, and parent-owned lifecycle rows remain deferred.
 - **Boundary:** auto-chain / feature-branch-chain PR 3 correction only; no backend, API, shared UI, global keyboard, commit, push, PR, or review work was performed.
+
+---
+
+## PR 4 — Search-list candidate, focus, and local-search refinements
+
+- **State / structured status:** completed under authoritative native OpenSpec status: `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, no blockers, and strict TDD enabled. The parent-provided action context is `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex`; every changed file is in the allowed surfaces, with no warning.
+- **Workload / PR boundary:** authorized `auto-chain` / `feature-branch-chain`, `PR 3 → 📍 PR 4 → PR 5`; no PR 5 hierarchy work or parent lifecycle action was performed. Final total is 268 A+D, including this progress record and task checkbox updates, below the hard 399 limit; no commit was made.
+- **Completed / persisted:** PR 4 RED, GREEN, and TRIANGULATE/REFACTOR lines 84–86 are visibly `[x]` in `tasks.md`.
+- **Implementation:** `candidateKey` is local and repaired independently of optional `confirmedKey`; `aria-selected` represents only confirmation, while candidate focus and confirmation have separate visible markers. Search is the sole typing target, with Spanish loaded-name-only copy and an honest loaded-result count. Local capture handlers move Search → candidate, first candidate → Search, and printable list keys → Search without global listeners or confirmation. Loading/error/empty announcements and continuation remain outside the ListBox.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 4 selector/model | `tests/unit/StagedSearchSelector.test.tsx` | RTL + pure unit | 10/10 focused selector/architecture baseline | 5 failures: honest Spanish copy, confirmed/candidate separation, first-item ArrowUp, printable transfer, and printable-key model | 8 selector tests passed after the smallest local handler/model changes | Click/Enter parity, filtered/zero-visible continuation, page/query preservation, modified/default-prevented input arrows, IME/command-key recognition, and focused-item Enter are covered | Prettier reformatted the three changed source/test files; focused suite stayed green |
+
+### Verification and runtime
+
+- `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck` — passed: 13/13 tests and typecheck.
+- `pnpm exec eslint src/features/resources-master/StagedSearchSelector.tsx src/features/resources-master/stagedSearchSelector.model.ts tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts` — passed.
+- Targeted Prettier check and `git diff --check` — passed.
+- **Keyboard runtime result:** RTL exercised Search `ArrowDown`, first-item `ArrowUp`, printable list transfer, focused Enter, click parity, loading/error/retry, zero visible results with `Cargar más…`, and query-preserving continuation; none called `onConfirm` except exact Enter/click.
+
+### Files, deviation, rollback, and remaining work
+
+- **Files:** `src/features/resources-master/StagedSearchSelector.tsx`, `src/features/resources-master/stagedSearchSelector.model.ts`, `tests/unit/StagedSearchSelector.test.tsx`, `openspec/changes/keyboard-first-resource-creation/tasks.md`, and this cumulative record. `keyboardBoundaries.test.ts` was verified but needed no source change because its existing local-listener guard already covered the boundary.
+- **Deviation:** none. The feature-local React Aria composite uses GARFEX semantic tokens and no API, backend, query, global-store, shared-UI, or document/window-listener changes.
+- **Rollback:** revert this selector/model/test slice and its three task checkboxes; retain PR 1–3 work and the single global keyboard controller.
+- **Remaining implementation tasks:** all implementation rows beginning PR 5 remain unchecked; next are `- [ ] **RED:** Add failing surface/model cases for parent-gated pagination, deep valid prefix entry, invalid-prefix fallback, Class/Family replacement cascades, same-ID reconfirmation, and stale descendant response rejection. <!-- sdd-owner: implementation -->`, `- [ ] **GREEN:** Wire independent existing \`createParentGatedListController\` instances through \`useResourceCreationFlow.ts\`, render staged Familia/Tipo selectors, and remove the corresponding simultaneous legacy controls. <!-- sdd-owner: implementation -->`, and `- [ ] **TRIANGULATE/REFACTOR:** Exercise continuation, dedupe, retry, rail return, and local-screen isolation across all three hierarchy stages; run the focused command and record the keyboard runtime result. <!-- sdd-owner: implementation -->`. Parent-owned lifecycle rows remain byte-for-byte deferred.
+
+---
+
+## PR 4 correction — selector keyboard findings
+
+- **Status / scope:** manual authoritative OpenSpec status consumed (`artifactStore: openspec`, `applyState: ready`, strict TDD, `repo-local`); the parent-provided five edit surfaces are safe. CodeGraph MCP was unavailable after its initialized-index check, so direct focused reads were used.
+- **Boundary / budget:** authorized auto-chain correction for PR 4 only. It adds **84 A+D** to the supplied 268-A+D candidate; the current total is **352 A+D**, below both the 130 correction allowance and 399 hard limit. No task checkbox, commit, PR, review, backend, API, shared-UI, global listener, or PR 5 work occurred.
+- **Behavior:** Search `ArrowDown` now focuses the current candidate option (including nonfirst preferred/page-repaired keys), never the ListBox container. Modified/IME/default-prevented first-option `ArrowUp` stays local. AltGraph Ctrl+Alt printable keys are accepted while ordinary command chords remain excluded. Space does not confirm; click and focused Enter parity remain covered. Search labels and loaded-result information are `text-sm`.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 4 correction | selector + keyboard 13/13 | 3 failures: nonfirst candidate focus, modified first-option ArrowUp, and AltGraph printable recognition | Minimal option query/focus, modifier guard, and AltGraph predicate made selector 8/8 green | Added Space non-confirmation and preferred candidate page-arrival repair; Prettier rerun and selector + keyboard suite passed 14/14 |
+
+- **Verification:** `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck && pnpm lint && pnpm format:check && git diff --check` passed (14/14); final `git diff --numstat` is 352 A+D.
+- **Remaining:** no PR 4 implementation rows remain; the exact next unchecked PR 5 rows remain in the previous PR 4 record. Parent-owned lifecycle rows are unchanged.

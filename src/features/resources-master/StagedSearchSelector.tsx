@@ -9,7 +9,8 @@ import {
 import { Button } from '../../shared/ui/Button'
 import {
   deriveVisibleStagedSelectorItems,
-  repairProvisionalActiveKey,
+  isPrintableStagedSelectorKey,
+  repairCandidateKey,
 } from './stagedSearchSelector.model'
 
 export type SelectorLoadState =
@@ -27,6 +28,7 @@ type StagedSearchSelectorProps<T> = {
   itemName: (item: T) => string
   renderItem?: (item: T) => ReactNode
   preferredActiveKey?: string | null
+  confirmedKey?: string | null
   loadState: SelectorLoadState
   onConfirm: (item: T) => void
   onLoadMore: () => void
@@ -40,14 +42,16 @@ export function StagedSearchSelector<T>({
   itemName,
   renderItem = itemName,
   preferredActiveKey = null,
+  confirmedKey = null,
   loadState,
   onConfirm,
   onLoadMore,
   onRetry,
 }: StagedSearchSelectorProps<T>) {
   const [query, setQuery] = useState('')
-  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const [candidateKey, setCandidateKey] = useState<string | null>(null)
   const preferredApplied = useRef(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const listBoxRef = useRef<HTMLDivElement>(null)
   const visibleItems = useMemo(
     () =>
@@ -64,17 +68,25 @@ export function StagedSearchSelector<T>({
 
   useEffect(() => {
     const preferredKey = preferredApplied.current ? null : preferredActiveKey
-    const repaired = repairProvisionalActiveKey(
+    const repaired = repairCandidateKey(
       visibleItems,
-      activeKey,
+      candidateKey,
       preferredKey,
     )
-    if (repaired !== activeKey) setActiveKey(repaired)
+    if (repaired !== candidateKey) setCandidateKey(repaired)
     if (visibleItems.length) preferredApplied.current = true
-  }, [activeKey, preferredActiveKey, visibleItems])
+  }, [candidateKey, preferredActiveKey, visibleItems])
 
   const canLoadMore = loadState.status === 'ready' && !loadState.exhausted
   const filteredEmpty = !visibleItems.length && items.length > 0
+  const focusCandidate = () => {
+    const key = candidateKey ?? visibleItems[0]?.key
+    Array.from(
+      listBoxRef.current?.querySelectorAll<HTMLElement>('[data-key]') ?? [],
+    )
+      .find((option) => option.dataset.key === key)
+      ?.focus()
+  }
 
   return (
     <section
@@ -82,10 +94,11 @@ export function StagedSearchSelector<T>({
       className="grid gap-3"
     >
       <SearchField value={query} onChange={setQuery} className="grid gap-1">
-        <Label className="text-[11px] font-bold tracking-[0.08em] text-text-primary">
+        <Label className="text-sm font-bold tracking-[0.08em] text-text-primary">
           {label}
         </Label>
         <Input
+          ref={inputRef}
           aria-label={label}
           className="min-h-9 rounded border border-border bg-surface px-3 text-text-primary outline-none focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-focus"
           onKeyDown={(event) => {
@@ -96,52 +109,89 @@ export function StagedSearchSelector<T>({
               event.altKey ||
               event.metaKey ||
               event.shiftKey ||
-              !['ArrowDown', 'ArrowUp'].includes(event.key)
+              event.key !== 'ArrowDown'
             )
               return
             event.preventDefault()
-            listBoxRef.current?.focus()
+            focusCandidate()
           }}
         />
       </SearchField>
-      <p className="text-[11px] text-text-secondary">
-        Filtra por nombre entre los elementos cargados
+      <p className="text-sm text-text-secondary">
+        Busca solo entre las opciones cargadas
       </p>
+      {items.length > 0 && (
+        <p aria-live="polite" className="text-sm text-text-secondary">
+          {query
+            ? `${visibleItems.length} ${visibleItems.length === 1 ? 'coincidencia' : 'coincidencias'} entre ${items.length} opciones cargadas.`
+            : `${items.length} opciones cargadas; búsqueda local por nombre.`}
+        </p>
+      )}
 
       {loadState.status === 'loading' ? (
         <p role="status" className="text-sm text-text-secondary">
           Cargando opciones…
         </p>
       ) : (
-        <ListBox
-          ref={listBoxRef}
-          aria-label={`Opciones de ${label}`}
-          items={visibleItems}
-          selectionMode="single"
-          selectedKeys={activeKey === null ? [] : [activeKey]}
-          onSelectionChange={(keys) => {
-            const key = keys === 'all' ? null : (Array.from(keys)[0] ?? null)
-            setActiveKey(key === null ? null : String(key))
+        <div
+          onFocusCapture={(event) => {
+            const key = (event.target as HTMLElement)
+              .closest('[data-key]')
+              ?.getAttribute('data-key')
+            if (key) setCandidateKey(key)
           }}
-          onAction={(key) => {
-            const selected = visibleItems.find(
-              (item) => item.key === String(key),
-            )
-            if (selected) onConfirm(selected.item)
+          onKeyDownCapture={(event) => {
+            if (event.defaultPrevented || event.nativeEvent.isComposing) return
+            const key = (event.target as HTMLElement)
+              .closest('[data-key]')
+              ?.getAttribute('data-key')
+            if (
+              event.key === 'ArrowUp' &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey &&
+              !event.shiftKey &&
+              key === visibleItems[0]?.key
+            ) {
+              event.preventDefault()
+              inputRef.current?.focus()
+              return
+            }
+            if (key && isPrintableStagedSelectorKey(event.nativeEvent)) {
+              event.preventDefault()
+              setQuery((current) => current + event.key)
+              inputRef.current?.focus()
+            }
           }}
-          className="grid gap-1"
         >
-          {(item) => (
-            <ListBoxItem
-              id={item.key}
-              textValue={item.displayName}
-              onPress={() => onConfirm(item.item)}
-              className="cursor-pointer rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none hover:bg-surface-subtle focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-focus selected:border-primary selected:bg-primary-subtle"
-            >
-              {renderItem(item.item)}
-            </ListBoxItem>
-          )}
-        </ListBox>
+          <ListBox
+            ref={listBoxRef}
+            aria-label={`Opciones de ${label}`}
+            items={visibleItems}
+            selectionMode="single"
+            selectedKeys={confirmedKey === null ? [] : [confirmedKey]}
+            className="grid gap-1"
+          >
+            {(item) => (
+              <ListBoxItem
+                id={item.key}
+                textValue={item.displayName}
+                onPress={() => onConfirm(item.item)}
+                className="cursor-pointer rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none hover:bg-surface-subtle focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-focus selected:border-primary selected:bg-primary-subtle"
+              >
+                <span className="flex items-center gap-2">
+                  {candidateKey === item.key && (
+                    <span aria-hidden="true">›</span>
+                  )}
+                  {renderItem(item.item)}
+                  {confirmedKey === item.key && (
+                    <span aria-hidden="true">✓</span>
+                  )}
+                </span>
+              </ListBoxItem>
+            )}
+          </ListBox>
+        </div>
       )}
 
       {filteredEmpty && (

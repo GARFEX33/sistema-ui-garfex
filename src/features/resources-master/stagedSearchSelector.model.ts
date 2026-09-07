@@ -18,7 +18,20 @@ export const deriveVisibleStagedSelectorItems = <T extends StagedSelectorItem>(
   )
 }
 
-export const repairProvisionalActiveKey = <T extends StagedSelectorItem>(
+export type StagedSelectorKeyEvent = Pick<
+  KeyboardEvent,
+  'altKey' | 'ctrlKey' | 'getModifierState' | 'isComposing' | 'key' | 'metaKey'
+>
+
+export const isPrintableStagedSelectorKey = (
+  event: StagedSelectorKeyEvent,
+): boolean =>
+  event.key.length === 1 &&
+  !event.isComposing &&
+  !event.metaKey &&
+  (event.getModifierState('AltGraph') || (!event.ctrlKey && !event.altKey))
+
+export const repairCandidateKey = <T extends StagedSelectorItem>(
   visibleItems: readonly T[],
   activeKey: string | null,
   preferredActiveKey: string | null,
