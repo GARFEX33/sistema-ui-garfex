@@ -65,9 +65,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 1. **Start → finish:** legacy surface composition → `ResourceCreationShell` presents one dominant decision, title **Creador de recursos**, and `ResourceCreationContractPending` as the only current terminal state. **Files:** `src/features/resources-master/ResourceCreationShell.tsx`, `src/features/resources-master/ResourceCreationContractPending.tsx`, `src/features/resources-master/CrearRecursoSurface.tsx`, `tests/unit/crearRecursoSurface.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck`. **Runtime:** open with `N`, move from Unit to pending, and verify focus moves to its heading. **Rollback:** remove these feature-local components/composition while retaining PR 1’s safety wall.
 
-- [ ] **RED:** Add failing RTL assertions for the visible Creador title, one dominant stage heading, no editable business-value control, and pending heading focus after Unit. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Extract `ResourceCreationShell.tsx` and `ResourceCreationContractPending.tsx`, compose them from `CrearRecursoSurface.tsx`, and use existing `Dialog`/GARFEX Light primitives without a second shell or global listener. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover initial Class and deep-snapshot openings plus pending back navigation, run the focused command, and record the `N`-open runtime result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing RTL assertions for the visible Creador title, one dominant stage heading, no editable business-value control, and pending heading focus after Unit. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Extract `ResourceCreationShell.tsx` and `ResourceCreationContractPending.tsx`, compose them from `CrearRecursoSurface.tsx`, and use existing `Dialog`/GARFEX Light primitives without a second shell or global listener. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Cover initial Class and deep-snapshot openings plus pending back navigation, run the focused command, and record the `N`-open runtime result. <!-- sdd-owner: implementation -->
 
 ### PR 3 — Interactive stage rail and persistent command bar
 

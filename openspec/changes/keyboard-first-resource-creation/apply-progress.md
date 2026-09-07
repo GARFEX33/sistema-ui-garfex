@@ -319,3 +319,52 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Keyboard runtime result:** focused RTL moved focus to the enabled Unidad confirmation and sent `Enter`; both preferred and explicitly selected non-preferred candidates reached `Contrato pendiente` without an attribute/create request. A browser runtime was not run because this work unit's task prescribes the focused Vitest/typecheck command.
 - **Rollback:** revert only the reducer event/lease fields, reachable pending branch, focused tests/guard, and these PR 1 checkbox/evidence updates.
 - **Deviation:** the historical legacy regions are made unreachable rather than deleted, preserving the PR 8–9 deletion boundary and the 399-line cap.
+
+---
+
+## PR 2 — Feature-local Creador shell and pending end state
+
+### Status
+
+- **State:** completed for parent-authorized PR 2 only. The native status CLI was unavailable in this checkout (`gentle-ai sdd` is not a supported command), so this apply used the required manual status fallback after directly reading the authoritative OpenSpec proposal, nested spec, design, tasks, prior progress, and `openspec/config.yaml`.
+- **Structured status:** `schemaName: spec-driven`; `changeName: keyboard-first-resource-creation`; `artifactStore: openspec`; `changeRoot: openspec/changes/keyboard-first-resource-creation`; proposal/spec/design/tasks/apply-progress are present; pre-apply state was `ready`; action context was `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex` with the parent-provided edit surfaces. No action-context warning occurred.
+- **Workload / PR boundary:** authorized feature-branch-chain `tracker → PR 1 → 📍 PR 2`; this work unit is shell/pending only. PR 3 rail/command bar, selector changes, Familia/Tipo/Unidad integration, legacy deletion, backend work, and parent lifecycle are out of scope.
+
+### Completed tasks and persisted checkbox updates
+
+- [x] PR 2 RED — the visible title, a single stage heading, absence of pending business-value inputs, and pending-heading focus assertions were added and failed before production edits.
+- [x] PR 2 GREEN — `ResourceCreationShell` and `ResourceCreationContractPending` were extracted and composed through the existing `Dialog` without a second dialog or global listener.
+- [x] PR 2 TRIANGULATE/REFACTOR — initial Class and deep-snapshot opens plus pending back navigation were covered; the persisted PR 2 task rows are visibly `[x]`.
+
+### Files changed
+
+- `src/features/resources-master/ResourceCreationShell.tsx`
+- `src/features/resources-master/ResourceCreationContractPending.tsx`
+- `src/features/resources-master/CrearRecursoSurface.tsx`
+- `tests/unit/crearRecursoSurface.test.tsx`
+- `openspec/changes/keyboard-first-resource-creation/tasks.md`
+- `openspec/changes/keyboard-first-resource-creation/apply-progress.md`
+
+### TDD Cycle Evidence
+
+| Task               | Test file                                 | Layer | Safety net            | RED                                                                               | GREEN                                                 | TRIANGULATE                                                                                                                 | REFACTOR                                                                                                                                             |
+| ------------------ | ----------------------------------------- | ----- | --------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PR 2 shell/pending | `tests/unit/crearRecursoSurface.test.tsx` | RTL   | 10 passed, 13 skipped | 1 failure: dialog remained named `Nuevo recurso` instead of `Creador de recursos` | 11 passed, 13 skipped after shell/pending composition | Initial Class and deep snapshot openings, pending back navigation, and both enabled/non-preferred Unit paths remain covered | Restored the minimal source slice after Prettier reformatted the pre-existing large surface; focused tests, typecheck, ESLint, and diff check passed |
+
+### Verification and runtime
+
+- `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx` — RED: 1 failed, 9 passed, 13 skipped; final: 11 passed, 13 skipped.
+- `pnpm typecheck` — passed.
+- Targeted `pnpm exec eslint` for the two new components, surface, and RTL test — passed.
+- Targeted Prettier checks pass for both new components, the surface, and its RTL test; the final source diff is minimal and `git diff --check` passes.
+- **Runtime result:** the focused RTL `N` shortcut opens the Creador shell at Class; Unit confirmation focuses `Contrato pendiente`; `Volver` returns to context. Browser runtime was not run in this bounded apply slice.
+
+### Deviations, rollback, and remaining work
+
+- **Deviation:** none. GARFEX Light semantic utilities and existing `Dialog`/`Button` were reused; no dark/game skin, API, shared UI, global listener, or lifecycle action was added.
+- **Rollback:** remove the two feature-local components and their composition/test assertions while retaining PR 1's Unit-to-pending safety wall.
+- **Remaining implementation work begins:**
+  - `- [ ] **RED:** Add failing RTL cases for <ol> rail semantics, aria-current="step", confirmed-stage return, 44px interactive rail targets, and stage-specific command copy that omits Crear in pending. <!-- sdd-owner: implementation -->`
+  - `- [ ] **GREEN:** Implement feature-local CreationStageRail.tsx and CreationCommandBar.tsx with semantic tokens, shape/text state cues beyond color, valid Back/Escape guidance, and existing Button chrome. <!-- sdd-owner: implementation -->`
+  - `- [ ] **TRIANGULATE/REFACTOR:** Verify rail navigation alone preserves valid selections while a later alternative confirmation triggers the reducer cascade, run the focused command, and record the rail runtime result. <!-- sdd-owner: implementation -->`
+- Parent-owned tracker, chain targeting, bounded review, verification, sync, and archive rows remain deferred byte-for-byte.

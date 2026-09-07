@@ -294,7 +294,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     const api = fakeApi()
     renderSurface(api)
     fireEvent.keyDown(document, { key: 'n' })
-    expect(screen.getByRole('dialog', { name: 'Nuevo recurso' })).toBeVisible()
+    expect(
+      screen.getByRole('dialog', { name: 'Creador de recursos' }),
+    ).toBeVisible()
     await waitFor(() =>
       expect(api.listContextClasses).toHaveBeenCalledWith({
         cursor: undefined,
@@ -318,6 +320,12 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     const user = userEvent.setup()
     renderSurface(api)
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    expect(
+      screen.getByRole('dialog', { name: 'Creador de recursos' }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('heading', { name: 'Creador de recursos' }),
+    ).toBeVisible()
     await waitFor(() => expect(api.listContextClasses).toHaveBeenCalled())
 
     await chooseOption(user, 'Clase', 'Material')
@@ -330,13 +338,55 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     confirmUnit.focus()
     await user.keyboard('{Enter}')
 
-    expect(await screen.findByText('Contrato pendiente')).toBeVisible()
+    const pendingHeading = await screen.findByRole('heading', {
+      name: 'Contrato pendiente',
+    })
+    expect(pendingHeading).toHaveFocus()
+    expect(
+      screen.getAllByRole('heading').map((heading) => heading.textContent),
+    ).toEqual(['Creador de recursos', 'Contrato pendiente'])
     expect(api.listAttributeAssignments).not.toHaveBeenCalled()
     expect(api.createResource).not.toHaveBeenCalled()
-    expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Descripción')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Crear recurso' }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Volver' }))
+    expect(
+      screen.queryByRole('heading', { name: 'Contrato pendiente' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeVisible()
+  })
+
+  it('keeps the shell title for initial and deep snapshot openings', async () => {
+    const initial = renderSurface(fakeApi())
+    fireEvent.keyDown(document, { key: 'n' })
+    expect(
+      screen.getByRole('dialog', { name: 'Creador de recursos' }),
+    ).toBeVisible()
+    expect(screen.getByRole('searchbox', { name: 'Clase' })).toBeVisible()
+    expect(
+      screen.getByRole('heading', { name: 'Elegí una Clase' }),
+    ).toBeVisible()
+    initial.unmount()
+
+    renderSurface(fakeApi(), {
+      initialHierarchySnapshot: {
+        classItem: classItem(),
+        familyItem: familyItem(),
+        typeItem: typeItem(),
+      },
+    })
+    fireEvent.keyDown(document, { key: 'n' })
+    expect(
+      screen.getByRole('heading', { name: 'Creador de recursos' }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('heading', { name: 'Completá el contexto' }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('searchbox', { name: 'Clase' }),
     ).not.toBeInTheDocument()
   })
 
@@ -460,7 +510,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     renderSurface(fakeApi())
     const trigger = screen.getByRole('button', { name: 'Nuevo recurso' })
     await user.click(trigger)
-    await screen.findByRole('dialog', { name: 'Nuevo recurso' })
+    await screen.findByRole('dialog', { name: 'Creador de recursos' })
     await user.keyboard('{Escape}')
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),

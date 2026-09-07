@@ -14,9 +14,11 @@ import {
   restoreFocusNextFrame,
 } from '../../shared/keyboard/focusRestoration'
 import { Button } from '../../shared/ui/Button'
-import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
+import { Dialog, DialogActions } from '../../shared/ui/Dialog'
 import { Field, FieldSeparator } from '../../shared/ui/Field'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
+import { ResourceCreationContractPending } from './ResourceCreationContractPending'
+import { ResourceCreationShell } from './ResourceCreationShell'
 import { StagedSearchSelector } from './StagedSearchSelector'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
 import {
@@ -568,7 +570,7 @@ export function CrearRecursoSurface({
         ref={dialogRef}
         isOpen={isOpen}
         onOpenChange={(openState) => !openState && close()}
-        aria-label="Nuevo recurso"
+        aria-label="Creador de recursos"
       >
         <div
           className="flex min-h-0 flex-1 flex-col"
@@ -579,7 +581,15 @@ export function CrearRecursoSurface({
             }
           }}
         >
-          <DialogHeading title="Nuevo recurso" />
+          <ResourceCreationShell
+            stageHeading={
+              step === 1
+                ? flow.state.stage.kind === 'class'
+                  ? 'Elegí una Clase'
+                  : 'Completá el contexto'
+                : undefined
+            }
+          />
           <div className="resources-dialog-content">
             <ol
               aria-label="Progreso de creación"
@@ -974,9 +984,7 @@ export function CrearRecursoSurface({
               </>
             )}
 
-            {step === 'contract-pending' && (
-              <p role="status">Contrato pendiente</p>
-            )}
+            {step === 'contract-pending' && <ResourceCreationContractPending />}
 
             {step === 3 && submitStatus === 'created' && created && (
               <div className="resources-context-field">
