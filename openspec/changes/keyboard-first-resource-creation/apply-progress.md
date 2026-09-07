@@ -368,3 +368,65 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
   - `- [ ] **GREEN:** Implement feature-local CreationStageRail.tsx and CreationCommandBar.tsx with semantic tokens, shape/text state cues beyond color, valid Back/Escape guidance, and existing Button chrome. <!-- sdd-owner: implementation -->`
   - `- [ ] **TRIANGULATE/REFACTOR:** Verify rail navigation alone preserves valid selections while a later alternative confirmation triggers the reducer cascade, run the focused command, and record the rail runtime result. <!-- sdd-owner: implementation -->`
 - Parent-owned tracker, chain targeting, bounded review, verification, sync, and archive rows remain deferred byte-for-byte.
+
+---
+
+## PR 3 — Interactive stage rail and persistent command bar
+
+### Status
+
+- **State:** completed for the parent-delegated PR 3 work unit only; this run consumed a reconstructed authoritative OpenSpec status because the parent did not include native JSON and the local status CLI is unavailable.
+- **Structured status:** `schemaName: spec-driven`; `changeName: keyboard-first-resource-creation`; `artifactStore: openspec`; proposal, nested spec, design, tasks, and prior apply-progress are present; `applyState: ready`; action context is `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex` with the supplied allowed edit surfaces. No unsafe-root warning occurred.
+- **Workload / PR boundary:** authorized `auto-chain` / `feature-branch-chain`, `tracker → PR 1 → PR 2 → 📍 PR 3`; no PR 4 selector work, Familia/Tipo migration, Unit resolver/stage, legacy deletion, backend work, commit, push, PR, review, receipt, or release was attempted.
+
+### Completed tasks and persisted checkbox updates
+
+- [x] PR 3 RED — task line 76 is visibly checked in `tasks.md`.
+- [x] PR 3 GREEN — task line 77 is visibly checked in `tasks.md`.
+- [x] PR 3 TRIANGULATE/REFACTOR — task line 78 is visibly checked in `tasks.md`.
+
+### Implementation
+
+- Added feature-local `CreationStageRail` with a semantic `<ol>`, compact Clase/Familia/Tipo/Unidad labels, focusable confirmed-stage controls, a `min-h-11` (44px) target contract, `aria-current="step"`, and text/shape cues (`✓`, `●`, `○`) independent of color.
+- Added a quiet persistent `CreationCommandBar` around the existing `DialogActions` and existing `Button` actions; it reports only `Esc Cerrar` in context or `Esc Volver` at `Contrato pendiente`, and never exposes Crear at the contract wall.
+- Composed the rail through `ResourceCreationShell`, removed the duplicate legacy Contexto progress and duplicate Clase breadcrumb, and retained selections on rail return until an explicit alternative Clase confirmation triggers the existing cascade.
+- Escape at `Contrato pendiente` now returns to context without allowing the Dialog handler to close it; Escape from context retains the existing close/opener-restoration behavior.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 3 rail/bar | `tests/unit/crearRecursoSurface.test.tsx` | RTL | 11 passed, 13 skipped | New rail case failed: `Unable to find ... role "list" and name "Etapas de creación"` | After minimal rail/bar/shell composition and duplicate-context removal, focused RTL passed 12 passed, 13 skipped; `pnpm typecheck` passed | Rail return then same Clase reconfirmation preserved context; the distinct rail-return then alternative Clase scenario proved Familia/Tipo/Unidad reset only after confirmation, with focused RTL 12 passed, 13 skipped | Targeted Prettier wrote only scoped files; focused RTL remained 12 passed, 13 skipped and typecheck passed |
+| PR 3 pending Escape | `tests/unit/crearRecursoSurface.test.tsx` | RTL | Same focused baseline | New pending Escape assertion failed because the dialog closed instead of returning to context | Added local propagation stop and pending-back branch; focused RTL passed 12 passed, 13 skipped | The original context Escape/restoration case remains green while the pending case keeps the dialog open | Included in the targeted Prettier rerun |
+
+### Verification and runtime
+
+- `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx` — safety net: 11 passed, 13 skipped; RED: 1 failed, 11 passed, 13 skipped; final/refactor: 12 passed, 13 skipped.
+- `pnpm typecheck` — passed (`pnpm router:generate && tsc -b`).
+- `pnpm exec prettier --write ...` followed by `pnpm exec prettier --check` for the five changed source/test files — passed; `git diff --check` passed.
+- **Runtime result:** RTL exercised the keyboard-reachable pending Escape path and rail-return/confirmation behavior; confirmed context stayed visible, focusable rail controls remained present, and the pending bar omitted Crear. Browser runtime was not run for this bounded component slice.
+
+### Files, budget, deviations, and rollback
+
+- **Files:** `CreationStageRail.tsx`, `CreationCommandBar.tsx`, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, `crearRecursoSurface.test.tsx`, `tasks.md`, and this cumulative progress record.
+- **Changed-line count:** `313 A+D` including untracked files (tracked `git diff --numstat`: 198 A+D; untracked rail/bar: 115 added lines), below the hard 399 cap by 86 lines.
+- **Deviation:** no design deviation; the 44px rail target is represented by Tailwind `min-h-11` and the RTL target contract. No new shared component, listener, API, backend, URL, state, or selector refinement was added.
+- **Rollback:** remove the two feature-local rail/bar files and their shell/surface/test composition only; the PR 1 safety wall, PR 2 shell ownership, dialog overlay, N trigger, and opener restoration remain.
+
+### Remaining implementation tasks
+
+- `- [ ] **RED:** Add failing RTL tests for Spanish loaded-name-only filtering and copy, ArrowDown search→list, ArrowUp first-item→search, printable list→search, Enter on focused item only, IME/defaultPrevented guards, and filter/page candidate repair without confirmation. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Refine \`StagedSearchSelector.tsx\` and its pure model to keep \`candidateKey\` distinct from \`confirmedKey\`, use local React Aria handlers only, announce loading/error/empty state, and leave continuation outside the listbox. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Add click/Enter parity, zero-visible-with-cursor, and continuation-preserves-query cases; run the focused command and record the keyboard runtime result. <!-- sdd-owner: implementation -->`
+- Parent-owned tracker, chain targeting, bounded review, verification, sync, and archive rows remain byte-for-byte deferred.
+
+---
+
+## PR 3 correction addendum — gatekeeper blockers
+
+- **Structured status:** manual authoritative OpenSpec status consumed for `keyboard-first-resource-creation`: `artifactStore: openspec`, `applyState: ready`, strict TDD, `repo-local` workspace, and only parent-provided edit surfaces; no action-context warnings.
+- **Corrections:** suppressed the duplicate DialogHeading Escape hint; pending Back/Escape now restores Unidad as the rail current stage; and rail controls use inline `minHeight: 44` rather than a descriptive marker.
+- **TDD Cycle Evidence:** RED added RTL assertions for no duplicate `Esc cerrar`, an inline/computed 44px target, and Escape after a Familia rail override restoring Unidad; the focused run failed on the missing minimum style, then GREEN passed 12 active RTL tests with 13 intentional skips.
+- **Verification:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx`, `pnpm typecheck`, targeted ESLint, targeted Prettier, `pnpm format:check`, and `git diff --check` all passed.
+- **Persisted tasks:** the three PR 3 implementation checkboxes remain visibly `[x]`; no task-plan content was changed, and parent-owned lifecycle rows remain deferred.
+- **Boundary:** auto-chain / feature-branch-chain PR 3 correction only; no backend, API, shared UI, global keyboard, commit, push, PR, or review work was performed.

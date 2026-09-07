@@ -14,7 +14,9 @@ import {
   restoreFocusNextFrame,
 } from '../../shared/keyboard/focusRestoration'
 import { Button } from '../../shared/ui/Button'
-import { Dialog, DialogActions } from '../../shared/ui/Dialog'
+import { Dialog } from '../../shared/ui/Dialog'
+import { CreationStageRail, type CreationRailStage } from './CreationStageRail'
+import { CreationCommandBar } from './CreationCommandBar'
 import { Field, FieldSeparator } from '../../shared/ui/Field'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
 import { ResourceCreationContractPending } from './ResourceCreationContractPending'
@@ -157,6 +159,10 @@ export function CrearRecursoSurface({
   const [message, showMessage] = useAutoClosingMessage()
 
   const [step, setStep] = useState<1 | 2 | 3 | 'contract-pending'>(1)
+  const [railStageOverride, setRailStageOverride] = useState<Exclude<
+    CreationRailStage,
+    'contract-pending'
+  > | null>(null)
   const [classId, setClassId] = useState<ResourceId | null>(null)
   const [familyId, setFamilyId] = useState<ResourceId | null>(null)
   const [typeId, setTypeId] = useState<ResourceId | null>(null)
@@ -189,6 +195,7 @@ export function CrearRecursoSurface({
       const prefix = initialHierarchySnapshotCaptureRef.current.captureOnOpen()
       flow.begin(prefix)
       setStep(1)
+      setRailStageOverride(null)
       setClassId(prefix.classItem?.id ?? null)
       setFamilyId(null)
       setTypeId(null)
@@ -309,6 +316,7 @@ export function CrearRecursoSurface({
   const selectClass = (item: ResourceContextClassItem) => {
     const id = item.id
     flow.confirmClass(item)
+    setRailStageOverride(null)
     if (classId !== null && key(classId) === key(id)) return
     setContextError(null)
     setClassId(id)
@@ -322,6 +330,7 @@ export function CrearRecursoSurface({
   }
 
   const selectFamily = (id: ResourceId) => {
+    setRailStageOverride(null)
     setContextError(null)
     setFamilyId(id)
     setTypeId(null)
@@ -332,6 +341,7 @@ export function CrearRecursoSurface({
   }
 
   const selectType = (id: ResourceId) => {
+    setRailStageOverride(null)
     setContextError(null)
     setTypeId(id)
     setUnitId(null)
@@ -422,7 +432,10 @@ export function CrearRecursoSurface({
     setStep('contract-pending')
   }
 
-  const backToContext = () => setStep(1)
+  const backToContext = () => {
+    setRailStageOverride('unit')
+    setStep(1)
+  }
 
   const setAttributeValue = (atributoRecursoId: ResourceId, value: string) => {
     const attributeKey = key(atributoRecursoId)
@@ -473,6 +486,31 @@ export function CrearRecursoSurface({
   const selectedTypeName =
     types.items.find((t) => key(t.id) === key(typeId))?.nombre ?? ''
   const selectedUnit = units.items.find((u) => key(u.unidadId) === key(unitId))
+  const currentRailStage: CreationRailStage =
+    step === 'contract-pending'
+      ? 'contract-pending'
+      : (railStageOverride ??
+        (classId === null
+          ? 'class'
+          : familyId === null
+            ? 'family'
+            : typeId === null
+              ? 'type'
+              : 'unit'))
+  const navigateRailStage = (
+    stage: Exclude<CreationRailStage, 'contract-pending'>,
+  ) => {
+    setRailStageOverride(stage)
+    if (stage === 'class') {
+      flow.enterClass()
+      return
+    }
+    dialogRef.current
+      ?.querySelector<HTMLButtonElement>(
+        `button[aria-label="${contextFieldLabels[stage]}"]`,
+      )
+      ?.focus()
+  }
 
   const attributeSummaryValue = (field: AttributeField): string => {
     const raw = attributeValues[key(field.atributoRecursoId)]
@@ -577,11 +615,25 @@ export function CrearRecursoSurface({
           onKeyDown={(event: React.KeyboardEvent) => {
             if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
               event.preventDefault()
-              close()
+              event.stopPropagation()
+              if (step === 'contract-pending') backToContext()
+              else close()
             }
           }}
         >
           <ResourceCreationShell
+            rail={
+              <CreationStageRail
+                currentStage={currentRailStage}
+                onNavigate={navigateRailStage}
+                selections={{
+                  className: selectedClassName,
+                  familyName: selectedFamilyName,
+                  typeName: selectedTypeName,
+                  unitName: selectedUnit?.nombre ?? '',
+                }}
+              />
+            }
             stageHeading={
               step === 1
                 ? flow.state.stage.kind === 'class'
@@ -591,16 +643,6 @@ export function CrearRecursoSurface({
             }
           />
           <div className="resources-dialog-content">
-            <ol
-              aria-label="Progreso de creación"
-              className="resources-dialog-step m-0 flex list-none gap-3 p-0 text-[11px] font-semibold"
-            >
-              <li aria-current={step === 1 ? 'step' : undefined}>1 Contexto</li>
-              <li aria-current={step === 2 ? 'step' : undefined}>
-                2 Atributos
-              </li>
-              <li aria-current={step === 3 ? 'step' : undefined}>3 Revisión</li>
-            </ol>
             <p className="mb-3 text-[11px] text-text-secondary">
               * Obligatorio
             </p>
@@ -624,16 +666,6 @@ export function CrearRecursoSurface({
                     onRetry={() => void flow.retryClasses()}
                   />
                 </div>
-                {selectedClassName && (
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onPress={flow.enterClass}
-                  >
-                    Clase: {selectedClassName}
-                  </Button>
-                )}
-
                 <div
                   className="resources-context-field"
                   hidden={flow.state.stage.kind === 'class'}
@@ -1091,7 +1123,9 @@ export function CrearRecursoSurface({
               </>
             )}
           </div>
-          <DialogActions>
+          <CreationCommandBar
+            stage={step === 'contract-pending' ? 'contract-pending' : 'context'}
+          >
             {step === 1 && (
               <>
                 <Button variant="outline" onPress={close} type="button">
@@ -1170,7 +1204,7 @@ export function CrearRecursoSurface({
                 </Button>
               </>
             )}
-          </DialogActions>
+          </CreationCommandBar>
         </div>
       </Dialog>
     </div>

@@ -73,9 +73,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 2. **Start → finish:** shell without persistent orientation → confirmed Clase/Familia/Tipo/Unidad context is navigable through a local rail and valid commands remain visible in a non-obscuring bar. **Files:** `src/features/resources-master/CreationStageRail.tsx`, `src/features/resources-master/CreationCommandBar.tsx`, `src/features/resources-master/ResourceCreationShell.tsx`, `tests/unit/crearRecursoSurface.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck`. **Runtime:** activate confirmed Clase/Familia in the rail and verify context remains visible and focus is not hidden by the bar. **Rollback:** revert rail/bar and shell composition only.
 
-- [ ] **RED:** Add failing RTL cases for `<ol>` rail semantics, `aria-current="step"`, confirmed-stage return, 44px interactive rail targets, and stage-specific command copy that omits Crear in pending. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement feature-local `CreationStageRail.tsx` and `CreationCommandBar.tsx` with semantic tokens, shape/text state cues beyond color, valid Back/Escape guidance, and existing `Button` chrome. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Verify rail navigation alone preserves valid selections while a later alternative confirmation triggers the reducer cascade, run the focused command, and record the rail runtime result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing RTL cases for `<ol>` rail semantics, `aria-current="step"`, confirmed-stage return, 44px interactive rail targets, and stage-specific command copy that omits Crear in pending. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Implement feature-local `CreationStageRail.tsx` and `CreationCommandBar.tsx` with semantic tokens, shape/text state cues beyond color, valid Back/Escape guidance, and existing `Button` chrome. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Verify rail navigation alone preserves valid selections while a later alternative confirmation triggers the reducer cascade, run the focused command, and record the rail runtime result. <!-- sdd-owner: implementation -->
 
 ### PR 4 — Search-list candidate, focus, and local-search refinements
 

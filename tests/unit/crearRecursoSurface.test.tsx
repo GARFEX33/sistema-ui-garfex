@@ -390,6 +390,63 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('keeps a semantic stage rail and stage-specific commands while returning to a confirmed stage', async () => {
+    const api = fakeApi()
+    const user = userEvent.setup()
+    renderSurface(api)
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await waitFor(() => expect(api.listContextClasses).toHaveBeenCalled())
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+
+    const rail = screen.getByRole('list', { name: 'Etapas de creación' })
+    const classStage = within(rail).getByRole('button', {
+      name: 'Clase: Material',
+    })
+    expect(classStage).toHaveStyle({ minHeight: '44px' })
+    expect(getComputedStyle(classStage).minHeight).toBe('44px')
+    expect(screen.queryByText('Esc cerrar')).not.toBeInTheDocument()
+    expect(within(rail).getByText('Familia: Áridos')).toBeVisible()
+    expect(within(rail).getByText('Tipo: Arena')).toBeVisible()
+    expect(within(rail).getByText('Unidad: Metro cúbico')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+    expect(
+      screen.getByRole('region', { name: 'Comandos disponibles' }),
+    ).toHaveTextContent('Esc Cerrar')
+
+    await user.click(classStage)
+    expect(screen.getByRole('searchbox', { name: 'Clase' })).toBeVisible()
+    expect(
+      within(rail).getByRole('button', { name: 'Clase: Material' }),
+    ).toBeVisible()
+    await user.click(screen.getByRole('option', { name: 'Material' }))
+
+    await user.click(
+      within(rail).getByRole('button', { name: 'Familia: Áridos' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: 'Contrato pendiente' })
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Comandos disponibles' }),
+      ).queryByText('Crear'),
+    ).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(
+      screen.queryByRole('heading', { name: 'Contrato pendiente' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(rail).getByRole('button', { name: 'Unidad: Metro cúbico' }),
+    ).toHaveAttribute('aria-current', 'step')
+    expect(
+      screen.getByRole('dialog', { name: 'Creador de recursos' }),
+    ).toBeVisible()
+  })
+
   it('cascades Clase -> Familia -> Tipo -> Unidad natural, preselecting the principal unit', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
@@ -464,7 +521,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(api.createResource).not.toHaveBeenCalled()
   })
 
-  it('resets Familia, Tipo and Unidad natural when Clase changes after they were chosen', async () => {
+  it('resets Familia, Tipo and Unidad natural only after a rail return confirms another Clase', async () => {
     const api = fakeApi({
       listContextClasses: vi.fn(async () => ({
         items: [classItem(), classItem({ id: 'class-2', nombre: 'Otro' })],
@@ -485,7 +542,12 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       ).toHaveTextContent('Metro cúbico (m³)'),
     )
 
-    await chooseOption(user, 'Clase', 'Otro')
+    const rail = screen.getByRole('list', { name: 'Etapas de creación' })
+    await user.click(
+      within(rail).getByRole('button', { name: 'Clase: Material' }),
+    )
+    expect(screen.getByRole('searchbox', { name: 'Clase' })).toBeVisible()
+    await user.click(screen.getByRole('option', { name: 'Otro' }))
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Familia/ })).toHaveTextContent(
