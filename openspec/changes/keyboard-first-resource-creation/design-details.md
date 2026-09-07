@@ -227,119 +227,210 @@ type StagedSearchSelectorProps<T> = {
 }
 ```
 
-- El input recibe foco al entrar a Clase, Familia, Tipo o Unidad.
-- El filtro es controlado y feature-local. Compara exclusivamente `itemName(item)` con `query.trim()` usando `toLocaleLowerCase('es')` e `includes`; no busca clave, símbolo, ID ni descripción y no elimina diacríticos de forma implícita.
-- El texto cercano será «Filtra por nombre entre los elementos cargados». Si el resultado filtrado está vacío pero existe continuación, dirá «No hay coincidencias entre los elementos cargados» y mantendrá **Cargar más…**.
-- `activeKey` es una selección provisional del `ListBox`, no el valor confirmado del borrador. Habrá exactamente uno si existen candidatos visibles, o `null` si no existen.
-- Al cambiar filtro o items, si `activeKey` sigue visible se conserva. Si desaparece, se asigna el primer visible; si no hay visibles se limpia. Este reajuste nunca llama `onConfirm`.
-- `preferredActiveKey` se aplica sólo al primer conjunto listo de una etapa. En Unidad representa la principal o seleccionada efectiva ya hidratada. Sigue siendo provisional y requiere `Enter`.
-- `ListBox` usa selección simple controlada para exponer `aria-selected` al candidato provisional. `onSelectionChange` sólo actualiza `activeKey`; `onAction` por `Enter` o click confirma el item visible actual y avanza.
-- **Cargar más…** está fuera del conjunto de opciones: es un botón explícito, tabbable y deshabilitado durante `loading-more`. Conserva query, items y candidato activo. Un retry de continuación usa el mismo cursor.
-- Loading inicial usa `role="status"`; vacío exhaustivo usa `role="status"`; errores usan `role="alert"` con Button **Reintentar**; error parcial conserva lista y ofrece **Reintentar continuación**.
+`confirmedKey` y `candidateKey` son estados distintos. `selectedKeys`, si se usa para semántica de selección, representa sólo `confirmedKey`; mover flechas no cambia `aria-selected`. El candidato se sigue mediante foco React Aria/handlers de item y se representa con contorno/marcador no dependiente sólo de color.
 
-No se usa `HierarchyNavigator`: la semántica de columnas, selección inmediata y navegación espacial es diferente.
+### Filtro y contador
 
-## 5. Propiedad exacta de teclado y foco
+- Query controlada, reiniciada al cambiar de etapa/context key.
+- Coincidencia por `itemName`, `trim()`, `toLocaleLowerCase('es')` e `includes`.
+- No elimina diacríticos, no busca ID/clave/descripción y no consulta backend.
+- El contador anuncia una frase completa, por ejemplo “2 coincidencias entre 20 opciones cargadas”.
+- Filtrar o recibir items repara candidato a: candidato aún visible → preferido inicial visible → primer visible → null.
+- Reparar candidato nunca llama `onConfirm`.
+- Con cero coincidencias y cursor se informa el alcance y se conserva **Cargar más…**.
 
-| Contexto                    | Propietario                                         | Comportamiento                                                                                                                                                                                                                        |
-| --------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Input del filtro            | React Aria SearchField + handler local del selector | Texto, borrado, caret e IME permanecen nativos. `ArrowDown`/`ArrowUp`, sólo sin composición/modificadores y si no está consumido, transfieren foco al candidato provisional visible; no confirman.                                    |
-| Lista de candidatos         | React Aria ListBox                                  | `ArrowUp`/`ArrowDown` cambian foco/candidato; `Enter` dispara `onAction` y confirma; no existe listener de documento.                                                                                                                 |
-| Inputs TEXTO/NUMERO y datos | Control local de etapa                              | Edición, caret, selección e IME tienen precedencia. `Enter` avanza sólo en input de una línea, sin composición, tras validación; no se captura en controles multilínea si aparecieran.                                                |
-| Selectores OPCION/BOOLEANO  | ListBox React Aria local                            | Flechas mueven candidato y `Enter` confirma. Un opcional mantiene además el Button **Omitir**.                                                                                                                                        |
-| `ArrowLeft` de etapa        | Contenedor del flujo, en bubbling                   | Vuelve sólo si `defaultPrevented` es falso, no hay composición/modificadores y el target no es input, textarea, select ni contenteditable. En un input mueve el caret; se vuelve mediante breadcrumb o foco a un control no editable. |
-| `Escape`                    | Root local del diálogo                              | Si un control hijo no lo consumió y no hay IME, hace `preventDefault` + `stopPropagation` y cierra una vez. Un popover React Aria puede consumir primero Escape.                                                                      |
-| `Tab`/`Shift+Tab`           | Dialog/Modal de React Aria                          | Navegación y contención modal nativas; nunca se interceptan globalmente.                                                                                                                                                              |
-| Atajos de AppShell          | KeyboardController existente                        | El overlay registrado impide acciones de fondo; además respeta `defaultPrevented`.                                                                                                                                                    |
+### Transferencia de foco
 
-Todo handler custom empieza por `event.defaultPrevented || event.nativeEvent.isComposing`. No se capturan flechas o Enter en el root del diálogo. Esto evita que una escritura o cambio de filtro confirme silenciosamente un item.
+| Origen/evento | Resultado |
+| --- | --- |
+| Search + `ArrowDown` | Foco al candidato visible actual o primero; no confirma |
+| Search + `ArrowUp` | Se conserva edición normal; no entra en lista |
+| Primer item + `ArrowUp` | `preventDefault`, foco a Search y conserva query |
+| Item + `ArrowUp/Down` | React Aria mueve foco/candidato; no confirma |
+| Item + tecla imprimible | Foco a Search y añade el carácter a query |
+| Item + `Enter` | Confirma exactamente el item enfocado y avanza |
+| Filtro/items/página recibida | Repara candidato sin confirmación |
+| `Tab`/`Shift+Tab` | Orden tabbable normal; nunca interceptado |
 
-Al cambiar de etapa, un efecto de foco dependiente de `stage` enfoca el control principal: filtro para selectores, control del atributo, Nombre en Datos, heading `tabIndex={-1}` en Revisión y estado en Resultado. Un error requerido enfoca el mismo control con `aria-invalid` y `aria-describedby`. Las migas son botones con nombre accesible y `aria-current="step"` en la etapa activa.
+Una tecla imprimible es `key.length === 1`, sin Ctrl/Meta/Alt salvo el caso de AltGraph admitido por el navegador, y fuera de composición IME. Shift puede producir mayúscula/símbolo. Todos los handlers empiezan comprobando `defaultPrevented` e `isComposing`. No se sintetiza texto durante composición.
 
-Al cerrar se conserva `registerOverlay(() => dialogRef.current)` y `restoreFocusNextFrame(openerRef.current, [trigger, sidebar.recursos])`. El opener se captura al abrir por trigger o atajo. No se enfoca `body` ni un nodo desconectado.
+Loading inicial mantiene foco en búsqueda; loading-more conserva query, items y candidato. Error inicial/partial usa `role=alert` y retry explícito. Vacíos usan `role=status`. El botón de continuación está fuera del listbox.
 
-## 6. Unidad natural desde políticas efectivas
+## 9. Shell, rail y barra de comandos
 
-`UnitCandidate` combina política y detalle sin modificar tipos públicos:
+### `ResourceCreationShell`
 
-```ts
-type UnitCandidate = Readonly<{
-  unidadId: ResourceId
-  clave: string
-  nombre: string
-  simbolo?: string
-  principal: boolean
-  selected: boolean
-}>
-```
+Recibe estado y callbacks locales, no API. Renderiza `DialogHeading`, rail, región principal y barra. Sólo la región principal cambia entre etapas. El heading de etapa tiene `tabIndex={-1}` para foco programático cuando no existe búsqueda.
 
-Por cada página pedida explícitamente a `listUnitPolicies({ tipoRecursoId, cursor, pageSize: 20 })`:
+Al cambiar etapa:
 
-1. se aceptan políticas `activo && effective`, no shadowed y cuya `selection` no sea `SHADOWED` ni `SUPPRESSED`;
-2. se deduplican políticas por `policy.id` y candidatos por `unidadId`;
-3. para cada nuevo `unidadId` se ejecuta `getUnit({ unidadId })` mediante `Promise.allSettled`;
-4. sólo se ofrece un detalle no nulo con `activo && effective`;
-5. candidatos repetidos conservan orden inicial y combinan `principal`/`selected` con OR; no repiten hidratación;
-6. la etiqueta visible incluye `clave — nombre` y el símbolo cuando existe; el filtro sigue usando sólo `nombre`.
+- selector → enfoca Search;
+- contrato pendiente → enfoca heading/estado;
+- futura revisión/resultado → enfoca heading;
+- si el elemento queda bajo la barra sticky, usa `scrollIntoView({ block: 'nearest' })` antes/de forma coordinada con foco, sin animación forzada.
 
-Una hidratación rechazada deja la página en error parcial, conserva detalles ya resueltos, muestra retry y bloquea confirmación hasta resolver las fallidas. El retry repite sólo los `unidadId` fallidos del token vigente. Un `null`, una Unidad inactiva o no efectiva representa una referencia no elegible confirmada: se excluye, se informa de forma genérica como opción no disponible y no se reintenta automáticamente. Si al agotar políticas no queda candidato y no hay fallos pendientes, el estado es vacío confirmado y no se puede avanzar.
+### `CreationStageRail`
 
-La existencia de una página siguiente no bloquea confirmar una Unidad ya hidratada y elegible, igual que en los selectores jerárquicos; **Cargar más…** permite ampliar explícitamente. Una página actualmente pendiente o con hidrataciones fallidas sí bloquea. El primer candidato principal hidratado es preferido; si no existe, el primer `selected`; si no, el primero visible. Ninguno se copia a `draft.unit` hasta `Enter`/acción explícita.
+Es un `<ol>` de botones para etapas confirmadas y una entrada actual con `aria-current="step"`. Etapas futuras no alcanzables son texto/estado, no botones disabled sin explicación. Activar una confirmada sólo navega; confirmar luego una alternativa ejecuta la cascada correspondiente.
 
-Cambiar Tipo invalida políticas, hidrataciones y candidato antes de iniciar el nuevo contexto.
+Cada item incluye nombre de etapa y valor confirmado, puede envolver texto y tiene caja interactiva mínima de 44 px. Estado actual/confirmado usa indicador de forma o texto además de tokens de color. Durante atributos hay una sola entrada agregada.
 
-## 7. Resolución y recorrido secuencial de atributos
+### `CreationCommandBar`
 
-Las asignaciones deben conocerse completas antes de fijar orden, por lo que su loader obtiene secuencialmente todas las páginas con cursor hasta `isExhausted`; esto no es búsqueda simulada y no introduce interacción de paginación al usuario. Se deduplica por assignment ID y se descartan primero `!effective`, `FORBIDDEN` y `NOT_APPLICABLE`. Las restantes se ordenan por `orden`, con orden de llegada como desempate estable.
+Permanece visible pero no tapa foco. Expone únicamente comandos válidos:
 
-Cada definición se hidrata una sola vez. Una definición rechazada, nula, inactiva o no efectiva deja la resolución en error recuperable porque omitirla silenciosamente podría ocultar un atributo requerido. Para `OPCION`, se acumulan todas las páginas activas, se deduplican por option ID y se conservan sólo opciones efectivas. Cualquier fallo de definición/opciones bloquea la secuencia hasta retry. Todas las adopciones comparan el token y Tipo vigentes.
+- selectores: `↑/↓ Mover`, `Enter Confirmar`, `← Anterior` cuando aplica, `Esc Volver/Cerrar`;
+- contrato pendiente: botón **Volver** y ayuda `Esc Volver`; no muestra Crear;
+- futura asignación opcional: añade **Omitir** sólo si está autorizado;
+- futura revisión VALID: **Crear recurso** sólo con lease/fingerprint vigentes.
 
-Un estado listo con cero asignaciones aplicables muestra «Este Tipo no tiene atributos aplicables» y permite pasar a Datos del Recurso. No se confunde con una carga incompleta.
+Los controles usan `Button`; las ayudas `<kbd>` son texto informativo, no controles. Todos los botones/rail/list items alcanzan 44 CSS px de hit area mediante layout local sin duplicar el chrome de Button.
 
-Cada atributo genera una etapa:
+## 10. Propiedad de teclado y Escape
 
-- `TEXTO`: input de texto;
-- `NUMERO`: input number y la conversión actual se difiere al payload;
-- `BOOLEANO`: ListBox Sí/No que conserva raw `'true' | 'false'`;
-- `OPCION`: ListBox de opciones efectivas que conserva option ID.
+| Contexto | Propietario | Regla |
+| --- | --- | --- |
+| Search/List | `StagedSearchSelector` | Flechas, printable y Enter locales |
+| `ArrowLeft` | root de `ResourceCreationShell` en bubbling | Vuelve sólo fuera de input/textarea/select/contenteditable y sin IME/modificadores/evento consumido |
+| `Escape` | root local después de hijos React Aria | Si no fue consumido: vuelve una etapa; sólo en Clase cierra |
+| Popover futuro | React Aria hijo | Consume Escape primero y evita navegación del shell |
+| Tab trap | `Dialog`/React Aria | No se intercepta |
+| Atajos fondo | `KeyboardController` existente | Overlay registrado bloquea la superficie de fondo |
 
-Sólo `REQUIRED` bloquea. `OPTIONAL` y `CONDITIONAL` muestran **Omitir**. Omitir registra el ID en `omittedAttributeIds`, borra un valor previo y avanza; nunca crea string vacío ni entrada de payload. Escribir/seleccionar un valor retira la omisión. Volver conserva ambos mapas mientras no cambie el Tipo.
+El handler de Escape hace `preventDefault` y `stopPropagation` una sola vez cuando actúa. En Unidad vuelve a Tipo; en Contrato pendiente vuelve a Unidad. Cerrar se reserva para Escape desde Clase, botón Cancelar/Cerrar o `onOpenChange` permitido.
 
-Un OPCION requerido sin opciones efectivas muestra estado vacío y no avanza; uno no requerido puede usar **Omitir** después de que la resolución vacía sea confirmada.
+La restauración conserva `restoreFocusNextFrame(openerRef, [trigger, sidebar.recursos])`; nunca enfoca `body` ni nodos desconectados.
 
-## 8. TDD y verificación
+## 11. Estados visibles
 
-### Seams y pruebas unitarias puras
+| Estado | Presentación/capacidad |
+| --- | --- |
+| loading inicial | `role=status`, sin confirmación, foco estable en Search |
+| loading-more | lista/query/candidato conservados, continuación disabled |
+| vacío filtrado | alcance “entre cargadas”; continuación si existe |
+| vacío exhaustivo | `role=status`, sin confirmación |
+| initial-error | `role=alert`, mensaje genérico y **Reintentar** |
+| partial-error | conserva datos, `role=alert`, retry del mismo cursor |
+| Unit hydration pending/error | bloquea confirmación hasta resolver/retry |
+| contract-pending | heading enfocado, explicación explícita, Volver/Cerrar; sin atributos/review/create |
+| future INCOMPLETE | sólo respuesta backend; señala decisión pendiente |
+| future INVALID | issues backend accionables; create ausente/disabled |
+| future VALID | review backend y create habilitado sólo con fingerprint vigente |
+| future create unknown/stale | disposición contractual; nunca éxito inferido |
 
-- `resourceCreation.model.test.ts`: matriz de prefijo 0/1/2/3, padre cruzado/stale, primera etapa, navegación, reset exacto de descendientes, mismo-ID sin reset, preservación al volver, omisión y `draft.revision`.
-- `resourceCreation.payload.test.ts`: parity de los cuatro tipos, trims, descripción opcional, ownership, ausencia de omitidos y mismo objeto lógico para review/submit.
-- `resourceCreation.loaders.test.ts`: acumulación/dedupe, retry de cursor, cursor repetido, respuesta stale por padre/Tipo, páginas de policies, ranking principal/selected, unidad duplicada, null/inactiva/no efectiva, hydration rejected y retry; assignments/options multipágina y respuesta stale.
-- Los tests de loader usarán deferred promises controladas; no dependerán de timers arbitrarios.
+No se añade token de error especulativo. ARIA, texto e iconografía/forma aportan significado. Los tokens Light y clases Tailwind existentes son la única fuente de color.
 
-### RTL de componentes y flujo
+## 12. Cambios de archivos
 
-- `StagedSearchSelector.test.tsx`: nombre-only, alcance local, active único, filtro que elimina active sin confirmar, ArrowUp/Down, Enter/onAction, IME, `defaultPrevented`, carga más que conserva query/items, dedupe, empty/error/retry y foco visible observable.
-- `crearRecursoSurface.test.tsx`: apertura por trigger/N; snapshot heredado profundo inicia Unidad; prefijos inválidos; breadcrumb; aislamiento respecto de callbacks de pantalla; todas las cascadas; Unidad explícita; atributos uno por uno; required/focus; Omitir; volver/preservar; cambio de Tipo; Datos; review/payload; submit único; known error; success; uncertainty revision lock; Escape una vez y fallback de foco.
-- `resourcesMasterScreen.test.tsx`: el mock del diálogo captura el snapshot y prueba presente/ausente/cruzado sin cambiar los criterios de lista.
-- `resourcesMasterScreenRefetch.test.tsx`: adapta el mock al nuevo prop y conserva que sólo la query observada se relee tras callback confirmado.
+### Disponibles antes de backend v1
+
+| Archivo | Cambio |
+| --- | --- |
+| `CrearRecursoSurface.tsx` | Reducir a trigger, overlay/open-close y composición; eliminar state/load/submit legado |
+| `ResourceCreationShell.tsx` | Nuevo shell feature-local |
+| `CreationStageRail.tsx` | Nuevo rail feature-local |
+| `CreationCommandBar.tsx` | Nueva barra feature-local |
+| `ResourceCreationContractPending.tsx` | Nuevo estado final honesto |
+| `StagedSearchSelector.tsx` | Separar confirmado/candidato; transferencias search↔list; contador y hit area |
+| `stagedSearchSelector.model.ts` | Helpers puros de filtro/reparación/printable |
+| `resourceCreation.model.ts` | Retirar Resource Data/submit; completar Unidad, cascadas y lease nula |
+| `resourceCreation.selectionDraft.ts` | Buckets genéricos active/suspended keyed por assignment ID |
+| `resourceCreation.loaders.ts` | Conservar controlador base y añadir composición de Unidad |
+| `useResourceCreationFlow.ts` | Tres jerarquías + Unidad; final contract-pending |
+| `ResourcesMasterScreen.tsx` | Mantener snapshot y seam `onCreated` |
+| `resourcesMaster.api.ts` / `.types.ts` | Sin cambio por esta capacidad; contratos legados quedan fuera del Creador |
+
+### Bloqueados
+
+Sólo tras DTOs exactos se decidirán nombres finales de archivos/adapters para definición/modo, valores permitidos, evaluator y create. En ese slice sí se extenderán operaciones, tipos y validadores de transporte con el contrato real. No se reserva ahora una interface vacía que pueda convertirse accidentalmente en API de facto.
+
+`resourcesMaster.css` se elimina sólo cuando no tenga consumidores. Lo nuevo usa composición shared + Tailwind/tokens; no se copia CSS legado.
+
+## 13. Matriz TDD actualizada
+
+### Unitarias puras
+
+- `resourceCreation.model.test.ts`: prefijos 0–3, padre cruzado, etapa inicial, navegación, misma-ID, cascadas exactas, Unidad explícita, invalidación atómica y final pending.
+- Eliminar casos de Nombre/Descripción, submit state, uncertain lock y payload.
+- `resourceCreation.selectionDraft.test.ts`: exclusión active/suspended, confirm, omit, suspend, restore, keep suspended, assignment ID estable e invalidación por jerarquía.
+- `resourceCreation.loaders.test.ts`: acumulación/dedupe/cursor/retry/stale y, para Unidad, policies paginadas, filtros efectivos, hidratación, principal sólo como preferencia, null/inactiva/error parcial.
+- Los tests usan deferred promises; no timers arbitrarios.
+
+### RTL
+
+- `StagedSearchSelector.test.tsx`: filtro local, contador, confirmed vs candidate, Down search→list, Up first→search, printable list→search, Enter exacto, click explícito, IME, defaultPrevented, paginación y estados.
+- `crearRecursoSurface.test.tsx`: título Creador, apertura trigger/N, snapshot, Clase/Familia/Tipo/Unidad staged, rail interactivo, barra por etapa, ArrowLeft, Escape escalonado, focus restore y Contrato pendiente.
+- Eliminar aserciones de preselección de Unidad, atributos por `tipoDato`, Nombre/Descripción, payload y `api.createResource`.
+- Añadir aserción negativa: completar Unidad no invoca operaciones de atributos ni creación.
+- `resourcesMasterScreen.test.tsx`: snapshot derivado/aislado.
+- `resourcesMasterScreenRefetch.test.tsx`: conserva el seam del callback mediante mock de surface, pero la surface real no llama `onCreated` en pending.
 
 ### Browser, axe y arquitectura
 
-- `resourcesMaster.workstation.spec.ts` añade un recorrido real sólo teclado a 1440×980: seleccionar jerarquía del Maestro, abrir con `N`, comprobar inicio en Unidad, confirmar Unidad, recorrer/omitir atributos, llenar Datos, revisar y crear. Comprueba foco tras cada etapa, que el filtro del fondo no cambia y que sólo se repite la request activa.
-- Un escenario de selector multipágina comprueba filtro local, **Cargar más…**, dedupe y que Enter confirma el candidato enfocado, no el reemplazado por filtro.
-- Un escenario de Escape comprueba una sola clausura, opener elegible y fallback cuando el opener se retira/deshabilita.
-- Axe se ejecuta con diálogo abierto al menos en selector y Revisión, además del chequeo existente de pantalla.
-- `keyboardBoundaries.test.ts` amplía su inventario/scan a los nuevos archivos y mantiene exactamente un listener global; prohíbe listeners `document/window` en toda la feature.
-- `queryZodBoundaries.test.ts`, `catalogHierarchyBoundaries.test.ts` y `runtimeFixtureIsolation.test.ts` corren sin cambios de contrato.
-- Un guard `resourceCreationBoundaries.test.ts` verifica que el selector siga en `resources-master`, que los archivos runtime de creación estén bajo 500 líneas y que ninguno importe React Query, Convex, Catálogo o estado global.
+- Playwright 1440×980: abrir con `N`, completar Clase→Familia→Tipo→Unidad sólo con teclado, verificar contexto persistente y terminar en Contrato pendiente sin requests de atributos/create.
+- Escenario multipágina: copy de alcance local, Cargar más, dedupe, Enter sobre candidato enfocado.
+- Escape: pending→Unit→Type→Family→Class→close, una transición por pulsación y restauración al opener/fallback.
+- Axe con selector y contract-pending abiertos.
+- `keyboardBoundaries.test.ts`: exactamente un listener global y ninguno en la feature.
+- `resourceCreationBoundaries.test.ts`: componentes permanecen feature-locales, runtime <500 líneas, sin React Query/store/Catálogo y sin uso de `createResource`/`ResourceCreateInput` en archivos del Creador.
+- `queryZodBoundaries`, `catalogHierarchyBoundaries` y `runtimeFixtureIsolation` conservan sus contratos.
 
-Comandos previstos, registrando resultado exacto en cada work unit:
+No se crean dobles de evaluator/create v1 antes de conocer DTOs exactos. Los valores opacos usados para probar el modelo puro no pretenden ser fixtures de transporte.
+
+## 14. Integración backend v1: gate verificable
+
+Antes del primer test de adapter deben estar disponibles:
+
+1. referencias de operación definitivas;
+2. requests y responses exactos;
+3. discriminantes/nulabilidad de valores tipados y `modoCaptura`;
+4. significado y orden de asignaciones resueltas;
+5. hechos que permiten decidir suspend/restore/invalid value sin interpretar `CONDITIONAL`;
+6. forma de issues, generated name, technical identity y fingerprint;
+7. obligación y ubicación de `expectedCatalogFingerprint`;
+8. lista completa de disposiciones y errores de create, incluida concurrencia/stale.
+
+Con ese material:
+
+- primero se escriben schemas/parsers y pruebas de transporte;
+- después el adapter normaliza hechos para React;
+- luego se conecta evaluación con guard `{token, context, revision}`;
+- después atributos SELECCION y reconciliación;
+- por último review/create y disposiciones;
+- cualquier respuesta no validada falla cerrada y nunca habilita Crear.
+
+No se deriva el contrato desde `crearRecurso`, `ResourceCreateInput`, `ResourceAttributeDataType` ni los DTOs actuales de opciones.
+
+## 15. Cadena de entrega y presupuesto
+
+Cada slice empieza RED y termina GREEN, con menos de 400 líneas agregadas + eliminadas:
+
+```text
+A  safety wall: Unit → contract-pending; pruebas negativas legacy/create
+B  shell + nombre Creador + rail + command bar
+C  Family/Type staged + paginación/stale; retirar selects correspondientes
+D  Unit policies/detail staged; retirar preselección/loader simple
+E  retirar UI/loader legacy de atributos manteniendo pending
+F  retirar Resource Data/review/payload/submit legado
+G  active/suspended pure model
+H  focus transfer, Escape escalonado, a11y y architecture/browser closure
+— gate backend v1 —
+I  parsers/adapters exactos + evaluation lease
+J  atributos SELECCION + reconciliación autoritativa
+K  review autoritativa + create fingerprint/disposiciones
+L  browser/axe/regresiones backend-enabled
+```
+
+Los cortes E y F se separan para que la gran eliminación histórica no falsee el presupuesto. Desde A no queda una ruta productiva alcanzable hacia el comportamiento supersedido. Si cualquier corte llega a 400 A+D tras una división honesta, se detiene y eleva el riesgo; no se reduce evidencia ni se declara excepción implícita.
+
+## 16. Verificación prevista
+
+Los nombres exactos de archivos de tests podrán ajustarse a los existentes, pero las gates son:
 
 ```bash
-pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourceCreation.payload.test.ts
-pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts
-pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/unit/crearRecursoSurface.test.tsx
-pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx
+pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourceCreation.selectionDraft.test.ts
+pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts tests/unit/StagedSearchSelector.test.tsx
+pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx
 pnpm exec vitest run tests/architecture/keyboardBoundaries.test.ts tests/architecture/queryZodBoundaries.test.ts tests/architecture/catalogHierarchyBoundaries.test.ts tests/architecture/runtimeFixtureIsolation.test.ts tests/architecture/resourceCreationBoundaries.test.ts
 pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts
 pnpm typecheck
@@ -348,35 +439,4 @@ pnpm format:check
 pnpm build
 ```
 
-Cada slice empieza con una prueba RED del contrato que agrega y termina GREEN con prueba enfocada más el mínimo typecheck/arquitectura aplicable. Tests y comportamiento permanecen en el mismo commit/PR; no se crea un PR separado de «sólo tests» después del código.
-
-## 9. Entrega en feature-branch-chain y presupuesto
-
-Estrategia confirmada: **feature-branch-chain**, tracker draft/no-merge. Límite: menos de 400 líneas cambiadas (`additions + deletions`) por child PR; no hay `size:exception`. Las cifras son presupuestos objetivo con margen, no autorización para excederlos.
-
-```text
-feat/keyboard-first-resource-creation (tracker draft/no-merge)
-└─ PR 1 snapshot/model (target: tracker)
-   └─ PR 2 reducer/navigation
-      └─ PR 3 paged dependent loaders
-         └─ PR 4 staged selector
-            └─ PR 5 hierarchy integration
-               └─ PR 6 Natural Unit integration
-                  └─ PR 7 sequential attributes + resource data
-                     └─ PR 8 review/result/payload + prototype cleanup
-                        └─ PR 9 browser/architecture/refetch closure
-```
-
-| PR  | Inicio → fin                                                                                                | Presupuesto objetivo | Verificación del slice               | Rollback aislado                              |
-| --- | ----------------------------------------------------------------------------------------------------------- | -------------------: | ------------------------------------ | --------------------------------------------- |
-| 1   | pantalla sin snapshot → contrato derivado/normalizado probado y prop pasivo                                 |              300–360 | model + screen focused tests         | retirar prop/helper                           |
-| 2   | navegación implícita → reducer tipado con resets/preservación                                               |              320–380 | reducer tests + typecheck            | retirar reducer, mantener snapshot            |
-| 3   | loaders de una página → controladores paginados/stale puros                                                 |              330–390 | loader tests                         | retirar nuevos loaders                        |
-| 4   | Select convencional → selector staged local probado, aún en seam controlado                                 |              340–395 | selector RTL + keyboard architecture | retirar componente local                      |
-| 5   | Contexto de cuatro selects → Clase/Familia/Tipo por etapas con breadcrumb                                   |              350–395 | surface hierarchy/snapshot tests     | restaurar bloque Contexto del parent          |
-| 6   | Unidad preseleccionada → policies paginadas/hidratadas y confirmación explícita                             |              340–390 | unit loader + surface tests          | restaurar unidad del parent sin tocar adapter |
-| 7   | atributos simultáneos → atributos uno a uno + Omitir + Datos                                                |              360–395 | attribute/preservation RTL           | revertir presenters/reducer events del slice  |
-| 8   | resumen acoplado → review desde payload + success/error/uncertain y eliminación de remanentes del prototipo |              360–395 | payload/result/submit tests          | revertir shell/result del slice               |
-| 9   | evidencia parcial → browser/axe, refetch y guards finales                                                   |              250–380 | e2e + architecture + full gates      | retirar sólo pruebas/guards adaptados         |
-
-En apply se hará una sola división honesta adicional si el `git diff --numstat` de un slice llega a 400. Si aun así no cabe, `ask-on-risk` obliga a detenerse y pedir una nueva decisión; no se comprimen pruebas, comentarios o código y no se infiere una excepción. El current boundary de esta fase son sólo los artefactos de diseño; no se crea tracker, rama, commit ni PR.
+Durante la capacidad backend-independent, ningún test debe esperar evaluación, nombre generado, atributos o create simulados. Después del gate, esas pruebas se agregan contra parsers y fixtures exactos.
