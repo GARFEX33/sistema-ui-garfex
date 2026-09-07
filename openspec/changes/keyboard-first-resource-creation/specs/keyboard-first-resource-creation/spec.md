@@ -1,243 +1,204 @@
-# Especificación de Creación Keyboard First de Recursos
+# Especificación del Creador de recursos Keyboard First
 
 ## Purpose
 
-Permitir crear un Recurso maestro mediante un recorrido secuencial utilizable íntegramente con teclado, sin cambiar la autoridad backend, los contratos de creación ni el estado de la pantalla Maestro de Recursos.
+Permitir que una persona configure un Recurso maestro mediante decisiones secuenciales y sólo por selección, manteniendo al backend como autoridad para las reglas, la evaluación y la creación.
 
 ## Requirements
 
-### Requirement: Inicio con contexto heredado válido y borrador aislado
+### Requirement: Shell de decisión única dentro de GARFEX Light
 
-Al abrir **Nuevo recurso**, el sistema MUST construir un snapshot local de la selección actual de Maestro de Recursos y MUST heredar únicamente el prefijo continuo válido `Clase → Familia → Tipo`. Una Clase heredada MUST seguir presente entre los elementos actuales; una Familia MUST seguir presente y pertenecer a esa Clase; y un Tipo MUST seguir presente y pertenecer a esa Familia. El diálogo MUST comenzar en la primera etapa no heredada y MUST mantener las etapas heredadas disponibles para corrección. El snapshot y todo el borrador de creación MUST permanecer aislados de la selección, filtro efectivo y consulta activa de la pantalla.
+El sistema MUST presentar la superficie con el nombre **Creador de recursos** y con una única decisión pendiente como foco dominante. La superficie MUST usar el sistema de diseño GARFEX en modo Light y MUST conservar un rail o breadcrumb interactivo de las etapas confirmadas y una barra de comandos persistente que comunique las acciones válidas de la etapa. El rail MUST permitir volver a una etapa confirmada sin ocultar el contexto jerárquico. La interfaz MUST distinguir candidato activo, selección confirmada, foco y estado de error mediante más de color.
 
-#### Scenario: Se hereda el prefijo válido más profundo
+#### Scenario: La shell mantiene orientación durante una decisión
 
-- GIVEN que Maestro de Recursos tiene una Clase, Familia y Tipo aún presentes y relacionados correctamente
-- WHEN la persona abre **Nuevo recurso**
-- THEN el diálogo considera confirmadas las tres etapas heredadas
-- AND inicia en la etapa de Unidad natural
-- AND muestra la ruta heredada como navegable
+- GIVEN el Creador de recursos abierto en cualquier etapa
+- WHEN la persona observa o navega la superficie
+- THEN identifica la decisión pendiente como contenido dominante
+- AND ve el contexto confirmado en un rail o breadcrumb interactivo
+- AND ve una barra de comandos persistente con las acciones disponibles
 
-#### Scenario: Se descarta un sufijo ausente, cruzado o stale
+#### Scenario: El rail permite corregir una decisión confirmada
 
-- GIVEN una selección de Maestro con una Familia ausente o que no pertenece a la Clase actual, o un Tipo ausente o que no pertenece a la Familia válida
-- WHEN la persona abre **Nuevo recurso**
-- THEN el diálogo conserva sólo el prefijo válido anterior al dato inválido
-- AND inicia en la primera etapa no válida
-- AND no adopta un descendiente ni una respuesta tardía de otro padre
+- GIVEN una Clase, Familia y Tipo confirmados
+- WHEN la persona activa Clase o Familia en el rail
+- THEN el Creador vuelve a la etapa activada
+- AND conserva sólo las selecciones que continúan siendo válidas para esa etapa
 
-#### Scenario: El diálogo no cambia la pantalla de fondo
+### Requirement: Snapshot local e invalidación atómica de descendientes
 
-- GIVEN un filtro jerárquico y una consulta activa en Maestro de Recursos
-- WHEN la persona cambia una selección heredada dentro del diálogo o cancela el flujo
-- THEN la selección jerárquica, el filtro efectivo y la consulta activa de la pantalla permanecen sin cambios
-- AND los cambios pertenecen sólo al borrador local del diálogo
+Al abrir el Creador, el sistema MUST copiar el prefijo continuo válido más profundo de `Clase → Familia → Tipo` desde el contexto actual de Maestro de Recursos a un snapshot local. El snapshot y el borrador MUST NOT modificar el filtro, la selección ni la consulta activa de Maestro de Recursos. Al cambiar una Clase, el sistema MUST invalidar atómicamente Familia, Tipo, Unidad natural, selecciones de asignación, evaluación y `catalogFingerprint`. Al cambiar una Familia, el sistema MUST invalidar atómicamente Tipo, Unidad natural, selecciones de asignación, evaluación y `catalogFingerprint`. Al cambiar un Tipo, el sistema MUST invalidar atómicamente Unidad natural, selecciones de asignación, evaluación y `catalogFingerprint`. Al cambiar Unidad natural, el sistema MUST invalidar atómicamente la evaluación y el `catalogFingerprint` derivados.
 
-### Requirement: Selector jerárquico secuencial con filtro local y continuación explícita
+#### Scenario: El Creador no altera Maestro de Recursos
 
-Clase, Familia y Tipo MUST ser etapas visibles, separadas y confirmables del recorrido. Cada etapa MUST mostrar sólo candidatos pertenecientes al contexto padre vigente y MUST permitir filtrar por nombre visible únicamente entre las páginas ya cargadas. La interfaz MUST comunicar que el filtro es local y MUST ofrecer **Cargar más…** sólo cuando exista continuación; MUST NOT presentar el filtro como búsqueda de todo el backend ni cargar páginas automáticamente para aparentarlo. Los candidatos repetidos entre páginas MUST aparecer una sola vez.
+- GIVEN Maestro de Recursos tiene un filtro y una consulta activa
+- WHEN la persona modifica o cancela selecciones dentro del Creador
+- THEN el filtro, la selección y la consulta activa de Maestro de Recursos permanecen sin cambios
+- AND los cambios existen sólo en el snapshot local del Creador
 
-El selector MUST conservar un único candidato activo elegible. Al cambiar el filtro o cargar otra página, si el candidato activo deja de ser visible, el sistema MUST mover el activo a un candidato visible sin confirmar selección alguna. La continuación MUST conservar el padre, el texto de filtro y las páginas válidas ya obtenidas.
+#### Scenario: Reemplazar un ancestro elimina todos sus descendientes dependientes
 
-#### Scenario: El filtro reduce sólo los candidatos cargados por nombre
+- GIVEN un borrador con Clase, Familia, Tipo, Unidad natural, selecciones de asignación y una evaluación previa
+- WHEN la persona confirma una Clase distinta
+- THEN Familia, Tipo, Unidad natural y todas las selecciones de asignación quedan invalidadas en la misma transición
+- AND la evaluación y su `catalogFingerprint` dejan de estar disponibles en esa misma transición
 
-- GIVEN la etapa de Familia con páginas cargadas y una continuación disponible
-- WHEN la persona escribe texto que coincide con el nombre visible de una Familia cargada
-- THEN la lista muestra sólo las Familias cargadas cuyo nombre coincide
-- AND comunica que el alcance se limita a los elementos cargados
-- AND no solicita una búsqueda backend ni afirma que no existan otras coincidencias
+#### Scenario: Una respuesta dependiente desactualizada no modifica el borrador
 
-#### Scenario: Cargar más conserva el contexto y deduplica
+- GIVEN una lectura dependiente solicitada para un padre o Tipo anterior
+- WHEN la persona cambia ese contexto antes de que llegue la respuesta
+- THEN el Creador descarta la respuesta desactualizada
+- AND sólo presenta datos que pertenecen al contexto vigente
 
-- GIVEN una etapa jerárquica con texto de filtro, un padre vigente y una continuación disponible
-- WHEN la persona activa **Cargar más…**
-- THEN el sistema obtiene explícitamente la siguiente página para ese mismo padre
-- AND conserva las páginas válidas y el texto de filtro
-- AND muestra una sola vez cada candidato aunque su ID aparezca en más de una página
+### Requirement: Jerarquía y Unidad natural con contratos actuales
 
-#### Scenario: El candidato activo se reajusta sin selección implícita
+El sistema MUST presentar Clase, Familia, Tipo y Unidad natural en ese orden como decisiones visibles y confirmables. Cada etapa jerárquica MUST mostrar únicamente candidatos elegibles para el contexto padre vigente. Mientras sólo estén disponibles los contratos actuales, la Unidad natural MUST proceder exclusivamente de las políticas efectivas del Tipo y de las lecturas de unidad disponibles; el sistema MUST NOT ofrecer una lista global de unidades ni una unidad ajena a dichas políticas. La búsqueda jerárquica MUST usar únicamente capacidades soportadas por los contratos actuales y MUST comunicar el alcance limitado cuando sólo filtra páginas cargadas.
 
-- GIVEN una etapa con un candidato activo visible sin confirmar
-- WHEN un filtro o una página nueva hace que ese candidato deje de estar visible
-- THEN el sistema designa un único candidato visible como activo cuando existe alguno
-- AND no confirma ni avanza de etapa hasta una acción explícita de la persona
-
-#### Scenario: Carga jerárquica vacía o fallida
-
-- GIVEN que la carga vigente de una etapa jerárquica está pendiente, no devuelve candidatos o falla
-- WHEN el diálogo presenta esa etapa
-- THEN comunica respectivamente carga, ausencia confirmada o error de forma accesible
-- AND ofrece reintento ante el error
-- AND no permite confirmar un candidato inexistente ni avanzar mientras no haya una selección válida
-
-### Requirement: Aplicación exclusiva de respuestas dependientes vigentes
-
-El sistema MUST asociar cada lectura dependiente de Familia, Tipo, Unidad natural o atributos al contexto de Clase, Familia o Tipo que la originó. Sólo MUST aplicar una respuesta si ese contexto continúa vigente al resolverse. Al reemplazar una Clase, el borrador MUST limpiar Familia, Tipo, Unidad natural y atributos; al reemplazar una Familia MUST limpiar Tipo, Unidad natural y atributos; y al reemplazar un Tipo MUST limpiar Unidad natural y atributos antes de permitir continuar.
-
-#### Scenario: Una respuesta anterior no reemplaza el contexto nuevo
-
-- GIVEN que se solicitó una carga para un padre o Tipo anterior
-- WHEN la persona cambia el padre o Tipo y después llega la respuesta anterior
-- THEN el diálogo descarta esa respuesta
-- AND conserva únicamente candidatos y datos pertenecientes al contexto vigente
-
-#### Scenario: Un cambio de padre reinicia sólo los dependientes requeridos
-
-- GIVEN un borrador con Clase, Familia, Tipo, Unidad y valores de atributos confirmados
-- WHEN la persona reemplaza la Familia desde la ruta del diálogo
-- THEN el sistema conserva la Clase y limpia Tipo, Unidad y atributos
-- AND la persona debe confirmar un Tipo y sus datos dependientes antes de revisar o crear
-
-### Requirement: Unidad natural explícita y elegible por Tipo
-
-Después de confirmar un Tipo, el recorrido MUST presentar una etapa explícita de **Unidad natural**. Sus candidatos MUST derivarse exclusivamente de las políticas efectivas del Tipo y MUST hidratarse mediante `obtenerUnidad({ unidadId })` para mostrar su clave, nombre, símbolo cuando exista y estado vigente necesario. El sistema MUST ofrecer sólo unidades elegibles y efectivas para el Tipo; MUST NOT sustituir este conjunto por una lista general de unidades. Una unidad principal o seleccionada efectiva MAY ser el candidato activo inicial, pero la persona MUST confirmarla explícitamente antes de avanzar.
-
-#### Scenario: La unidad confirmada pertenece a las políticas efectivas
+#### Scenario: La Unidad natural sólo ofrece unidades elegibles para el Tipo
 
 - GIVEN un Tipo con políticas efectivas que identifican unidades elegibles
-- WHEN la etapa de Unidad natural termina de resolver sus candidatos
-- THEN la lista muestra sólo unidades hidratadas de esas políticas que continúan efectivas
-- AND la persona debe confirmar una unidad visible para continuar
-- AND el borrador conserva el `unidadId` de la unidad confirmada
+- WHEN el Creador presenta la decisión de Unidad natural
+- THEN muestra sólo unidades obtenidas desde esas políticas y las lecturas disponibles
+- AND exige confirmar explícitamente una unidad antes de continuar
 
-#### Scenario: La Unidad natural no tiene candidato elegible
+#### Scenario: La búsqueda local no simula una búsqueda global
 
-- GIVEN un Tipo cuyas políticas efectivas no producen una Unidad natural elegible
-- WHEN el diálogo resuelve la etapa de Unidad natural
-- THEN comunica una ausencia confirmada de opciones elegibles
-- AND no inventa una unidad por defecto ni ofrece unidades ajenas a las políticas
-- AND no permite avanzar a atributos
+- GIVEN una etapa jerárquica con varias páginas y sólo algunas ya cargadas
+- WHEN la persona escribe en la búsqueda
+- THEN la lista filtra únicamente los candidatos cargados que coinciden
+- AND el contador comunica el alcance de los datos cargados
+- AND el Creador no afirma haber buscado todo el catálogo remoto
 
-#### Scenario: La resolución de Unidad natural falla o queda invalidada
+### Requirement: Navegación search-list y teclado accesibles
 
-- GIVEN que la lectura de políticas o la hidratación de una Unidad natural falla, está pendiente o pertenece a un Tipo que fue reemplazado
-- WHEN la persona intenta continuar
-- THEN el diálogo comunica carga o error y ofrece reintento cuando corresponde
-- AND bloquea el avance hasta que la resolución vigente produzca una unidad confirmada
-- AND no conserva una unidad del Tipo anterior
+Cuando una etapa admita búsqueda, el sistema MUST proporcionar una búsqueda fija sobre la lista y MUST aceptar escritura únicamente en esa búsqueda. Con el foco en búsqueda, `ArrowDown` MUST mover el foco a la lista. Con el foco en el primer candidato de lista, `ArrowUp` MUST devolver el foco a búsqueda. La escritura imprimible desde la lista MUST reactivar el foco de búsqueda y aportar el texto a su filtro. `ArrowUp` y `ArrowDown` MUST mover sólo el candidato activo; `Enter` MUST ser necesario para confirmar una selección. Filtrar, paginar o recibir datos MUST NOT confirmar un candidato. Fuera de edición de texto, `ArrowLeft` MUST volver a la etapa anterior. `Escape` MUST volver una etapa y MUST cerrar la superficie sólo desde la primera etapa. El sistema MUST preservar la precedencia de composición IME, edición local y eventos con `defaultPrevented`, y MUST conservar la navegación accesible por `Tab` y `Shift+Tab`, la contención del diálogo y la restauración de foco al cerrarlo.
 
-### Requirement: Atributos y datos de Recurso se capturan secuencialmente
+#### Scenario: Buscar, entrar en lista y confirmar son acciones distintas
 
-El sistema MUST resolver las asignaciones efectivas del Tipo, ordenarlas por `orden` y excluir las asignaciones `FORBIDDEN` o `NOT_APPLICABLE`. Cada atributo aplicable MUST presentarse de uno en uno con el control correspondiente a su tipo existente. Un atributo `REQUIRED` sin valor MUST bloquear el avance, mostrar un error asociado al control y enfocar ese control. Todo atributo no requerido MUST ofrecer una acción explícita **Omitir**; omitirlo MUST avanzar sin fabricar un valor ni incluir un valor vacío. El recorrido MUST conservar la captura de nombre, descripción y los demás datos propios del Recurso conforme a su contrato actual.
+- GIVEN una etapa con búsqueda y candidatos elegibles
+- WHEN la persona escribe una consulta, presiona `ArrowDown` y mueve el candidato activo
+- THEN el texto sólo filtra la lista y `ArrowDown` mueve el foco a ella
+- AND ninguna de esas acciones confirma una selección
+- WHEN la persona presiona `Enter` sobre el candidato activo
+- THEN el Creador confirma ese candidato y avanza
 
-Al volver sin reemplazar el Tipo, el sistema MUST preservar valores y omisiones ya confirmados. Cambiar el Tipo MUST descartar atómicamente las definiciones, valores y omisiones del Tipo anterior antes de aceptar los del nuevo Tipo. Mientras las asignaciones vigentes estén pendientes, fallen o no produzcan atributos aplicables, el diálogo MUST comunicar respectivamente carga, error recuperable o ausencia confirmada y MUST impedir avanzar a revisión hasta resolver el contexto vigente o completar los datos requeridos.
+#### Scenario: La lista devuelve la escritura a búsqueda
 
-#### Scenario: Los atributos requeridos bloquean y los opcionales se omiten explícitamente
+- GIVEN el foco en la lista de una etapa con búsqueda
+- WHEN la persona produce una tecla imprimible sin composición IME activa
+- THEN el foco vuelve a búsqueda
+- AND la tecla aporta texto al filtro de búsqueda
 
-- GIVEN una secuencia de atributos aplicables que contiene uno `REQUIRED` y uno opcional
-- WHEN la persona intenta avanzar sin valor en el requerido
-- THEN el diálogo permanece en ese atributo, comunica el error cercano y enfoca el control corregible
-- WHEN la persona llega al atributo opcional y activa **Omitir**
-- THEN avanza al siguiente dato sin registrar un valor artificial para ese atributo
+#### Scenario: Los atajos respetan edición, IME y eventos consumidos
 
-#### Scenario: Volver conserva el borrador del mismo Tipo
+- GIVEN el foco en búsqueda o hay una composición IME activa, o el control local consumió el evento
+- WHEN la persona usa una tecla de edición o navegación
+- THEN el Creador conserva el comportamiento del control o de la composición
+- AND no ejecuta un atajo incompatible del flujo
 
-- GIVEN valores y omisiones ya confirmados para el Tipo vigente
-- WHEN la persona retrocede y después vuelve a las etapas de atributos sin reemplazar el Tipo
-- THEN el diálogo conserva los valores y omisiones previamente introducidos
+#### Scenario: Retroceso y cierre siguen una jerarquía predecible
 
-#### Scenario: Cambiar Tipo descarta atributos dependientes
+- GIVEN el Creador está en una etapa posterior a la primera y el foco no edita texto
+- WHEN la persona presiona `ArrowLeft` o `Escape`
+- THEN `ArrowLeft` vuelve a la etapa anterior y `Escape` vuelve una etapa
+- WHEN la persona presiona `Escape` desde la primera etapa
+- THEN se cierra sólo el Creador y el foco vuelve al opener elegible o a su fallback accesible
 
-- GIVEN atributos, valores y omisiones confirmados para un Tipo
-- WHEN la persona reemplaza el Tipo desde la ruta
-- THEN el diálogo descarta los atributos, valores y omisiones anteriores junto con la Unidad natural
-- AND no permite reutilizarlos en el nuevo Tipo
+### Requirement: Atributos sólo por selección y por ID de asignación
 
-#### Scenario: Las asignaciones de atributos cargan, fallan o están vacías de forma explícita
+La secuencia de atributos MUST identificar cada decisión por su ID de asignación estable, no por posición ni por ID de definición, y MUST rotular la etapa como **Atributos · n de total**. El contexto de Clase, Familia, Tipo y Unidad natural MUST continuar visible durante esa secuencia. Cada valor de negocio MUST confirmarse exclusivamente seleccionando un valor permitido y tipado devuelto por el backend; la escritura de búsqueda MUST NOT convertirse por sí misma en valor seleccionado. V1 MUST admitir sólo `modoCaptura: SELECCION`. Para `LIBRE`, el Creador MUST comunicar que el modo no está soportado y MUST NOT mostrar editor manual. El Creador MUST NOT simular `DERIVADO`, que queda fuera de v1. Una asignación opcional MUST ofrecer **Omitir**; una asignación requerida sin selección MUST impedir un resultado `VALID`. El Creador MUST NOT ofrecer campos para Nombre, Descripción, TEXTO, NUMERO ni ningún otro valor de negocio manual.
 
-- GIVEN un Tipo vigente cuya resolución de asignaciones está pendiente, falla o no devuelve atributos aplicables
-- WHEN el diálogo llega a la etapa de atributos
-- THEN comunica respectivamente carga, error con reintento o que no hay atributos aplicables
-- AND no adopta resultados de un Tipo anterior
-- AND permite continuar sólo cuando el contexto vigente no tenga datos requeridos pendientes
+#### Scenario: Una asignación SELECCION conserva el valor permitido confirmado
 
-### Requirement: Revisión fiel y creación con paridad de payload
+- GIVEN una asignación activa con `modoCaptura: SELECCION` y valores permitidos disponibles
+- WHEN la persona filtra, activa y confirma un valor con `Enter`
+- THEN el borrador registra la selección bajo el ID de esa asignación
+- AND conserva el valor tipado e identidad seleccionable devueltos por backend
+- AND el texto de búsqueda no se registra como valor de negocio
 
-Antes de crear, el sistema MUST presentar una revisión legible de Clase, Familia, Tipo, Unidad natural, datos propios del Recurso y sólo los valores de atributos efectivamente cargados. La persona MUST poder retroceder para corregir datos y regresar a revisión. **Crear** MUST permanecer inhabilitado mientras falte un requisito, haya una carga dependiente pendiente o el envío esté en curso.
+#### Scenario: Una asignación opcional puede omitirse
 
-La creación MUST conservar el contrato actual: IDs de Clase, Familia, Tipo y Unidad confirmados; nombre y demás datos existentes sin reinterpretación; el mapeo actual de valores de atributos; y `ownership: { kind: 'GLOBAL' }`. El sistema MUST impedir envíos duplicados. Los atributos opcionales omitidos MUST NOT incluirse en el payload ni mostrarse como valores en la revisión.
+- GIVEN una asignación activa opcional sin selección confirmada
+- WHEN la persona activa **Omitir**
+- THEN el Creador avanza sin fabricar un valor
+- AND la omisión queda distinguida de una selección de valor
 
-#### Scenario: La revisión coincide con el envío previsto
+#### Scenario: Los modos fuera de v1 no habilitan captura libre
 
-- GIVEN un borrador completo con un atributo opcional omitido
-- WHEN la persona llega a revisión
-- THEN la revisión muestra el contexto, la Unidad y los datos de Recurso que se enviarán
-- AND muestra sólo valores de atributos efectivamente cargados
-- AND no presenta el atributo omitido como si tuviera un valor
-- WHEN confirma **Crear**
-- THEN la solicitud conserva los IDs, datos, mapeo de atributos y ownership del contrato existente
+- GIVEN una definición con `modoCaptura: LIBRE` o `modoCaptura: DERIVADO`
+- WHEN el Creador llega a esa asignación
+- THEN para `LIBRE` comunica que el modo no está soportado y no ofrece editor
+- AND para `DERIVADO` comunica que está fuera de v1 y no simula un valor
 
-#### Scenario: El envío está en curso o se repite la activación
+### Requirement: Borrador reversible para condiciones resueltas por backend
 
-- GIVEN que la persona ya confirmó **Crear** y el resultado aún está pendiente
-- WHEN vuelve a activar la acción de crear
-- THEN el diálogo comunica el estado de envío
-- AND no emite una segunda solicitud de creación
+El borrador MUST distinguir selecciones activas de selecciones suspendidas por ID de asignación. Cuando la evaluación autoritativa indique que una asignación deja de aplicar, el Creador MUST mover su selección de activa a suspendida y MUST NOT enviarla como selección activa. Si una evaluación posterior vuelve a habilitar la misma asignación y confirma que el valor aún está permitido, el Creador MUST restaurar esa selección como activa. Si el valor ya no está permitido, el Creador MUST conservarlo como no aplicable y MUST solicitar una nueva decisión cuando corresponda. El frontend MUST NOT evaluar ni interpretar por sí mismo reglas `CONDITIONAL`.
 
-### Requirement: Resultado de creación y refresco limitado a la consulta activa
+#### Scenario: Una condición suspende y después restaura una selección válida
 
-El sistema MUST distinguir entre creación confirmada, error administrativo conocido y resultado incierto. Sólo un resultado `CREATED` confirmado MUST comunicar éxito, finalizar el flujo como creación exitosa y solicitar refresco. Un error conocido MUST permanecer recuperable sin declararse éxito. Un resultado incierto MUST informar su incertidumbre y MUST NOT generar éxito optimista ni refresco.
+- GIVEN una selección activa asociada a un ID de asignación
+- WHEN una evaluación backend indica que la asignación deja de aplicar
+- THEN el borrador conserva el valor como selección suspendida
+- AND no lo incluye entre las selecciones activas enviables
+- WHEN una evaluación posterior vuelve a aplicar la asignación y confirma que el valor sigue permitido
+- THEN el borrador restaura la selección como activa
 
-Después de una creación confirmada, el sistema MUST refrescar únicamente la consulta activa de Maestro de Recursos. MUST NOT insertar resultados optimistas, editar manualmente cache ni invalidar de forma amplia consultas de otros filtros o identidades.
+#### Scenario: Una selección suspendida que ya no es válida exige nueva decisión
 
-#### Scenario: Éxito confirmado actualiza sólo la lista consultada
+- GIVEN una selección suspendida para una asignación que vuelve a aplicar
+- WHEN la evaluación backend indica que su valor ya no está permitido
+- THEN el Creador no restaura el valor como activo
+- AND presenta la asignación como decisión pendiente
 
-- GIVEN una creación que responde `CREATED` y una lista activa con una identidad de consulta definida
-- WHEN el diálogo procesa el resultado confirmado
-- THEN comunica el éxito y solicita releer únicamente esa lista activa
-- AND no inserta un Recurso optimista
-- AND no invalida listas con otra búsqueda o filtro jerárquico
+### Requirement: Evaluación, revisión y creación autoritativas con backend v1
 
-#### Scenario: Error o resultado incierto no simulan éxito
+Cuando estén disponibles los DTOs v1 exactos, sus nulabilidades, errores y disposiciones, el Creador MUST obtener definiciones mediante `obtenerDefinicionAtributo`, valores permitidos mediante `listarValoresPermitidosAtributo`, y evaluación mediante `evaluarCreacionDesdeSelecciones`. La evaluación MUST proceder de backend y MUST devolver exactamente uno de `INCOMPLETE`, `VALID` o `INVALID`, junto con el `catalogFingerprint` y las salidas previstas por el contrato definitivo. La revisión MUST representar fielmente las asignaciones resueltas, incidencias, nombre generado e identidad técnica devueltos por backend; Nombre e identidad técnica MUST NOT ser entradas ni cálculos frontend. `INCOMPLETE` MUST señalar decisiones pendientes, `INVALID` MUST impedir crear y presentar incidencias accionables, y sólo `VALID` MUST habilitar la confirmación final. Cualquier mutación de selección MUST invalidar la evaluación y el `catalogFingerprint` anteriores.
 
-- GIVEN una solicitud de creación que devuelve un error administrativo conocido o un resultado incierto
-- WHEN el diálogo procesa el resultado
-- THEN comunica respectivamente el error recuperable o la incertidumbre
-- AND no comunica éxito ni solicita el refresco de la lista activa
+La creación desde el Creador MUST invocar `crearRecursoDesdeSelecciones` únicamente con IDs de selección activos y con `expectedCatalogFingerprint` obligatorio. Esa creación MUST reevaluar las selecciones transaccionalmente contra el catálogo vigente y MUST devolver disposiciones explícitas. La interfaz MUST representar las disposiciones definidas por el contrato real y MUST NOT inferir éxito ni tratar una respuesta incierta o stale como creación confirmada.
 
-### Requirement: Recorrido completo por teclado, foco y overlay accesibles
+#### Scenario: La evaluación gobierna la revisión y la habilitación de creación
 
-El flujo MUST poder abrirse, completarse, revisarse, enviarse o cerrarse sin mouse, manteniendo el mouse como alternativa. Dentro de cada selector local, `ArrowUp` y `ArrowDown` MUST mover el candidato activo; `Enter` MUST confirmar el candidato visible y avanzar; escribir MUST editar el filtro local cuando la etapa lo tenga; y `ArrowLeft` MUST volver a la etapa anterior o a la ruta confirmada. `Escape` MUST cerrar sólo el diálogo activo una vez. `Tab` y `Shift+Tab` MUST conservar la navegación accesible y la contención modal del diálogo sin una captura global de Tab.
+- GIVEN DTOs v1 exactos disponibles y un borrador de selecciones activas
+- WHEN el Creador invoca `evaluarCreacionDesdeSelecciones`
+- THEN presenta el estado `INCOMPLETE`, `VALID` o `INVALID` devuelto por backend
+- AND muestra nombre, identidad técnica, incidencias y asignaciones sólo como salidas del contrato
+- AND habilita crear sólo para `VALID`
 
-Todo control, candidato activo y error MUST tener nombre accesible, relación semántica con su campo cuando corresponda y foco perceptible compatible con WCAG 2.2 AA. La edición de texto, composición IME, controles locales y eventos ya consumidos MUST tener precedencia sobre los atajos del flujo. El diálogo MUST registrarse como overlay activo, impedir acciones de la pantalla de fondo y, al cerrarse, MUST restaurar el foco al opener elegible o al fallback accesible existente. La interacción local MUST NOT añadir un listener global de documento ni competir con el arbitraje global existente.
+#### Scenario: Cambiar una selección invalida una revisión anterior
 
-#### Scenario: Una persona completa el recorrido sólo con teclado
+- GIVEN una evaluación `VALID` con un `catalogFingerprint`
+- WHEN la persona confirma, omite, restaura o cambia una selección
+- THEN la evaluación y el `catalogFingerprint` anteriores dejan de ser utilizables en la misma transición
+- AND el Creador requiere una nueva evaluación antes de habilitar crear
 
-- GIVEN el diálogo abierto en una etapa seleccionable y datos válidos disponibles
-- WHEN la persona usa escritura, flechas, `Enter`, `ArrowLeft`, `Tab` y `Shift+Tab` según cada etapa
-- THEN puede confirmar Clase, Familia, Tipo, Unidad, atributos, datos de Recurso, revisión y creación sin usar mouse
-- AND `Enter` nunca confirma silenciosamente un candidato alterado por un filtro
+#### Scenario: Crear exige fingerprint y una disposición confirmada
 
-#### Scenario: Edición y composición conservan precedencia
+- GIVEN una evaluación vigente `VALID` con `catalogFingerprint`
+- WHEN la persona confirma crear
+- THEN el Creador envía sólo IDs de selecciones activas y `expectedCatalogFingerprint`
+- AND espera la disposición explícita de `crearRecursoDesdeSelecciones`
+- AND comunica éxito sólo si la disposición contractual confirma la creación
 
-- GIVEN el foco en el filtro, un campo de atributo o un dato de Recurso, o una composición IME activa
-- WHEN la persona usa teclas de edición o produce un evento consumido por el control local
-- THEN el diálogo conserva el comportamiento de edición, composición o control local
-- AND no ejecuta navegación o confirmación posterior incompatible
+### Requirement: Límite explícito antes de contratos backend v1
 
-#### Scenario: Escape aísla el overlay y restaura el foco
+Antes de que existan los contratos backend v1 exactos, el Creador MUST permitir únicamente la shell, el rail, la barra de comandos, la interacción search-list, las etapas Clase, Familia, Tipo y Unidad natural con contratos actuales, la invalidación jerárquica y el modelo puro de selecciones activas/suspendidas. En ese estado, el Creador MUST comunicar que el contrato está pendiente al alcanzar atributos, evaluación, revisión o creación bloqueados. El frontend MUST NOT inventar endpoints, DTOs, errores, disposiciones, adaptadores productivos ni una evaluación `CONDITIONAL` local. Los dobles de prueba MUST utilizarse sólo después de conocer los DTOs exactos y sólo dentro de pruebas.
 
-- GIVEN el diálogo abierto sobre Maestro de Recursos desde un opener que sigue siendo elegible
-- WHEN la persona presiona `Escape`
-- THEN se cierra sólo el diálogo
-- AND no se ejecuta una acción de la pantalla de fondo
-- AND el foco vuelve al opener
+#### Scenario: El recorrido se detiene honestamente sin backend v1
 
-#### Scenario: El opener ya no es elegible
+- GIVEN que los contratos backend v1 exactos no están disponibles
+- WHEN la persona completa Clase, Familia, Tipo y Unidad natural
+- THEN el Creador muestra un estado explícito de contrato pendiente antes de atributos o revisión autoritativa
+- AND no habilita creación
+- AND no presenta datos simulados como respuesta productiva
 
-- GIVEN un diálogo abierto cuyo opener fue retirado, ocultado o deshabilitado
-- WHEN la persona cierra el diálogo
-- THEN el foco se mueve al fallback accesible existente de Maestro de Recursos
-- AND no queda en el fondo inactivo, `body` ni un nodo desconectado
+### Requirement: Autoridad y compatibilidad preservadas
 
-### Requirement: Fronteras de autoridad y alcance preservadas
+El backend MUST conservar la autoridad sobre elegibilidad, reglas condicionales, validación, nombre, identidad técnica, persistencia y reevaluación transaccional. El método legado `crearRecurso` MUST permanecer disponible y sin cambios, pero el Creador MUST NOT usarlo para el flujo nuevo. Esta capacidad MUST NOT cambiar backend, Catálogo, relaciones o semánticas globales, dependencias, estado global, rutas, URL ni infraestructura transversal. El alcance MUST permanecer feature-local y MUST NOT añadir listeners globales de teclado, push, PR ni cambios de backend.
 
-Esta capacidad MUST limitarse al diálogo y al snapshot local de creación de Maestro de Recursos. El backend externo MUST conservar autoridad sobre datos, elegibilidad, reglas efectivas, validación, permisos y persistencia. El sistema MUST conservar los adapters feature-locales y la validación de transporte antes de React. Esta capacidad MUST NOT cambiar endpoints, DTOs públicos, contratos API, payloads, Catálogo, rutas, URL, dependencias, estado global, infraestructura de consultas ni semánticas existentes de Clase, Familia o Tipo.
+#### Scenario: Inspección de límites del cambio
 
-#### Scenario: Inspección del alcance de la capacidad
-
-- GIVEN la capacidad de creación Keyboard First terminada
-- WHEN se inspeccionan sus contratos, efectos externos y propiedad de estado
-- THEN no existe cambio de backend, API pública, DTO, payload, Catálogo, ruta, URL, dependencia ni estado global
-- AND la autoridad de elegibilidad y persistencia continúa fuera del frontend
-- AND el borrador, el overlay y el foco permanecen como estado local del flujo de creación
+- GIVEN la capacidad implementada conforme a esta especificación
+- WHEN se inspeccionan sus efectos y contratos
+- THEN no existe captura manual de valores de negocio ni uso de `crearRecurso` por el Creador
+- AND no existen cambios de backend, Catálogo, dependencias, estado global, rutas ni URL
+- AND las reglas condicionales, evaluación y creación continúan bajo autoridad backend
