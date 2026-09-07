@@ -1,10 +1,10 @@
-# Detalle de diseño — Creación de recursos Keyboard First
+# Detalle de diseño — Creador de recursos Keyboard First
 
-[design.md](./design.md) es la autoridad de arquitectura, alcance, invariantes, migración, riesgos y cierre. Este archivo conserva únicamente los contratos mecánicos y de entrega que detallan esa autoridad; no la reemplaza. Ambos artefactos son entradas requeridas para apply.
+[design.md](./design.md) es la autoridad de arquitectura y alcance. Este archivo concreta las transiciones, algoritmos, propiedad de foco, reconciliación, cambios de archivos y pruebas. Ningún tipo ilustrativo de este documento define un DTO backend.
 
-## 1. Snapshot inicial tipado y propiedad del estado
+## 1. Snapshot y propiedad local
 
-Se añadirá un contrato feature-local, sin ampliar los DTOs del adapter:
+Se conservan los contratos implementados:
 
 ```ts
 export type InitialResourceHierarchySnapshot = Readonly<{
@@ -21,32 +21,13 @@ export type NormalizedResourceHierarchyPrefix = Readonly<{
 }>
 ```
 
-`ResourcesMasterScreen` derivará `InitialResourceHierarchySnapshot` con una función pura `deriveInitialHierarchySnapshot(selection, items)`. Cada entrada será el item actualmente cargado cuyo ID coincide con el ID seleccionado; una selección ausente en los items produce `null`. La comparación de IDs usará un único helper feature-local coherente con la superficie actual (`String(id)`), porque `ResourceId` es opaco y los adapters actuales ya usan esa identidad para controles.
+`ResourcesMasterScreen` deriva el snapshot sólo de selección e items actualmente cargados. `open()` captura el último prop cerrado y conserva exclusivamente el prefijo continuo válido. Un diálogo abierto no se resincroniza con la pantalla.
 
-El prop será:
+La surface recibe datos, no `selectClass`, `selectFamily`, `selectType`, criterios de listado ni setters de búsqueda. La selección interna nunca modifica el contexto de Maestro de Recursos. `resourceIdKey` sigue siendo la única normalización de identidad para contratos existentes.
 
-```tsx
-<CrearRecursoSurface
-  api={api}
-  initialHierarchySnapshot={initialHierarchySnapshot}
-  onCreated={() => void refetchActive()}
-/>
-```
+## 2. Máquina de etapas disponible ahora
 
-El prop puede actualizarse mientras el diálogo está cerrado. `open()` captura una copia del último prop y llama a `normalizeInitialHierarchySnapshot`. La normalización pertenece al diálogo y conserva sólo el prefijo continuo:
-
-1. sin `classItem`, profundidad 0;
-2. con Clase y sin Familia, o si `familyItem.claseRecursoId` no coincide con `classItem.id`, profundidad 1;
-3. con Clase/Familia y sin Tipo, o si `typeItem.familiaRecursoId` no coincide con `familyItem.id`, profundidad 2;
-4. sólo si las tres referencias existen y se relacionan, profundidad 3.
-
-No se intenta recuperar un sufijo faltante mediante requests tardíos. La pantalla entrega datos, no setters: el diálogo nunca recibe `selectClass`, `selectFamily`, `selectType`, criterios de lista ni setters de búsqueda. Así se impide por construcción que el borrador cambie el filtro o la consulta del fondo.
-
-El snapshot se toma en cada apertura, incluido **Crear otro**. No se resincroniza un diálogo ya abierto si la pantalla cambia por otra causa.
-
-## 2. Máquina local de etapas
-
-La navegación y el borrador se modelarán con un reducer puro. No se almacenarán en React Query ni en un store global.
+Se elimina `resource-data`, `review` y el resultado legado. La capacidad actual usa:
 
 ```ts
 type CreationStage =
@@ -54,103 +35,181 @@ type CreationStage =
   | { kind: 'family' }
   | { kind: 'type' }
   | { kind: 'unit' }
-  | { kind: 'attribute'; attributeId: string; index: number }
-  | { kind: 'resource-data' }
-  | { kind: 'review' }
-  | { kind: 'result'; outcome: 'created' | 'uncertain' }
-
-type CreationDraft = {
-  hierarchy: {
-    classItem: ResourceContextClassItem | null
-    familyItem: ResourceContextFamilyItem | null
-    typeItem: ResourceContextTypeItem | null
-  }
-  unit: UnitCandidate | null
-  attributes: readonly ResolvedAttribute[]
-  attributeValues: Readonly<Record<string, string>>
-  omittedAttributeIds: ReadonlySet<string>
-  nombre: string
-  descripcion: string
-  revision: number
-}
-
-type SubmitState =
-  | { status: 'idle' }
-  | { status: 'submitting'; draftRevision: number }
-  | { status: 'known-error'; message: string }
-  | { status: 'created'; item: ResourceSummary }
-  | { status: 'uncertain'; message: string; blockedRevision: number }
+  | { kind: 'contract-pending'; blockedCapability: 'attributes-v1' }
 ```
 
-`OPEN(prefix)` fija el borrador inicial y elige la primera etapa faltante: Clase, Familia, Tipo o Unidad. No hay salto implícito de Unidad a atributos. Cada etapa confirmada se muestra en una ruta navegable.
-
-| Evento                       | Efecto atómico                                                                                                | Siguiente etapa                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `CONFIRM_CLASS(item)`        | Si cambia el ID, limpia Familia, Tipo, Unidad, definiciones, valores y omisiones; conserva Nombre/Descripción | Familia                                                                              |
-| `CONFIRM_FAMILY(item)`       | Si cambia el ID, limpia Tipo, Unidad, definiciones, valores y omisiones                                       | Tipo                                                                                 |
-| `CONFIRM_TYPE(item)`         | Si cambia el ID, limpia Unidad, definiciones, valores y omisiones e invalida sus cargas                       | Unidad                                                                               |
-| `CONFIRM_UNIT(candidate)`    | Guarda sólo una Unidad visible e hidratada                                                                    | espera resolución de atributos y luego primer atributo, o Datos si no hay aplicables |
-| `CONFIRM_ATTRIBUTE(id, raw)` | Valida por tipo, guarda el raw compatible, quita la omisión y avanza                                          | siguiente atributo o Datos                                                           |
-| `OMIT_ATTRIBUTE(id)`         | Sólo para no `REQUIRED`; elimina cualquier valor, registra la omisión y avanza                                | siguiente atributo o Datos                                                           |
-| `CONFIRM_RESOURCE_DATA`      | Valida Nombre con la normalización actual; conserva Descripción opcional                                      | Revisión                                                                             |
-| `SUBMIT_*`                   | Controla submit único y resultado                                                                             | Revisión o Resultado                                                                 |
-
-Volver o activar una miga sólo cambia `stage`; no descarta datos. Confirmar nuevamente el mismo ID tampoco resetea descendientes. Sólo reemplazar un ID dispara la cascada. El orden de vuelta es Tipo ← Unidad ← atributos en orden ← Datos ← Revisión; desde Familia se vuelve a Clase y desde Tipo a Familia. En Clase, `ArrowLeft` no cierra: cerrar continúa reservado para `Escape` o Cancelar.
-
-Los atributos se identifican por `String(assignment.id)`, no sólo por índice, para que una respuesta reordenada nunca asocie un valor al campo incorrecto. Cambiar Tipo incrementa la revisión del borrador antes de iniciar nuevas lecturas.
-
-## 3. Cargas paginadas, acumulación y rechazo stale
-
-### Jerarquía
-
-Clase, Familia y Tipo usarán tres instancias independientes del `createParentGatedListController` existente, envueltas por un hook feature-local. No se cambia el controlador compartido. Se conservará `PAGE_SIZE = 20`, cursor explícito, primer retry acotado, items previos durante error de continuación y deduplicación por ID.
-
-- Clase se carga al entrar por primera vez en esa etapa.
-- Familia se contextualiza por la Clase confirmada.
-- Tipo se contextualiza por la Familia confirmada.
-- Reentrar a una etapa con el mismo contexto conserva páginas y filtro local.
-- Reemplazar el padre llama primero a `setContext`, lo que invalida el token anterior, vacía sus descendientes y sólo después inicia la página inicial.
-
-### Loader feature-local para resoluciones de Tipo
-
-Unidad y atributos necesitan hidratación y no encajan sin pérdida semántica en el controlador de jerarquía. `resourceCreation.loaders.ts` contendrá un controlador feature-local, probado sin React, con este estado común:
+El estado local conserva jerarquía, Unidad confirmada, revisión incremental del borrador y dos slots que siempre son nulos antes de backend v1:
 
 ```ts
-type DependentLoadState<T> =
-  | { status: 'idle'; contextKey: null; items: readonly [] }
-  | { status: 'loading'; contextKey: string; items: readonly T[] }
-  | {
-      status: 'ready'
-      contextKey: string
-      items: readonly T[]
-      cursor: string | null
-      exhausted: boolean
-    }
-  | { status: 'empty'; contextKey: string; items: readonly []; exhausted: true }
-  | { status: 'loading-more'; contextKey: string; items: readonly T[] }
-  | {
-      status: 'initial-error'
-      contextKey: string
-      items: readonly []
-      retry: 'initial'
-    }
-  | {
-      status: 'partial-error'
-      contextKey: string
-      items: readonly T[]
-      retry: 'continuation'
-    }
+type BackendIndependentCreationDraft = Readonly<{
+  hierarchy: InitialResourceHierarchySnapshot
+  unit: UnitCandidate | null
+  selectionBuckets: SelectionBuckets<never>
+  authoritativeEvaluation: null
+  catalogFingerprint: null
+  revision: number
+}>
 ```
 
-Cada `start/continue/retry` captura `{token, contextKey, cursor}`. El resultado se adopta sólo si los tres siguen vigentes. `setContext` incrementa el token aun cuando la promesa anterior no pueda abortarse. La acumulación mantiene el orden de primera aparición y deduplica con una función de identidad inyectada. Un cursor repetido con `isExhausted: false` se trata como error recuperable para evitar bucles.
+`SelectionBuckets<never>` expresa que la estructura existe pero el runtime actual no puede fabricar selecciones. No representa allowed values ni un request backend.
 
-No se agregan parámetros de búsqueda al adapter. El filtro nunca dispara requests.
+### Transiciones
 
-## 4. Selector staged feature-local
+| Evento | Efecto atómico | Etapa siguiente |
+| --- | --- | --- |
+| `OPEN(prefix)` | Reinicia borrador, evaluación y fingerprint; copia el prefijo | primera etapa faltante, o Unidad para depth 3 |
+| `CONFIRM_CLASS(item)` | Si cambia ID, invalida Familia, Tipo, Unidad, buckets, evaluación y fingerprint | Familia |
+| `CONFIRM_FAMILY(item)` | Si cambia ID, invalida Tipo, Unidad, buckets, evaluación y fingerprint | Tipo |
+| `CONFIRM_TYPE(item)` | Si cambia ID, invalida Unidad, buckets, evaluación y fingerprint | Unidad |
+| `CONFIRM_UNIT(candidate)` | Guarda candidata hidratada; invalida evaluación y fingerprint incluso si antes fueran nulos | Contrato pendiente |
+| `NAVIGATE_TO_CONFIRMED(stage)` | Cambia sólo etapa; no modifica selecciones válidas | etapa solicitada |
+| `BACK` | Vuelve según orden determinista | etapa anterior |
 
-`StagedSearchSelector.tsx` será una composición local de React Aria `SearchField`, `Input`, `ListBox`, `ListBoxItem` y los `Button` compartidos para retry/continuación. Será genérico sólo dentro de `resources-master`; no se exportará desde `shared/ui`.
+Reconfirmar exactamente el mismo ID no borra descendientes, pero confirmar una Unidad distinta sí incrementa `revision` e invalida cualquier evaluación futura. Ninguna carga, filtro, reparación de candidato o preferencia de Unidad emite `CONFIRM_*`.
 
-Contrato propuesto:
+Orden de vuelta actual:
+
+```text
+Contrato pendiente ← Unidad ← Tipo ← Familia ← Clase
+```
+
+En Clase, `BACK` no cambia estado. `Escape` decide después si cierra.
+
+## 3. Modelo puro active/suspended por assignment ID
+
+El modelo backend-independent se implementa en un módulo puro genérico. Sus tipos son internos y deliberadamente no describen transporte:
+
+```ts
+type AssignmentKey = string
+
+type SelectionBuckets<TSelection> = Readonly<{
+  active: Readonly<Record<AssignmentKey, TSelection>>
+  suspended: Readonly<Record<AssignmentKey, TSelection>>
+  omitted: ReadonlySet<AssignmentKey>
+}>
+```
+
+Reglas invariantes:
+
+1. La clave se obtiene del **assignment ID**, nunca del índice ni del definition ID.
+2. Una clave aparece como máximo en uno de `active` o `suspended`.
+3. `omitted` es distinto de “sin respuesta” y no fabrica un valor.
+4. Sólo `active` puede proyectarse a una solicitud futura.
+5. Cambiar Clase/Familia/Tipo borra los tres buckets; cambiar Unidad conserva los buckets y sólo invalida evaluación/fingerprint, tras lo cual la siguiente evaluación autoritativa reconciliará aplicabilidad.
+6. Toda mutación efectiva incrementa `revision` e invalida evaluación/fingerprint en la misma transición.
+
+Operaciones puras disponibles para pruebas, sin simular backend:
+
+- `confirmSelection(key, selection)`: escribe en active, elimina la misma clave de suspended/omitted;
+- `omitSelection(key)`: sólo se invoca cuando un hecho autoritativo futuro marque la asignación como omitible; elimina active y registra omitted;
+- `suspendSelection(key)`: mueve active a suspended sin alterar el valor;
+- `restoreSelection(key)`: mueve suspended a active sólo cuando el caller aporta el hecho autoritativo de que aplica y sigue permitido;
+- `keepSuspended(key)`: conserva el valor retenido cuando ya no puede restaurarse;
+- `dropAssignments(keys)`: se reserva para invalidación jerárquica, no para interpretar condiciones.
+
+Antes del DTO v1, tests de estas funciones usan valores opacos locales y comandos explícitos; no crean respuestas falsas de `evaluarCreacionDesdeSelecciones`.
+
+## 4. Reconciliación futura tras evaluación autoritativa
+
+La reconciliación no evalúa `CONDITIONAL`. Después de integrar DTOs exactos, un adapter validado convertirá cada respuesta vigente en hechos UI explícitos. El detalle exacto de esos hechos se diseñará a partir del DTO publicado; no se fija aquí un interface TypeScript.
+
+Semántica obligatoria:
+
+1. Descartar la respuesta si no coincide su token de request, contexto jerárquico, Unidad y `draft.revision` capturados.
+2. Adoptar status, fingerprint, issues, nombre, identidad y orden de asignaciones únicamente desde esa respuesta.
+3. Para cada assignment ID que backend diga que dejó de aplicar, mover active → suspended.
+4. Para cada assignment ID que backend diga que volvió a aplicar y cuyo valor retenido backend confirme aún permitido, mover suspended → active.
+5. Si vuelve a aplicar pero el valor ya no está permitido, conservarlo suspended y presentar esa asignación como decisión pendiente sin enviarlo como active.
+6. No eliminar selecciones suspendidas por reordenamiento ni por una evaluación incompleta.
+7. Proyectar futuras requests sólo desde selecciones activas y omisiones que el contrato exacto admita.
+
+La evaluación adoptada es una lease ligada a `draft.revision`. Cualquier selección, omisión, restauración, Unidad o cambio jerárquico la elimina junto con su fingerprint antes de iniciar otra request.
+
+## 5. Secuencia futura de atributos
+
+Cuando backend v1 exista, las etapas adicionales se incorporarán sin alterar la secuencia inicial:
+
+```ts
+// Forma local de navegación; no es un DTO.
+type BackendEnabledStage =
+  | CreationStageWithoutContractPending
+  | { kind: 'attribute'; assignmentKey: string }
+  | { kind: 'authoritative-review' }
+  | { kind: 'result' }
+```
+
+El orden procede de las asignaciones resueltas de la evaluación vigente. La navegación almacena `assignmentKey`; el índice se deriva al renderizar para evitar asociar una selección a otra asignación si cambia el orden.
+
+- El rail muestra una sola entrada `Atributos · n de total`.
+- `n` es la posición 1-based del assignment ID activo dentro de la secuencia vigente.
+- `total` procede exclusivamente de la secuencia autoritativa vigente.
+- Si una nueva evaluación cambia la secuencia, se conserva el assignment actual si sigue pendiente; si desaparece, se elige determinísticamente la primera decisión pendiente devuelta por backend.
+- Nunca se muestran todas las asignaciones como controles simultáneos.
+- Sólo `modoCaptura: SELECCION` ofrece valores permitidos.
+- `LIBRE` muestra “Modo no soportado” sin input.
+- `DERIVADO` muestra “Fuera de v1” sin valor simulado.
+- **Omitir** aparece sólo si el resultado autoritativo/contrato lo permite.
+- Una requerida pendiente no puede desembocar en evaluación `VALID`.
+
+No se reutilizan `listAttributeAssignments`, `listAttributeOptions` ni `tipoDato` actuales para fabricar esta secuencia: no aportan `modoCaptura`, valores tipados ni resolución condicional autoritativa.
+
+## 6. Cargas jerárquicas y rechazo stale
+
+Clase, Familia y Tipo usan instancias independientes de `createParentGatedListController` con `PAGE_SIZE = 20`:
+
+- Clase no requiere padre.
+- Familia usa `classId` como context key.
+- Tipo usa `familyId` como context key.
+- Reentrar con el mismo contexto conserva páginas y filtro local.
+- Reemplazar padre ejecuta `setContext` antes de cargar y hace stale cualquier promesa previa.
+- Se conserva acumulación, orden de primera aparición, dedupe por ID, retry inicial acotado, retry de continuación y cursor explícito.
+
+Una adopción sólo es válida si `{token, contextKey, cursor}` siguen vigentes. Un cursor repetido no exhaustivo es error recuperable, no bucle. El filtro no añade argumentos al adapter ni dispara red.
+
+`useResourceCreationFlow` debe exponer el mismo contrato conceptual para las tres etapas:
+
+```text
+items + SelectorLoadState + confirm + continue + retry
+```
+
+No se necesita una interfaz pública nueva; cada item mantiene su tipo actual validado por `resourcesMaster.api.ts`.
+
+## 7. Unidad natural desde políticas efectivas
+
+`UnitCandidate` sigue siendo un tipo local compuesto, no un DTO:
+
+```ts
+type UnitCandidate = Readonly<{
+  unidadId: ResourceId
+  clave: string
+  nombre: string
+  simbolo?: string
+  principal: boolean
+  selected: boolean
+}>
+```
+
+El loader dependiente recorre sólo páginas solicitadas explícitamente de políticas para el Tipo vigente:
+
+1. llama al listado existente con Tipo, cursor y page size;
+2. conserva políticas activas/efectivas y excluye shadowed/suppressed según los campos actuales;
+3. deduplica políticas por policy ID y unidades por `unidadId`;
+4. hidrata cada nueva unidad con `getUnit` una sola vez;
+5. ofrece únicamente detalle no nulo, activo y efectivo;
+6. combina flags repetidos `principal`/`selected` con OR y conserva el primer orden;
+7. adopta todo resultado sólo para el token/contexto/cursor vigente.
+
+Una preferencia `principal`, luego `selected`, sólo decide el candidato al que se transfiere foco. Nunca escribe `draft.unit`: Enter o click explícito siguen siendo obligatorios.
+
+Una hidratación rechazada produce error parcial, conserva candidatas resueltas y bloquea confirmación hasta retry de los IDs fallidos. `null`, inactiva o no efectiva se excluye como referencia confirmadamente no elegible. No se muestra un ID como etiqueta inventada.
+
+Si hay cursor, **Cargar más…** amplía explícitamente. Si la página actual está pendiente o tiene hidrataciones fallidas, la confirmación se bloquea. Cambiar Tipo invalida inmediatamente políticas, detalles y candidato anteriores.
+
+## 8. Contrato mecánico de `StagedSearchSelector`
+
+La composición permanece en `resources-master` y usa `Field` para la etiqueta/espaciado del buscador, `SearchField`, `Input`, `ListBox` y `ListBoxItem` de React Aria, y `Button` compartido. `Field` apunta mediante `htmlFor` al `Input`; no se duplica una segunda etiqueta visible.
+
+Props locales:
 
 ```ts
 type StagedSearchSelectorProps<T> = {
@@ -159,7 +218,8 @@ type StagedSearchSelectorProps<T> = {
   itemKey: (item: T) => string
   itemName: (item: T) => string
   renderItem?: (item: T) => ReactNode
-  preferredActiveKey?: string | null
+  confirmedKey?: string | null
+  preferredCandidateKey?: string | null
   loadState: SelectorLoadState
   onConfirm: (item: T) => void
   onLoadMore: () => void
