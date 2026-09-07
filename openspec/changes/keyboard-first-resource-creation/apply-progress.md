@@ -508,3 +508,22 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - `- [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, \`getUnit\` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->`
 - `- [ ] **GREEN:** Add the feature-local \`UnitCandidate\` resolver using only current Type-policy pages and \`getUnit\`, token/context/cursor adoption guards, first-order preservation, and principal/selected as focus preference only. <!-- sdd-owner: implementation -->`
 - `- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies OR-combine preference flags, retained resolved candidates survive a partial error, and repeated non-exhausted cursors fail recoverably; run the focused command. <!-- sdd-owner: implementation -->`
+
+---
+## PR 6B — size-guarded correction stop
+- **Status/action context:** authoritative OpenSpec artifacts were present; strict TDD and supplied repo-local edit roots were safe, with no warnings.
+- **TDD:** RED was exactly 4 failed, 11 passed (15) for flattened candidates, overlapping retry, overlapping same-Tipo start, and policy-reference advancement; GREEN was 13/13 plus `pnpm typecheck` passed.
+- **Boundary:** after restoring tasks/prior progress, the honest source/test candidate was 422 A+D, 23 above the hard 399 cap.
+- **Rollback/tasks:** all PR 6B source/test edits were reverted; no PR 6 checkbox changed, the three PR 6 rows remain visibly unchecked, and the restored focused baseline is 8/8 passed.
+- **Next:** parent needs a cohesive sub-slice or explicit `size:exception`; no commit or lifecycle action occurred.
+
+---
+## PR 6B1 — stable Unit detail snapshot
+- **Status/action context:** complete for the authorized PR 6B1 slice; manual authoritative OpenSpec status was `ready`, strict TDD and repo-local allowed surfaces were safe, with no warnings.
+- **TDD:** 8/8 safety net; RED was 4 failures/8 passes for the absent hydrator; GREEN 12/12 plus typecheck; triangulation covers dedupe/OR flags, partial failures, stale Tipo/cursor snapshots, and confirmed empty; Prettier refactor reran green.
+- **Verification:** focused Vitest 12/12, full `pnpm test` 411 passed/13 skipped, typecheck, targeted ESLint/Prettier, and `git diff --check` passed.
+- **Files/boundary:** only `resourceCreation.loaders.ts`, its unit test, and this record changed; `getUnit` is the sole injected detail read, no retry API or consumer/UI work was added.
+- **Tasks/remaining:** combined PR 6 rows intentionally remain unchecked because policy paging/retry/consumer work is deferred; parent-owned rows remain byte-for-byte deferred.
+- [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, `getUnit` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add the feature-local `UnitCandidate` resolver using only current Type-policy pages and `getUnit`, token/context/cursor adoption guards, first-order preservation, and principal/selected as focus preference only. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies OR-combine preference flags, retained resolved candidates survive a partial error, and repeated non-exhausted cursors fail recoverably; run the focused command. <!-- sdd-owner: implementation -->

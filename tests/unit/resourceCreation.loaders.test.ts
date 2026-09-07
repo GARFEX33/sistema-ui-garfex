@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createDependentLoader,
+  createUnitCandidateHydrator,
   createUnitPolicyPageController,
 } from '../../src/features/resources-master/resourceCreation.loaders'
-import type { ResourceUnitPolicy } from '../../src/features/resources-master/resourcesMaster.types'
+import type {
+  ResourceUnitDetail,
+  ResourceUnitPolicy,
+} from '../../src/features/resources-master/resourcesMaster.types'
 
 type Item = { id: string; name: string }
 type Deferred<T> = {
@@ -46,6 +50,20 @@ const policyPage = (
   continuationCursor: string | null,
   isExhausted = false,
 ) => ({ items, continuationCursor, isExhausted })
+
+const unitDetail = (
+  id: string,
+  overrides: Partial<ResourceUnitDetail> = {},
+): ResourceUnitDetail => ({
+  id,
+  clave: `U-${id}`,
+  nombre: `Unidad ${id}`,
+  simbolo: 'u',
+  activo: true,
+  revision: 1,
+  effective: true,
+  ...overrides,
+})
 
 const policySetup = () => {
   const requests: Deferred<ReturnType<typeof policyPage>>[] = []
@@ -314,6 +332,154 @@ describe('Unit policy page controller', () => {
         { policyId: 'p-a', unidadId: 'u-a' },
         { policyId: 'p-b', unidadId: 'u-b' },
       ],
+    })
+  })
+})
+
+describe('Unit candidate hydration', () => {
+  const setup = () => {
+    const requests: Deferred<ResourceUnitDetail | null>[] = []
+    const getUnit = vi.fn(() => {
+      const request = deferred<ResourceUnitDetail | null>()
+      requests.push(request)
+      return request.promise
+    })
+    return {
+      getUnit,
+      requests,
+      hydrator: createUnitCandidateHydrator({
+        identity: (value) => String(value),
+        getUnit,
+      }),
+    }
+  }
+
+  it('hydrates one unique ordered policy snapshot into flat eligible candidates', async () => {
+    const { hydrator, getUnit, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: 'next',
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: true },
+        { policyId: 'p-b', unidadId: 'u-a', principal: true, selected: false },
+        { policyId: 'p-c', unidadId: 'u-b', principal: false, selected: false },
+        { policyId: 'p-d', unidadId: 'u-c', principal: false, selected: false },
+      ],
+    })
+
+    const first = hydrator.start()
+    expect(hydrator.start()).toBe(first)
+    expect(getUnit).toHaveBeenCalledTimes(3)
+    expect(getUnit).toHaveBeenNthCalledWith(1, { unidadId: 'u-a' })
+    expect(getUnit).toHaveBeenNthCalledWith(2, { unidadId: 'u-b' })
+    expect(getUnit).toHaveBeenNthCalledWith(3, { unidadId: 'u-c' })
+    requests[0]!.resolve(unitDetail('u-a'))
+    requests[1]!.resolve(unitDetail('u-b', { activo: false }))
+    requests[2]!.resolve(null)
+
+    expect(await first).toBe(true)
+    const state = hydrator.getState()
+    expect(state.status).toBe('ready')
+    expect(state.candidates).toEqual([
+      {
+        unidadId: 'u-a',
+        clave: 'U-u-a',
+        nombre: 'Unidad u-a',
+        simbolo: 'u',
+        principal: true,
+        selected: true,
+      },
+    ])
+    expect(state.failedUnitIds).toEqual([])
+  })
+
+  it('retains resolved candidates and exposes ordered failed identities', async () => {
+    const { hydrator, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: null,
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+        { policyId: 'p-b', unidadId: 'u-b', principal: false, selected: false },
+        { policyId: 'p-c', unidadId: 'u-c', principal: false, selected: false },
+      ],
+    })
+
+    const result = hydrator.start()
+    requests[0]!.resolve(unitDetail('u-a'))
+    requests[1]!.reject(new Error('offline'))
+    requests[2]!.reject(new Error('timeout'))
+
+    expect(await result).toBe(false)
+    expect(hydrator.getState()).toMatchObject({
+      status: 'partial-error',
+      candidates: [expect.objectContaining({ unidadId: 'u-a' })],
+      failedUnitIds: ['u-b', 'u-c'],
+    })
+  })
+
+  it('rejects superseded Tipo or policy snapshots and hydrates the latest generation', async () => {
+    const { hydrator, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: 'cursor-a',
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+      ],
+    })
+    const stale = hydrator.start()
+    const previous = hydrator.getState()
+    hydrator.setSnapshot({
+      tipoId: 'type-b',
+      cursor: 'cursor-b',
+      references: [
+        { policyId: 'p-b', unidadId: 'u-b', principal: false, selected: true },
+      ],
+    })
+    const current = hydrator.start()
+    expect(hydrator.getState()).toMatchObject({
+      status: 'loading',
+      tipoId: 'type-b',
+    })
+    expect(hydrator.getState().generation).toBeGreaterThan(previous.generation)
+    expect(hydrator.getState().snapshotSignature).not.toBe(
+      previous.snapshotSignature,
+    )
+
+    requests[0]!.resolve(unitDetail('u-a'))
+    requests[1]!.resolve(unitDetail('u-b'))
+
+    expect(await stale).toBe(false)
+    expect(await current).toBe(true)
+    expect(hydrator.getState()).toMatchObject({
+      status: 'ready',
+      tipoId: 'type-b',
+      candidates: [
+        expect.objectContaining({ unidadId: 'u-b', selected: true }),
+      ],
+    })
+  })
+
+  it('reports confirmed empty eligibility after all details resolve null or inactive', async () => {
+    const { hydrator, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-empty',
+      cursor: null,
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+        { policyId: 'p-b', unidadId: 'u-b', principal: false, selected: false },
+      ],
+    })
+    const result = hydrator.start()
+    requests[0]!.resolve(null)
+    requests[1]!.resolve(unitDetail('u-b', { activo: false }))
+
+    expect(await result).toBe(true)
+    expect(hydrator.getState()).toMatchObject({
+      status: 'empty',
+      tipoId: 'type-empty',
+      candidates: [],
+      failedUnitIds: [],
     })
   })
 })
