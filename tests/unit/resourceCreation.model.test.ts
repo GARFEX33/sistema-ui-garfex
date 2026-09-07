@@ -279,6 +279,56 @@ describe('resource creation navigation and hierarchy cascades', () => {
   })
 })
 
+describe('resource creation contract-pending safety wall', () => {
+  it('ends an explicit Unit confirmation at contract-pending with no lease', () => {
+    const state = resourceCreationReducer(open(), {
+      type: 'CONFIRM_UNIT',
+      unitId: 'unit-1',
+    })
+
+    expect(state.stage).toEqual({
+      kind: 'contract-pending',
+      blockedCapability: 'attributes-v1',
+    })
+    expect(state.draft).toMatchObject({
+      unitId: 'unit-1',
+      authoritativeEvaluation: null,
+      catalogFingerprint: null,
+    })
+  })
+
+  it('keeps same-ID Unit confirmation non-mutating and revises a replacement', () => {
+    const first = resourceCreationReducer(open(), {
+      type: 'CONFIRM_UNIT',
+      unitId: 'unit-1',
+    })
+    const same = resourceCreationReducer(first, {
+      type: 'CONFIRM_UNIT',
+      unitId: 'unit-1',
+    })
+    const replacement = resourceCreationReducer(same, {
+      type: 'CONFIRM_UNIT',
+      unitId: 'unit-2',
+    })
+
+    expect(same.draft).toBe(first.draft)
+    expect(same.draft).toMatchObject({
+      authoritativeEvaluation: null,
+      catalogFingerprint: null,
+    })
+    expect(replacement.draft).toMatchObject({
+      unitId: 'unit-2',
+      authoritativeEvaluation: null,
+      catalogFingerprint: null,
+      revision: first.draft.revision + 1,
+    })
+    expect(replacement.stage).toEqual({
+      kind: 'contract-pending',
+      blockedCapability: 'attributes-v1',
+    })
+  })
+})
+
 const createdItem = {
   id: 'resource-1',
   identificadorTecnico: 'RESOURCE-1',

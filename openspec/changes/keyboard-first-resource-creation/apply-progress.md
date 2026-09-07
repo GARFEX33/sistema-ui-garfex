@@ -273,3 +273,49 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Runtime/rollback:** RTL keyboard filter → Cargar más → Enter confirmed only local Clase; remove the flow wrapper and replaced Clase region to roll back.
 - **Workload:** feature-branch-chain `PR4 → 📍 PR5 → PR6`; 392 A+D including this record, below 399; no commit, PR, review, receipt, or PR6 work.
 - **Deviation/remaining:** none; Familia/Tipo, Unit, attributes, APIs, screen callbacks, globals, and shared/CSS changes remain deferred to their owned slices.
+
+---
+## PR 1 — Safety wall: Unidad ends at Contrato pendiente
+
+### Status
+
+- **State:** completed for the parent-authorized PR 1 safety-wall work unit; native attempt state consumed: `proceed`.
+- **Structured status consumed:** `gentle-ai.sdd-status@2` reported `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, all required proposal/spec/design/tasks artifacts present, and no blockers.
+- **Action context:** `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex`; every edit stayed within the parent-provided allowed surfaces. No action-context warnings occurred.
+- **Workload / PR boundary:** authorized `feature-branch-chain`, `tracker → 📍 PR 1`; final authored A+D is 251 (tracked 229 plus 22 new architecture-test lines), below the 399-line hard limit. No commit, branch, PR, review, receipt, backend, shared UI, keyboard-controller, global-state, URL, or dependency action was performed.
+
+### Completed tasks and persisted checkboxes
+
+- [x] PR 1 RED — `tasks.md` updated immediately after RED/GREEN evidence.
+- [x] PR 1 GREEN — `tasks.md` updated immediately after the focused suite passed.
+- [x] PR 1 TRIANGULATE/REFACTOR — `tasks.md` updated after replacement-unit coverage and formatting rerun.
+
+### Implementation and verification
+
+- Added `CONFIRM_UNIT` to the local reducer; it ends at `{ kind: 'contract-pending', blockedCapability: 'attributes-v1' }`, preserves null evaluation/fingerprint lease fields, preserves same-ID identity, and revises replacement Units.
+- Routed the currently reachable Unidad continuation to `Contrato pendiente`; it does not call legacy attribute or create operations, and pending exposes only **Volver**.
+- Legacy attribute/review/create source regions remain intentionally unreachable and their stale RTL suites are skipped until their separately budgeted removal slices (PRs 8–9); this PR does not delete those regions.
+- `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts` — RED: 2 failed (`Cannot read properties of undefined (reading 'id')`), then GREEN: 27 passed.
+- `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx` — RED: missing `Contrato pendiente`, then GREEN/TRIANGULATE: 10 passed, 13 stale legacy tests skipped.
+- `pnpm exec vitest run tests/architecture/resourceCreationBoundaries.test.ts` — initial RED harness failed with `The URL must be of scheme file`; the test-path defect was corrected before the production guard's GREEN run (1 passed).
+- `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck` — passed: 38 passed, 13 skipped; typecheck passed.
+- `pnpm exec prettier --write src/features/resources-master/resourceCreation.model.ts src/features/resources-master/CrearRecursoSurface.tsx tests/architecture/resourceCreationBoundaries.test.ts` followed by the focused suite — passed; `git diff --check` passed.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 1 safety wall | `resourceCreation.model.test.ts`, `crearRecursoSurface.test.tsx`, `resourceCreationBoundaries.test.ts` | Unit + RTL + architecture | 48/48 baseline | Reducer threw for unknown `CONFIRM_UNIT`; RTL could not find pending; architecture test initially had a URL-scheme harness defect | 27 model, 10 active RTL, and 1 architecture assertion passed | Same-ID and replacement Units plus explicit non-preferred Unidad both stayed pending without legacy calls | Prettier formatting reran focused tests green |
+
+### Remaining implementation tasks
+
+- `- [ ] **RED:** Add failing RTL assertions for the visible Creador title, one dominant stage heading, no editable business-value control, and pending heading focus after Unit. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Extract \`ResourceCreationShell.tsx\` and \`ResourceCreationContractPending.tsx\`, compose them from \`CrearRecursoSurface.tsx\`, and use existing \`Dialog\`/GARFEX Light primitives without a second shell or global listener. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Cover initial Class and deep-snapshot openings plus pending back navigation, run the focused command, and record the \`N\`-open runtime result. <!-- sdd-owner: implementation -->`
+- Parent-owned lifecycle rows remain deferred byte-for-byte.
+
+### Runtime, rollback, and deviation
+
+- **Keyboard runtime result:** focused RTL moved focus to the enabled Unidad confirmation and sent `Enter`; both preferred and explicitly selected non-preferred candidates reached `Contrato pendiente` without an attribute/create request. A browser runtime was not run because this work unit's task prescribes the focused Vitest/typecheck command.
+- **Rollback:** revert only the reducer event/lease fields, reachable pending branch, focused tests/guard, and these PR 1 checkbox/evidence updates.
+- **Deviation:** the historical legacy regions are made unreachable rather than deleted, preserving the PR 8–9 deletion boundary and the 399-line cap.

@@ -313,66 +313,31 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('uses compact semantic progress and validates only the first missing context field on Next', async () => {
+  it('stops at Contrato pendiente after confirming Unidad without legacy calls', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
     renderSurface(api)
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
     await waitFor(() => expect(api.listContextClasses).toHaveBeenCalled())
 
-    const progress = screen.getByRole('list', { name: 'Progreso de creación' })
-    const currentSteps = () =>
-      within(progress).getAllByRole('listitem', { current: 'step' })
-    expect(within(progress).getAllByRole('listitem')).toHaveLength(3)
-    expect(within(progress).getByText('1 Contexto')).toHaveAttribute(
-      'aria-current',
-      'step',
-    )
-    expect(within(progress).getByText('2 Atributos')).not.toHaveAttribute(
-      'aria-current',
-    )
-    expect(within(progress).getByText('3 Revisión')).not.toHaveAttribute(
-      'aria-current',
-    )
-    expect(screen.getByText('* Obligatorio')).toBeVisible()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    const next = screen.getByRole('button', { name: 'Siguiente' })
-    expect(next).toBeDisabled()
     await chooseOption(user, 'Clase', 'Material')
-    expect(next).toBeEnabled()
-    await user.click(next)
-
-    const familyTrigger = screen.getByRole('button', { name: /Familia/ })
-    const error = screen.getByRole('alert')
-    expect(error).toHaveTextContent('Seleccioná una Familia.')
-    expect(familyTrigger).toHaveAttribute('aria-invalid', 'true')
-    expect(familyTrigger).toHaveAttribute('aria-describedby', error.id)
-    expect(familyTrigger).toHaveFocus()
-    expect(screen.getByText('1 Contexto')).toHaveAttribute(
-      'aria-current',
-      'step',
-    )
-
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-    await user.click(next)
-    await screen.findByText('Observaciones')
-
-    expect(currentSteps()).toHaveLength(1)
-    expect(within(progress).getByText('2 Atributos')).toHaveAttribute(
-      'aria-current',
-      'step',
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled(),
     )
+    const confirmUnit = screen.getByRole('button', { name: 'Siguiente' })
+    confirmUnit.focus()
+    await user.keyboard('{Enter}')
 
-    await chooseOption(user, 'Granulometría', 'Fina')
-    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
-    await screen.findByLabelText('Nombre')
-
-    expect(currentSteps()).toHaveLength(1)
-    expect(within(progress).getByText('3 Revisión')).toHaveAttribute(
-      'aria-current',
-      'step',
-    )
+    expect(await screen.findByText('Contrato pendiente')).toBeVisible()
+    expect(api.listAttributeAssignments).not.toHaveBeenCalled()
+    expect(api.createResource).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Descripción')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Crear recurso' }),
+    ).not.toBeInTheDocument()
   })
 
   it('cascades Clase -> Familia -> Tipo -> Unidad natural, preselecting the principal unit', async () => {
@@ -411,7 +376,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
   })
 
-  it('filters out non-effective unit policies and does not preselect when none is principal or selected', async () => {
+  it('requires an explicit non-preferred Unidad choice before showing Contrato pendiente', async () => {
     const api = fakeApi({
       listUnitPolicies: vi.fn(async () => ({
         items: [
@@ -437,13 +402,16 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(
       within(listbox).queryByRole('option', { name: /Tonelada|TON/ }),
     ).not.toBeInTheDocument()
-    expect(
-      within(listbox).getByRole('option', { name: /Kilogramo/ }),
-    ).toBeVisible()
-    await user.keyboard('{Escape}')
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled(),
-    )
+    const kilogramo = within(listbox).getByRole('option', {
+      name: /Kilogramo/,
+    })
+    expect(kilogramo).toBeVisible()
+    await user.click(kilogramo)
+    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
+
+    expect(await screen.findByText('Contrato pendiente')).toBeVisible()
+    expect(api.listAttributeAssignments).not.toHaveBeenCalled()
+    expect(api.createResource).not.toHaveBeenCalled()
   })
 
   it('resets Familia, Tipo and Unidad natural when Clase changes after they were chosen', async () => {
@@ -601,7 +569,7 @@ describe('CrearRecursoSurface — Clase staged', () => {
   })
 })
 
-describe('CrearRecursoSurface — Paso 2 (Atributos dinámicos)', () => {
+describe.skip('CrearRecursoSurface — Paso 2 (Atributos dinámicos)', () => {
   it('resolves definitions per effective assignment, ordered, skipping non-effective ones', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
@@ -809,7 +777,7 @@ const goToStep3 = async (
   await screen.findByLabelText('Nombre')
 }
 
-describe('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
+describe.skip('CrearRecursoSurface — Paso 3 (Revisión y confirmación)', () => {
   it('shows a read-only summary of the chosen context and loaded attribute values', async () => {
     const api = fakeApi()
     const user = userEvent.setup()

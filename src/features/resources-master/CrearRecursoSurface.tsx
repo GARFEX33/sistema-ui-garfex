@@ -154,7 +154,7 @@ export function CrearRecursoSurface({
   const { registerAction, registerOverlay } = useKeyboardController()
   const [message, showMessage] = useAutoClosingMessage()
 
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2 | 3 | 'contract-pending'>(1)
   const [classId, setClassId] = useState<ResourceId | null>(null)
   const [familyId, setFamilyId] = useState<ResourceId | null>(null)
   const [typeId, setTypeId] = useState<ResourceId | null>(null)
@@ -417,9 +417,7 @@ export function CrearRecursoSurface({
         ?.focus()
       return
     }
-    if (typeId === null) return
-    setStep(2)
-    void loadStep2(typeId)
+    setStep('contract-pending')
   }
 
   const backToContext = () => setStep(1)
@@ -976,6 +974,10 @@ export function CrearRecursoSurface({
               </>
             )}
 
+            {step === 'contract-pending' && (
+              <p role="status">Contrato pendiente</p>
+            )}
+
             {step === 3 && submitStatus === 'created' && created && (
               <div className="resources-context-field">
                 <p role="status">✓ Recurso creado</p>
@@ -1095,6 +1097,11 @@ export function CrearRecursoSurface({
                   Siguiente
                 </Button>
               </>
+            )}
+            {step === 'contract-pending' && (
+              <Button variant="outline" onPress={backToContext} type="button">
+                Volver
+              </Button>
             )}
             {step === 2 && (
               <>

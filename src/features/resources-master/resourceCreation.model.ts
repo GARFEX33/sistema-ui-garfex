@@ -125,6 +125,7 @@ export type CreationStage =
   | { kind: 'family' }
   | { kind: 'type' }
   | { kind: 'unit' }
+  | { kind: 'contract-pending'; blockedCapability: 'attributes-v1' }
   | { kind: 'attribute'; attributeId: string; index: number }
   | { kind: 'resource-data' }
   | { kind: 'review' }
@@ -136,6 +137,8 @@ export type CreationDraft = Readonly<{
   attributeIds: readonly ResourceId[]
   attributeValues: Readonly<Record<string, string>>
   omittedAttributeIds: ReadonlySet<string>
+  authoritativeEvaluation: null
+  catalogFingerprint: null
   nombre: string
   descripcion: string
   revision: number
@@ -159,6 +162,7 @@ export type CreationEvent =
   | { type: 'CONFIRM_CLASS'; item: ResourceContextClassItem }
   | { type: 'CONFIRM_FAMILY'; item: ResourceContextFamilyItem }
   | { type: 'CONFIRM_TYPE'; item: ResourceContextTypeItem }
+  | { type: 'CONFIRM_UNIT'; unitId: ResourceId }
   | { type: 'SET_ATTRIBUTE_VALUE'; attributeId: string; value: string }
   | { type: 'OMIT_ATTRIBUTE'; attributeId: string }
   | { type: 'SET_RESOURCE_DATA'; nombre: string; descripcion: string }
@@ -176,6 +180,8 @@ const emptyDraft = (): CreationDraft => ({
   attributeIds: [],
   attributeValues: {},
   omittedAttributeIds: new Set(),
+  authoritativeEvaluation: null,
+  catalogFingerprint: null,
   nombre: '',
   descripcion: '',
   revision: 0,
@@ -226,6 +232,7 @@ const backStage = (stage: CreationStage): CreationStage => {
   if (stage.kind === 'family') return { kind: 'class' }
   if (stage.kind === 'type') return { kind: 'family' }
   if (stage.kind === 'unit') return { kind: 'type' }
+  if (stage.kind === 'contract-pending') return { kind: 'unit' }
   if (stage.kind === 'resource-data') return { kind: 'unit' }
   if (stage.kind === 'review') return { kind: 'resource-data' }
   if (stage.kind === 'result' && stage.outcome === 'uncertain')
@@ -368,6 +375,25 @@ export const resourceCreationReducer = (
           typeItem: null,
         })
     return { ...state, draft: nextDraft, stage: { kind: 'family' } }
+  }
+
+  if (event.type === 'CONFIRM_UNIT') {
+    const nextDraft =
+      draft.unitId !== null &&
+      resourceIdKey(draft.unitId) === resourceIdKey(event.unitId)
+        ? draft
+        : {
+            ...draft,
+            unitId: event.unitId,
+            authoritativeEvaluation: null,
+            catalogFingerprint: null,
+            revision: draft.revision + 1,
+          }
+    return {
+      ...state,
+      draft: nextDraft,
+      stage: { kind: 'contract-pending', blockedCapability: 'attributes-v1' },
+    }
   }
 
   if (event.type === 'CONFIRM_FAMILY') {
