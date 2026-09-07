@@ -1,15 +1,15 @@
-# Tasks — Creación Keyboard First de Recursos
+# Tasks — Creador de recursos Keyboard First
 
 ## Review Workload Forecast
 
-| Field                   | Value                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Estimated changed lines | 4,210–5,040 additions + deletions across 15 child PRs                                                        |
-| 400-line budget risk    | High                                                                                                         |
-| Chained PRs recommended | Yes                                                                                                          |
-| Suggested split         | PR 1 → PR 2 → PR 3 → PR 4 → PR 5 → PR 6 → PR 7 → PR 8 → PR 9 → PR 10 → PR 11 → PR 12 → PR 13 → PR 14 → PR 15 |
-| Delivery strategy       | ask-on-risk                                                                                                  |
-| Chain strategy          | feature-branch-chain                                                                                         |
+| Field | Value |
+|-------|-------|
+| Estimated changed lines | 4,100–5,250 A+D remaining; 15 implementation child slices plus planning-doc slicing |
+| 400-line budget risk | High |
+| Chained PRs recommended | Yes |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12 adapters/evaluation → PR 13 attributes/reconciliation → PR 14 review/create → PR 15 backend closure |
+| Delivery strategy | auto-chain |
+| Chain strategy | feature-branch-chain |
 
 Decision needed before apply: No
 Chained PRs recommended: Yes
@@ -18,212 +18,169 @@ Chain strategy: feature-branch-chain
 
 ## Delivery controls
 
-Apply requires both approved design artifacts: `design.md` (architecture authority) and `design-details.md` (mechanical contracts and chain detail).
+- Use the authorized `feature-branch-chain`: draft/no-merge tracker `feat/keyboard-first-resource-creation`; the first child targets the tracker and each later child targets its immediate predecessor. Each PR body includes its own dependency diagram with its current child marked `📍`, start/finish, dependency, follow-up, focused evidence, runtime result, and rollback boundary.
+- Every child is one work-unit commit/PR and has a hard maximum of **399 additions + deletions** (tests and documentation included). Record `git diff --numstat`, the exact focused command result, and `git diff --check` before committing. Stop and split by observable region if an honest slice reaches 400; do not compress tests or request an implicit size exception.
+- Strict TDD applies to every implementation child: complete the listed RED assertion first, then the smallest GREEN behavior, then the listed TRIANGULATE/REFACTOR evidence. A pure module may state runtime `N/A` only where the named downstream child consumes it.
+- This complete replacement of `tasks.md` is itself likely over 399 A+D. Before committing planning artifacts, the parent must divide the documentation revision into reviewable <400 A+D commit slices (or stop for an explicit maintainer decision); this task plan does not authorize a planning-document size exception.
+- No child may edit backend, Convex, routes/URL, dependencies, React Query/global state, `KeyboardController`, AppShell, Catálogo, shared UI, or `resourcesMaster.api.ts`/`.types.ts` before the backend-v1 gate. Reuse feature-local React Aria composites, GARFEX Light tokens, `Dialog`, `Button`, and `Field`.
 
-Use a **feature-branch-chain** with draft/no-merge tracker branch `feat/keyboard-first-resource-creation`: PR 1 targets the tracker and each later child targets its immediate predecessor. Each child is one cohesive work-unit commit/PR, includes its RED/GREEN evidence, is independently buildable at its finish, and has a hard maximum of **399 A+D**. Before committing, record `git diff --numstat`, the focused command result, the runtime scenario result (or the stated pure-contract `N/A`), and a clean-diff check. If an honest child reaches 400 A+D, stop before apply and request the preflight `ask-on-risk` decision; do not compress code/tests or use a size exception.
+## Preserved history and superseded work
 
-`7c42860` remains auditable evidence for payload, focus, overlay, submit, and result semantics. Replace a prototype region only in the child that supplies its observable replacement; do not expose two selectable creation flows or a feature flag. Strict TDD applies to every child: make the named assertion RED, implement the smallest GREEN behavior, then triangulate/refactor and run the child command.
+The compatible work through Class stage commit `e52b9b2` is historical baseline, not work to redo. It retains the local snapshot/identity seam, staged Class path, feature-local loader/selector foundations, overlay registration, opener restoration, and their existing evidence.
 
-No-go scope for every child: backend/Convex; endpoints; DTOs, public API, and payload contract; Catálogo and `catalog-hierarchy-base`; routes/URL; dependencies; React Query/global state; `KeyboardController`; AppShell; shared staged-selector abstraction; mobile/touch redesign; optimistic insertion/cache-wide refresh; OpenPencil artifacts; and `openspec/config.yaml`. Use existing `Dialog`, `Button`, and `Field`, React Aria local composites, Tailwind, and existing Light semantic tokens only.
+- [x] Preserve the compatible `e52b9b2` seams in `src/features/resources-master/{resourceCreation.model.ts,resourceCreation.loaders.ts,StagedSearchSelector.tsx,CrearRecursoSurface.tsx}` and their `tests/unit/` evidence; do not revert them merely because this plan replaces later stale tasks. <!-- sdd-owner: implementation -->
+- [x] Supersede the old manual Nombre/Descripción, free TEXTO/NUMERO/other business-value controls, local `CONDITIONAL` simplification, `buildResourceCreateInput`/`ResourceCreateInput` final path, and `api.createResource`/legacy-create result tasks in the `src/features/resources-master/` Creador discovery target; none is valid future work for this Creador. <!-- sdd-owner: implementation -->
 
-## Chain map, boundaries, and arithmetic audit
+## Chain map
 
-All children inherit the no-go scope above. “N/A” runtime boundaries are limited to directly tested pure contracts with a named downstream consumer in this chain; they are not empty scaffolding.
+| PR | Availability | Dependency diagram / target | Bounded outcome and authored budget |
+|---|---|---|---|
+| 1 | Now | `tracker → 📍 PR 1` / tracker | Safety wall after Unidad; 260–360 A+D |
+| 2 | Now | `tracker → PR 1 → 📍 PR 2` / PR 1 | Creador shell and pending state; 300–390 A+D |
+| 3 | Now | `… → PR 2 → 📍 PR 3` / PR 2 | Interactive rail and persistent command bar; 280–380 A+D |
+| 4 | Now | `… → PR 3 → 📍 PR 4` / PR 3 | Search-list focus contract refinements; 300–390 A+D |
+| 5 | Now | `… → PR 4 → 📍 PR 5` / PR 4 | Staged Familia/Tipo integration; 310–395 A+D |
+| 6 | Now | `… → PR 5 → 📍 PR 6` / PR 5 | Pure natural-Unit policy/detail resolver; 250–340 A+D |
+| 7 | Now | `… → PR 6 → 📍 PR 7` / PR 6 | Explicit staged Unidad integration; 300–390 A+D |
+| 8 | Now | `… → PR 7 → 📍 PR 8` / PR 7 | Remove reachable legacy attribute/manual regions; 260–390 A+D |
+| 9 | Now | `… → PR 8 → 📍 PR 9` / PR 8 | Remove legacy review/payload/create regions; 260–390 A+D |
+| 10 | Now | `… → PR 9 → 📍 PR 10` / PR 9 | Pure active/suspended buckets by assignment ID; 230–330 A+D |
+| 11 | Now | `… → PR 10 → 📍 PR 11` / PR 10 | Browser, axe, isolation, and architecture closure; 300–395 A+D |
+| 12 | Blocked | `… → PR 11 → 📍 PR 12` / PR 11 | Exact v1 parsers/adapters and evaluation lease; 300–390 A+D |
+| 13 | Blocked | `… → PR 12 → 📍 PR 13` / PR 12 | Selection attributes and authoritative reconciliation; 320–395 A+D |
+| 14 | Blocked | `… → PR 13 → 📍 PR 14` / PR 13 | Authoritative review and fingerprinted create; 320–395 A+D |
+| 15 | Blocked | `… → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
-| Child | Target; dependency diagram required in PR body               | Start → finish; follow-up                                                                   | Declared A+D |
-| ----- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | -----------: |
-| PR 1  | tracker; `tracker (draft/no-merge) → 📍 PR 1`                | no validated snapshot → captured, normalized read-only open seed; PR 2                      |      300–360 |
-| PR 2  | PR 1; `tracker → PR 1 → 📍 PR 2`                             | open seed → tested local state machine; PR 3                                                |      290–345 |
-| PR 3  | PR 2; `tracker → PR 1 → PR 2 → 📍 PR 3`                      | one-page dependent seam → stale-safe generic paged loader; PR 4                             |      280–330 |
-| PR 4  | PR 3; `tracker → PR 1 → PR 2 → PR 3 → 📍 PR 4`               | conventional/select seam → local staged selector with keyboard behavior; PR 5               |      305–360 |
-| PR 5  | PR 4; `tracker → PR 1 → PR 2 → PR 3 → PR 4 → 📍 PR 5`        | legacy context → staged Clase selection; PR 6                                               |      290–345 |
-| PR 6  | PR 5; `tracker → PR 1 → PR 2 → PR 3 → PR 4 → PR 5 → 📍 PR 6` | Clase stage → Familia/Tipo cascade flow; PR 7                                               |      295–345 |
-| PR 7  | PR 6; `… → PR 6 → 📍 PR 7`                                   | generic loader → directly tested Natural Unit policy/hydration resolver; PR 8               |      260–305 |
-| PR 8  | PR 7; `… → PR 7 → 📍 PR 8`                                   | resolved candidates → explicit Natural Unit dialog stage; PR 9                              |      290–350 |
-| PR 9  | PR 8; `… → PR 8 → 📍 PR 9`                                   | generic loader → directly tested sequential-attribute resolver; PR 10                       |      275–325 |
-| PR 10 | PR 9; `… → PR 9 → 📍 PR 10`                                  | resolved attributes → one-at-a-time typed attribute stage; PR 11                            |      335–395 |
-| PR 11 | PR 10; `… → PR 10 → 📍 PR 11`                                | attributes complete → Resource data stage with preserved validation; PR 12                  |      280–330 |
-| PR 12 | PR 11; `… → PR 11 → 📍 PR 12`                                | assembled draft → directly tested single payload/review projection; PR 13                   |      195–245 |
-| PR 13 | PR 12; `… → PR 12 → 📍 PR 13`                                | payload projection → review, single submit, known-error/success behavior; PR 14             |      325–385 |
-| PR 14 | PR 13; `… → PR 13 → 📍 PR 14`                                | submit results → uncertainty lock, focus/result completion, prototype-region removal; PR 15 |      275–350 |
-| PR 15 | PR 14; `… → PR 14 → 📍 PR 15`                                | focused unit evidence → browser/axe/refetch/architecture closure; end                       |      230–300 |
+## Executable now — backend-independent implementation
 
-| Child           | Per-file maximum arithmetic | Sum of maxima | Declared maximum | Audit               |
-| --------------- | --------------------------- | ------------: | ---------------: | ------------------- |
-| PR 1            | 85 + 45 + 50 + 90 + 90      |           360 |              360 | Fits; ≤399          |
-| PR 2            | 155 + 190                   |           345 |              345 | Fits; ≤399          |
-| PR 3            | 145 + 185                   |           330 |              330 | Fits; ≤399          |
-| PR 4            | 165 + 170 + 25              |           360 |              360 | Fits; ≤399          |
-| PR 5            | 115 + 80 + 150              |           345 |              345 | Fits; ≤399          |
-| PR 6            | 125 + 75 + 145              |           345 |              345 | Fits; ≤399          |
-| PR 7            | 130 + 175                   |           305 |              305 | Fits; ≤399          |
-| PR 8            | 70 + 120 + 160              |           350 |              350 | Fits; ≤399          |
-| PR 9            | 155 + 170                   |           325 |              325 | Fits; ≤399          |
-| PR 10           | 140 + 90 + 165              |           395 |              395 | Fits; ≤399          |
-| PR 11           | 95 + 80 + 155               |           330 |              330 | Fits; ≤399          |
-| PR 12           | 100 + 145                   |           245 |              245 | Fits; ≤399          |
-| PR 13           | 110 + 125 + 150             |           385 |              385 | Fits; ≤399          |
-| PR 14           | 85 + 95 + 25 + 145          |           350 |              350 | Fits; ≤399          |
-| PR 15           | 100 + 45 + 25 + 85 + 45     |           300 |              300 | Fits; ≤399          |
-| **Chain total** | **sum of child ranges**     |     **5,040** |        **5,040** | **4,210–5,040 A+D** |
+### PR 1 — Safety wall: Unidad ends at Contrato pendiente
 
-## Implementation work units
+**Start → finish:** current Class-capable flow with reachable legacy continuation → confirming Unidad reaches only `contract-pending`; no manual capture, legacy attributes, review, or create is reachable. **Files:** `src/features/resources-master/CrearRecursoSurface.tsx`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/crearRecursoSurface.test.tsx`, `tests/unit/resourceCreation.model.test.ts`, `tests/architecture/resourceCreationBoundaries.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** keyboard-confirm a Unit and observe Contract pending with no attribute/create request. **Rollback:** revert this boundary and its tests only; no backend or shared infrastructure changes.
 
-### PR 1 — Validated snapshot captured on dialog open (target: tracker)
+- [ ] **RED:** Add failing model/surface/architecture assertions that `CONFIRM_UNIT` ends at `contract-pending`, that pending exposes no create command, and that the reachable surface does not call legacy attribute or create operations. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Route Unidad confirmation through the local `contract-pending` stage in `resourceCreation.model.ts` and `CrearRecursoSurface.tsx`, removing every reachable transition to manual, attribute, review, and submit regions. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove same-ID and replacement Unit transitions invalidate the null evaluation/fingerprint lease without auto-confirmation, run the focused command, and record the keyboard runtime result. <!-- sdd-owner: implementation -->
 
-**Bounded files:** `src/features/resources-master/resourceCreation.model.ts` (new, 70–85); `src/features/resources-master/ResourcesMasterScreen.tsx` (35–45); `src/features/resources-master/CrearRecursoSurface.tsx` (40–50); `tests/unit/resourceCreation.model.test.ts` (new, 80–90); `tests/unit/resourcesMasterScreen.test.tsx` (75–90). **Total:** 300–360 A+D.
+### PR 2 — Feature-local Creador shell and honest pending end state
 
-**Review focus:** derive only loaded, continuous Clase→Familia→Tipo prefixes through one opaque-ID helper; capture the latest prop only on open; give the dialog data rather than screen setters. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourcesMasterScreen.test.tsx && pnpm typecheck`. **Runtime scenario:** open at depths 0/1/2/3 and verify the captured seed does not mutate background filters or callbacks. **Rollback:** remove snapshot derivation/capture and its tests, retaining the prototype form and remote list.
+**Depends on:** PR 1. **Start → finish:** legacy surface composition → `ResourceCreationShell` presents one dominant decision, title **Creador de recursos**, and `ResourceCreationContractPending` as the only current terminal state. **Files:** `src/features/resources-master/ResourceCreationShell.tsx`, `src/features/resources-master/ResourceCreationContractPending.tsx`, `src/features/resources-master/CrearRecursoSurface.tsx`, `tests/unit/crearRecursoSurface.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck`. **Runtime:** open with `N`, move from Unit to pending, and verify focus moves to its heading. **Rollback:** remove these feature-local components/composition while retaining PR 1’s safety wall.
 
-- [x] **RED:** Add failing prefix, cross-parent/stale, and capture-on-open assertions in `tests/unit/resourceCreation.model.test.ts` and `tests/unit/resourcesMasterScreen.test.tsx`; record the failing focused command. <!-- sdd-owner: implementation -->
-- [x] **GREEN:** Add snapshot types, `resourceIdKey`, derivation/normalization helpers in `resourceCreation.model.ts`; derive loaded-item snapshots in `ResourcesMasterScreen.tsx`; and make `CrearRecursoSurface.tsx` capture the read-only `initialHierarchySnapshot` at opening without receiving hierarchy setters. <!-- sdd-owner: implementation -->
-- [x] **TRIANGULATE/REFACTOR:** Cover all prefix depths and a changed closed-dialog prop versus an unchanged open-dialog seed, run the stated command, and commit the tested snapshot behavior with its consumers. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add failing RTL assertions for the visible Creador title, one dominant stage heading, no editable business-value control, and pending heading focus after Unit. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Extract `ResourceCreationShell.tsx` and `ResourceCreationContractPending.tsx`, compose them from `CrearRecursoSurface.tsx`, and use existing `Dialog`/GARFEX Light primitives without a second shell or global listener. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover initial Class and deep-snapshot openings plus pending back navigation, run the focused command, and record the `N`-open runtime result. <!-- sdd-owner: implementation -->
 
-### PR 2 — Reducer, navigation, and reset invariants (target: PR 1)
+### PR 3 — Interactive stage rail and persistent command bar
 
-**Bounded files:** `src/features/resources-master/resourceCreation.model.ts` (130–155); `tests/unit/resourceCreation.model.test.ts` (160–190). **Total:** 290–345 A+D.
+**Depends on:** PR 2. **Start → finish:** shell without persistent orientation → confirmed Clase/Familia/Tipo/Unidad context is navigable through a local rail and valid commands remain visible in a non-obscuring bar. **Files:** `src/features/resources-master/CreationStageRail.tsx`, `src/features/resources-master/CreationCommandBar.tsx`, `src/features/resources-master/ResourceCreationShell.tsx`, `tests/unit/crearRecursoSurface.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck`. **Runtime:** activate confirmed Clase/Familia in the rail and verify context remains visible and focus is not hidden by the bar. **Rollback:** revert rail/bar and shell composition only.
 
-**Review focus:** typed local state preserves same-ID descendants, atomically clears only changed-parent dependents, and increments revision only on real mutations. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime scenario:** N/A — direct pure reducer matrix; PR 5 consumes it in the dialog after the shared loader/selector seams land. **Rollback:** revert reducer/events/navigation cases only, retaining PR 1’s captured snapshot.
+- [ ] **RED:** Add failing RTL cases for `<ol>` rail semantics, `aria-current="step"`, confirmed-stage return, 44px interactive rail targets, and stage-specific command copy that omits Crear in pending. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement feature-local `CreationStageRail.tsx` and `CreationCommandBar.tsx` with semantic tokens, shape/text state cues beyond color, valid Back/Escape guidance, and existing `Button` chrome. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Verify rail navigation alone preserves valid selections while a later alternative confirmation triggers the reducer cascade, run the focused command, and record the rail runtime result. <!-- sdd-owner: implementation -->
 
-- [x] **RED:** Extend `tests/unit/resourceCreation.model.test.ts` with failing cases for `OPEN`, first-missing stage, breadcrumb/back navigation, Class/Family/Type cascades, same-ID preservation, omission/value preservation, and revision changes. <!-- sdd-owner: implementation -->
-- [x] **GREEN:** Implement `CreationStage`, `CreationDraft`, submit state, reducer events, validation predicates, and ID-keyed navigation/reset helpers in `resourceCreation.model.ts`, without Query/store ownership. <!-- sdd-owner: implementation -->
-- [x] **TRIANGULATE/REFACTOR:** Add replacement-versus-reconfirmation and return-navigation matrices, run the stated command, and commit the directly tested state contract used by the hierarchy integration. <!-- sdd-owner: implementation -->
+### PR 4 — Search-list candidate, focus, and local-search refinements
 
-### PR 3 — Generic stale-safe dependent paging contract (target: PR 2)
+**Depends on:** PR 3. **Start → finish:** Class-stage selector foundation → `StagedSearchSelector` fully enforces search↔list transfer, candidate-versus-confirmed separation, IME/event precedence, and honest loaded-page filtering. **Files:** `src/features/resources-master/StagedSearchSelector.tsx`, `src/features/resources-master/stagedSearchSelector.model.ts`, `tests/unit/StagedSearchSelector.test.tsx`, `tests/architecture/keyboardBoundaries.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck`. **Runtime:** type, ArrowDown, ArrowUp, printable-from-list, Enter, load-more, and retry without an automatic selection. **Rollback:** revert selector/model/selector tests only; retain the existing single global keyboard controller.
 
-**Bounded files:** `src/features/resources-master/resourceCreation.loaders.ts` (new, 125–145); `tests/unit/resourceCreation.loaders.test.ts` (new, 155–185). **Total:** 280–330 A+D.
+- [ ] **RED:** Add failing RTL tests for Spanish loaded-name-only filtering and copy, ArrowDown search→list, ArrowUp first-item→search, printable list→search, Enter on focused item only, IME/defaultPrevented guards, and filter/page candidate repair without confirmation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Refine `StagedSearchSelector.tsx` and its pure model to keep `candidateKey` distinct from `confirmedKey`, use local React Aria handlers only, announce loading/error/empty state, and leave continuation outside the listbox. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Add click/Enter parity, zero-visible-with-cursor, and continuation-preserves-query cases; run the focused command and record the keyboard runtime result. <!-- sdd-owner: implementation -->
 
-**Review focus:** token, context key, and cursor all guard adoption; continuation retains valid pages and first-appearance dedupe; filter text never becomes an API parameter. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts && pnpm typecheck`. **Runtime scenario:** N/A — controlled deferred promises directly prove adoption/retry behavior; PRs 5–10 consume this contract after the selector seam lands. **Rollback:** remove only the generic loader and its tests.
+### PR 5 — Staged Familia and Tipo integration
 
-- [x] **RED:** Add deferred-promise failures in `tests/unit/resourceCreation.loaders.test.ts` for initial/continuation/retry states, parent/Tipo stale responses, cursor retry, repeated cursor, dedupe, and context invalidation. <!-- sdd-owner: implementation -->
-- [x] **GREEN:** Implement the feature-local dependent loader in `resourceCreation.loaders.ts` with injected identity, token/context/cursor guards, retained partial items, explicit retry state, and no React/global-query dependency. <!-- sdd-owner: implementation -->
-- [x] **TRIANGULATE/REFACTOR:** Exercise out-of-order completions and duplicates across pages, run the stated command, and commit the reusable feature-local contract with its deterministic tests. <!-- sdd-owner: implementation -->
+**Depends on:** PR 4 and the preserved Class stage. **Start → finish:** Class-only staged path → Familia is gated by confirmed Clase and Tipo by confirmed Familia, with paginated/stale-safe current contracts and atomic ancestor cascades. **Files:** `src/features/resources-master/useResourceCreationFlow.ts`, `src/features/resources-master/CrearRecursoSurface.tsx`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/crearRecursoSurface.test.tsx`, `tests/unit/resourceCreation.model.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/unit/resourceCreation.loaders.test.ts && pnpm typecheck`. **Runtime:** keyboard-confirm Clase→Familia→Tipo, replace an ancestor, and observe stale responses and descendant state are rejected. **Rollback:** remove only Familia/Tipo bindings and their tests, preserving Class.
 
-### PR 4 — Feature-local staged selector behavior (target: PR 3)
+- [ ] **RED:** Add failing surface/model cases for parent-gated pagination, deep valid prefix entry, invalid-prefix fallback, Class/Family replacement cascades, same-ID reconfirmation, and stale descendant response rejection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Wire independent existing `createParentGatedListController` instances through `useResourceCreationFlow.ts`, render staged Familia/Tipo selectors, and remove the corresponding simultaneous legacy controls. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Exercise continuation, dedupe, retry, rail return, and local-screen isolation across all three hierarchy stages; run the focused command and record the keyboard runtime result. <!-- sdd-owner: implementation -->
 
-**Bounded files:** `src/features/resources-master/StagedSearchSelector.tsx` (new, 140–165); `tests/unit/StagedSearchSelector.test.tsx` (new, 145–170); `tests/architecture/keyboardBoundaries.test.ts` (20–25). **Total:** 305–360 A+D.
+### PR 6 — Pure natural-Unit policy/detail resolver
 
-**Review focus:** local React Aria composite filters loaded names only, maintains one provisional candidate distinct from confirmation, and installs no global listener. **Command:** `pnpm exec vitest run tests/unit/StagedSearchSelector.test.tsx tests/architecture/keyboardBoundaries.test.ts && pnpm typecheck`. **Runtime scenario:** RTL keyboard sequence filters, arrows, Enter, IME/defaultPrevented, retry, and continuation. **Rollback:** remove selector and selector-specific guard assertions only; do not alter `HierarchyNavigator`, shared UI, or `KeyboardController`.
+**Depends on:** PR 5. **Start → finish:** no Type-scoped Unit candidates → a stale-safe pure loader emits only hydrated, active, effective Unit candidates from effective Type policies. **Files:** `src/features/resources-master/resourceCreation.loaders.ts`, `tests/unit/resourceCreation.loaders.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts && pnpm typecheck`. **Runtime:** N/A — deferred-promise tests prove the resolver consumed by PR 7. **Rollback:** revert the Unit resolver and tests only.
 
-- [x] **RED:** Add failing RTL and architecture assertions for Spanish name-only local filtering, active-key repair without confirmation, arrows/Enter, IME/defaultPrevented precedence, explicit retry/continuation, and no document/window listener. <!-- sdd-owner: implementation -->
-- [x] **GREEN:** Create `StagedSearchSelector.tsx` from local React Aria `SearchField`/`ListBox` and shared `Button`, including accessible loading/empty/error copy, controlled query, `Cargar más…`, and provisional `activeKey`; keep it inside `resources-master`. <!-- sdd-owner: implementation -->
-- [x] **TRIANGULATE/REFACTOR:** Add filter-removes-active, deduped-page, continuation-preserves-query, and click/Enter parity evidence; run the stated command and commit the selector with its tests. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, `getUnit` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add the feature-local `UnitCandidate` resolver using only current Type-policy pages and `getUnit`, token/context/cursor adoption guards, first-order preservation, and principal/selected as focus preference only. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies OR-combine preference flags, retained resolved candidates survive a partial error, and repeated non-exhausted cursors fail recoverably; run the focused command. <!-- sdd-owner: implementation -->
 
-### PR 5 — Staged Clase selection integrated vertically (target: PR 4)
+### PR 7 — Explicit staged Unidad natural decision
 
-**Bounded files:** `src/features/resources-master/CrearRecursoSurface.tsx` (95–115); `src/features/resources-master/useResourceCreationFlow.ts` (new, 65–80); `tests/unit/crearRecursoSurface.test.tsx` (130–150). **Total:** 290–345 A+D.
+**Depends on:** PR 6. **Start → finish:** resolver without rendered choice → Unidad is a visible search-list decision whose preferred candidate is only focused and whose explicit Enter/click leads to pending. **Files:** `src/features/resources-master/useResourceCreationFlow.ts`, `src/features/resources-master/CrearRecursoSurface.tsx`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/crearRecursoSurface.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime:** confirm a hydrated eligible Unit by Enter; verify a global-unit list is never offered and pending/error blocks confirmation. **Rollback:** remove Unit flow/rendering only, retaining PR 6 resolver.
 
-**Review focus:** the captured seed opens at Clase when missing, Clase pages use the existing parent-gated behavior, and explicit confirmation alters only the local draft. **Command:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/unit/StagedSearchSelector.test.tsx && pnpm typecheck`. **Runtime scenario:** open with no valid prefix, filter/load/confirm Clase by keyboard, and confirm background selection/query remain unchanged. **Rollback:** restore the replaced Clase region and remove the flow wrapper, retaining pure seams.
+- [ ] **RED:** Add failing RTL cases for Unit entry after Tipo, preferred-but-unconfirmed candidate, explicit Enter/click, eligible empty state, partial-error retry, and Type-change invalidation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Connect the PR 6 resolver through `useResourceCreationFlow.ts`, render the staged Unit selector in `CrearRecursoSurface.tsx`, and dispatch `CONFIRM_UNIT` only from explicit confirmation. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover load-more with immediately confirmable hydrated candidates versus pending/failed hydration that cannot advance, run the focused command, and record the runtime result. <!-- sdd-owner: implementation -->
 
-- [x] **RED:** Add failing `crearRecursoSurface.test.tsx` cases for depth-zero opening, Clase loading/retry/continuation, explicit Enter confirmation, local draft isolation, and the route breadcrumb. <!-- sdd-owner: implementation -->
-- [x] **GREEN:** In `CrearRecursoSurface.tsx` and `useResourceCreationFlow.ts`, consume the reducer and existing parent-gated Clase controller, render `StagedSearchSelector`, and replace only the legacy Clase region with this single active path. <!-- sdd-owner: implementation -->
-- [x] **TRIANGULATE/REFACTOR:** Verify re-entry preserves Clase pages/filter while no confirm occurs from filtering, run the stated command, and commit the vertical Clase behavior and tests together. <!-- sdd-owner: implementation -->
+### PR 8 — Remove legacy attribute and manual-capture regions behind the wall
 
-### PR 6 — Familia and Tipo cascade integration (target: PR 5)
+**Depends on:** PR 7. **Start → finish:** unreachable legacy attribute/manual views remain in source → those regions and tests are removed while `contract-pending` stays the only end after Unit. Split again by source region rather than exceed 399 A+D. **Discovery targets:** imports and branches in `src/features/resources-master/CrearRecursoSurface.tsx`; legacy attribute presenters/loaders under `src/features/resources-master/`; stale expectations in `tests/unit/crearRecursoSurface.test.tsx` and `tests/unit/resourceCreation.loaders.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.loaders.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** complete Unit and inspect only Contract pending. **Rollback:** restore this deletion slice only; retain the safety wall.
 
-**Bounded files:** `src/features/resources-master/CrearRecursoSurface.tsx` (105–125); `src/features/resources-master/useResourceCreationFlow.ts` (65–75); `tests/unit/crearRecursoSurface.test.tsx` (125–145). **Total:** 295–345 A+D.
+- [ ] **RED:** Replace stale legacy assertions with failing negative tests that the production Creador exposes no TEXTO, NUMERO, BOOLEANO, OPCION, Nombre, Descripción, or legacy attribute request after Unit. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Delete one bounded legacy attribute/manual-capture region at a time from the discovery targets, including now-orphaned imports and tests, without deleting current API operations used by other consumers. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Run the focused command and a source-boundary scan proving no reachable Creador branch renders a free business-value input; record the Unit-to-pending runtime result. <!-- sdd-owner: implementation -->
 
-**Review focus:** Familia is scoped to confirmed Clase, Tipo to confirmed Familia, breadcrumb changes reset exactly the prescribed descendants, and legacy context controls disappear with their replacement. **Command:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/unit/StagedSearchSelector.test.tsx && pnpm typecheck`. **Runtime scenario:** replace Clase then Familia by keyboard; confirm stale descendant results and background filters cannot leak into the new draft. **Rollback:** restore only Familia/Tipo regions and flow bindings, retaining PR 5 Clase behavior.
+### PR 9 — Remove legacy review, payload, and create flow
 
-- [ ] **RED:** Add failing surface cases for valid deep seeds starting at Unidad, invalid prefixes starting at Familia/Tipo, parent-scoped continuation, breadcrumb replacement, and stale descendant rejection. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Wire Familia and Tipo parent-gated controller instances through `useResourceCreationFlow.ts`, render their staged selectors in `CrearRecursoSurface.tsx`, and remove the corresponding old context controls in the same replacement. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover Class/Family/Type replacement and same-ID reconfirmation through the dialog, run the stated command, and commit one green staged hierarchy path. <!-- sdd-owner: implementation -->
+**Depends on:** PR 8. **Start → finish:** dead legacy submit/review/payload code remains → Creador contains no `buildResourceCreateInput`, `ResourceCreateInput`, `api.createResource`, ownership mapping, or legacy result path. **Discovery targets:** `src/features/resources-master/CrearRecursoSurface.tsx`, `src/features/resources-master/resourceCreation.model.ts`, any feature-local `ResourceCreationDetails*`/attribute stage files, and `tests/unit/resourceCreation*.test*`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** pending has Back/Close only and never invokes `onCreated`. **Rollback:** restore only this cleanup region; do not change `resourcesMaster.api.ts` or the legacy backend method.
 
-### PR 7 — Natural Unit policy and hydration resolver (target: PR 6)
+- [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke `onCreated` or any create operation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Delete the bounded legacy review, submit, payload, ownership, and result branches plus their obsolete tests while retaining the `onCreated → refetchActive()` seam unused by pending. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->
 
-**Bounded files:** `src/features/resources-master/resourceCreation.loaders.ts` (110–130); `tests/unit/resourceCreation.loaders.test.ts` (150–175). **Total:** 260–305 A+D.
+### PR 10 — Pure active/suspended selection buckets
 
-**Review focus:** candidates derive only from effective, non-shadowed policies and hydrated details; principal/selected ranking is provisional; rejected hydration remains retryable. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts && pnpm typecheck`. **Runtime scenario:** N/A — direct deferred-promise resolver tests; PR 8 immediately renders and confirms its candidates. **Rollback:** remove only Natural Unit resolver extensions and their tests, retaining generic paging.
+**Depends on:** PR 9. **Start → finish:** no reversible local selection model → generic, transport-free buckets retain opaque values by assignment ID without interpreting conditions or calling backend. **Files:** `src/features/resources-master/resourceCreation.selectionDraft.ts`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/resourceCreation.selectionDraft.test.ts`, `tests/unit/resourceCreation.model.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/resourceCreation.selectionDraft.test.ts tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime:** N/A — pure contract consumed only after the backend-v1 gate. **Rollback:** revert the new pure module/model integration and tests only.
 
-- [ ] **RED:** Add failing loader tests for policy filtering/dedupe, `getUnit` hydration, principal/selected ranking, null/inactive/ineffective exclusion, rejected hydration retry, stale Tipo rejection, and confirmed empty eligibility. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Extend `resourceCreation.loaders.ts` with policy paging, unique `Promise.allSettled` hydration, `UnitCandidate`, effective-detail filtering, failure retention, and token-guarded retry without using a general-unit list. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies and continuation after a valid candidate preserve first order and block only pending/failed resolution, then run the stated command and commit the tested resolver. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add failing opaque-value tests for assignment-ID keying, active/suspended exclusivity, confirm, omit, suspend, restore, keep-suspended, active-only projection, hierarchy reset, Unit evaluation invalidation, and revision increments. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement generic `SelectionBuckets<TSelection>` and pure operations in `resourceCreation.selectionDraft.ts`; keep `SelectionBuckets<never>` in the current runtime and never introduce a transport DTO or local `CONDITIONAL` evaluator. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove definition-ID/index collisions cannot merge assignments and that omitted differs from unanswered, then run the focused command and record the pure-contract result. <!-- sdd-owner: implementation -->
 
-### PR 8 — Explicit Natural Unit dialog stage (target: PR 7)
+### PR 11 — Backend-independent accessibility, browser, and architecture closure
 
-**Bounded files:** `src/features/resources-master/useResourceCreationFlow.ts` (55–70); `src/features/resources-master/CrearRecursoSurface.tsx` (100–120); `tests/unit/crearRecursoSurface.test.tsx` (135–160). **Total:** 290–350 A+D.
+**Depends on:** PR 10. **Start → finish:** focused unit coverage → keyboard-only Class→Familia→Tipo→Unidad→Contrato pendiente behavior, WCAG checks, isolation, and file-size guards are proven without backend-v1 simulation. **Files:** `tests/e2e/resourcesMaster.workstation.spec.ts`, `tests/architecture/resourceCreationBoundaries.test.ts`, `tests/architecture/keyboardBoundaries.test.ts`, `tests/unit/resourcesMasterScreen.test.tsx`, `tests/unit/resourcesMasterScreenRefetch.test.tsx`. **Verify:** `pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/keyboardBoundaries.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts && pnpm typecheck && pnpm lint && pnpm format:check && pnpm build`. **Runtime:** Chromium 1440×980 keyboard route, Escape ladder, opener/fallback restoration, and axe on selector/pending. **Rollback:** revert closure tests/guards only.
 
-**Review focus:** the preferred candidate is merely active, Enter explicitly puts a hydrated eligible unit in the draft, and no Unit path uses `listarUnidades`. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck`. **Runtime scenario:** start after confirmed Tipo, inspect preferred active Unit, confirm with Enter, then observe empty/error/retry blocking. **Rollback:** restore only the Unit stage and flow hookup, retaining staged hierarchy.
+- [ ] **RED:** Add failing browser/architecture cases for keyboard-only staged hierarchy, honest loaded-page copy/Cargar más, Escape pending→Unit→Type→Family→Class→close, focus restoration, axe dialog states, no feature global listener, runtime <500 lines, and no create/payload imports. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only the named test/guard evidence and any minimal test fixtures required to exercise completed behavior; do not add attribute/evaluator/create mocks to production or tests before exact DTOs exist. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Run the full focused closure command, remove only duplicated assertions, and record exact gate and browser results or unavailable failures honestly. <!-- sdd-owner: implementation -->
 
-- [ ] **RED:** Add failing surface tests for Unit-stage entry after Tipo, preferred-active-but-unconfirmed behavior, Enter/click confirmation, empty eligibility, partial error retry, and stale-Type invalidation. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Connect the PR 7 resolver in `useResourceCreationFlow.ts` and render an explicit Unit `StagedSearchSelector` in `CrearRecursoSurface.tsx`, dispatching `CONFIRM_UNIT` only from explicit action. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Demonstrate a continuation can coexist with an immediately confirmable hydrated candidate while pending/failed hydration cannot advance, run the stated command, and commit Unit behavior with its tests. <!-- sdd-owner: implementation -->
+## Blocked — backend-v1 integration only after contract acceptance
 
-### PR 9 — Sequential attribute-resolution contract (target: PR 8)
+**Gate for PRs 12–15:** do not start until published, reviewed exact request/response DTOs, schemas/discriminants, nulability, error shapes, assignment-order/applicability facts, typed allowed-value identity, `modoCaptura`, issue shape, generated name/technical identity, required fingerprint placement, and complete create dispositions are available for `obtenerDefinicionAtributo`, `listarValoresPermitidosAtributo`, `evaluarCreacionDesdeSelecciones`, and `crearRecursoDesdeSelecciones`. If those contracts force product decisions, return to proposal/design review first. Do not infer them from `crearRecurso`, `ResourceCreateInput`, `tipoDato`, or the current legacy option endpoints.
 
-**Bounded files:** `src/features/resources-master/resourceCreation.loaders.ts` (130–155); `tests/unit/resourceCreation.loaders.test.ts` (145–170). **Total:** 275–325 A+D.
+### PR 12 — Exact adapters/parsers and authoritative evaluation lease (BLOCKED)
 
-**Review focus:** complete assignment pages before stable `orden` ordering; resolve definitions/options under the current Tipo token; incomplete resolution is recoverable rather than silently omitted. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts && pnpm typecheck`. **Runtime scenario:** N/A — direct resolver tests cover multi-page and stale async outcomes; PR 10 immediately presents the resolved sequence. **Rollback:** remove only attribute-resolution extensions and their tests.
+**Depends on:** PR 11 and the backend-v1 gate. **Start → finish:** pending-only frontend → exact validated transport parsing and evaluation adoption guarded by request token, hierarchy/Unit context, and draft revision. **Concrete discovery targets after gate:** the published frontend operation module/types validated against backend v1; feature-local parser/adapter location under `src/features/resources-master/`; `tests/unit/*transport*.test.ts` and `tests/unit/resourceCreation.model.test.ts`. **Budget:** 300–390 A+D. **Verify after gate:** focused Vitest parser/evaluation tests plus `pnpm typecheck`. **Rollback:** remove only v1 adapters/evaluation integration and return to pending.
 
-- [ ] **RED:** Add failing resolver tests for multi-page assignments/options, effective/forbidden/not-applicable filtering, stable ordering, definition/option errors, stale Tipo responses, and zero applicable assignments. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement complete paged assignment/option resolution and definition hydration in `resourceCreation.loaders.ts`, with assignment/option dedupe, stable ordering, retry state, and current-token adoption checks. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover reordered arrivals and a required option with no effective options, run the stated command, and commit the directly tested resolver consumed by the attribute stage. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Write failing parser tests from the published exact DTO fixtures for all evaluator statuses, values, issues, fingerprint, and malformed/unknown response rejection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement schemas/parsers before React and an evaluation lease that adopts only current token/context/revision responses, failing closed without inventing fields or endpoint behavior. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove stale, out-of-order, and malformed evaluator responses cannot enable review/create, run the post-gate focused command, and record its exact result. <!-- sdd-owner: implementation -->
 
-### PR 10 — One-at-a-time attribute interaction (target: PR 9)
+### PR 13 — SELECCION attributes and authoritative reconciliation (BLOCKED)
 
-**Bounded files:** `src/features/resources-master/ResourceAttributeStage.tsx` (new, 115–140); `src/features/resources-master/CrearRecursoSurface.tsx` (75–90); `tests/unit/crearRecursoSurface.test.tsx` (145–165). **Total:** 335–395 A+D.
+**Depends on:** PR 12 and the backend-v1 gate. **Start → finish:** exact evaluation facts available → one assignment-ID-keyed `Atributos · n de total` sequence offers only allowed typed selections and reconciles buckets from backend facts. **Concrete discovery targets after gate:** feature-local attribute stage, v1 allowed-value adapter, `resourceCreation.selectionDraft.ts`, `ResourceCreationShell.tsx`, and corresponding unit/RTL tests. **Budget:** 320–395 A+D. **Verify after gate:** focused attribute/reconciliation Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove this stage and return to pending/evaluation boundary; preserve pure buckets.
 
-**Review focus:** every type preserves its existing raw transport semantics; only REQUIRED blocks; optional and conditional values can be genuinely omitted; changing Tipo clears the entire sequence. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime scenario:** keyboard-complete text/number/boolean/option fields, omit a non-required field, go back, and replace Tipo. **Rollback:** remove attribute presenter and its surface region/tests only, retaining Unit and hierarchy behavior.
+- [ ] **RED:** Write failing tests using only exact DTO fixtures for assignment ordering by assignment ID, allowed typed-value confirmation, authorized Omitir, LIBRE unsupported, DERIVADO out-of-v1, active→suspended, valid restore, and invalid retained selection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Render one selection-only assignment at a time from validated authoritative facts, label the rail `Atributos · n de total`, and reconcile buckets without parsing or simplifying `CONDITIONAL`. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove a changed authoritative sequence preserves the current pending assignment when possible and never sends suspended values, then run and record the post-gate focused command. <!-- sdd-owner: implementation -->
 
-- [ ] **RED:** Add failing surface cases for per-type controls, required focus/error, optional/conditional **Omitir**, raw-value preservation, backtracking, zero-applicable continuation, and Type replacement clearing prior Unit/attributes. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Create `ResourceAttributeStage.tsx` and compose it from `CrearRecursoSurface.tsx` with the PR 9 resolver and reducer, rendering one attribute at a time and recording values/omissions by assignment ID. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Verify all four value kinds and that omission removes—not empties—a value, run the stated command, and commit the attribute behavior plus its RED/GREEN evidence. <!-- sdd-owner: implementation -->
+### PR 14 — Authoritative review and fingerprinted creation (BLOCKED)
 
-### PR 11 — Resource data stage (target: PR 10)
+**Depends on:** PR 13 and the backend-v1 gate. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the exact create disposition contract. **Concrete discovery targets after gate:** feature-local review/result components, v1 create adapter/parser, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. **Budget:** 320–395 A+D. **Verify after gate:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
 
-**Bounded files:** `src/features/resources-master/ResourceCreationDetails.tsx` (new, 80–95); `src/features/resources-master/CrearRecursoSurface.tsx` (65–80); `tests/unit/crearRecursoSurface.test.tsx` (135–155). **Total:** 280–330 A+D.
+- [ ] **RED:** Write failing exact-fixture tests for INCOMPLETE/VALID/INVALID rendering, evaluation invalidation on every selection mutation, required `expectedCatalogFingerprint`, active IDs only, stale/unknown disposition handling, and confirmed-success-only behavior. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Render generated name, technical identity, assignments, and issues exclusively from validated evaluation output; call `crearRecursoDesdeSelecciones` only with a current fingerprint and represent only published explicit dispositions. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove a concurrent/stale response never presents success or calls `onCreated`, run the post-gate focused command, and record its exact result. <!-- sdd-owner: implementation -->
 
-**Review focus:** Nombre/Descripción retain current trim and optional semantics in their own stage; Enter is guarded for editable controls; valid data progresses only to the payload seam, not submission. **Command:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime scenario:** keyboard-enter Nombre/Descripción, correct a required name, return to attributes, and preserve both data and focus behavior. **Rollback:** remove the Resource data presenter/stage and its tests, retaining attribute capture.
+### PR 15 — Backend-enabled browser and regression closure (BLOCKED)
 
-- [ ] **RED:** Add failing surface tests for required trimmed Nombre, optional trimmed Descripción omission, field-focused error, guarded Enter/IME behavior, and preservation when returning from Resource data. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add the Resource data presentation to `ResourceCreationDetails.tsx` and compose it in `CrearRecursoSurface.tsx` through the reducer’s data-confirmation stage without adding fields or normalizations. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover blank-versus-whitespace values and return navigation from data to attributes, run the stated command, and commit the data-stage behavior and tests together. <!-- sdd-owner: implementation -->
+**Depends on:** PR 14 and the backend-v1 gate. **Start → finish:** exact-contract unit coverage → browser/axe and boundary regressions prove the completed authoritative path. **Concrete discovery targets after gate:** `tests/e2e/resourcesMaster.workstation.spec.ts`, feature architecture guards, and exact DTO fixture helpers limited to tests. **Budget:** 260–370 A+D. **Verify after gate:** focused Vitest architecture suite, `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm build`. **Rollback:** revert closure evidence only; if runtime failures expose a behavior bug, revert its owning PR rather than weakening the test.
 
-### PR 12 — Single payload and review projection contract (target: PR 11)
+- [ ] **RED:** Add failing keyboard-only and axe cases for allowed-value selection, optional omission, authoritative INCOMPLETE/INVALID/VALID review, fingerprinted create, and non-confirming stale/unknown disposition. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Run the post-gate closure commands, confirm no obsolete manual/free-value/create-legacy path returns, and record exact results. <!-- sdd-owner: implementation -->
 
-**Bounded files:** `src/features/resources-master/resourceCreation.model.ts` (80–100); `tests/unit/resourceCreation.payload.test.ts` (new, 115–145). **Total:** 195–245 A+D.
+## Parent-owned review and lifecycle gates
 
-**Review focus:** one pure `buildResourceCreateInput(draft)` is the sole input to both upcoming review and submission; it keeps exact IDs, ownership, attribute mappings, and omitted-value absence. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.payload.test.ts && pnpm typecheck`. **Runtime scenario:** N/A — direct payload parity tests; PR 13 immediately consumes this object for review and API invocation. **Rollback:** remove the pure payload/review projection and its test, retaining staged data capture.
-
-- [ ] **RED:** Add failing `tests/unit/resourceCreation.payload.test.ts` cases for all attribute mappings, exact hierarchy/Unit IDs, trim semantics, optional description, GLOBAL ownership, and absence of omitted or empty optional values. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement `buildResourceCreateInput(draft)` and the typed review projection in `resourceCreation.model.ts` so both derive from the same object and no second payload mapping exists. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Compare each review projection field against the outgoing contract for text, number, boolean, and option values; run the stated command and commit the tested pure contract. <!-- sdd-owner: implementation -->
-
-### PR 13 — Review, submit, known-error, and confirmed-success behavior (target: PR 12)
-
-**Bounded files:** `src/features/resources-master/ResourceCreationDetails.tsx` (90–110); `src/features/resources-master/CrearRecursoSurface.tsx` (105–125); `tests/unit/crearRecursoSurface.test.tsx` (130–150). **Total:** 325–385 A+D.
-
-**Review focus:** review renders the PR 12 projection, duplicate submit is impossible, known errors preserve a retryable draft, and only `CREATED` calls `onCreated` once. **Command:** `pnpm exec vitest run tests/unit/resourceCreation.payload.test.ts tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck`. **Runtime scenario:** review an omitted optional value, submit once, observe known-error retry and confirmed-success callback. **Rollback:** restore review/submit/result-success region only, retaining all capture stages and payload contract.
-
-- [ ] **RED:** Add failing surface tests for review/payload parity, disabled incomplete/submitting creation, duplicate-submit prevention, known administrative error with manual retry, and `CREATED` invoking `onCreated` exactly once. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Render review and success presentation in `ResourceCreationDetails.tsx`; in `CrearRecursoSurface.tsx`, submit only the PR 12 payload, retain known errors in review, and invoke the existing `onCreated={() => void refetchActive()}` path only on confirmed `CREATED`. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Assert the displayed review and API argument are equivalent for populated and omitted optional values, run the stated command, and commit submit behavior with its tests. <!-- sdd-owner: implementation -->
-
-### PR 14 — Uncertain outcomes, dialog focus completion, and prototype cleanup (target: PR 13)
-
-**Bounded files:** `src/features/resources-master/ResourceCreationDetails.tsx` (70–85); `src/features/resources-master/CrearRecursoSurface.tsx` (80–95); `src/features/resources-master/resourcesMaster.css` (0–25 deleted only if last consumer); `tests/unit/crearRecursoSurface.test.tsx` (125–145). **Total:** 275–350 A+D.
-
-**Review focus:** uncertain writes do not retry or refresh until a real draft mutation; Escape closes once and restores opener/fallback; the replaced prototype result region and final CSS hooks vanish in this same child. **Command:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx && pnpm typecheck`. **Runtime scenario:** induce unknown result, return and mutate data before retry; then Escape with eligible and ineligible opener. **Rollback:** restore only uncertainty/focus/result region and CSS hooks removed here, retaining confirmed submit behavior.
-
-- [ ] **RED:** Add failing surface tests for uncertain-result messaging, blocked identical replay, mutation-based revision unlock, no `onCreated`, one Escape closure, eligible opener restoration, and fallback focus. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Complete uncertain-result presentation and revision gating in `ResourceCreationDetails.tsx`/`CrearRecursoSurface.tsx`, retain overlay registration/focus restoration, and remove the replaced prototype result region and `resourcesMaster.css` only after its last consumer is gone. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove known-error, success, and uncertain outcomes remain distinct and no duplicate selectable prototype path exists, run the stated command, and commit the completed outcomes with their tests. <!-- sdd-owner: implementation -->
-
-### PR 15 — Browser, axe, refetch, and architecture closure (target: PR 14)
-
-**Bounded files:** `tests/e2e/resourcesMaster.workstation.spec.ts` (80–100); `tests/unit/resourcesMasterScreenRefetch.test.tsx` (35–45); `tests/architecture/keyboardBoundaries.test.ts` (20–25); `tests/architecture/resourceCreationBoundaries.test.ts` (new, 65–85); `tests/architecture/queryZodBoundaries.test.ts`, `tests/architecture/catalogHierarchyBoundaries.test.ts`, and `tests/architecture/runtimeFixtureIsolation.test.ts` (combined, 30–45). **Total:** 230–300 A+D.
-
-**Review focus:** this is closure evidence for behavior already tested in its owning vertical children, not a substitute for missing unit evidence: browser keyboard/focus/axe, active-query-only refetch, and feature boundaries/file limits. **Command:** `pnpm exec vitest run tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/keyboardBoundaries.test.ts tests/architecture/queryZodBoundaries.test.ts tests/architecture/catalogHierarchyBoundaries.test.ts tests/architecture/runtimeFixtureIsolation.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts && pnpm typecheck`. **Runtime scenario:** Chromium at 1440×980 completes keyboard-only creation and axe checks selector/review states. **Rollback:** remove only closure tests/guards; do not revert production behavior.
-
-- [ ] **RED:** Add failing browser/refetch/architecture expectations for keyboard-only staged creation, local-filter continuation/dedupe, Escape opener/fallback, axe dialog states, active-query-only refresh, no global listener, feature-local imports, and runtime files below 500 lines. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Update only the named tests and guards to exercise the completed behavior, including `onCreated → refetchActive()` solely after `CREATED`, without broad invalidation, optimistic insertion, or production edits. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Run the stated browser/architecture command, remove duplicated assertions while retaining distinct end-to-end coverage, and commit the closure evidence with exact results. <!-- sdd-owner: implementation -->
-
-## Final verification and parent-owned lifecycle actions
-
-- [ ] Run the complete final gate after PR 15: `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourceCreation.payload.test.ts tests/unit/resourceCreation.loaders.test.ts tests/unit/StagedSearchSelector.test.tsx tests/unit/crearRecursoSurface.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/keyboardBoundaries.test.ts tests/architecture/queryZodBoundaries.test.ts tests/architecture/catalogHierarchyBoundaries.test.ts tests/architecture/runtimeFixtureIsolation.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts && pnpm typecheck && pnpm lint && pnpm format:check && pnpm build`; record exact results and do not report unavailable gates as passed. <!-- sdd-owner: implementation -->
-
-- [ ] Create/reuse the draft/no-merge tracker and feature-branch child chain, confirm immediate-predecessor targets and each `📍` diagram, and stop for ask-on-risk when `git diff --numstat` reaches 400 A+D for a cohesive child. <!-- sdd-owner: parent -->
-- [ ] Start or reuse bounded review for every child with its clean diff, focused evidence, runtime result, review focus, rollback boundary, and auditable `7c42860` replacement evidence; keep the tracker unmerged until all children are accepted. <!-- sdd-owner: parent -->
-- [ ] After accepted verification, sync this approved change into `openspec/specs/keyboard-first-resource-creation/spec.md`, preserving canonical compatibility specs and leaving `openspec/config.yaml` unchanged. <!-- sdd-owner: parent -->
-- [ ] Archive `openspec/changes/keyboard-first-resource-creation/` only through the repository OpenSpec archive workflow after canonical sync, final gates, and lifecycle review; record deviations, unexecuted checks, or follow-ups rather than silently closing. <!-- sdd-owner: parent -->
+- [ ] Create or reuse the authorized draft/no-merge tracker for `openspec/changes/keyboard-first-resource-creation/tasks.md` and the local feature-branch chain; verify every child targets its immediate predecessor and contains its `📍` dependency diagram, with no push, PR publication, or release. <!-- sdd-owner: parent -->
+- [ ] Before committing the rewritten `openspec/changes/keyboard-first-resource-creation/tasks.md`, split its over-budget documentation diff into reviewable <400 A+D commits or stop for an explicit maintainer decision; do not hide it in an implementation child. <!-- sdd-owner: parent -->
+- [ ] Start or reuse bounded review for each source/test work unit named in `openspec/changes/keyboard-first-resource-creation/tasks.md`, using its clean diff, exact RED/GREEN/TRIANGULATE evidence, focused command result, runtime result, dependency, and rollback boundary. <!-- sdd-owner: parent -->
+- [ ] Treat the backend-v1 gate in `openspec/changes/keyboard-first-resource-creation/{proposal.md,specs/keyboard-first-resource-creation/spec.md,design.md,design-details.md}` as a lifecycle hold: verify all exact contracts and any required artifact update before authorizing PR 12. <!-- sdd-owner: parent -->
+- [ ] After accepted implementation, run the complete applicable quality suite from `openspec/config.yaml`, record unavailable checks or deviations in this change, then follow the repository OpenSpec canonical-sync and archive workflow without changing `openspec/config.yaml`. <!-- sdd-owner: parent -->
