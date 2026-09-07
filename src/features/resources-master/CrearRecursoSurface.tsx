@@ -28,7 +28,6 @@ import type {
   ResourceContextFamilyItem,
   ResourceContextTypeItem,
   ResourceId,
-  ResourceSummary,
 } from './resourcesMaster.types'
 
 const ADMIN_ERROR_MESSAGES: Record<string, string> = {
@@ -67,7 +66,7 @@ const extractAdminCode = (error: unknown): string | undefined => {
   return typeof code === 'string' ? code : undefined
 }
 
-type SubmitStatus = 'idle' | 'submitting' | 'created' | 'error' | 'uncertain'
+type SubmitStatus = 'idle' | 'submitting' | 'error' | 'uncertain'
 
 const unitLabel = (unit: { nombre: string; simbolo?: string }) =>
   unit.simbolo ? `${unit.nombre} (${unit.simbolo})` : unit.nombre
@@ -145,7 +144,6 @@ export function CrearRecursoSurface({
   const [descripcion, setDescripcion] = useState('')
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle')
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [created, setCreated] = useState<ResourceSummary | null>(null)
   const [contextError, setContextError] = useState<ContextField | null>(null)
   const [nombreError, setNombreError] = useState(false)
   const nombreRef = useRef<HTMLInputElement>(null)
@@ -169,7 +167,6 @@ export function CrearRecursoSurface({
       setDescripcion('')
       setSubmitStatus('idle')
       setSubmitError(null)
-      setCreated(null)
       setContextError(null)
       setNombreError(false)
       clearAttributes()
@@ -432,7 +429,7 @@ export function CrearRecursoSurface({
     setSubmitStatus('submitting')
     setSubmitError(null)
     try {
-      const result = await api.createResource({
+      await api.createResource({
         claseRecursoId: classId,
         familiaRecursoId: familyId,
         tipoRecursoId: typeId,
@@ -442,8 +439,7 @@ export function CrearRecursoSurface({
         valores: buildValores(),
         ownership: { kind: 'GLOBAL' },
       })
-      setCreated(result.item)
-      setSubmitStatus('created')
+      setSubmitStatus('idle')
       onCreated?.()
     } catch (error) {
       const code = extractAdminCode(error)
@@ -598,27 +594,7 @@ export function CrearRecursoSurface({
 
             {step === 'contract-pending' && <ResourceCreationContractPending />}
 
-            {step === 3 && submitStatus === 'created' && created && (
-              <div className="resources-context-field">
-                <p role="status">✓ Recurso creado</p>
-                <dl>
-                  <div>
-                    <dt>ID</dt>
-                    <dd>{String(created.id)}</dd>
-                  </div>
-                  <div>
-                    <dt>Identidad</dt>
-                    <dd>{created.identificadorTecnico}</dd>
-                  </div>
-                  <div>
-                    <dt>Estado</dt>
-                    <dd>{created.activo ? 'Activo' : 'Inactivo'}</dd>
-                  </div>
-                </dl>
-              </div>
-            )}
-
-            {step === 3 && submitStatus !== 'created' && (
+            {step === 3 && (
               <>
                 <Field label="Nombre *" htmlFor="resource-nombre">
                   <input
@@ -723,27 +699,25 @@ export function CrearRecursoSurface({
                 Volver
               </Button>
             )}
-            {step === 3 &&
-              submitStatus !== 'created' &&
-              submitStatus !== 'uncertain' && (
-                <>
-                  <Button
-                    variant="outline"
-                    onPress={backToAttributes}
-                    type="button"
-                    isDisabled={submitStatus === 'submitting'}
-                  >
-                    Volver
-                  </Button>
-                  <Button
-                    type="button"
-                    isDisabled={submitStatus === 'submitting'}
-                    onPress={() => void submit()}
-                  >
-                    Crear recurso
-                  </Button>
-                </>
-              )}
+            {step === 3 && submitStatus !== 'uncertain' && (
+              <>
+                <Button
+                  variant="outline"
+                  onPress={backToAttributes}
+                  type="button"
+                  isDisabled={submitStatus === 'submitting'}
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="button"
+                  isDisabled={submitStatus === 'submitting'}
+                  onPress={() => void submit()}
+                >
+                  Crear recurso
+                </Button>
+              </>
+            )}
             {step === 3 && submitStatus === 'uncertain' && (
               <>
                 <Button
@@ -755,16 +729,6 @@ export function CrearRecursoSurface({
                 </Button>
                 <Button type="button" onPress={close}>
                   Cerrar y buscar en el listado
-                </Button>
-              </>
-            )}
-            {step === 3 && submitStatus === 'created' && (
-              <>
-                <Button variant="outline" onPress={() => open()} type="button">
-                  Crear otro
-                </Button>
-                <Button type="button" onPress={close}>
-                  Cerrar
                 </Button>
               </>
             )}

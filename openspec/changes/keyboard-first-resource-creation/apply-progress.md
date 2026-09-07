@@ -626,3 +626,41 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Workload / rollback:** source/test A+D is 239 (11 additions, 228 deletions), below 399; restore only the model/test/guard deletion to roll back. No commit, push, PR, review, receipt, or lifecycle action.
 - **Surface split result:** `CrearRecursoSurface.tsx` does not import the removed model protocol, and typecheck is green; it does not prevent this green split. Its legacy payload/create code remains for PR 9B.
 - **Remaining:** PR 9 RED/GREEN/TRIANGULATE rows remain unchecked for the deferred surface cleanup and close/back/no-create evidence; parent-owned lifecycle rows are deferred unchanged.
+
+---
+## PR 9B — surface cleanup budget stop
+- **State/status:** blocked before persistence; native status was `apply: ready`, strict TDD and repo-local allowed roots were consumed without warnings.
+- **TDD evidence:** safety net 43 passed/6 skipped; RED added a source-negative architecture guard and failed on `api.createResource`; the complete deletion trial made that guard green and focused surface/model/architecture passed 44/6, but was reverted before completion for budget compliance.
+- **Budget:** the cohesive source-plus-architecture trial measured exactly **434 A+D** (27 additions, 407 deletions), exceeding the hard 399 limit by 35; no smaller honest PR9B surface slice was authorized.
+- **Final verification after reversion:** `pnpm test` 414 passed/6 skipped; `pnpm typecheck`, targeted ESLint, targeted Prettier, and `git diff --check` passed.
+- **Tasks/files:** PR 9 rows remain visibly unchecked as directed; only this cumulative progress record changed, and no API/types/screen/E2E/model/backend/shared/global file changed.
+- **Required decision:** authorize cohesive PR9B.1/PR9B.2 source boundaries or an explicit `size:exception`; no commit, push, PR, review, receipt, or lifecycle action was performed.
+
+---
+## PR 9B1 — dead created-result presentation deletion
+
+- **Status / action context:** consumed authoritative `gentle-ai sdd-status keyboard-first-resource-creation`: `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, all required artifacts present, strict TDD active, and no blockers. Parent-provided repo-local edit surfaces were honored; no action-context warning occurred.
+- **Boundary:** authorized auto-chain PR9B1 only (`PR 8 → PR 9A → 📍 PR 9B1 → PR 9B2`). This removes only the dead created-result presentation and its exclusive state/imports; review form, `buildValores`, `submit`, `api.createResource`, error/uncertain states, and the unused `onCreated` seam remain buildable. Excluding the inherited 9-line PR9B stop record, this slice is exactly **56 additions + 56 deletions = 112 A+D**, below 399. No Paso 3/E2E test deletion, API/types/model/screen/docs/shared/global/backend change, commit, review, receipt, or lifecycle action occurred.
+- **Implementation:** removed the `ResourceSummary` result state/import, `created` submit status, result JSX, and **Crear otro** restart action. Successful dormant submission now returns its retained submit state to `idle` before retaining `onCreated?.()`.
+- **Persisted tasks:** no PR 9 checkbox was changed because every aggregate PR 9 implementation row remains incomplete until PR9B2 removes the review/payload/create flow. Parent-owned rows remain byte-for-byte unchanged.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR9B1 created-result deletion | `tests/architecture/resourceCreationBoundaries.test.ts` | Architecture source boundary | 3/3 passed | Added a negative guard; 1/4 failed on `✓ Recurso creado` | 4/4 passed after the bounded deletion; typecheck passed | Guard independently rejects result presentation, restart action, created-status branch, and result setter | Prettier formatted the surface; guard and typecheck remained green |
+
+### Verification
+
+- Focused `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts` — 44 passed, 6 skipped.
+- `pnpm test` — 415 passed, 6 skipped.
+- `pnpm typecheck`, `pnpm lint`, and `pnpm format:check` — passed.
+- `git diff --check` — passed after this progress update.
+
+### Remaining implementation tasks
+
+- `- [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke onCreated or any create operation. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Delete the bounded legacy review, submit, payload, ownership, and result branches plus their obsolete tests while retaining the onCreated → refetchActive() seam unused by pending. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->`
+
+- **Rollback:** restore only this result-state/result-JSX/restart-action deletion and its architecture guard; retain Unit→Contrato pendiente and the deferred PR9B2 review/submit code.

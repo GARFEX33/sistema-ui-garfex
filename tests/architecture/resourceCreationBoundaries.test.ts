@@ -47,4 +47,11 @@ describe('resource creation safety wall', () => {
     expect(modelSource).not.toContain('isResourceDataValid')
     expect(modelSource).not.toContain('canSubmitResourceCreation')
   })
+
+  it('does not retain the legacy created-result presentation or restart action', () => {
+    expect(surfaceSource).not.toContain('✓ Recurso creado')
+    expect(surfaceSource).not.toContain('Crear otro')
+    expect(surfaceSource).not.toContain("submitStatus === 'created'")
+    expect(surfaceSource).not.toContain('setCreated')
+  })
 })
