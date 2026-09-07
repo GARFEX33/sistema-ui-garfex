@@ -161,7 +161,6 @@ const populatedDraft = () => {
     draft: {
       ...state.draft,
       unitId: 'unit-1',
-      attributeIds: ['attribute-1'],
       revision: 4,
     },
   }
@@ -228,7 +227,7 @@ describe('resource creation navigation and hierarchy cascades', () => {
       'unit',
     ],
   ] as const)(
-    'replacing %s atomically clears its Unit and attribute placeholders',
+    'replacing %s atomically clears its Unit placeholder',
     (_, event, hierarchy, stage) => {
       const before = populatedDraft()
       const state = resourceCreationReducer(before, event)
@@ -238,7 +237,6 @@ describe('resource creation navigation and hierarchy cascades', () => {
         draft: {
           hierarchy,
           unitId: null,
-          attributeIds: [],
           revision: before.draft.revision + 1,
         },
       })
@@ -340,60 +338,10 @@ const createdItem = {
   classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
 }
 
-describe('resource creation attributes, data, and submit state', () => {
-  const draftWithAttributes = () => {
-    const state = populatedDraft()
-    return {
-      ...state,
-      draft: {
-        ...state.draft,
-        attributeValues: { 'assignment-1': 'previous' },
-        omittedAttributeIds: new Set(['assignment-2']),
-      },
-    }
-  }
-
-  it('keys attribute values by assignment ID and makes omission remove a value', () => {
-    const before = draftWithAttributes()
-    const omitted = resourceCreationReducer(before, {
-      type: 'OMIT_ATTRIBUTE',
-      attributeId: 'assignment-1',
-    })
-    const restored = resourceCreationReducer(omitted, {
-      type: 'SET_ATTRIBUTE_VALUE',
-      attributeId: 'assignment-2',
-      value: 'selected',
-    })
-
-    expect(omitted.draft.attributeValues).toEqual({})
-    expect(omitted.draft.omittedAttributeIds).toEqual(
-      new Set(['assignment-1', 'assignment-2']),
-    )
-    expect(restored.draft.attributeValues).toEqual({
-      'assignment-2': 'selected',
-    })
-    expect(restored.draft.omittedAttributeIds).toEqual(
-      new Set(['assignment-1']),
-    )
-    expect(restored.draft.revision).toBe(before.draft.revision + 2)
-  })
-
-  it('does not revise the draft for repeated effective attribute or data mutations', () => {
-    const before = draftWithAttributes()
-    const sameValue = resourceCreationReducer(before, {
-      type: 'SET_ATTRIBUTE_VALUE',
-      attributeId: 'assignment-1',
-      value: 'previous',
-    })
-    const omitted = resourceCreationReducer(sameValue, {
-      type: 'OMIT_ATTRIBUTE',
-      attributeId: 'assignment-3',
-    })
-    const repeatedOmission = resourceCreationReducer(omitted, {
-      type: 'OMIT_ATTRIBUTE',
-      attributeId: 'assignment-3',
-    })
-    const data = resourceCreationReducer(repeatedOmission, {
+describe('resource creation resource-data and submit state', () => {
+  it('does not revise the draft for repeated resource-data mutations', () => {
+    const before = open()
+    const data = resourceCreationReducer(before, {
       type: 'SET_RESOURCE_DATA',
       nombre: ' Cable UTP ',
       descripcion: ' Categoría 6 ',
@@ -404,9 +352,8 @@ describe('resource creation attributes, data, and submit state', () => {
       descripcion: ' Categoría 6 ',
     })
 
-    expect(sameValue.draft).toBe(before.draft)
-    expect(repeatedOmission.draft.revision).toBe(omitted.draft.revision)
-    expect(repeatedData.draft.revision).toBe(data.draft.revision)
+    expect(data.draft.revision).toBe(before.draft.revision + 1)
+    expect(repeatedData.draft).toBe(data.draft)
   })
 
   it('validates trimmed Nombre while keeping Descripción optional in resource data', () => {
@@ -491,34 +438,6 @@ describe('resource creation attributes, data, and submit state', () => {
     })
     expect(created.submit).toEqual({ status: 'created', item: createdItem })
     expect(created.stage).toEqual({ kind: 'result', outcome: 'created' })
-  })
-
-  it('preserves values and omissions across navigation but clears them for a replacement Type', () => {
-    const before = draftWithAttributes()
-    const navigated = resourceCreationReducer(before, {
-      type: 'NAVIGATE_TO_STAGE',
-      stage: { kind: 'resource-data' },
-    })
-    const reconfirmed = resourceCreationReducer(navigated, {
-      type: 'CONFIRM_TYPE',
-      item: typeItem,
-    })
-    const replaced = resourceCreationReducer(reconfirmed, {
-      type: 'CONFIRM_TYPE',
-      item: { ...typeItem, id: 'type-2' },
-    })
-
-    expect(reconfirmed.draft.attributeValues).toEqual({
-      'assignment-1': 'previous',
-    })
-    expect(reconfirmed.draft.omittedAttributeIds).toEqual(
-      new Set(['assignment-2']),
-    )
-    expect(replaced.draft).toMatchObject({
-      attributeValues: {},
-      attributeIds: [],
-    })
-    expect(replaced.draft.omittedAttributeIds).toEqual(new Set())
   })
 
   it('returns an uncertain result to review without unlocking its unchanged revision', () => {

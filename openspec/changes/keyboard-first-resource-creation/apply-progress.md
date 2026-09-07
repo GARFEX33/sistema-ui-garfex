@@ -588,3 +588,22 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **TDD:** rail and pending-back regressions failed before reducer-authoritative navigation; final focused surface/loader/model run passed 63 with 13 intentional skips.
 - **Verification:** full suite passed 419 with 13 skips; typecheck, targeted ESLint/Prettier, and diff checks passed. PR 7 rows are now `[x]`.
 - **Workload:** this evidence-only reconciliation stays below 120 A+D; no runtime source changes.
+
+---
+
+## PR 8B — unreachable attribute reducer and suite cleanup
+
+- **Status:** consumed `gentle-ai.sdd-status@2`: OpenSpec `applyState: ready`, strict TDD, repo-local allowed root, no blockers or action-context warnings.
+- **Completed/persisted:** PR 8 RED/GREEN/TRIANGULATE rows are `[x]`; committed PR8A plus this cleanup satisfy the bounded PR8 rows.
+- **Files:** model, model/surface/architecture tests, tasks, and this record; no `CrearRecursoSurface`, API/types, or backend edits.
+- **Behavior:** removed disconnected attribute stage/draft/events/reset/reducer arms and only skipped Paso 2; retained resource-data/review/create bridge and Paso 3 fixtures/helpers. Class/Family/Type/Unit/pending behavior is unchanged.
+
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR8B deletion | 48 passed, 13 skipped | source-boundary assertion failed | 47 passed, 6 skipped | six negative symbols; resource-data-only repeated mutation; Prettier green |
+
+- **Verification:** focused surface/model/loader/architecture 63 passed, 6 skipped; full suite 418 passed, 6 skipped; typecheck, targeted ESLint/Prettier, and diff check passed. Source scan finds removed model symbols only in the guard; Unit RTL reaches pending without legacy requests.
+- **Runtime/rollback:** keyboard Unit confirmation reaches `Contrato pendiente`; browser N/A. Restore only this cleanup to roll back.
+- **Boundary:** `PR 7 → PR8A → 📍 PR8B → PR9`; no commit, push, PR, review, receipt, or lifecycle action.
+- **Remaining:** `- [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke onCreated or any create operation. <!-- sdd-owner: implementation -->`

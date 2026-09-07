@@ -113,9 +113,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 7. **Start → finish:** unreachable legacy attribute/manual views remain in source → those regions and tests are removed while `contract-pending` stays the only end after Unit. Split again by source region rather than exceed 399 A+D. **Discovery targets:** imports and branches in `src/features/resources-master/CrearRecursoSurface.tsx`; legacy attribute presenters/loaders under `src/features/resources-master/`; stale expectations in `tests/unit/crearRecursoSurface.test.tsx` and `tests/unit/resourceCreation.loaders.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.loaders.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** complete Unit and inspect only Contract pending. **Rollback:** restore this deletion slice only; retain the safety wall.
 
-- [ ] **RED:** Replace stale legacy assertions with failing negative tests that the production Creador exposes no TEXTO, NUMERO, BOOLEANO, OPCION, Nombre, Descripción, or legacy attribute request after Unit. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Delete one bounded legacy attribute/manual-capture region at a time from the discovery targets, including now-orphaned imports and tests, without deleting current API operations used by other consumers. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Run the focused command and a source-boundary scan proving no reachable Creador branch renders a free business-value input; record the Unit-to-pending runtime result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Replace stale legacy assertions with failing negative tests that the production Creador exposes no TEXTO, NUMERO, BOOLEANO, OPCION, Nombre, Descripción, or legacy attribute request after Unit. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Delete one bounded legacy attribute/manual-capture region at a time from the discovery targets, including now-orphaned imports and tests, without deleting current API operations used by other consumers. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Run the focused command and a source-boundary scan proving no reachable Creador branch renders a free business-value input; record the Unit-to-pending runtime result. <!-- sdd-owner: implementation -->
 
 ### PR 9 — Remove legacy review, payload, and create flow
 

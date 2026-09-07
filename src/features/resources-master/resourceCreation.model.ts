@@ -126,7 +126,6 @@ export type CreationStage =
   | { kind: 'type' }
   | { kind: 'unit' }
   | { kind: 'contract-pending'; blockedCapability: 'attributes-v1' }
-  | { kind: 'attribute'; attributeId: string; index: number }
   | { kind: 'resource-data' }
   | { kind: 'review' }
   | { kind: 'result'; outcome: 'created' | 'uncertain' }
@@ -134,9 +133,6 @@ export type CreationStage =
 export type CreationDraft = Readonly<{
   hierarchy: InitialResourceHierarchySnapshot
   unitId: ResourceId | null
-  attributeIds: readonly ResourceId[]
-  attributeValues: Readonly<Record<string, string>>
-  omittedAttributeIds: ReadonlySet<string>
   authoritativeEvaluation: null
   catalogFingerprint: null
   nombre: string
@@ -163,8 +159,6 @@ export type CreationEvent =
   | { type: 'CONFIRM_FAMILY'; item: ResourceContextFamilyItem }
   | { type: 'CONFIRM_TYPE'; item: ResourceContextTypeItem }
   | { type: 'CONFIRM_UNIT'; unitId: ResourceId }
-  | { type: 'SET_ATTRIBUTE_VALUE'; attributeId: string; value: string }
-  | { type: 'OMIT_ATTRIBUTE'; attributeId: string }
   | { type: 'SET_RESOURCE_DATA'; nombre: string; descripcion: string }
   | { type: 'CONFIRM_RESOURCE_DATA' }
   | { type: 'SUBMIT_STARTED' }
@@ -177,9 +171,6 @@ export type CreationEvent =
 const emptyDraft = (): CreationDraft => ({
   hierarchy: emptySnapshot,
   unitId: null,
-  attributeIds: [],
-  attributeValues: {},
-  omittedAttributeIds: new Set(),
   authoritativeEvaluation: null,
   catalogFingerprint: null,
   nombre: '',
@@ -217,9 +208,6 @@ const clearDependentPlaceholders = (
   ...draft,
   hierarchy,
   unitId: null,
-  attributeIds: [],
-  attributeValues: {},
-  omittedAttributeIds: new Set(),
   revision: draft.revision + 1,
 })
 
@@ -258,41 +246,6 @@ const withDraft = (
   draft: CreationDraft,
 ): CreationState => (draft === state.draft ? state : { ...state, draft })
 
-const setAttributeValue = (
-  draft: CreationDraft,
-  attributeId: string,
-  value: string,
-): CreationDraft => {
-  const wasOmitted = draft.omittedAttributeIds.has(attributeId)
-  if (draft.attributeValues[attributeId] === value && !wasOmitted) return draft
-
-  const omittedAttributeIds = new Set(draft.omittedAttributeIds)
-  omittedAttributeIds.delete(attributeId)
-  return {
-    ...draft,
-    attributeValues: { ...draft.attributeValues, [attributeId]: value },
-    omittedAttributeIds,
-    revision: draft.revision + 1,
-  }
-}
-
-const omitAttribute = (
-  draft: CreationDraft,
-  attributeId: string,
-): CreationDraft => {
-  const hasValue = attributeId in draft.attributeValues
-  if (!hasValue && draft.omittedAttributeIds.has(attributeId)) return draft
-
-  const attributeValues = { ...draft.attributeValues }
-  delete attributeValues[attributeId]
-  return {
-    ...draft,
-    attributeValues,
-    omittedAttributeIds: new Set([...draft.omittedAttributeIds, attributeId]),
-    revision: draft.revision + 1,
-  }
-}
-
 const setResourceData = (
   draft: CreationDraft,
   nombre: string,
@@ -318,13 +271,6 @@ export const resourceCreationReducer = (
   if (event.type === 'NAVIGATE_TO_STAGE')
     return { ...state, stage: event.stage }
   if (event.type === 'BACK') return { ...state, stage: backStage(state.stage) }
-  if (event.type === 'SET_ATTRIBUTE_VALUE')
-    return withDraft(
-      state,
-      setAttributeValue(draft, event.attributeId, event.value),
-    )
-  if (event.type === 'OMIT_ATTRIBUTE')
-    return withDraft(state, omitAttribute(draft, event.attributeId))
   if (event.type === 'SET_RESOURCE_DATA')
     return withDraft(
       state,
