@@ -426,6 +426,7 @@ export type UnitCandidateHydrator = Readonly<{
   getState: () => UnitCandidateHydrationState
   setSnapshot: (snapshot: UnitCandidateHydrationSnapshot | null) => void
   start: () => Promise<boolean>
+  retry: () => Promise<boolean>
 }>
 
 type CapturedUnitCandidateSnapshot = Readonly<{
@@ -501,33 +502,42 @@ export function createUnitCandidateHydrator(options: {
     snapshot?.generation === request.generation &&
     snapshot.signature === request.signature
 
-  const hydrate = async (request: CapturedUnitCandidateSnapshot) => {
+  const hydrate = async (
+    request: CapturedUnitCandidateSnapshot,
+    references: readonly UnitPolicyReference[],
+    retainedCandidates: readonly UnitCandidate[],
+  ) => {
     state = {
       status: 'loading',
       tipoId: request.tipoId,
       snapshotSignature: request.signature,
       generation: request.generation,
-      candidates: [],
-      failedUnitIds: [],
+      candidates: retainedCandidates,
+      failedUnitIds: references.map((reference) => reference.unidadId),
     }
     try {
       const details = await Promise.allSettled(
-        request.references.map((reference) =>
+        references.map((reference) =>
           options.getUnit({ unidadId: reference.unidadId }),
         ),
       )
       if (!isCurrent(request)) return false
 
+      const candidatesByUnitId = new Map(
+        retainedCandidates.map((candidate) => [
+          options.identity(candidate.unidadId),
+          candidate,
+        ]),
+      )
       const failedUnitIds: ResourceId[] = []
-      const candidates: UnitCandidate[] = []
       details.forEach((result, index) => {
-        const reference = request.references[index]!
+        const reference = references[index]!
         if (result.status === 'rejected') {
           failedUnitIds.push(reference.unidadId)
           return
         }
         if (!isEligibleUnitDetail(result.value)) return
-        candidates.push({
+        candidatesByUnitId.set(options.identity(reference.unidadId), {
           unidadId: result.value.id,
           clave: result.value.clave,
           nombre: result.value.nombre,
@@ -537,6 +547,12 @@ export function createUnitCandidateHydrator(options: {
           principal: reference.principal,
           selected: reference.selected,
         })
+      })
+      const candidates = request.references.flatMap((reference) => {
+        const candidate = candidatesByUnitId.get(
+          options.identity(reference.unidadId),
+        )
+        return candidate === undefined ? [] : [candidate]
       })
       state = {
         status: failedUnitIds.length
@@ -592,7 +608,24 @@ export function createUnitCandidateHydrator(options: {
       if (pending !== null && pendingGeneration === snapshot.generation)
         return pending
       const request = snapshot
-      const requestPromise = hydrate(request)
+      const requestPromise = hydrate(request, request.references, [])
+      pending = requestPromise
+      pendingGeneration = request.generation
+      return requestPromise
+    },
+    retry: () => {
+      if (snapshot === null) return Promise.resolve(false)
+      if (pending !== null && pendingGeneration === snapshot.generation)
+        return pending
+      if (state.status !== 'partial-error' || state.failedUnitIds.length === 0)
+        return Promise.resolve(false)
+      const failedUnitKeys = new Set(state.failedUnitIds.map(options.identity))
+      const references = snapshot.references.filter((reference) =>
+        failedUnitKeys.has(options.identity(reference.unidadId)),
+      )
+      if (references.length === 0) return Promise.resolve(false)
+      const request = snapshot
+      const requestPromise = hydrate(request, references, state.candidates)
       pending = requestPromise
       pendingGeneration = request.generation
       return requestPromise

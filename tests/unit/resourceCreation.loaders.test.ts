@@ -482,4 +482,132 @@ describe('Unit candidate hydration', () => {
       failedUnitIds: [],
     })
   })
+
+  it('retries only failed identities once and restores them in policy order', async () => {
+    const { hydrator, getUnit, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: null,
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+        { policyId: 'p-b', unidadId: 'u-b', principal: true, selected: false },
+        { policyId: 'p-c', unidadId: 'u-c', principal: false, selected: true },
+      ],
+    })
+    const first = hydrator.start()
+    requests[0]!.resolve(unitDetail('u-a'))
+    requests[1]!.reject(new Error('offline'))
+    requests[2]!.reject(new Error('timeout'))
+    expect(await first).toBe(false)
+
+    const retry = hydrator.retry()
+    expect(hydrator.retry()).toBe(retry)
+    expect(getUnit).toHaveBeenCalledTimes(5)
+    expect(getUnit).toHaveBeenNthCalledWith(4, { unidadId: 'u-b' })
+    expect(getUnit).toHaveBeenNthCalledWith(5, { unidadId: 'u-c' })
+    requests[3]!.resolve(unitDetail('u-b'))
+    requests[4]!.resolve(unitDetail('u-c'))
+
+    expect(await retry).toBe(true)
+    expect(hydrator.getState()).toMatchObject({
+      status: 'ready',
+      candidates: [
+        expect.objectContaining({ unidadId: 'u-a' }),
+        expect.objectContaining({ unidadId: 'u-b', principal: true }),
+        expect.objectContaining({ unidadId: 'u-c', selected: true }),
+      ],
+      failedUnitIds: [],
+    })
+  })
+
+  it('keeps a failed retry recoverable until its ordered candidate resolves', async () => {
+    const { hydrator, getUnit, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: null,
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+        { policyId: 'p-b', unidadId: 'u-b', principal: false, selected: false },
+        { policyId: 'p-c', unidadId: 'u-c', principal: false, selected: false },
+      ],
+    })
+    const first = hydrator.start()
+    requests[0]!.resolve(unitDetail('u-a'))
+    requests[1]!.reject(new Error('offline'))
+    requests[2]!.reject(new Error('timeout'))
+    await first
+
+    const firstRetry = hydrator.retry()
+    requests[3]!.resolve(unitDetail('u-b'))
+    requests[4]!.reject(new Error('still offline'))
+    expect(await firstRetry).toBe(false)
+    expect(hydrator.getState()).toMatchObject({
+      status: 'partial-error',
+      candidates: [
+        expect.objectContaining({ unidadId: 'u-a' }),
+        expect.objectContaining({ unidadId: 'u-b' }),
+      ],
+      failedUnitIds: ['u-c'],
+    })
+
+    const finalRetry = hydrator.retry()
+    expect(getUnit).toHaveBeenLastCalledWith({ unidadId: 'u-c' })
+    requests[5]!.resolve(unitDetail('u-c'))
+    expect(await finalRetry).toBe(true)
+    expect(
+      hydrator.getState().candidates.map(({ unidadId }) => unidadId),
+    ).toEqual(['u-a', 'u-b', 'u-c'])
+  })
+
+  it('does not call details when retry has no failed identities', async () => {
+    const { hydrator, getUnit, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: null,
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+      ],
+    })
+    const first = hydrator.start()
+    requests[0]!.resolve(unitDetail('u-a'))
+    expect(await first).toBe(true)
+
+    expect(await hydrator.retry()).toBe(false)
+    expect(getUnit).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a stale retry without clearing a newer pending snapshot', async () => {
+    const { hydrator, requests } = setup()
+    hydrator.setSnapshot({
+      tipoId: 'type-a',
+      cursor: null,
+      references: [
+        { policyId: 'p-a', unidadId: 'u-a', principal: false, selected: false },
+      ],
+    })
+    const first = hydrator.start()
+    requests[0]!.reject(new Error('offline'))
+    await first
+
+    const staleRetry = hydrator.retry()
+    hydrator.setSnapshot({
+      tipoId: 'type-b',
+      cursor: null,
+      references: [
+        { policyId: 'p-b', unidadId: 'u-b', principal: false, selected: true },
+      ],
+    })
+    const current = hydrator.start()
+    requests[1]!.resolve(unitDetail('u-a'))
+
+    expect(await staleRetry).toBe(false)
+    expect(hydrator.start()).toBe(current)
+    requests[2]!.resolve(unitDetail('u-b'))
+    expect(await current).toBe(true)
+    expect(hydrator.getState()).toMatchObject({
+      status: 'ready',
+      tipoId: 'type-b',
+      candidates: [expect.objectContaining({ unidadId: 'u-b' })],
+    })
+  })
 })

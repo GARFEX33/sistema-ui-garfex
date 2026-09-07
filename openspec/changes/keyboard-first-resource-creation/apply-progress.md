@@ -527,3 +527,29 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, `getUnit` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Add the feature-local `UnitCandidate` resolver using only current Type-policy pages and `getUnit`, token/context/cursor adoption guards, first-order preservation, and principal/selected as focus preference only. <!-- sdd-owner: implementation -->
 - [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies OR-combine preference flags, retained resolved candidates survive a partial error, and repeated non-exhausted cursors fail recoverably; run the focused command. <!-- sdd-owner: implementation -->
+
+---
+
+## PR 6B2 — failed Unit-detail retry
+
+- **Status:** completed delegated PR 6B2 under native authoritative OpenSpec status `applyState: ready`, `nextRecommended: apply`, strict TDD, and repo-local allowed root; no action-context warnings.
+- **Boundary:** `PR 5 → PR 6A → PR 6B1 → 📍 PR 6B2`; retry only, with no UI/hook/API/backend/listarUnidades/PR7 or lifecycle work, commit, push, or PR action.
+- **Completed/persisted:** PR 6 RED, GREEN, and TRIANGULATE/REFACTOR checkboxes are now `[x]`; PR6A policy paging, PR6B1 stable hydration, and this retry evidence cover the combined rows.
+- **Behavior:** public `retry()` targets only the current failed Unit identities, returns the current same-generation promise during overlap, retains successful candidates, restores retry successes in policy-reference order, and preserves unresolved failed identities for another retry. A superseded Tipo snapshot rejects old adoption and cannot clear the newer pending promise; retry without failures makes no detail call.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 6B2 retry | `tests/unit/resourceCreation.loaders.test.ts` | Unit | 12/12 passed | 3 failures: public `retry` was absent | 15/15 passed after the minimal retry implementation | 16/16 covers repeated failed retry recovery/order, no-failure no-call, and stale Tipo retry retaining newer pending work | Prettier formatted loader/test; focused 16/16 remained green |
+
+- **Verification:** focused `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts` passed 16/16; `pnpm test` passed 415 with 13 skipped; `pnpm typecheck`, targeted ESLint, targeted Prettier, and `git diff --check` passed.
+- **Files:** `resourceCreation.loaders.ts`, `resourceCreation.loaders.test.ts`, `tasks.md`, and this record.
+- **Runtime:** N/A; this pure deferred-promise loader contract has no browser boundary before PR 7.
+- **Rollback:** remove `UnitCandidateHydrator.retry()` and its focused deferred-promise tests; retain PR6A policy paging and PR6B1 snapshot hydration.
+- **Deviation:** none.
+- **Remaining exact next implementation rows:**
+  - `- [ ] **RED:** Add failing surface tests for Unit-stage entry after Tipo, preferred-active-but-unconfirmed behavior, Enter/click confirmation, empty eligibility, partial error retry, and stale-Type invalidation. <!-- sdd-owner: implementation -->`
+  - `- [ ] **GREEN:** Connect the PR 7 resolver in \`useResourceCreationFlow.ts\` and render an explicit Unit \`StagedSearchSelector\` in \`CrearRecursoSurface.tsx\`, dispatching \`CONFIRM_UNIT\` only from explicit action. <!-- sdd-owner: implementation -->`
+  - `- [ ] **TRIANGULATE/REFACTOR:** Demonstrate a continuation can coexist with an immediately confirmable hydrated candidate while pending/failed hydration cannot advance, run the stated command, and commit Unit behavior with its tests. <!-- sdd-owner: implementation -->`
+- **Workload:** 209 A+D (26 progress + 6 task checkboxes + 49 loader + 128 tests), below the hard 399 limit.
