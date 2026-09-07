@@ -38,7 +38,6 @@ import type {
   ResourceContextTypeItem,
   ResourceId,
   ResourceSummary,
-  ResourceUnitPolicy,
 } from './resourcesMaster.types'
 
 const ADMIN_ERROR_MESSAGES: Record<string, string> = {
@@ -79,9 +78,7 @@ const extractAdminCode = (error: unknown): string | undefined => {
 
 type SubmitStatus = 'idle' | 'submitting' | 'created' | 'error' | 'uncertain'
 
-type UnitOption = ResourceUnitPolicy & { nombre: string; simbolo?: string }
-
-const unitLabel = (unit: UnitOption) =>
+const unitLabel = (unit: { nombre: string; simbolo?: string }) =>
   unit.simbolo ? `${unit.nombre} (${unit.simbolo})` : unit.nombre
 
 type AttributeField = {
@@ -94,13 +91,6 @@ type AttributeField = {
 }
 
 type ContextField = 'class' | 'family' | 'type' | 'unit'
-
-const contextErrorMessages: Record<ContextField, string> = {
-  class: 'Seleccioná una Clase.',
-  family: 'Seleccioná una Familia.',
-  type: 'Seleccioná un Tipo.',
-  unit: 'Seleccioná una Unidad natural.',
-}
 
 const contextFieldLabels: Record<ContextField, string> = {
   class: 'Clase',
@@ -181,35 +171,8 @@ export function CrearRecursoSurface({
   const nombreRef = useRef<HTMLInputElement>(null)
 
   const flow = useResourceCreationFlow(api)
-  const [units, loadUnits, clearUnits] = useLevel<UnitOption>()
   const [attributes, loadAttributes, clearAttributes] =
     useLevel<AttributeField>()
-
-  const loadUnitsForType = useCallback(
-    (typeId: ResourceId) =>
-      loadUnits(async () => {
-        const page = await api.listUnitPolicies({ tipoRecursoId: typeId })
-        const withNames = await Promise.all(
-          page.items
-            .filter((item) => item.effective)
-            .map(async (item) => {
-              const unit = await api.getUnit({ unidadId: item.unidadId })
-              return {
-                ...item,
-                nombre: unit?.nombre ?? key(item.unidadId),
-                simbolo: unit?.simbolo,
-              }
-            }),
-        )
-        const preselected =
-          withNames.find((item) => item.principal) ??
-          withNames.find((item) => item.selected) ??
-          null
-        if (preselected) setUnitId(preselected.unidadId)
-        return { items: withNames }
-      }),
-    [api, loadUnits],
-  )
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
@@ -231,15 +194,11 @@ export function CrearRecursoSurface({
       setContextError(null)
       setAttributeError(null)
       setNombreError(false)
-      clearUnits()
       clearAttributes()
-      if (prefix.typeItem) {
-        setTypeId(prefix.typeItem.id)
-        void loadUnitsForType(prefix.typeItem.id)
-      }
+      if (prefix.typeItem) setTypeId(prefix.typeItem.id)
       setIsOpen(true)
     },
-    [clearUnits, clearAttributes, flow, loadUnitsForType],
+    [clearAttributes, flow],
   )
 
   const action = useMemo(
@@ -300,6 +259,13 @@ export function CrearRecursoSurface({
   }, [attributeError, contextError, step])
 
   useEffect(() => {
+    if (step !== 1 || flow.state.stage.kind !== 'unit') return
+    dialogRef.current
+      ?.querySelector<HTMLInputElement>('input[aria-label="Unidad natural"]')
+      ?.focus()
+  }, [flow.state.stage.kind, step])
+
+  useEffect(() => {
     if (isOpen) {
       wasOpen.current = true
     } else if (wasOpen.current) {
@@ -335,7 +301,6 @@ export function CrearRecursoSurface({
     setFamilyId(null)
     setTypeId(null)
     setUnitId(null)
-    clearUnits()
     resetAttributesIfNeeded()
   }
 
@@ -347,7 +312,6 @@ export function CrearRecursoSurface({
     setFamilyId(item.id)
     setTypeId(null)
     setUnitId(null)
-    clearUnits()
     resetAttributesIfNeeded()
   }
 
@@ -360,7 +324,6 @@ export function CrearRecursoSurface({
     setTypeId(id)
     setUnitId(null)
     resetAttributesIfNeeded()
-    void loadUnitsForType(id)
   }
 
   const loadStep2 = (forTypeId: ResourceId) =>
@@ -427,8 +390,14 @@ export function CrearRecursoSurface({
     setStep('contract-pending')
   }
 
+  const returnToUnit = () => {
+    const typeItem = flow.state.draft.hierarchy.typeItem
+    if (typeItem) flow.confirmType(typeItem)
+  }
+
   const backToContext = () => {
-    setRailStageOverride('unit')
+    setRailStageOverride(null)
+    returnToUnit()
     setStep(1)
   }
 
@@ -478,7 +447,26 @@ export function CrearRecursoSurface({
   const selectedClassName = flow.state.draft.hierarchy.classItem?.nombre ?? ''
   const selectedFamilyName = flow.state.draft.hierarchy.familyItem?.nombre ?? ''
   const selectedTypeName = flow.state.draft.hierarchy.typeItem?.nombre ?? ''
-  const selectedUnit = units.items.find((u) => key(u.unidadId) === key(unitId))
+  const selectedUnit = flow.units.find(
+    (unit) =>
+      flow.state.draft.unitId !== null &&
+      key(unit.unidadId) === key(flow.state.draft.unitId),
+  )
+  const preferredUnitKey =
+    flow.units.find((unit) => unit.principal)?.unidadId ??
+    flow.units.find((unit) => unit.selected)?.unidadId ??
+    null
+  const showUnitSelector = step === 1 && flow.state.stage.kind === 'unit'
+  const confirmUnit = (candidate: (typeof flow.units)[number]) => {
+    if (
+      flow.unitLoadState.status !== 'ready' &&
+      flow.unitLoadState.status !== 'loading-more'
+    )
+      return
+    flow.confirmUnit(candidate)
+    setContextError(null)
+    setStep('contract-pending')
+  }
   const currentRailStage: CreationRailStage =
     step === 'contract-pending'
       ? 'contract-pending'
@@ -493,24 +481,23 @@ export function CrearRecursoSurface({
   const navigateRailStage = (
     stage: Exclude<CreationRailStage, 'contract-pending'>,
   ) => {
-    setRailStageOverride(stage)
     if (stage === 'class') {
+      setRailStageOverride(stage)
       flow.enterClass()
       return
     }
     if (stage === 'family') {
+      setRailStageOverride(stage)
       flow.enterFamily()
       return
     }
     if (stage === 'type') {
+      setRailStageOverride(stage)
       flow.enterType()
       return
     }
-    dialogRef.current
-      ?.querySelector<HTMLButtonElement>(
-        `button[aria-label="${contextFieldLabels[stage]}"]`,
-      )
-      ?.focus()
+    setRailStageOverride(null)
+    returnToUnit()
   }
 
   const attributeSummaryValue = (field: AttributeField): string => {
@@ -637,9 +624,11 @@ export function CrearRecursoSurface({
             }
             stageHeading={
               step === 1
-                ? flow.state.stage.kind === 'class'
-                  ? 'Elegí una Clase'
-                  : 'Completá el contexto'
+                ? showUnitSelector
+                  ? 'Elegí una Unidad natural'
+                  : flow.state.stage.kind === 'class'
+                    ? 'Elegí una Clase'
+                    : 'Completá el contexto'
                 : undefined
             }
           />
@@ -705,69 +694,29 @@ export function CrearRecursoSurface({
                   />
                 </div>
 
-                <div
-                  className="resources-context-field"
-                  hidden={flow.state.stage.kind !== 'unit'}
-                >
-                  <Select
-                    aria-label="Unidad natural"
-                    placeholder="Elegir Unidad natural…"
-                    isDisabled={typeId === null || units.status === 'loading'}
-                    isRequired
-                    selectedKey={unitId === null ? null : key(unitId)}
-                    onSelectionChange={(id) => {
-                      const item = units.items.find(
-                        (u) => key(u.unidadId) === id,
-                      )
-                      if (item) {
-                        setContextError(null)
-                        setUnitId(item.unidadId)
-                      }
-                    }}
-                  >
-                    <Label>Unidad natural *</Label>
-                    <SelectTriggerButton className="resources-select-trigger">
-                      <SelectValue />
-                      <span aria-hidden="true">▾</span>
-                    </SelectTriggerButton>
-                    <Popover>
-                      <ListBox items={units.items}>
-                        {(item) => (
-                          <ListBoxItem
-                            id={key(item.unidadId)}
-                            textValue={unitLabel(item)}
-                          >
-                            {unitLabel(item)}
-                            {item.principal ? ' — principal' : ''}
-                          </ListBoxItem>
-                        )}
-                      </ListBox>
-                    </Popover>
-                  </Select>
-                  {contextError === 'unit' && (
-                    <p
-                      id="resource-context-unit-error"
-                      role="alert"
-                      className="resources-context-error"
-                    >
-                      {contextErrorMessages.unit}
-                    </p>
-                  )}
-                  {units.status === 'error' && (
-                    <p role="alert" className="resources-context-error">
-                      No se pudo cargar la Unidad natural.{' '}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          flow.state.draft.hierarchy.typeItem &&
-                          selectType(flow.state.draft.hierarchy.typeItem)
-                        }
-                      >
-                        Reintentar
-                      </button>
-                    </p>
-                  )}
-                </div>
+                {showUnitSelector && (
+                  <StagedSearchSelector
+                    label="Unidad natural"
+                    items={flow.units}
+                    itemKey={(item) => flow.classKey(item.unidadId)}
+                    itemName={unitLabel}
+                    renderItem={unitLabel}
+                    confirmedKey={
+                      flow.state.draft.unitId === null
+                        ? null
+                        : flow.classKey(flow.state.draft.unitId)
+                    }
+                    preferredActiveKey={
+                      preferredUnitKey === null
+                        ? null
+                        : flow.classKey(preferredUnitKey)
+                    }
+                    loadState={flow.unitLoadState}
+                    onConfirm={confirmUnit}
+                    onLoadMore={() => void flow.continueUnits()}
+                    onRetry={() => void flow.retryUnits()}
+                  />
+                )}
               </>
             )}
 
@@ -1047,13 +996,11 @@ export function CrearRecursoSurface({
                 <Button variant="outline" onPress={close} type="button">
                   Cancelar
                 </Button>
-                <Button
-                  type="button"
-                  isDisabled={flow.state.stage.kind !== 'unit'}
-                  onPress={goToAttributes}
-                >
-                  Siguiente
-                </Button>
+                {flow.state.stage.kind !== 'unit' && (
+                  <Button type="button" isDisabled onPress={goToAttributes}>
+                    Siguiente
+                  </Button>
+                )}
               </>
             )}
             {step === 'contract-pending' && (

@@ -499,10 +499,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled(),
-    )
-    const confirmUnit = screen.getByRole('button', { name: 'Siguiente' })
+    const confirmUnit = await screen.findByRole('option', {
+      name: 'Metro cúbico (m³)',
+    })
     confirmUnit.focus()
     await user.keyboard('{Enter}')
 
@@ -524,7 +523,13 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(
       screen.queryByRole('heading', { name: 'Contrato pendiente' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeVisible()
+    const unitSearch = screen.getByRole('searchbox', {
+      name: 'Unidad natural',
+    })
+    expect(unitSearch).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Siguiente' })).toBeNull()
+    expect(screen.queryByRole('searchbox', { name: 'Tipo' })).toBeNull()
+    expect(screen.getAllByRole('searchbox')).toHaveLength(1)
   })
 
   it('keeps the shell title for initial and deep snapshot openings', async () => {
@@ -551,7 +556,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.getByRole('heading', { name: 'Creador de recursos' }),
     ).toBeVisible()
     expect(
-      screen.getByRole('heading', { name: 'Completá el contexto' }),
+      screen.getByRole('heading', { name: 'Elegí una Unidad natural' }),
     ).toBeVisible()
     expect(
       screen.queryByRole('searchbox', { name: 'Clase' }),
@@ -578,7 +583,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.queryByText('Esc cerrar')).not.toBeInTheDocument()
     expect(within(rail).getByText('Familia: Áridos')).toBeVisible()
     expect(within(rail).getByText('Tipo: Arena')).toBeVisible()
-    expect(within(rail).getByText('Unidad: Metro cúbico')).toHaveAttribute(
+    expect(within(rail).getByText('Unidad · pendiente')).toHaveAttribute(
       'aria-current',
       'step',
     )
@@ -599,7 +604,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.getByRole('searchbox', { name: 'Familia' })).toBeVisible()
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await user.click(
+      await screen.findByRole('option', { name: 'Metro cúbico (m³)' }),
+    )
     await screen.findByRole('heading', { name: 'Contrato pendiente' })
     expect(
       within(
@@ -616,6 +623,17 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(
       screen.getByRole('dialog', { name: 'Creador de recursos' }),
     ).toBeVisible()
+    await user.click(within(rail).getByRole('button', { name: 'Tipo: Arena' }))
+    expect(screen.getByRole('searchbox', { name: 'Tipo' })).toBeVisible()
+    await user.click(
+      within(rail).getByRole('button', { name: 'Unidad: Metro cúbico' }),
+    )
+    const unitSearch = await screen.findByRole('searchbox', {
+      name: 'Unidad natural',
+    })
+    expect(unitSearch).toHaveFocus()
+    expect(screen.queryByRole('searchbox', { name: 'Tipo' })).toBeNull()
+    expect(screen.getAllByRole('searchbox')).toHaveLength(1)
   })
 
   it('cascades Clase -> Familia -> Tipo -> Unidad natural, preselecting the principal unit', async () => {
@@ -647,15 +665,87 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await waitFor(() =>
       expect(api.listUnitPolicies).toHaveBeenCalledWith({
         tipoRecursoId: 'type-1',
+        cursor: null,
+        pageSize: 20,
       }),
     )
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /Unidad natural/ }),
-      ).toHaveTextContent('Metro cúbico (m³)'),
-    )
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
+    expect(
+      await screen.findByRole('searchbox', { name: 'Unidad natural' }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'Siguiente' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders Unidad natural as an unconfirmed staged decision until Enter explicitly confirms it', async () => {
+    const api = fakeApi()
+    const user = userEvent.setup()
+    renderSurface(api)
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+
+    const unitSearch = await screen.findByRole('searchbox', {
+      name: 'Unidad natural',
+    })
+    const preferredUnit = screen.getByRole('option', {
+      name: 'Metro cúbico (m³)',
+    })
+    expect(preferredUnit).toHaveAttribute('aria-selected', 'false')
+    expect(
+      screen.queryByRole('button', { name: 'Siguiente' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('— principal')).not.toBeInTheDocument()
+
+    await user.click(unitSearch)
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Contrato pendiente' }),
+    ).toBeVisible()
+    expect(api.listAttributeAssignments).not.toHaveBeenCalled()
+  })
+
+  it('keeps a hydrated Unidad selectable while Cargar más waits for the next policy page', async () => {
+    let resolveMore!: (page: {
+      items: ReturnType<typeof unitPolicy>[]
+      continuationCursor: null
+      isExhausted: boolean
+    }) => void
+    const api = fakeApi({
+      listUnitPolicies: vi.fn(({ cursor }) =>
+        cursor === null
+          ? Promise.resolve({
+              items: [unitPolicy({ unidadId: 'KG', principal: false })],
+              continuationCursor: 'more-units',
+              isExhausted: false,
+            })
+          : new Promise((resolve) => {
+              resolveMore = resolve
+            }),
+      ),
+    })
+    const user = userEvent.setup()
+    renderSurface(api)
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+
+    const kilogramo = await screen.findByRole('option', {
+      name: 'Kilogramo (kg)',
+    })
+    await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    expect(screen.getByRole('button', { name: 'Cargar más…' })).toBeDisabled()
+    expect(kilogramo).toBeVisible()
+    await user.click(kilogramo)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Contrato pendiente' }),
+    ).toBeVisible()
+    resolveMore({ items: [], continuationCursor: null, isExhausted: true })
   })
 
   it('requires an explicit non-preferred Unidad choice before showing Contrato pendiente', async () => {
@@ -678,9 +768,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Tipo', 'Arena')
 
     await waitFor(() => expect(api.listUnitPolicies).toHaveBeenCalled())
-    const unitTrigger = screen.getByRole('button', { name: /Unidad natural/ })
-    await user.click(unitTrigger)
-    const listbox = await screen.findByRole('listbox')
+    const listbox = await screen.findByRole('listbox', {
+      name: 'Opciones de Unidad natural',
+    })
     expect(
       within(listbox).queryByRole('option', { name: /Tonelada|TON/ }),
     ).not.toBeInTheDocument()
@@ -689,7 +779,6 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     })
     expect(kilogramo).toBeVisible()
     await user.click(kilogramo)
-    await user.click(screen.getByRole('button', { name: 'Siguiente' }))
 
     expect(await screen.findByText('Contrato pendiente')).toBeVisible()
     expect(api.listAttributeAssignments).not.toHaveBeenCalled()
@@ -711,11 +800,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /Unidad natural/ }),
-      ).toHaveTextContent('Metro cúbico (m³)'),
-    )
+    expect(
+      await screen.findByRole('option', { name: 'Metro cúbico (m³)' }),
+    ).toBeVisible()
 
     const rail = screen.getByRole('list', { name: 'Etapas de creación' })
     await user.click(
@@ -731,7 +818,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.queryByRole('button', { name: /Tipo/ }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Unidad natural/ }),
+      screen.queryByRole('searchbox', { name: 'Unidad natural' }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
   })
@@ -949,22 +1036,23 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-    await screen.findByRole('button', { name: /Unidad natural/ })
+    await screen.findByRole('searchbox', { name: 'Unidad natural' })
 
     await user.click(screen.getByRole('button', { name: 'Familia: Áridos' }))
     await chooseOption(user, 'Familia', 'Áridos')
     expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Tipo: Arena' })).toBeVisible()
+    await chooseOption(user, 'Tipo', 'Arena')
     expect(
-      screen.getByRole('button', { name: /Unidad: Metro cúbico/ }),
+      await screen.findByRole('searchbox', { name: 'Unidad natural' }),
     ).toBeVisible()
 
+    await user.click(screen.getByRole('button', { name: 'Tipo: Arena' }))
     await user.click(screen.getByRole('option', { name: 'Mortero' }))
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /Unidad natural/ }),
-      ).toHaveTextContent('Elegir Unidad natural…'),
-    )
+    expect(
+      await screen.findByRole('searchbox', { name: 'Unidad natural' }),
+    ).toBeVisible()
+    expect(screen.getByText('No hay opciones disponibles.')).toBeVisible()
   })
 
   it('opens a valid deep prefix at Unidad and falls back to Tipo for an invalid Tipo', async () => {
@@ -979,10 +1067,14 @@ describe('CrearRecursoSurface — Clase staged', () => {
     })
 
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
-    const unit = await screen.findByRole('button', { name: /Unidad natural/ })
-    await waitFor(() => expect(unit).toBeEnabled())
+    const unit = await screen.findByRole('searchbox', {
+      name: 'Unidad natural',
+    })
+    expect(unit).toBeVisible()
     expect(validApi.listUnitPolicies).toHaveBeenCalledWith({
       tipoRecursoId: 'type-1',
+      cursor: null,
+      pageSize: 20,
     })
     expect(
       screen.queryByRole('searchbox', { name: 'Tipo' }),
@@ -999,7 +1091,7 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
     expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toBeVisible()
     expect(
-      screen.queryByRole('button', { name: /Unidad natural/ }),
+      screen.queryByRole('searchbox', { name: 'Unidad natural' }),
     ).not.toBeInTheDocument()
   })
 
