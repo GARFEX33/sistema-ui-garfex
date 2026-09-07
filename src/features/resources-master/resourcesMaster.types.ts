@@ -182,7 +182,8 @@ export interface ResourceUnitPolicy {
 }
 
 export interface ResourceUnitPolicyListInput extends ResourceContextListInput {
-  tipoRecursoId: ResourceId
+  familiaRecursoId: ResourceId
+  paraTipoRecursoId: ResourceId
 }
 
 export interface ResourceUnitDetail {

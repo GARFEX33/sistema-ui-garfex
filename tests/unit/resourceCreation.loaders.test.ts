@@ -237,13 +237,17 @@ describe('dependent loader', () => {
 })
 
 describe('Unit policy page controller', () => {
-  it('requests Tipo-scoped pages and retains ordered eligible unit references', async () => {
+  it('requests effective Family and para-Type policy pages with their exact cursor', async () => {
     const { controller, loadPolicies, requests } = policySetup()
-    controller.setTipo('type-a')
+    controller.setContext({
+      familiaRecursoId: 'family-a',
+      paraTipoRecursoId: 'type-a',
+    })
 
     const first = controller.start()
     expect(loadPolicies).toHaveBeenLastCalledWith({
-      tipoRecursoId: 'type-a',
+      familiaRecursoId: 'family-a',
+      paraTipoRecursoId: 'type-a',
       cursor: null,
     })
     requests[0]!.resolve(
@@ -262,7 +266,8 @@ describe('Unit policy page controller', () => {
 
     const more = controller.continue()
     expect(loadPolicies).toHaveBeenLastCalledWith({
-      tipoRecursoId: 'type-a',
+      familiaRecursoId: 'family-a',
+      paraTipoRecursoId: 'type-a',
       cursor: 'next',
     })
     requests[1]!.resolve(
@@ -297,11 +302,17 @@ describe('Unit policy page controller', () => {
     })
   })
 
-  it('rejects stale Tipo pages without replacing the current ordered references', async () => {
+  it('rejects stale policies after replacing the Family context for the same Tipo', async () => {
     const { controller, requests } = policySetup()
-    controller.setTipo('type-a')
+    controller.setContext({
+      familiaRecursoId: 'family-a',
+      paraTipoRecursoId: 'type-a',
+    })
     const stale = controller.start()
-    controller.setTipo('type-b')
+    controller.setContext({
+      familiaRecursoId: 'family-b',
+      paraTipoRecursoId: 'type-a',
+    })
     const current = controller.start()
     requests[1]!.resolve(policyPage([policy('p-b', 'u-b')], null, true))
     await current
@@ -310,14 +321,16 @@ describe('Unit policy page controller', () => {
     expect(await stale).toBe(false)
     expect(controller.getState()).toMatchObject({
       status: 'ready',
-      tipoId: 'type-b',
       references: [{ policyId: 'p-b', unidadId: 'u-b' }],
     })
   })
 
   it('keeps collected references when a non-exhausted cursor repeats', async () => {
     const { controller, requests } = policySetup()
-    controller.setTipo('type-a')
+    controller.setContext({
+      familiaRecursoId: 'family-a',
+      paraTipoRecursoId: 'type-a',
+    })
     const first = controller.start()
     requests[0]!.resolve(policyPage([policy('p-a', 'u-a')], 'loop'))
     await first

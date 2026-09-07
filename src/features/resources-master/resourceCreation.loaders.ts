@@ -187,6 +187,11 @@ export type UnitPolicyReference = Readonly<{
   selected: boolean
 }>
 
+export type UnitPolicyContext = Readonly<{
+  familiaRecursoId: ResourceId
+  paraTipoRecursoId: ResourceId
+}>
+
 export type UnitPolicyPageState =
   | {
       status: 'idle'
@@ -221,7 +226,7 @@ export type UnitPolicyPageState =
 
 export type UnitPolicyPageController = Readonly<{
   getState: () => UnitPolicyPageState
-  setTipo: (tipoId: ResourceId | null) => void
+  setContext: (context: UnitPolicyContext | null) => void
   start: () => Promise<boolean>
   continue: () => Promise<boolean>
   retry: () => Promise<boolean>
@@ -236,12 +241,13 @@ const isEligibleUnitPolicy = (policy: ResourceUnitPolicy) =>
 
 export function createUnitPolicyPageController(options: {
   identity: (id: ResourceId) => string
-  loadPolicies: (request: {
-    tipoRecursoId: ResourceId
-    cursor: string | null
-  }) => Promise<DependentPage<ResourceUnitPolicy>>
+  loadPolicies: (
+    request: UnitPolicyContext & {
+      cursor: string | null
+    },
+  ) => Promise<DependentPage<ResourceUnitPolicy>>
 }): UnitPolicyPageController {
-  let tipoId: ResourceId | null = null
+  let policyContext: UnitPolicyContext | null = null
   let contextKey: string | null = null
   let cursor: string | null = null
   let token = 0
@@ -308,9 +314,10 @@ export function createUnitPolicyPageController(options: {
     requestCursor: string | null,
     continuation: boolean,
   ) => {
-    if (pending || tipoId === null || contextKey === null) return false
+    if (pending || policyContext === null || contextKey === null) return false
     const requestToken = token
-    const requestTipoId = tipoId
+    const requestPolicyContext = policyContext
+    const requestTipoId = requestPolicyContext.paraTipoRecursoId
     const requestContext = contextKey
     pending = true
     if (!continuation) {
@@ -325,7 +332,7 @@ export function createUnitPolicyPageController(options: {
 
     try {
       const page = await options.loadPolicies({
-        tipoRecursoId: requestTipoId,
+        ...requestPolicyContext,
         cursor: requestCursor,
       })
       if (!isCurrent(requestToken, requestContext, requestCursor)) return false
@@ -374,15 +381,22 @@ export function createUnitPolicyPageController(options: {
 
   return {
     getState: () => state,
-    setTipo: (nextTipoId) => {
+    setContext: (nextContext) => {
       token++
-      tipoId = nextTipoId
-      contextKey = nextTipoId === null ? null : options.identity(nextTipoId)
+      policyContext = nextContext
+      contextKey =
+        nextContext === null
+          ? null
+          : `${options.identity(nextContext.familiaRecursoId)}:${options.identity(nextContext.paraTipoRecursoId)}`
       cursor = null
       pending = false
       policyIndexes = new Map()
       referenceIndexes = new Map()
-      state = { status: 'idle', tipoId: nextTipoId, references: [] }
+      state = {
+        status: 'idle',
+        tipoId: nextContext?.paraTipoRecursoId ?? null,
+        references: [],
+      }
     },
     start: () => request(null, false),
     continue: () =>

@@ -10,6 +10,7 @@ import {
   createUnitCandidateHydrator,
   createUnitPolicyPageController,
   type UnitCandidate,
+  type UnitPolicyContext,
   type UnitCandidateHydrationState,
   type UnitPolicyPageState,
 } from './resourceCreation.loaders'
@@ -144,9 +145,10 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
   const [unitPolicies] = useState(() =>
     createUnitPolicyPageController({
       identity: resourceIdKey,
-      loadPolicies: ({ tipoRecursoId, cursor }) =>
+      loadPolicies: ({ familiaRecursoId, paraTipoRecursoId, cursor }) =>
         api.listUnitPolicies({
-          tipoRecursoId,
+          familiaRecursoId,
+          paraTipoRecursoId,
           cursor,
           pageSize: PAGE_SIZE,
         }),
@@ -188,15 +190,19 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
     },
     [refreshUnitState, unitHydrator, unitPolicies],
   )
-  const startUnitsForTipo = useCallback(
-    async (tipoId: ResourceId) => {
+  const startUnitsForContext = useCallback(
+    async (context: UnitPolicyContext) => {
+      unitPolicies.setContext(context)
       const request = unitPolicies.start()
       refreshUnitState()
       const loaded = await request
       refreshUnitState()
-      if (!loaded || !sameId(unitPolicies.getState().tipoId, tipoId))
+      if (
+        !loaded ||
+        !sameId(unitPolicies.getState().tipoId, context.paraTipoRecursoId)
+      )
         return false
-      return hydrateUnitPolicies(tipoId)
+      return hydrateUnitPolicies(context.paraTipoRecursoId)
     },
     [hydrateUnitPolicies, refreshUnitState, unitPolicies],
   )
@@ -223,16 +229,20 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
         types.setContext({ operation: 'types', parentId: prefix.familyItem.id })
         void types.start()
       }
-      unitPolicies.setTipo(prefix.typeItem?.id ?? null)
+      unitPolicies.setContext(null)
       unitHydrator.setSnapshot(null)
       refreshUnitState()
-      if (prefix.typeItem) void startUnitsForTipo(prefix.typeItem.id)
+      if (prefix.familyItem && prefix.typeItem)
+        void startUnitsForContext({
+          familiaRecursoId: prefix.familyItem.id,
+          paraTipoRecursoId: prefix.typeItem.id,
+        })
     },
     [
       classes,
       families,
       refreshUnitState,
-      startUnitsForTipo,
+      startUnitsForContext,
       types,
       unitHydrator,
       unitPolicies,
@@ -264,7 +274,7 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
       )
       if (!changed) return
       families.setContext({ operation: 'families', parentId: item.id })
-      unitPolicies.setTipo(null)
+      unitPolicies.setContext(null)
       unitHydrator.setSnapshot(null)
       refreshUnitState()
       void families.start()
@@ -294,7 +304,7 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
       )
       if (!changed) return
       types.setContext({ operation: 'types', parentId: item.id })
-      unitPolicies.setTipo(null)
+      unitPolicies.setContext(null)
       unitHydrator.setSnapshot(null)
       refreshUnitState()
       void types.start()
@@ -314,17 +324,21 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
         resourceCreationReducer(current, { type: 'CONFIRM_TYPE', item }),
       )
       if (!changed) return
-      unitPolicies.setTipo(item.id)
+      const familyId = state.draft.hierarchy.familyItem?.id
+      if (familyId === undefined || familyId === null) return
       unitHydrator.setSnapshot(null)
       refreshUnitState()
-      void startUnitsForTipo(item.id)
+      void startUnitsForContext({
+        familiaRecursoId: familyId,
+        paraTipoRecursoId: item.id,
+      })
     },
     [
       refreshUnitState,
-      startUnitsForTipo,
+      startUnitsForContext,
+      state.draft.hierarchy.familyItem?.id,
       state.draft.hierarchy.typeItem?.id,
       unitHydrator,
-      unitPolicies,
     ],
   )
   const continueUnits = useCallback(async () => {

@@ -731,8 +731,8 @@ const contextTypeArgs = (input: ResourceContextTypeListInput) =>
 
 const unitPolicyArgs = (input: ResourceUnitPolicyListInput) =>
   Object.freeze({
-    tipoRecursoId: input.tipoRecursoId,
-    paraTipoRecursoId: input.tipoRecursoId,
+    familiaRecursoId: input.familiaRecursoId,
+    paraTipoRecursoId: input.paraTipoRecursoId,
     ...contextListArgs(input),
   })
 
@@ -1002,7 +1002,11 @@ export function createResourcesMasterApi(
       )
     },
     async listUnitPolicies(input) {
-      if (!definedId(input.tipoRecursoId)) return bad()
+      if (
+        !definedId(input.familiaRecursoId) ||
+        !definedId(input.paraTipoRecursoId)
+      )
+        return bad()
       return parseUnitPoliciesPage(
         await transport.invoke(
           'catalogoAdmin/unidades:listarPoliticasUnidad',

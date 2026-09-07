@@ -562,20 +562,28 @@ describe('resources master API boundary', () => {
     ...extra,
   })
 
-  it('lists unit policies for a type, resolving through paraTipoRecursoId', async () => {
+  it('lists effective unit policies with the Family and para-Type context only', async () => {
     const invoke = vi.fn().mockResolvedValue(contextPage([policyItem()]))
     const api = createResourcesMasterApi({ invoke })
 
-    const result = await api.listUnitPolicies({ tipoRecursoId: 'type-1' })
+    const result = await api.listUnitPolicies({
+      familiaRecursoId: 'family-1',
+      paraTipoRecursoId: 'type-1',
+      cursor: 'next-policies',
+      pageSize: 20,
+    })
 
     expect(invoke).toHaveBeenCalledWith(
       'catalogoAdmin/unidades:listarPoliticasUnidad',
       {
-        tipoRecursoId: 'type-1',
+        familiaRecursoId: 'family-1',
         paraTipoRecursoId: 'type-1',
+        cursor: 'next-policies',
+        pageSize: 20,
         modo: 'ACTIVE',
       },
     )
+    expect(invoke.mock.calls[0]?.[1]).not.toHaveProperty('tipoRecursoId')
     expect(result.items[0]).toMatchObject({
       unidadId: 'unit-1',
       principal: true,
@@ -584,7 +592,10 @@ describe('resources master API boundary', () => {
       parseUnitPoliciesPage(contextPage([policyItem({ selection: 'WRONG' })])),
     ).toThrow()
     await expect(
-      api.listUnitPolicies({ tipoRecursoId: undefined as never }),
+      api.listUnitPolicies({
+        familiaRecursoId: undefined as never,
+        paraTipoRecursoId: 'type-1',
+      }),
     ).rejects.toThrow()
   })
 

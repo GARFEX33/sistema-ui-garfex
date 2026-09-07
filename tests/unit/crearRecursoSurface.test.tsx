@@ -143,8 +143,8 @@ it('resolves only the current Tipo policy candidates and confirms Unidad explici
     isExhausted: boolean
   }) => void
   const api = fakeApi({
-    listUnitPolicies: vi.fn(({ tipoRecursoId, cursor }) =>
-      tipoRecursoId === 'type-1'
+    listUnitPolicies: vi.fn(({ paraTipoRecursoId, cursor }) =>
+      paraTipoRecursoId === 'type-1'
         ? new Promise((resolve) => {
             resolveOldPolicies = resolve
           })
@@ -178,16 +178,22 @@ it('resolves only the current Tipo policy candidates and confirms Unidad explici
   )
   await waitFor(() =>
     expect(api.listUnitPolicies).toHaveBeenCalledWith({
-      tipoRecursoId: 'type-1',
+      familiaRecursoId: 'family-1',
+      paraTipoRecursoId: 'type-1',
       cursor: null,
       pageSize: 20,
     }),
   )
 
-  act(() => result.current.confirmType(typeItem({ id: 'type-2' })))
+  act(() =>
+    result.current.confirmType(
+      typeItem({ id: 'type-2', familiaRecursoId: 'stale-family' }),
+    ),
+  )
   await waitFor(() =>
     expect(api.listUnitPolicies).toHaveBeenCalledWith({
-      tipoRecursoId: 'type-2',
+      familiaRecursoId: 'family-1',
+      paraTipoRecursoId: 'type-2',
       cursor: null,
       pageSize: 20,
     }),
@@ -546,7 +552,8 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Tipo', 'Arena')
     await waitFor(() =>
       expect(api.listUnitPolicies).toHaveBeenCalledWith({
-        tipoRecursoId: 'type-1',
+        familiaRecursoId: 'family-1',
+        paraTipoRecursoId: 'type-1',
         cursor: null,
         pageSize: 20,
       }),
@@ -954,7 +961,8 @@ describe('CrearRecursoSurface — Clase staged', () => {
     })
     expect(unit).toBeVisible()
     expect(validApi.listUnitPolicies).toHaveBeenCalledWith({
-      tipoRecursoId: 'type-1',
+      familiaRecursoId: 'family-1',
+      paraTipoRecursoId: 'type-1',
       cursor: null,
       pageSize: 20,
     })

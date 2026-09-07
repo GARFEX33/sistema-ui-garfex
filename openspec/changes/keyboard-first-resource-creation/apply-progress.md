@@ -753,3 +753,21 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Task persistence / remaining:** PR 10 RED, GREEN, and TRIANGULATE/REFACTOR rows remain visibly `[x]`; no task was unchecked. PR 11 is next and remains unchecked.
 - **Deviation / rollback:** none; revert only these bucket guard/test changes to restore the prior PR 10 state.
 - **Workload / boundary:** PR 10 correction only, no commit or lifecycle action; final candidate is 384 A+D, below 399.
+
+---
+## Unit-policy context correction — before PR 11
+
+- **Status / action context:** authoritative `gentle-ai.sdd-status@2` reported `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, all required artifacts present, and no blockers. The repo-local workspace and supplied allowlist were safe; no warnings occurred.
+- **Boundary / workload:** corrective Creator/API-adapter input path only; feature-branch-chain correction remains below the 399 A+D limit. No commit, push, PR, review, receipt, backend, styling, unrestricted-list, attribute/evaluation/create, or PR 11 closure work occurred.
+- **Implementation:** `ResourceUnitPolicyListInput` and adapter serialization now use exactly `familiaRecursoId`, `paraTipoRecursoId`, `cursor`, and `pageSize` (plus existing `modo`), without direct `tipoRecursoId`. The policy controller now keys requests by explicit Family+Type context, while the flow derives Family from the confirmed hierarchy for deep prefixes and Type confirmation.
+- **Task persistence:** no `tasks.md` checkbox was changed as directed; this correction does not complete a task row. Parent-owned lifecycle rows remain untouched.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Effective policy context | `resourcesMasterApi.test.ts`, `resourceCreation.loaders.test.ts`, `crearRecursoSurface.test.tsx` | Unit + flow RTL | 59/59 focused | 6 failures: direct Type serialization, missing controller context method, and mismatched flow arguments | 59/59 focused plus typecheck | Cursor continuation, deep-prefix/confirmed-Type Family use, and same-Type Family replacement reject stale pages | Formatted loader and removed an obsolete hook dependency; focused suite remained 59/59 |
+
+- **Verification:** focused API/loader/flow Vitest 59/59; full `pnpm test` 426/426; `pnpm typecheck`; targeted ESLint; targeted Prettier; and `git diff --check` passed.
+- **Files:** `resourcesMaster.types.ts`, `resourcesMaster.api.ts`, `resourceCreation.loaders.ts`, `useResourceCreationFlow.ts`, three focused test files, and this record.
+- **Deviation / rollback:** none; revert this adapter/context/test slice to restore the prior direct-Type policy query behavior.
