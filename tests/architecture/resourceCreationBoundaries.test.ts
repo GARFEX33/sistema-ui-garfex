@@ -20,7 +20,7 @@ const modelSource = readFileSync(
 describe('resource creation safety wall', () => {
   it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {
     const continuation = surfaceSource.match(
-      /const goToAttributes = \(\) => \{[\s\S]*?\n\s+const backToContext/,
+      /const confirmUnit = \([\s\S]*?\n\s+const currentRailStage/,
     )?.[0]
 
     expect(continuation).toContain("setStep('contract-pending')")
@@ -53,5 +53,11 @@ describe('resource creation safety wall', () => {
     expect(surfaceSource).not.toContain('Crear otro')
     expect(surfaceSource).not.toContain("submitStatus === 'created'")
     expect(surfaceSource).not.toContain('setCreated')
+  })
+
+  it('keeps legacy review, payload, and create mechanics out of the production surface', () => {
+    expect(surfaceSource).not.toMatch(
+      /api\.createResource|buildValores|AttributeField|attributeValues|resource-nombre|resource-descripcion|Nombre \*|Descripción|SubmitStatus|submitStatus|submitError|UNCERTAIN_MESSAGE|ADMIN_ERROR_MESSAGES|extractAdminCode|backToAttributes|ownership: \{ kind:|valores: buildValores|Crear recurso|step === 3/,
+    )
   })
 })

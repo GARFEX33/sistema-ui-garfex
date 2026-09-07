@@ -8,8 +8,6 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CreationStageRail, type CreationRailStage } from './CreationStageRail'
 import { CreationCommandBar } from './CreationCommandBar'
-import { Field, FieldSeparator } from '../../shared/ui/Field'
-import { fieldInputClass } from '../../shared/ui/fieldStyles'
 import { ResourceCreationContractPending } from './ResourceCreationContractPending'
 import { ResourceCreationShell } from './ResourceCreationShell'
 import { StagedSearchSelector } from './StagedSearchSelector'
@@ -19,75 +17,15 @@ import {
   type InitialResourceHierarchySnapshot,
 } from './resourceCreation.model'
 import { useResourceCreationFlow } from './useResourceCreationFlow'
-import { useAutoClosingMessage } from './useAutoClosingMessage'
 import type {
-  ResourceAttributeApplicability,
-  ResourceAttributeDataType,
-  ResourceAttributeOption,
   ResourceContextClassItem,
   ResourceContextFamilyItem,
   ResourceContextTypeItem,
   ResourceId,
 } from './resourcesMaster.types'
 
-const ADMIN_ERROR_MESSAGES: Record<string, string> = {
-  ADMIN_DUPLICATE_KEY:
-    'Ya existe un recurso con esta combinación. Buscalo en el listado antes de crear uno nuevo.',
-  ADMIN_INVALID_REFERENCE:
-    'El catálogo cambió mientras completabas el formulario. Volvé al Paso 1 y elegí de nuevo.',
-  ADMIN_INVALID_STATE:
-    'No se pudo crear el recurso: los datos no cumplen las reglas del catálogo. Revisá el formulario.',
-  ADMIN_INVALID_ARGUMENT:
-    'No se pudo crear el recurso: hay un dato inválido. Revisá el formulario.',
-  ADMIN_AGGREGATE_INCOMPLETE:
-    'No se pudo crear el recurso: falta completar información del catálogo. Revisá el formulario.',
-  ADMIN_DEPENDENCY_BLOCKED:
-    'No se pudo crear el recurso: una dependencia lo impide. Revisá el formulario.',
-  ADMIN_CONFLICT:
-    'No se pudo crear el recurso: hay un conflicto con datos existentes. Revisá el formulario.',
-  ADMIN_PUBLICATION_INVALID:
-    'No se pudo crear el recurso: la publicación no es válida. Revisá el formulario.',
-  ADMIN_NOT_FOUND:
-    'No se pudo crear el recurso: no se encontró una referencia necesaria. Revisá el formulario.',
-  ADMIN_IMMUTABLE_FIELD:
-    'No se pudo crear el recurso: un campo no puede modificarse. Revisá el formulario.',
-  ADMIN_STALE_REVISION:
-    'No se pudo crear el recurso: los datos cambiaron. Revisá el formulario.',
-}
-
-const UNCERTAIN_MESSAGE =
-  'No pudimos confirmar si el recurso se creó. No lo vuelvas a intentar con los mismos datos — buscá primero si ya aparece en el listado.'
-
-const extractAdminCode = (error: unknown): string | undefined => {
-  if (typeof error !== 'object' || error === null) return undefined
-  const data = (error as { data?: unknown }).data
-  if (typeof data !== 'object' || data === null) return undefined
-  const code = (data as { code?: unknown }).code
-  return typeof code === 'string' ? code : undefined
-}
-
-type SubmitStatus = 'idle' | 'submitting' | 'error' | 'uncertain'
-
 const unitLabel = (unit: { nombre: string; simbolo?: string }) =>
   unit.simbolo ? `${unit.nombre} (${unit.simbolo})` : unit.nombre
-
-type AttributeField = {
-  atributoRecursoId: ResourceId
-  nombre: string
-  tipoDato: ResourceAttributeDataType
-  aplicabilidad: ResourceAttributeApplicability
-  orden: number
-  options: ResourceAttributeOption[]
-}
-
-type ContextField = 'class' | 'family' | 'type' | 'unit'
-
-const contextFieldLabels: Record<ContextField, string> = {
-  class: 'Clase',
-  family: 'Familia',
-  type: 'Tipo',
-  unit: 'Unidad natural',
-}
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
@@ -95,24 +33,11 @@ export interface CrearRecursoSurfaceProps {
   onCreated?: () => void
 }
 
-type LevelState<T> = {
-  items: T[]
-}
-
-const idleLevel = <T,>(): LevelState<T> => ({ items: [] })
-
-function useLevel<T>() {
-  const [state, setState] = useState<LevelState<T>>(idleLevel)
-  const clear = useCallback(() => setState(idleLevel), [])
-  return [state, clear] as const
-}
-
 const key = (id: ResourceId) => String(id)
 
 export function CrearRecursoSurface({
   api,
   initialHierarchySnapshot,
-  onCreated,
 }: CrearRecursoSurfaceProps) {
   const [isOpen, setIsOpen] = useState(false)
   const initialHierarchySnapshotCaptureRef = useRef(
@@ -126,9 +51,8 @@ export function CrearRecursoSurface({
   const isOpenRef = useRef(isOpen)
   isOpenRef.current = isOpen
   const { registerAction, registerOverlay } = useKeyboardController()
-  const [message, showMessage] = useAutoClosingMessage()
 
-  const [step, setStep] = useState<1 | 2 | 3 | 'contract-pending'>(1)
+  const [step, setStep] = useState<1 | 'contract-pending'>(1)
   const [railStageOverride, setRailStageOverride] = useState<Exclude<
     CreationRailStage,
     'contract-pending'
@@ -136,20 +60,7 @@ export function CrearRecursoSurface({
   const [classId, setClassId] = useState<ResourceId | null>(null)
   const [familyId, setFamilyId] = useState<ResourceId | null>(null)
   const [typeId, setTypeId] = useState<ResourceId | null>(null)
-  const [unitId, setUnitId] = useState<ResourceId | null>(null)
-  const [attributeValues, setAttributeValues] = useState<
-    Record<string, string>
-  >({})
-  const [nombre, setNombre] = useState('')
-  const [descripcion, setDescripcion] = useState('')
-  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle')
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [contextError, setContextError] = useState<ContextField | null>(null)
-  const [nombreError, setNombreError] = useState(false)
-  const nombreRef = useRef<HTMLInputElement>(null)
-
   const flow = useResourceCreationFlow(api)
-  const [attributes, clearAttributes] = useLevel<AttributeField>()
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
@@ -161,19 +72,10 @@ export function CrearRecursoSurface({
       setClassId(prefix.classItem?.id ?? null)
       setFamilyId(prefix.familyItem?.id ?? null)
       setTypeId(null)
-      setUnitId(null)
-      setAttributeValues({})
-      setNombre('')
-      setDescripcion('')
-      setSubmitStatus('idle')
-      setSubmitError(null)
-      setContextError(null)
-      setNombreError(false)
-      clearAttributes()
       if (prefix.typeItem) setTypeId(prefix.typeItem.id)
       setIsOpen(true)
     },
-    [clearAttributes, flow],
+    [flow],
   )
 
   const action = useMemo(
@@ -192,27 +94,6 @@ export function CrearRecursoSurface({
 
   useEffect(() => registerAction(action), [action, registerAction])
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
-
-  useEffect(() => {
-    if (step === 1) {
-      for (const field of ['class', 'family', 'type', 'unit'] as const) {
-        const control = dialogRef.current?.querySelector<HTMLButtonElement>(
-          `button[aria-label="${contextFieldLabels[field]}"]`,
-        )
-        if (!control) continue
-        if (contextError === field) {
-          control.setAttribute('aria-invalid', 'true')
-          control.setAttribute(
-            'aria-describedby',
-            `resource-context-${field}-error`,
-          )
-        } else {
-          control.removeAttribute('aria-invalid')
-          control.removeAttribute('aria-describedby')
-        }
-      }
-    }
-  }, [contextError, step])
 
   useEffect(() => {
     if (step !== 1 || flow.state.stage.kind !== 'unit') return
@@ -237,37 +118,22 @@ export function CrearRecursoSurface({
     }
   }, [isOpen])
 
-  const resetAttributesIfNeeded = () => {
-    const hadProgress =
-      attributes.items.length > 0 || Object.keys(attributeValues).length > 0
-    clearAttributes()
-    setAttributeValues({})
-    if (hadProgress)
-      showMessage('Se limpiaron los atributos por cambio de Tipo')
-  }
-
   const selectClass = (item: ResourceContextClassItem) => {
     const id = item.id
     flow.confirmClass(item)
     setRailStageOverride(null)
     if (classId !== null && key(classId) === key(id)) return
-    setContextError(null)
     setClassId(id)
     setFamilyId(null)
     setTypeId(null)
-    setUnitId(null)
-    resetAttributesIfNeeded()
   }
 
   const selectFamily = (item: ResourceContextFamilyItem) => {
     flow.confirmFamily(item)
     setRailStageOverride(null)
     if (familyId !== null && key(familyId) === key(item.id)) return
-    setContextError(null)
     setFamilyId(item.id)
     setTypeId(null)
-    setUnitId(null)
-    resetAttributesIfNeeded()
   }
 
   const selectType = (item: ResourceContextTypeItem) => {
@@ -275,33 +141,7 @@ export function CrearRecursoSurface({
     flow.confirmType(item)
     setRailStageOverride(null)
     if (typeId !== null && key(typeId) === key(id)) return
-    setContextError(null)
     setTypeId(id)
-    setUnitId(null)
-    resetAttributesIfNeeded()
-  }
-
-  const goToAttributes = () => {
-    const missing: ContextField | null =
-      classId === null
-        ? 'class'
-        : familyId === null
-          ? 'family'
-          : typeId === null
-            ? 'type'
-            : unitId === null
-              ? 'unit'
-              : null
-    if (missing) {
-      setContextError(missing)
-      dialogRef.current
-        ?.querySelector<HTMLButtonElement>(
-          `button[aria-label="${contextFieldLabels[missing]}"]`,
-        )
-        ?.focus()
-      return
-    }
-    setStep('contract-pending')
   }
 
   const returnToUnit = () => {
@@ -314,8 +154,6 @@ export function CrearRecursoSurface({
     returnToUnit()
     setStep(1)
   }
-
-  const backToAttributes = () => setStep(2)
 
   const selectedClassName = flow.state.draft.hierarchy.classItem?.nombre ?? ''
   const selectedFamilyName = flow.state.draft.hierarchy.familyItem?.nombre ?? ''
@@ -337,7 +175,6 @@ export function CrearRecursoSurface({
     )
       return
     flow.confirmUnit(candidate)
-    setContextError(null)
     setStep('contract-pending')
   }
   const currentRailStage: CreationRailStage =
@@ -371,86 +208,6 @@ export function CrearRecursoSurface({
     }
     setRailStageOverride(null)
     returnToUnit()
-  }
-
-  const attributeSummaryValue = (field: AttributeField): string => {
-    const raw = attributeValues[key(field.atributoRecursoId)]
-    if (raw === undefined || raw === '') return ''
-    if (field.tipoDato === 'OPCION')
-      return field.options.find((o) => key(o.id) === raw)?.nombre ?? raw
-    if (field.tipoDato === 'BOOLEANO') return raw === 'true' ? 'Sí' : 'No'
-    return raw
-  }
-
-  const buildValores = () => {
-    const result: Record<string, unknown>[] = []
-    for (const field of attributes.items) {
-      const raw = attributeValues[key(field.atributoRecursoId)]
-      if (raw === undefined || raw === '') continue
-      if (field.tipoDato === 'OPCION') {
-        const option = field.options.find((o) => key(o.id) === raw)
-        if (!option) continue
-        result.push({
-          atributoRecursoId: field.atributoRecursoId,
-          valor: option.nombre,
-          opcionAtributoId: option.id,
-        })
-      } else if (field.tipoDato === 'BOOLEANO') {
-        result.push({
-          atributoRecursoId: field.atributoRecursoId,
-          valor: raw === 'true',
-        })
-      } else if (field.tipoDato === 'NUMERO') {
-        result.push({
-          atributoRecursoId: field.atributoRecursoId,
-          valor: Number(raw),
-        })
-      } else {
-        result.push({ atributoRecursoId: field.atributoRecursoId, valor: raw })
-      }
-    }
-    return result
-  }
-
-  const submit = async () => {
-    if (submitStatus === 'submitting') return
-    if (nombre.trim() === '') {
-      setNombreError(true)
-      nombreRef.current?.focus()
-      return
-    }
-    if (
-      classId === null ||
-      familyId === null ||
-      typeId === null ||
-      unitId === null
-    )
-      return
-    setSubmitStatus('submitting')
-    setSubmitError(null)
-    try {
-      await api.createResource({
-        claseRecursoId: classId,
-        familiaRecursoId: familyId,
-        tipoRecursoId: typeId,
-        unidadId: unitId,
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim() === '' ? undefined : descripcion.trim(),
-        valores: buildValores(),
-        ownership: { kind: 'GLOBAL' },
-      })
-      setSubmitStatus('idle')
-      onCreated?.()
-    } catch (error) {
-      const code = extractAdminCode(error)
-      if (code && code in ADMIN_ERROR_MESSAGES) {
-        setSubmitError(ADMIN_ERROR_MESSAGES[code])
-        setSubmitStatus('error')
-      } else {
-        setSubmitError(UNCERTAIN_MESSAGE)
-        setSubmitStatus('uncertain')
-      }
-    }
   }
 
   return (
@@ -505,15 +262,6 @@ export function CrearRecursoSurface({
             }
           />
           <div className="resources-dialog-content">
-            <p className="mb-3 text-[11px] text-text-secondary">
-              * Obligatorio
-            </p>
-            {message && (
-              <p role="status" className="resources-dialog-notice">
-                {message}
-              </p>
-            )}
-
             {step === 1 && (
               <>
                 <div hidden={flow.state.stage.kind !== 'class'}>
@@ -593,91 +341,6 @@ export function CrearRecursoSurface({
             )}
 
             {step === 'contract-pending' && <ResourceCreationContractPending />}
-
-            {step === 3 && (
-              <>
-                <Field label="Nombre *" htmlFor="resource-nombre">
-                  <input
-                    id="resource-nombre"
-                    aria-label="Nombre"
-                    ref={nombreRef}
-                    required
-                    aria-invalid={nombreError}
-                    aria-describedby={
-                      nombreError ? 'resource-nombre-error' : undefined
-                    }
-                    type="text"
-                    className={fieldInputClass}
-                    value={nombre}
-                    disabled={submitStatus === 'submitting'}
-                    onChange={(event) => {
-                      if (event.target.value.trim() !== '')
-                        setNombreError(false)
-                      setNombre(event.target.value)
-                    }}
-                  />
-                </Field>
-                {nombreError && (
-                  <p
-                    id="resource-nombre-error"
-                    role="alert"
-                    className="resources-context-error"
-                  >
-                    Ingresá un Nombre.
-                  </p>
-                )}
-                <Field label="Descripción" htmlFor="resource-descripcion">
-                  <input
-                    id="resource-descripcion"
-                    type="text"
-                    className={fieldInputClass}
-                    value={descripcion}
-                    disabled={submitStatus === 'submitting'}
-                    onChange={(event) => setDescripcion(event.target.value)}
-                  />
-                </Field>
-                <FieldSeparator />
-                <dl className="resources-context-field">
-                  <div>
-                    <dt>Clase</dt>
-                    <dd>{selectedClassName}</dd>
-                  </div>
-                  <div>
-                    <dt>Familia</dt>
-                    <dd>{selectedFamilyName}</dd>
-                  </div>
-                  <div>
-                    <dt>Tipo</dt>
-                    <dd>{selectedTypeName}</dd>
-                  </div>
-                  <div>
-                    <dt>Unidad natural</dt>
-                    <dd>{selectedUnit ? unitLabel(selectedUnit) : ''}</dd>
-                  </div>
-                </dl>
-                {attributes.items.some(
-                  (field) => attributeSummaryValue(field) !== '',
-                ) && (
-                  <ul className="resources-context-field">
-                    {attributes.items.map((field) => {
-                      const value = attributeSummaryValue(field)
-                      if (value === '') return null
-                      return (
-                        <li key={key(field.atributoRecursoId)}>
-                          {field.nombre}: {value}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-                {(submitStatus === 'error' || submitStatus === 'uncertain') &&
-                  submitError && (
-                    <p role="alert" className="resources-context-error">
-                      {submitError}
-                    </p>
-                  )}
-              </>
-            )}
           </div>
           <CreationCommandBar
             stage={step === 'contract-pending' ? 'contract-pending' : 'context'}
@@ -688,7 +351,7 @@ export function CrearRecursoSurface({
                   Cancelar
                 </Button>
                 {flow.state.stage.kind !== 'unit' && (
-                  <Button type="button" isDisabled onPress={goToAttributes}>
+                  <Button type="button" isDisabled>
                     Siguiente
                   </Button>
                 )}
@@ -698,39 +361,6 @@ export function CrearRecursoSurface({
               <Button variant="outline" onPress={backToContext} type="button">
                 Volver
               </Button>
-            )}
-            {step === 3 && submitStatus !== 'uncertain' && (
-              <>
-                <Button
-                  variant="outline"
-                  onPress={backToAttributes}
-                  type="button"
-                  isDisabled={submitStatus === 'submitting'}
-                >
-                  Volver
-                </Button>
-                <Button
-                  type="button"
-                  isDisabled={submitStatus === 'submitting'}
-                  onPress={() => void submit()}
-                >
-                  Crear recurso
-                </Button>
-              </>
-            )}
-            {step === 3 && submitStatus === 'uncertain' && (
-              <>
-                <Button
-                  variant="outline"
-                  onPress={backToAttributes}
-                  type="button"
-                >
-                  Volver
-                </Button>
-                <Button type="button" onPress={close}>
-                  Cerrar y buscar en el listado
-                </Button>
-              </>
             )}
           </CreationCommandBar>
         </div>

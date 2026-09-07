@@ -664,3 +664,16 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - `- [ ] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->`
 
 - **Rollback:** restore only this result-state/result-JSX/restart-action deletion and its architecture guard; retain Unit→Contrato pendiente and the deferred PR9B2 review/submit code.
+## PR 9B2 — legacy review/payload/create surface deletion
+- **Status:** manual fallback `spec-driven` status consumed: `artifactStore: openspec`, authoritative nested spec/design/tasks present, `applyState: ready`; strict TDD active.
+- **Action context:** repo-local `/home/garfex/PROGRAMACION/sistema-ui-garfex`; only supplied surface/test/progress paths changed; no warnings.
+- **Workload / PR boundary:** auto-chain `PR 9B1 → 📍 PR 9B2 → PR 9C`; exact final A+D is 397, below 399; no commit or parent lifecycle action.
+- **Completed tasks:** none persisted by explicit PR9C hold; PR9 rows remain unchecked, while the retained `onCreated` prop/interface is not invoked.
+- **Files:** `CrearRecursoSurface.tsx`, `resourceCreationBoundaries.test.ts`, and this cumulative record.
+- **TDD Cycle Evidence:** safety net 44 passed/6 skipped; RED source guard failed on `api.createResource`; GREEN focused suite 45 passed/6 skipped; triangulation guards manual fields, payload/admin/error/uncertain branches, and review commands; Prettier refactor remained green.
+- **Verification:** focused Vitest 45 passed/6 skipped; full `pnpm test` 416 passed/6 skipped; `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check` passed.
+- **Deviations / rollback:** disabled staged `Siguiente` remains for active test compatibility; restore only this deletion/guard slice to roll back.
+- **Remaining exact unchecked rows:**
+- [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke `onCreated` or any create operation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Delete the bounded legacy review, submit, payload, ownership, and result branches plus their obsolete tests while retaining the `onCreated → refetchActive()` seam unused by pending. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Verify close/back focus behavior still works after removal, run the focused command, and record the no-create runtime result. <!-- sdd-owner: implementation -->
