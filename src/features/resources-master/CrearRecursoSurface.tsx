@@ -181,8 +181,6 @@ export function CrearRecursoSurface({
   const nombreRef = useRef<HTMLInputElement>(null)
 
   const flow = useResourceCreationFlow(api)
-  const [families, loadFamilies, clearFamilies] =
-    useLevel<ResourceContextFamilyItem>()
   const [types, loadTypes, clearTypes] = useLevel<ResourceContextTypeItem>()
   const [units, loadUnits, clearUnits] = useLevel<UnitOption>()
   const [attributes, loadAttributes, clearAttributes] =
@@ -197,7 +195,7 @@ export function CrearRecursoSurface({
       setStep(1)
       setRailStageOverride(null)
       setClassId(prefix.classItem?.id ?? null)
-      setFamilyId(null)
+      setFamilyId(prefix.familyItem?.id ?? null)
       setTypeId(null)
       setUnitId(null)
       setAttributeValues({})
@@ -209,25 +207,16 @@ export function CrearRecursoSurface({
       setContextError(null)
       setAttributeError(null)
       setNombreError(false)
-      clearFamilies()
       clearTypes()
       clearUnits()
       clearAttributes()
-      if (prefix.classItem)
-        void loadFamilies(() =>
-          api.listContextFamilies({ claseRecursoId: prefix.classItem!.id }),
+      if (prefix.familyItem)
+        void loadTypes(() =>
+          api.listContextTypes({ familiaRecursoId: prefix.familyItem!.id }),
         )
       setIsOpen(true)
     },
-    [
-      api,
-      clearFamilies,
-      clearTypes,
-      clearUnits,
-      clearAttributes,
-      flow,
-      loadFamilies,
-    ],
+    [api, clearTypes, clearUnits, clearAttributes, flow, loadTypes],
   )
 
   const action = useMemo(
@@ -326,18 +315,19 @@ export function CrearRecursoSurface({
     clearTypes()
     clearUnits()
     resetAttributesIfNeeded()
-    void loadFamilies(() => api.listContextFamilies({ claseRecursoId: id }))
   }
 
-  const selectFamily = (id: ResourceId) => {
+  const selectFamily = (item: ResourceContextFamilyItem) => {
+    flow.confirmFamily(item)
     setRailStageOverride(null)
+    if (familyId !== null && key(familyId) === key(item.id)) return
     setContextError(null)
-    setFamilyId(id)
+    setFamilyId(item.id)
     setTypeId(null)
     setUnitId(null)
     clearUnits()
     resetAttributesIfNeeded()
-    void loadTypes(() => api.listContextTypes({ familiaRecursoId: id }))
+    void loadTypes(() => api.listContextTypes({ familiaRecursoId: item.id }))
   }
 
   const selectType = (id: ResourceId) => {
@@ -481,8 +471,7 @@ export function CrearRecursoSurface({
   const backToAttributes = () => setStep(2)
 
   const selectedClassName = flow.state.draft.hierarchy.classItem?.nombre ?? ''
-  const selectedFamilyName =
-    families.items.find((f) => key(f.id) === key(familyId))?.nombre ?? ''
+  const selectedFamilyName = flow.state.draft.hierarchy.familyItem?.nombre ?? ''
   const selectedTypeName =
     types.items.find((t) => key(t.id) === key(typeId))?.nombre ?? ''
   const selectedUnit = units.items.find((u) => key(u.unidadId) === key(unitId))
@@ -503,6 +492,10 @@ export function CrearRecursoSurface({
     setRailStageOverride(stage)
     if (stage === 'class') {
       flow.enterClass()
+      return
+    }
+    if (stage === 'family') {
+      flow.enterFamily()
       return
     }
     dialogRef.current
@@ -666,73 +659,29 @@ export function CrearRecursoSurface({
                     onRetry={() => void flow.retryClasses()}
                   />
                 </div>
-                <div
-                  className="resources-context-field"
-                  hidden={flow.state.stage.kind === 'class'}
-                >
-                  <Select
-                    aria-label="Familia"
-                    placeholder="Elegir Familia…"
-                    isDisabled={
-                      classId === null || families.status === 'loading'
-                    }
-                    isRequired
-                    selectedKey={familyId === null ? null : key(familyId)}
-                    onSelectionChange={(id) => {
-                      const item = families.items.find((f) => key(f.id) === id)
-                      if (item) selectFamily(item.id)
-                    }}
-                  >
-                    <Label>Familia *</Label>
-                    <SelectTriggerButton className="resources-select-trigger">
-                      <SelectValue />
-                      <span aria-hidden="true">▾</span>
-                    </SelectTriggerButton>
-                    <Popover>
-                      <ListBox items={families.items}>
-                        {(item) => (
-                          <ListBoxItem
-                            id={key(item.id)}
-                            textValue={item.nombre}
-                          >
-                            {item.nombre}
-                          </ListBoxItem>
-                        )}
-                      </ListBox>
-                    </Popover>
-                  </Select>
-                  {contextError === 'family' && (
-                    <p
-                      id="resource-context-family-error"
-                      role="alert"
-                      className="resources-context-error"
-                    >
-                      {contextErrorMessages.family}
-                    </p>
-                  )}
-                  {families.status === 'error' && (
-                    <p role="alert" className="resources-context-error">
-                      No se pudieron cargar las Familias.{' '}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          classId !== null &&
-                          void loadFamilies(() =>
-                            api.listContextFamilies({
-                              claseRecursoId: classId,
-                            }),
+                <div hidden={flow.state.stage.kind !== 'family'}>
+                  <StagedSearchSelector
+                    label="Familia"
+                    items={flow.families}
+                    itemKey={(item) => flow.classKey(item.id)}
+                    itemName={(item) => item.nombre}
+                    confirmedKey={
+                      flow.state.draft.hierarchy.familyItem
+                        ? flow.classKey(
+                            flow.state.draft.hierarchy.familyItem.id,
                           )
-                        }
-                      >
-                        Reintentar
-                      </button>
-                    </p>
-                  )}
+                        : null
+                    }
+                    loadState={flow.familyLoadState}
+                    onConfirm={selectFamily}
+                    onLoadMore={() => void flow.continueFamilies()}
+                    onRetry={() => void flow.retryFamilies()}
+                  />
                 </div>
 
                 <div
                   className="resources-context-field"
-                  hidden={flow.state.stage.kind === 'class'}
+                  hidden={flow.state.stage.kind !== 'type'}
                 >
                   <Select
                     aria-label="Tipo"
@@ -794,7 +743,7 @@ export function CrearRecursoSurface({
 
                 <div
                   className="resources-context-field"
-                  hidden={flow.state.stage.kind === 'class'}
+                  hidden={flow.state.stage.kind !== 'type'}
                 >
                   <Select
                     aria-label="Unidad natural"
@@ -1133,7 +1082,7 @@ export function CrearRecursoSurface({
                 </Button>
                 <Button
                   type="button"
-                  isDisabled={flow.state.stage.kind === 'class'}
+                  isDisabled={flow.state.stage.kind !== 'type'}
                   onPress={goToAttributes}
                 >
                   Siguiente

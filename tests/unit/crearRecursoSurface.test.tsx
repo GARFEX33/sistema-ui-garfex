@@ -256,14 +256,14 @@ const chooseOption = async (
   fieldLabel: string,
   optionName: string,
 ) => {
-  if (fieldLabel === 'Clase') {
-    const filter = screen.queryByRole('searchbox', { name: 'Clase' })
-    if (!filter)
-      await user.click(screen.getByRole('button', { name: /^Clase:/ }))
+  const filter = screen.queryByRole('searchbox', { name: fieldLabel })
+  if (filter) {
     await user.click(await screen.findByRole('option', { name: optionName }))
     return
   }
-  const trigger = screen.getByRole('button', { name: new RegExp(fieldLabel) })
+  if (fieldLabel === 'Clase')
+    await user.click(screen.getByRole('button', { name: /^Clase:/ }))
+  const trigger = screen.getByLabelText(fieldLabel)
   await user.click(trigger)
   const listbox = await screen.findByRole('listbox')
   await user.click(within(listbox).getByRole('option', { name: optionName }))
@@ -428,6 +428,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await user.click(
       within(rail).getByRole('button', { name: 'Familia: Áridos' }),
     )
+    expect(screen.getByRole('searchbox', { name: 'Familia' })).toBeVisible()
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
     await user.click(screen.getByRole('button', { name: 'Siguiente' }))
     await screen.findByRole('heading', { name: 'Contrato pendiente' })
     expect(
@@ -458,6 +461,8 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await waitFor(() =>
       expect(api.listContextFamilies).toHaveBeenCalledWith({
         claseRecursoId: 'class-1',
+        cursor: undefined,
+        pageSize: 20,
       }),
     )
 
@@ -549,22 +554,16 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.getByRole('searchbox', { name: 'Clase' })).toBeVisible()
     await user.click(screen.getByRole('option', { name: 'Otro' }))
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Familia/ })).toHaveTextContent(
-        'Elegir Familia…',
-      ),
-    )
-    expect(screen.getByRole('button', { name: /Tipo/ })).toHaveTextContent(
-      'Elegir Tipo…',
-    )
     expect(
-      screen.getByRole('button', { name: /Unidad natural/ }),
-    ).toHaveTextContent('Elegir Unidad natural…')
-    expect(screen.getByRole('button', { name: /Tipo/ })).toBeDisabled()
+      await screen.findByRole('searchbox', { name: 'Familia' }),
+    ).toBeVisible()
     expect(
-      screen.getByRole('button', { name: /Unidad natural/ }),
-    ).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
+      screen.queryByRole('button', { name: /Tipo/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Unidad natural/ }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
   })
 
   it('closes on Escape and restores focus to the trigger', async () => {
@@ -615,6 +614,8 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await waitFor(() =>
       expect(api.listContextFamilies).toHaveBeenCalledWith({
         claseRecursoId: 'class-3',
+        cursor: undefined,
+        pageSize: 20,
       }),
     )
     const breadcrumb = screen.getByRole('button', { name: /Clase: Equipo/ })
@@ -625,6 +626,96 @@ describe('CrearRecursoSurface — Clase staged', () => {
     )
     expect(screen.getByRole('option', { name: 'Equipo' })).toBeVisible()
     expect(onCreated).not.toHaveBeenCalled()
+  })
+
+  it('gates a paginated Familia decision by the confirmed Clase without a legacy selector', async () => {
+    const api = fakeApi({
+      listContextFamilies: vi
+        .fn()
+        .mockResolvedValueOnce({
+          items: [familyItem()],
+          continuationCursor: 'more-families',
+          isExhausted: false,
+        })
+        .mockResolvedValueOnce({
+          items: [
+            familyItem({
+              id: 'family-2',
+              nombre: 'Grava',
+              clave: 'GRAVA',
+            }),
+          ],
+          continuationCursor: null,
+          isExhausted: true,
+        }),
+    })
+    const user = userEvent.setup()
+    renderSurface(api)
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+
+    const filter = await screen.findByRole('searchbox', { name: 'Familia' })
+    expect(api.listContextFamilies).toHaveBeenCalledWith({
+      claseRecursoId: 'class-1',
+      cursor: undefined,
+      pageSize: 20,
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Familia' }),
+    ).not.toBeInTheDocument()
+
+    await user.type(filter, 'grava')
+    await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    const grava = await screen.findByRole('option', { name: 'Grava' })
+    grava.focus()
+    await user.keyboard('{Enter}')
+
+    await waitFor(() =>
+      expect(api.listContextTypes).toHaveBeenCalledWith({
+        familiaRecursoId: 'family-2',
+      }),
+    )
+    expect(screen.getByRole('button', { name: /Tipo/ })).toBeVisible()
+  })
+
+  it('opens a valid Clase/Familia prefix at legacy Tipo and falls back safely', async () => {
+    const user = userEvent.setup()
+    const validApi = fakeApi()
+    const valid = renderSurface(validApi, {
+      initialHierarchySnapshot: {
+        classItem: classItem(),
+        familyItem: familyItem(),
+        typeItem: null,
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    const typeTrigger = screen.getByLabelText('Tipo')
+    expect(typeTrigger).toBeVisible()
+    expect(typeTrigger).toBeEnabled()
+    await waitFor(() =>
+      expect(validApi.listContextTypes).toHaveBeenCalledWith({
+        familiaRecursoId: 'family-1',
+      }),
+    )
+    expect(
+      screen.queryByRole('searchbox', { name: 'Familia' }),
+    ).not.toBeInTheDocument()
+    valid.unmount()
+
+    renderSurface(fakeApi(), {
+      initialHierarchySnapshot: {
+        classItem: classItem(),
+        familyItem: familyItem({ claseRecursoId: 'other-class' }),
+        typeItem: typeItem(),
+      },
+    })
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    expect(
+      await screen.findByRole('searchbox', { name: 'Familia' }),
+    ).toBeVisible()
+    expect(screen.getByLabelText('Tipo')).not.toBeVisible()
   })
 
   it('exposes Clase retry after the parent-gated initial retry is exhausted', async () => {
@@ -670,6 +761,8 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await waitFor(() =>
       expect(api.listContextFamilies).toHaveBeenCalledWith({
         claseRecursoId: 'class-1',
+        cursor: undefined,
+        pageSize: 20,
       }),
     )
     expect(api.listContextClasses).not.toHaveBeenCalled()
