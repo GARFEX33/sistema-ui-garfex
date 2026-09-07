@@ -492,3 +492,19 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Remaining:** `- [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, `getUnit` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->`
 - **Runtime/rollback:** RTL keyboard confirms staged hierarchy and stale rejection; browser N/A. Revert only the Tipo controller/surface/test wiring while retaining PR5A Familia.
 - **Budget:** 387 A+D including tasks/progress, under 399; no design deviation.
+
+---
+## PR 6A — Unit policy-page state
+- **Status/boundary:** authoritative `gentle-ai sdd-status keyboard-first-resource-creation`: OpenSpec `applyState: ready`, strict TDD, repo-local allowed root, no warnings; auto-chain `PR 5 → 📍 PR 6A → PR 6B`.
+- **Completed:** Tipo-scoped pages retain eligible first-order policy/unit references, reject stale/repeated cursors, and keep the first unit for a duplicate policy ID while OR-ing later `principal`/`selected`; distinct policy IDs sharing it still dedupe.
+- **Tasks/files:** no PR 6 checkbox changed because combined rows include deferred hydration/retry; parent rows untouched. Changed loader, focused test, and this record only.
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| Duplicate-policy flags | 8/8 | 7/8 after distinct policy flags removed | 8/8 after retained-reference OR | later-unit duplicate plus distinct same-unit ID; no refactor |
+- **Verification:** `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts` 8/8; `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check` passed; final numstat 384 A+D.
+- **Runtime/rollback/deviation:** N/A pure policy state; revert loader/controller and focused tests only; hydration/detail eligibility/error retry/final candidate shape remain PR 6B.
+- **Remaining unchecked PR 6 rows:**
+- `- [ ] **RED:** Add deferred-promise failures for policy and unit dedupe, effective/non-shadowed filtering, \`getUnit\` hydration, null/inactive exclusion, partial hydration error/retry, stale Tipo rejection, and explicit continuation. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Add the feature-local \`UnitCandidate\` resolver using only current Type-policy pages and \`getUnit\`, token/context/cursor adoption guards, first-order preservation, and principal/selected as focus preference only. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate policies OR-combine preference flags, retained resolved candidates survive a partial error, and repeated non-exhausted cursors fail recoverably; run the focused command. <!-- sdd-owner: implementation -->`
