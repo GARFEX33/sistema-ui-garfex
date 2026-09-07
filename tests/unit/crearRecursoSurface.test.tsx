@@ -1,6 +1,8 @@
 import {
+  act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -9,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CrearRecursoSurface } from '../../src/features/resources-master/CrearRecursoSurface'
+import { useResourceCreationFlow } from '../../src/features/resources-master/useResourceCreationFlow'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
@@ -240,6 +243,171 @@ function fakeApi(
     ...overrides,
   } as ResourcesMasterApi
 }
+
+it('resolves only the current Tipo policy candidates and confirms Unidad explicitly', async () => {
+  let resolveOldPolicies!: (value: {
+    items: ReturnType<typeof unitPolicy>[]
+    continuationCursor: null
+    isExhausted: boolean
+  }) => void
+  let resolveMorePolicies!: (value: {
+    items: ReturnType<typeof unitPolicy>[]
+    continuationCursor: null
+    isExhausted: boolean
+  }) => void
+  const api = fakeApi({
+    listUnitPolicies: vi.fn(({ tipoRecursoId, cursor }) =>
+      tipoRecursoId === 'type-1'
+        ? new Promise((resolve) => {
+            resolveOldPolicies = resolve
+          })
+        : cursor === null
+          ? Promise.resolve({
+              items: [
+                unitPolicy({
+                  id: 'policy-kg',
+                  unidadId: 'KG',
+                  principal: false,
+                  selected: true,
+                }),
+              ],
+              continuationCursor: 'more-units',
+              isExhausted: false,
+            })
+          : new Promise((resolve) => {
+              resolveMorePolicies = resolve
+            }),
+    ),
+  })
+  const { result } = renderHook(() => useResourceCreationFlow(api))
+
+  act(() =>
+    result.current.begin({
+      classItem: classItem(),
+      familyItem: familyItem(),
+      typeItem: typeItem(),
+      depth: 3,
+    }),
+  )
+  await waitFor(() =>
+    expect(api.listUnitPolicies).toHaveBeenCalledWith({
+      tipoRecursoId: 'type-1',
+      cursor: null,
+      pageSize: 20,
+    }),
+  )
+
+  act(() => result.current.confirmType(typeItem({ id: 'type-2' })))
+  await waitFor(() =>
+    expect(api.listUnitPolicies).toHaveBeenCalledWith({
+      tipoRecursoId: 'type-2',
+      cursor: null,
+      pageSize: 20,
+    }),
+  )
+  await waitFor(() =>
+    expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['KG']),
+  )
+  expect(result.current.state.draft.unitId).toBeNull()
+
+  act(() => void result.current.continueUnits())
+  await waitFor(() =>
+    expect(result.current.unitLoadState).toEqual({ status: 'loading-more' }),
+  )
+  expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['KG'])
+  resolveMorePolicies({
+    items: [unitPolicy({ id: 'policy-m3', unidadId: 'M3' })],
+    continuationCursor: null,
+    isExhausted: true,
+  })
+  await waitFor(() =>
+    expect(result.current.units.map((unit) => unit.unidadId)).toEqual([
+      'KG',
+      'M3',
+    ]),
+  )
+
+  resolveOldPolicies({
+    items: [unitPolicy({ unidadId: 'M3' })],
+    continuationCursor: null,
+    isExhausted: true,
+  })
+  await waitFor(() =>
+    expect(result.current.units.map((unit) => unit.unidadId)).toEqual([
+      'KG',
+      'M3',
+    ]),
+  )
+
+  await act(async () => result.current.confirmUnit(result.current.units[0]!))
+  expect(result.current.state.draft.unitId).toBe('KG')
+  expect(result.current.state.stage).toEqual({
+    kind: 'contract-pending',
+    blockedCapability: 'attributes-v1',
+  })
+})
+
+it('keeps resolved Unidad candidates retryable without implicitly confirming one', async () => {
+  const api = fakeApi({
+    listUnitPolicies: vi.fn(async () => ({
+      items: [
+        unitPolicy({ unidadId: 'M3' }),
+        unitPolicy({ id: 'policy-kg', unidadId: 'KG' }),
+      ],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
+    getUnit: vi
+      .fn()
+      .mockResolvedValueOnce({
+        id: 'M3',
+        clave: 'M3',
+        nombre: 'Metro cúbico',
+        simbolo: 'm³',
+        activo: true,
+        revision: 1,
+        effective: true,
+      })
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({
+        id: 'KG',
+        clave: 'KG',
+        nombre: 'Kilogramo',
+        simbolo: 'kg',
+        activo: true,
+        revision: 1,
+        effective: true,
+      }),
+  })
+  const { result } = renderHook(() => useResourceCreationFlow(api))
+
+  act(() =>
+    result.current.begin({
+      classItem: classItem(),
+      familyItem: familyItem(),
+      typeItem: typeItem(),
+      depth: 3,
+    }),
+  )
+  await waitFor(() =>
+    expect(result.current.unitLoadState).toEqual({ status: 'partial-error' }),
+  )
+  expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['M3'])
+
+  act(() => result.current.confirmUnit(result.current.units[0]!))
+  expect(result.current.state.draft.unitId).toBeNull()
+  expect(result.current.state.stage).toEqual({ kind: 'unit' })
+
+  await act(async () => result.current.retryUnits())
+  expect(result.current.units.map((unit) => unit.unidadId)).toEqual([
+    'M3',
+    'KG',
+  ])
+  expect(result.current.unitLoadState).toEqual({
+    status: 'ready',
+    exhausted: true,
+  })
+})
 
 const renderSurface = (
   api: ResourcesMasterApi,

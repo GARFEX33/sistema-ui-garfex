@@ -553,3 +553,28 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
   - `- [ ] **GREEN:** Connect the PR 7 resolver in \`useResourceCreationFlow.ts\` and render an explicit Unit \`StagedSearchSelector\` in \`CrearRecursoSurface.tsx\`, dispatching \`CONFIRM_UNIT\` only from explicit action. <!-- sdd-owner: implementation -->`
   - `- [ ] **TRIANGULATE/REFACTOR:** Demonstrate a continuation can coexist with an immediately confirmable hydrated candidate while pending/failed hydration cannot advance, run the stated command, and commit Unit behavior with its tests. <!-- sdd-owner: implementation -->`
 - **Workload:** 209 A+D (26 progress + 6 task checkboxes + 49 loader + 128 tests), below the hard 399 limit.
+
+---
+
+## PR 7A — Unit hook/controller coordination
+
+- **Status:** consumed authoritative native OpenSpec status: `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, strict TDD, and `repo-local` workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`. Parent-supplied allowed surfaces were safe; no action-context warnings.
+- **Boundary:** `PR 6B2 → 📍 PR 7A`; flow/hook coordination only. `CrearRecursoSurface.tsx` was not edited, no Unit UI replacement, API/backend/shared/global/URL/dependency change, task-checkbox change, commit, review, or lifecycle action occurred.
+- **Implementation:** `useResourceCreationFlow` now owns `createUnitPolicyPageController` and `createUnitCandidateHydrator` using existing `api.listUnitPolicies` and `api.getUnit`. It exposes read-only `units`, selector-compatible `unitLoadState`, `continueUnits`, `retryUnits`, and guarded `confirmUnit`. A deep valid prefix starts Tipo-scoped policy/detail resolution; ancestor/Tipo replacement clears the policy and hydration generations, so stale work cannot attach. `confirmUnit` dispatches `CONFIRM_UNIT` only for an explicitly supplied current hydrated candidate and never auto-confirms/preselects.
+- **Files:** `src/features/resources-master/useResourceCreationFlow.ts`; `tests/unit/crearRecursoSurface.test.tsx`; this record.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- |
+| PR 7A controller wiring | `tests/unit/crearRecursoSurface.test.tsx` | Hook integration | 16 passed, 13 skipped | New deep-prefix policy-call test failed: `listUnitPolicies` had 0 calls | 17 passed, 13 skipped after hook wiring | Added continuation coexistence plus partial hydration/retry/current-candidate guard; 18 passed, 13 skipped. Prettier refactor reran focused flow/loader tests green. |
+
+- **Verification:** focused surface/loader `34 passed, 13 skipped`; `pnpm test` `417 passed, 13 skipped`; `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check` passed.
+- **Runtime:** N/A — this isolated hook has no visible Unit surface by delegation; focused hook tests cover explicit callback dispatch and stale Tipo rejection.
+- **Rollback:** remove the Unit controller/hydrator ownership, exports, and hook tests only; retain PR 6 resolver and the byte-identical Unit surface.
+- **Tasks:** PR 7’s combined rows remain visibly unchecked because the delegated PR 7A slice deliberately excludes its required `CrearRecursoSurface.tsx` UI work; parent-owned rows were preserved byte-for-byte.
+- **Remaining exact PR 7 rows:**
+  - `- [ ] **RED:** Add failing RTL cases for Unit entry after Tipo, preferred-but-unconfirmed candidate, explicit Enter/click, eligible empty state, partial-error retry, and Type-change invalidation. <!-- sdd-owner: implementation -->`
+  - `- [ ] **GREEN:** Connect the PR 6 resolver through \`useResourceCreationFlow.ts\`, render the staged Unit selector in \`CrearRecursoSurface.tsx\`, and dispatch \`CONFIRM_UNIT\` only from explicit confirmation. <!-- sdd-owner: implementation -->`
+  - `- [ ] **TRIANGULATE/REFACTOR:** Cover load-more with immediately confirmable hydrated candidates versus pending/failed hydration that cannot advance, run the focused command, and record the runtime result. <!-- sdd-owner: implementation -->`
+- **Workload:** current diff `385 A + 8 D = 393 A+D`, below the hard 399 PR boundary.
