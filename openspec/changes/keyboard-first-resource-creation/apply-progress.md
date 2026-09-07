@@ -607,3 +607,22 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Runtime/rollback:** keyboard Unit confirmation reaches `Contrato pendiente`; browser N/A. Restore only this cleanup to roll back.
 - **Boundary:** `PR 7 → PR8A → 📍 PR8B → PR9`; no commit, push, PR, review, receipt, or lifecycle action.
 - **Remaining:** `- [ ] **RED:** Add failing architecture/surface assertions that Creador source has no legacy payload/create symbols and that completing Unit does not invoke onCreated or any create operation. <!-- sdd-owner: implementation -->`
+
+---
+
+## PR 9A — legacy model protocol deletion
+
+- **Status:** consumed authoritative `gentle-ai.sdd-status@2`: OpenSpec apply ready, artifacts present, repo-local root allowed, and no blockers. Strict TDD applies.
+- **Boundary:** PR 9A only (`PR 8 → 📍 PR 9A → PR 9B`); deleted only model protocol and its obsolete model tests. `CrearRecursoSurface.tsx` was inspected but not edited.
+- **Behavior:** removed `resource-data`, `review`, and `result` stages; `SubmitState`/`submit`; manual Nombre/Descripción draft data; validation/submit helpers and events; and legacy `backStage`/reducer arms. Hierarchy selection, `unitId`, null evaluation/fingerprint lease, revision/cascades, and pending→unit back remain.
+- **Task checkboxes:** none changed: all three persisted PR 9 rows include the deferred surface payload/create cleanup, so marking them would be false completion. Their exact unchecked rows remain authoritative.
+
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 9A deletion | model + architecture 27/27 | new model-source negative guard failed on `resource-data` | model + architecture 23/23; typecheck passed | guard covers stages, submit type/events, and helpers; Prettier rerun stayed green |
+
+- **Verification:** model/surface/architecture Vitest 43 passed, 6 skipped; full `pnpm test` 414 passed, 6 skipped; `pnpm typecheck`, targeted ESLint, targeted Prettier, and `git diff --check` passed.
+- **Workload / rollback:** source/test A+D is 239 (11 additions, 228 deletions), below 399; restore only the model/test/guard deletion to roll back. No commit, push, PR, review, receipt, or lifecycle action.
+- **Surface split result:** `CrearRecursoSurface.tsx` does not import the removed model protocol, and typecheck is green; it does not prevent this green split. Its legacy payload/create code remains for PR 9B.
+- **Remaining:** PR 9 RED/GREEN/TRIANGULATE rows remain unchecked for the deferred surface cleanup and close/back/no-create evidence; parent-owned lifecycle rows are deferred unchanged.

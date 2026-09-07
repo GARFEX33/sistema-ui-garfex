@@ -36,4 +36,15 @@ describe('resource creation safety wall', () => {
     expect(modelSource).not.toContain('SET_ATTRIBUTE_VALUE')
     expect(modelSource).not.toContain('OMIT_ATTRIBUTE')
   })
+
+  it('keeps legacy manual-data and submit reducer protocol out of the model', () => {
+    expect(modelSource).not.toContain("kind: 'resource-data'")
+    expect(modelSource).not.toContain("kind: 'review'")
+    expect(modelSource).not.toContain("kind: 'result'")
+    expect(modelSource).not.toContain('SubmitState')
+    expect(modelSource).not.toContain('SET_RESOURCE_DATA')
+    expect(modelSource).not.toContain('SUBMIT_STARTED')
+    expect(modelSource).not.toContain('isResourceDataValid')
+    expect(modelSource).not.toContain('canSubmitResourceCreation')
+  })
 })

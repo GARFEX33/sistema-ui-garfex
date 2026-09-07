@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canSubmitResourceCreation,
   createInitialCreationState,
   createInitialHierarchySnapshotCapture,
   deriveInitialHierarchySnapshot,
-  isResourceDataValid,
   normalizeInitialHierarchySnapshot,
   resourceCreationReducer,
   resourceIdKey,
@@ -324,136 +322,5 @@ describe('resource creation contract-pending safety wall', () => {
       kind: 'contract-pending',
       blockedCapability: 'attributes-v1',
     })
-  })
-})
-
-const createdItem = {
-  id: 'resource-1',
-  identificadorTecnico: 'RESOURCE-1',
-  nombre: 'Cable UTP',
-  tipoRecursoId: 'type-1',
-  unidadId: 'unit-1',
-  activo: true,
-  revision: 1,
-  classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
-}
-
-describe('resource creation resource-data and submit state', () => {
-  it('does not revise the draft for repeated resource-data mutations', () => {
-    const before = open()
-    const data = resourceCreationReducer(before, {
-      type: 'SET_RESOURCE_DATA',
-      nombre: ' Cable UTP ',
-      descripcion: ' Categoría 6 ',
-    })
-    const repeatedData = resourceCreationReducer(data, {
-      type: 'SET_RESOURCE_DATA',
-      nombre: ' Cable UTP ',
-      descripcion: ' Categoría 6 ',
-    })
-
-    expect(data.draft.revision).toBe(before.draft.revision + 1)
-    expect(repeatedData.draft).toBe(data.draft)
-  })
-
-  it('validates trimmed Nombre while keeping Descripción optional in resource data', () => {
-    const blank = resourceCreationReducer(open(), {
-      type: 'SET_RESOURCE_DATA',
-      nombre: '  ',
-      descripcion: '  ',
-    })
-    const valid = resourceCreationReducer(blank, {
-      type: 'SET_RESOURCE_DATA',
-      nombre: ' Cable UTP ',
-      descripcion: ' Descripción ',
-    })
-
-    expect(isResourceDataValid(blank.draft)).toBe(false)
-    expect(isResourceDataValid(valid.draft)).toBe(true)
-    expect(valid.draft).toMatchObject({
-      nombre: ' Cable UTP ',
-      descripcion: ' Descripción ',
-    })
-  })
-
-  it('guards duplicate submits and unlocks an uncertain revision only after a real mutation', () => {
-    const ready = resourceCreationReducer(open(), {
-      type: 'SET_RESOURCE_DATA',
-      nombre: 'Cable UTP',
-      descripcion: '',
-    })
-    const submitting = resourceCreationReducer(ready, {
-      type: 'SUBMIT_STARTED',
-    })
-    const duplicate = resourceCreationReducer(submitting, {
-      type: 'SUBMIT_STARTED',
-    })
-    const uncertain = resourceCreationReducer(duplicate, {
-      type: 'SUBMIT_UNCERTAIN',
-      message: 'No se pudo confirmar el resultado.',
-    })
-    const unchanged = resourceCreationReducer(uncertain, {
-      type: 'SET_RESOURCE_DATA',
-      nombre: 'Cable UTP',
-      descripcion: '',
-    })
-    const corrected = resourceCreationReducer(unchanged, {
-      type: 'SET_RESOURCE_DATA',
-      nombre: 'Cable UTP corregido',
-      descripcion: '',
-    })
-
-    expect(submitting.submit).toEqual({
-      status: 'submitting',
-      draftRevision: ready.draft.revision,
-    })
-    expect(duplicate).toBe(submitting)
-    expect(uncertain.submit).toEqual({
-      status: 'uncertain',
-      message: 'No se pudo confirmar el resultado.',
-      blockedRevision: ready.draft.revision,
-    })
-    expect(canSubmitResourceCreation(unchanged)).toBe(false)
-    expect(canSubmitResourceCreation(corrected)).toBe(true)
-  })
-
-  it('models known-error and created submit outcomes without treating either as uncertainty', () => {
-    const ready = resourceCreationReducer(open(), {
-      type: 'SET_RESOURCE_DATA',
-      nombre: 'Cable UTP',
-      descripcion: '',
-    })
-    const knownError = resourceCreationReducer(
-      resourceCreationReducer(ready, { type: 'SUBMIT_STARTED' }),
-      { type: 'SUBMIT_KNOWN_ERROR', message: 'Nombre duplicado.' },
-    )
-    const created = resourceCreationReducer(
-      resourceCreationReducer(knownError, { type: 'SUBMIT_STARTED' }),
-      { type: 'SUBMIT_CREATED', item: createdItem },
-    )
-
-    expect(knownError.submit).toEqual({
-      status: 'known-error',
-      message: 'Nombre duplicado.',
-    })
-    expect(created.submit).toEqual({ status: 'created', item: createdItem })
-    expect(created.stage).toEqual({ kind: 'result', outcome: 'created' })
-  })
-
-  it('returns an uncertain result to review without unlocking its unchanged revision', () => {
-    const ready = resourceCreationReducer(open(), {
-      type: 'SET_RESOURCE_DATA',
-      nombre: 'Cable UTP',
-      descripcion: '',
-    })
-    const uncertain = resourceCreationReducer(
-      resourceCreationReducer(ready, { type: 'SUBMIT_STARTED' }),
-      { type: 'SUBMIT_UNCERTAIN', message: 'Resultado incierto.' },
-    )
-    const returned = resourceCreationReducer(uncertain, { type: 'BACK' })
-
-    expect(returned.stage).toEqual({ kind: 'review' })
-    expect(returned.submit).toEqual(uncertain.submit)
-    expect(canSubmitResourceCreation(returned)).toBe(false)
   })
 })
