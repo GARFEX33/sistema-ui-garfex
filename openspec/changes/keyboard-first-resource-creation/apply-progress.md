@@ -715,3 +715,41 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Source scan:** no `buildResourceCreateInput`, `ResourceCreateInput`, `.createResource(`, `ownership`, or `ResourceCreationDetails` remains in Creador production files outside API/types; `resourcesMaster.api.ts` and `.types.ts` retain the legacy create facade/operation. `tests/unit/resourcesMasterScreenRefetch.test.tsx` has no diff and passed in the unit suite.
 - **Deviation / rollback:** none. Restore only this E2E scenario/helpers and the two current dialog-name assertions to roll back; retain PR9’s production deletions.
 - **Remaining implementation tasks:** persisted unchecked work begins unchanged with `- [ ] **RED:** Add failing opaque-value tests for assignment-ID keying, active/suspended exclusivity, confirm, omit, suspend, restore, keep-suspended, active-only projection, hierarchy reset, Unit evaluation invalidation, and revision increments. <!-- sdd-owner: implementation -->`, `- [ ] **GREEN:** Implement generic \`SelectionBuckets<TSelection>\` and pure operations in \`resourceCreation.selectionDraft.ts\`; keep \`SelectionBuckets<never>\` in the current runtime and never introduce a transport DTO or local \`CONDITIONAL\` evaluator. <!-- sdd-owner: implementation -->`, and `- [ ] **TRIANGULATE/REFACTOR:** Prove definition-ID/index collisions cannot merge assignments and that omitted differs from unanswered, then run the focused command and record the pure-contract result. <!-- sdd-owner: implementation -->`; parent-owned lifecycle rows remain byte-for-byte deferred.
+
+---
+## PR 10 — Pure active/suspended selection buckets
+
+- **Status / structured status:** complete for the parent-authorized PR 10 work unit. Native `gentle-ai sdd-status keyboard-first-resource-creation` was authoritative: `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, required artifacts present, and no blockers.
+- **Action context:** `repo-local` workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`; all edits are in the supplied allowlist. No warnings.
+- **Boundary:** feature-branch-chain `… → PR 9 → 📍 PR 10 → PR 11`; no commit, PR, review, receipt, runtime UI/API/backend/DTO/evaluator, global state, dependency, or URL changes.
+- **Completed / persisted:** PR 10 RED, GREEN, and TRIANGULATE/REFACTOR rows are visibly `[x]` in `tasks.md`.
+- **Implementation:** added generic assignment-ID keyed active/suspended/omitted buckets and active-only projection. `CreationDraft` now carries `SelectionBuckets<never>`; hierarchy changes atomically clear buckets, while Unit changes preserve them and invalidate the null lease. Effective bucket replacement increments revision and invalidates the lease.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 10 buckets/model | model 20/20 | selection module import failed; model bucket/reset and revision assertions failed | focused 28/28 | same definition/index assignment IDs stayed distinct; omitted differed from unanswered; Prettier rerun stayed 28/28 |
+
+- **Verification:** focused Vitest 28/28; `pnpm test` 424/424; `pnpm typecheck`; targeted ESLint; targeted Prettier; and `git diff --check` passed.
+- **Runtime:** N/A — this is a pure backend-independent contract not yet consumed by runtime attributes.
+- **Files:** `resourceCreation.selectionDraft.ts`, `resourceCreation.model.ts`, both focused unit tests, `tasks.md`, and this cumulative record.
+- **Deviation / rollback:** none; revert only the pure module, model bucket seam, focused tests, and these task/progress updates.
+- **Remaining:** no PR 10 implementation-owned rows remain unchecked. All later retained implementation rows and parent-owned lifecycle rows remain unchanged in `tasks.md`.
+- **Workload:** final A+D before correction: 332, below the hard 399-line cap.
+
+---
+## PR 10 correction — bucket exclusivity
+
+- **Status / action context:** authoritative `gentle-ai.sdd-status@2` was `apply: ready`; `repo-local` workspace and the supplied edit allowlist were safe, with no warnings.
+- **TDD:** safety net 6/6 passed; RED added opaque-`undefined` own-key and suspend→omit tests, which failed 2/8; minimal GREEN passed 8/8; existing normal confirm/omit paths triangulate both fixes; no refactor beyond Prettier was needed.
+
+| Task | Test file | Layer | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- | --- |
+| PR 10 correction | `resourceCreation.selectionDraft.test.ts` | Unit | 2 failures / 8 | 8 / 8 passed | existing normal paths; Prettier green |
+
+- **Fix / files:** `confirmSelection` now requires an own active key before identity no-op; `omitSelection` clears suspended state. Changed only the PR 10 pure module, its unit test, and this merged record.
+- **Verification:** focused Vitest 8/8; full `pnpm test` 426/426; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- **Task persistence / remaining:** PR 10 RED, GREEN, and TRIANGULATE/REFACTOR rows remain visibly `[x]`; no task was unchecked. PR 11 is next and remains unchecked.
+- **Deviation / rollback:** none; revert only these bucket guard/test changes to restore the prior PR 10 state.
+- **Workload / boundary:** PR 10 correction only, no commit or lifecycle action; final candidate is 384 A+D, below 399.

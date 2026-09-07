@@ -4,6 +4,10 @@ import type {
   ResourceContextTypeItem,
   ResourceId,
 } from './resourcesMaster.types'
+import {
+  createSelectionBuckets,
+  type SelectionBuckets,
+} from './resourceCreation.selectionDraft'
 
 export type InitialResourceHierarchySnapshot = Readonly<{
   classItem: ResourceContextClassItem | null
@@ -129,6 +133,7 @@ export type CreationStage =
 export type CreationDraft = Readonly<{
   hierarchy: InitialResourceHierarchySnapshot
   unitId: ResourceId | null
+  selectionBuckets: SelectionBuckets<never>
   authoritativeEvaluation: null
   catalogFingerprint: null
   revision: number
@@ -151,6 +156,7 @@ export type CreationEvent =
 const emptyDraft = (): CreationDraft => ({
   hierarchy: emptySnapshot,
   unitId: null,
+  selectionBuckets: createSelectionBuckets(),
   authoritativeEvaluation: null,
   catalogFingerprint: null,
   revision: 0,
@@ -178,14 +184,27 @@ const hierarchyFromPrefix = (
   typeItem: prefix.typeItem,
 })
 
+export const replaceSelectionBuckets = (
+  draft: CreationDraft,
+  selectionBuckets: SelectionBuckets<never>,
+): CreationDraft =>
+  selectionBuckets === draft.selectionBuckets
+    ? draft
+    : {
+        ...draft,
+        selectionBuckets,
+        authoritativeEvaluation: null,
+        catalogFingerprint: null,
+        revision: draft.revision + 1,
+      }
+
 const clearDependentPlaceholders = (
   draft: CreationDraft,
   hierarchy: InitialResourceHierarchySnapshot,
 ): CreationDraft => ({
-  ...draft,
+  ...replaceSelectionBuckets(draft, createSelectionBuckets()),
   hierarchy,
   unitId: null,
-  revision: draft.revision + 1,
 })
 
 const hasSameId = (

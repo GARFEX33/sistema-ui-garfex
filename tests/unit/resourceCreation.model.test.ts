@@ -4,6 +4,7 @@ import {
   createInitialHierarchySnapshotCapture,
   deriveInitialHierarchySnapshot,
   normalizeInitialHierarchySnapshot,
+  replaceSelectionBuckets,
   resourceCreationReducer,
   resourceIdKey,
 } from '../../src/features/resources-master/resourceCreation.model'
@@ -322,5 +323,56 @@ describe('resource creation contract-pending safety wall', () => {
       kind: 'contract-pending',
       blockedCapability: 'attributes-v1',
     })
+  })
+
+  it('revises and invalidates the lease only when selection buckets change', () => {
+    const before = populatedDraft().draft
+    const buckets = {
+      ...before.selectionBuckets,
+      omitted: new Set(['assignment-omitted']),
+    }
+    const changed = replaceSelectionBuckets(before, buckets)
+
+    expect(replaceSelectionBuckets(before, before.selectionBuckets)).toBe(
+      before,
+    )
+    expect(changed).toMatchObject({
+      selectionBuckets: buckets,
+      authoritativeEvaluation: null,
+      catalogFingerprint: null,
+      revision: before.revision + 1,
+    })
+  })
+
+  it('clears every selection bucket with hierarchy changes and preserves them for a Unit change', () => {
+    const buckets = {
+      active: { 'assignment-active': undefined as never },
+      suspended: { 'assignment-suspended': undefined as never },
+      omitted: new Set(['assignment-omitted']),
+    }
+    const before = {
+      ...populatedDraft(),
+      draft: {
+        ...populatedDraft().draft,
+        selectionBuckets: buckets,
+      },
+    }
+    const hierarchyChanged = resourceCreationReducer(before, {
+      type: 'CONFIRM_CLASS',
+      item: { ...classItem, id: 'class-2' },
+    })
+    const unitChanged = resourceCreationReducer(before, {
+      type: 'CONFIRM_UNIT',
+      unitId: 'unit-2',
+    })
+
+    expect(hierarchyChanged.draft).toMatchObject({
+      selectionBuckets: { active: {}, suspended: {}, omitted: new Set() },
+      authoritativeEvaluation: null,
+      catalogFingerprint: null,
+      revision: before.draft.revision + 1,
+    })
+    expect(unitChanged.draft.selectionBuckets).toBe(buckets)
+    expect(unitChanged.draft.revision).toBe(before.draft.revision + 1)
   })
 })

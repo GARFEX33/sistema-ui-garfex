@@ -129,9 +129,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 9. **Start → finish:** no reversible local selection model → generic, transport-free buckets retain opaque values by assignment ID without interpreting conditions or calling backend. **Files:** `src/features/resources-master/resourceCreation.selectionDraft.ts`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/resourceCreation.selectionDraft.test.ts`, `tests/unit/resourceCreation.model.test.ts`. **Verify:** `pnpm exec vitest run tests/unit/resourceCreation.selectionDraft.test.ts tests/unit/resourceCreation.model.test.ts && pnpm typecheck`. **Runtime:** N/A — pure contract consumed only after the backend-v1 gate. **Rollback:** revert the new pure module/model integration and tests only.
 
-- [ ] **RED:** Add failing opaque-value tests for assignment-ID keying, active/suspended exclusivity, confirm, omit, suspend, restore, keep-suspended, active-only projection, hierarchy reset, Unit evaluation invalidation, and revision increments. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement generic `SelectionBuckets<TSelection>` and pure operations in `resourceCreation.selectionDraft.ts`; keep `SelectionBuckets<never>` in the current runtime and never introduce a transport DTO or local `CONDITIONAL` evaluator. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove definition-ID/index collisions cannot merge assignments and that omitted differs from unanswered, then run the focused command and record the pure-contract result. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing opaque-value tests for assignment-ID keying, active/suspended exclusivity, confirm, omit, suspend, restore, keep-suspended, active-only projection, hierarchy reset, Unit evaluation invalidation, and revision increments. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Implement generic `SelectionBuckets<TSelection>` and pure operations in `resourceCreation.selectionDraft.ts`; keep `SelectionBuckets<never>` in the current runtime and never introduce a transport DTO or local `CONDITIONAL` evaluator. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove definition-ID/index collisions cannot merge assignments and that omitted differs from unanswered, then run the focused command and record the pure-contract result. <!-- sdd-owner: implementation -->
 
 ### PR 11 — Backend-independent accessibility, browser, and architecture closure
 
