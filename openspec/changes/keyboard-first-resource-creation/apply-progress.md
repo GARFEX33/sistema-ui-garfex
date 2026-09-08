@@ -800,3 +800,10 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Verification:** focused RTL 22/22; keyboard/resource-creation architecture 11/11; full `pnpm test` 429/429; `pnpm typecheck`; targeted ESLint and Prettier; `git diff --check` all passed.
 - **Files / workload:** `CrearRecursoSurface.tsx`, `crearRecursoSurface.test.tsx`, and this record; source/test A+D is 133 before this concise record, below the 399-line PR boundary. No commit, push, PR, review, receipt, browser fixture, API/backend, styling, dependency, attribute/evaluation/create, or global-listener work occurred.
 - **Deviation / rollback:** none; revert the local handler/focus effect and their RTL coverage to restore the prior behavior.
+
+## PR 11C — closure and focus correction
+- **Status/action context:** `openspec` authoritative `ready`, strict TDD, repo-local allowlist only, and no warnings; PR11 RED/GREEN/TRIANGULATE rows remain visibly `[x]` after gates.
+- **Completed/files:** preserved keyboard/axe closure and corrected only `CrearRecursoSurface.tsx`, `StagedSearchSelector.tsx`, their RTL files, and the existing workstation E2E; no backend, API, style, global listener, or lifecycle change.
+- **TDD Cycle Evidence:** safety net 31 RTL passed; RED failed on user-focus stealing and trigger-over-original restoration; GREEN passed 34 RTL; triangulation covered more-page, partial-error, exhaustion, batched readiness, immediate reopen, and valid keyboard opener; Prettier refactor stayed green.
+- **Verification:** 60 focused RTL/architecture tests, Playwright 7/7, typecheck, lint, format check, build, and `git diff --check` passed; build had only existing Rollup/Zod comments and >500 kB chunk warnings.
+- **Deviation/remaining/workload:** none; PR12–15 exact unchecked backend-gated rows remain unchanged; rollback only these local focus tests/effects; final candidate is below 399 A+D, with no commit or parent action.

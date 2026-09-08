@@ -772,6 +772,46 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toHaveFocus()
   })
 
+  it('restores a valid keyboard opener before the trigger fallback', async () => {
+    const user = userEvent.setup()
+    renderSurface(fakeApi())
+    const originalOpener = document.createElement('button')
+    originalOpener.textContent = 'Abrir creador desde contexto'
+    document.body.append(originalOpener)
+    originalOpener.focus()
+
+    fireEvent.keyDown(document, { key: 'n' })
+    await screen.findByRole('dialog', { name: 'Creador de recursos' })
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    await new Promise((resolve) => window.setTimeout(resolve, 60))
+
+    expect(originalOpener).toHaveFocus()
+    originalOpener.remove()
+  })
+
+  it('cancels delayed close restoration when the dialog immediately reopens', async () => {
+    const user = userEvent.setup()
+    renderSurface(fakeApi())
+    const trigger = screen.getByRole('button', { name: 'Nuevo recurso' })
+
+    await user.click(trigger)
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    await user.click(trigger)
+    const classSearch = await screen.findByRole('searchbox', {
+      name: 'Clase',
+    })
+    await new Promise((resolve) => window.setTimeout(resolve, 60))
+
+    expect(screen.getByRole('dialog')).toBeVisible()
+    expect(classSearch).toHaveFocus()
+  })
+
   it('falls back to the Recursos sidebar when the trigger is disconnected before Class Escape closes', async () => {
     const user = userEvent.setup()
     renderSurface(fakeApi())

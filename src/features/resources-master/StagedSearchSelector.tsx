@@ -51,8 +51,11 @@ export function StagedSearchSelector<T>({
   const [query, setQuery] = useState('')
   const [candidateKey, setCandidateKey] = useState<string | null>(null)
   const preferredApplied = useRef(false)
+  const restoreLoadMoreFocus = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const listBoxRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef<HTMLButtonElement>(null)
+  const retryContinuationRef = useRef<HTMLButtonElement>(null)
   const visibleItems = useMemo(
     () =>
       deriveVisibleStagedSelectorItems(
@@ -79,6 +82,25 @@ export function StagedSearchSelector<T>({
 
   const canLoadMore = loadState.status === 'ready' && !loadState.exhausted
   const filteredEmpty = !visibleItems.length && items.length > 0
+
+  useEffect(() => {
+    if (!restoreLoadMoreFocus.current || loadState.status === 'loading-more')
+      return
+    restoreLoadMoreFocus.current = false
+    const restoreFocus = () => {
+      const activeElement = document.activeElement
+      const focusWasLost =
+        activeElement === document.body ||
+        activeElement === document.documentElement
+      if (!focusWasLost) return
+      if (canLoadMore) loadMoreRef.current?.focus()
+      else if (loadState.status === 'partial-error')
+        retryContinuationRef.current?.focus()
+      else inputRef.current?.focus()
+    }
+    const frame = window.requestAnimationFrame(restoreFocus)
+    return () => window.cancelAnimationFrame(frame)
+  }, [canLoadMore, items, loadState.status])
   const focusCandidate = () => {
     const key = candidateKey ?? visibleItems[0]?.key
     Array.from(
@@ -215,13 +237,24 @@ export function StagedSearchSelector<T>({
       {loadState.status === 'partial-error' && (
         <p role="alert" className="text-sm text-text-secondary">
           No se pudo cargar la continuación.{' '}
-          <Button variant="outline" onPress={onRetry}>
+          <Button
+            ref={retryContinuationRef}
+            variant="outline"
+            onPress={onRetry}
+          >
             Reintentar continuación
           </Button>
         </p>
       )}
       {canLoadMore && (
-        <Button variant="outline" onPress={onLoadMore}>
+        <Button
+          ref={loadMoreRef}
+          variant="outline"
+          onPress={() => {
+            restoreLoadMoreFocus.current = true
+            onLoadMore()
+          }}
+        >
           Cargar más…
         </Button>
       )}

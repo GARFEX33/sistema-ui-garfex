@@ -72,7 +72,12 @@ export function CrearRecursoSurface({
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
-      openerRef.current = opener?.isConnected ? opener : null
+      openerRef.current =
+        opener?.isConnected &&
+        opener !== document.body &&
+        opener !== document.documentElement
+          ? opener
+          : null
       const prefix = initialHierarchySnapshotCaptureRef.current.captureOnOpen()
       flow.begin(prefix)
       setStep(1)
@@ -104,7 +109,7 @@ export function CrearRecursoSurface({
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
 
   useEffect(() => {
-    if (step !== 1) return
+    if (!isOpen || step !== 1) return
     const labelByStage = {
       class: 'Clase',
       family: 'Familia',
@@ -119,21 +124,31 @@ export function CrearRecursoSurface({
     dialogRef.current
       ?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
       ?.focus()
-  }, [flow.state.stage.kind, step])
+  }, [flow.state.stage.kind, isOpen, step])
 
   useEffect(() => {
+    let delayedRestore: number | null = null
     if (isOpen) {
       wasOpen.current = true
     } else if (wasOpen.current) {
-      restoreFocusNextFrame(openerRef.current, [
+      const opener = openerRef.current
+      const fallbacks = [
         () => triggerRef.current,
         () =>
           document.querySelector<HTMLElement>(
             '[data-spatial-id="sidebar.recursos"]',
           ),
-      ])
+      ]
+      const restoreFocus = () => restoreFocusNextFrame(opener, fallbacks)
+      restoreFocus()
+      delayedRestore = window.setTimeout(() => {
+        if (!isOpenRef.current) restoreFocus()
+      }, 50)
       openerRef.current = null
       wasOpen.current = false
+    }
+    return () => {
+      if (delayedRestore !== null) window.clearTimeout(delayedRestore)
     }
   }, [isOpen])
 

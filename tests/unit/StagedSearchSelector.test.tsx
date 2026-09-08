@@ -1,4 +1,10 @@
-import { createEvent, fireEvent, render, screen } from '@testing-library/react'
+import {
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -145,6 +151,74 @@ describe('StagedSearchSelector', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'No hay opciones disponibles.',
     )
+  })
+
+  it('consumes continuation focus in every terminal state without stealing a user-selected focus target', async () => {
+    const onLoadMore = vi.fn()
+    const selector = (
+      loadState: SelectorLoadState,
+      selectorItems: readonly Item[] = items,
+    ) => (
+      <Selector
+        items={selectorItems}
+        loadState={loadState}
+        onLoadMore={onLoadMore}
+      />
+    )
+    const { rerender } = render(selector(ready))
+    const input = screen.getByRole('searchbox', { name: 'Clase' })
+    const tree = screen.getByRole('option', { name: 'Árbol' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    rerender(selector({ status: 'loading-more' }))
+    rerender(selector(ready))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Cargar más…' })).toHaveFocus(),
+    )
+
+    const batchedLoadMore = screen.getByRole('button', {
+      name: 'Cargar más…',
+    })
+    batchedLoadMore.focus()
+    fireEvent.click(batchedLoadMore)
+    document.body.tabIndex = -1
+    document.body.focus()
+    rerender(selector(ready, [...items, { id: 'pipe', nombre: 'Tubería' }]))
+    document.body.removeAttribute('tabindex')
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Cargar más…' })).toHaveFocus(),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más…' }))
+    rerender(selector({ status: 'loading-more' }))
+    tree.focus()
+    rerender(selector(ready))
+    expect(tree).toHaveFocus()
+
+    const loadMore = screen.getByRole('button', { name: 'Cargar más…' })
+    loadMore.focus()
+    fireEvent.click(loadMore)
+    rerender(selector({ status: 'loading-more' }))
+    rerender(selector({ status: 'partial-error' }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Reintentar continuación' }),
+      ).toHaveFocus(),
+    )
+
+    rerender(selector(ready))
+    const finalPageLoadMore = screen.getByRole('button', {
+      name: 'Cargar más…',
+    })
+    finalPageLoadMore.focus()
+    fireEvent.click(finalPageLoadMore)
+    rerender(selector({ status: 'loading-more' }))
+    rerender(selector({ status: 'ready', exhausted: true }))
+    await waitFor(() => expect(input).toHaveFocus())
+
+    rerender(selector(ready))
+    expect(input).toHaveFocus()
+    expect(onLoadMore).toHaveBeenCalledTimes(5)
   })
 
   it('confirms exactly the option focused by list arrows, not its initial active option', async () => {
