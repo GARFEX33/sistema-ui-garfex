@@ -3,9 +3,10 @@ import { makeFunctionReference } from 'convex/server'
 import type { FunctionReference } from 'convex/server'
 import { z } from 'zod'
 import type {
+  ResourceAllowedAttributeValueItem,
+  ResourceAllowedAttributeValueListInput,
   ResourceAttributeAssignment,
   ResourceAttributeAssignmentListInput,
-  ResourceAttributeDataType,
   ResourceAttributeDefinition,
   ResourceAttributeDefinitionInput,
   ResourceAttributeOption,
@@ -70,6 +71,9 @@ export type ResourceAttributeAssignmentListOperation =
 export type ResourceAttributeDefinitionOperation =
   'catalogoAdmin/atributos:obtenerDefinicionAtributo'
 
+export type ResourceAllowedAttributeValueListOperation =
+  'catalogoAdmin/atributos:listarValoresPermitidosAtributo'
+
 export type ResourceAttributeOptionListOperation =
   'catalogoAdmin/atributos:listarOpcionesAtributo'
 
@@ -84,6 +88,7 @@ export type ResourceOperation =
   | ResourceUnitDetailOperation
   | ResourceAttributeAssignmentListOperation
   | ResourceAttributeDefinitionOperation
+  | ResourceAllowedAttributeValueListOperation
   | ResourceAttributeOptionListOperation
 
 export interface ResourceTransport {
@@ -136,6 +141,9 @@ export interface ResourcesMasterApi {
   getAttributeDefinition: (
     input: ResourceAttributeDefinitionInput,
   ) => Promise<ResourceAttributeDefinition | null>
+  listAllowedAttributeValues: (
+    input: ResourceAllowedAttributeValueListInput,
+  ) => Promise<ResourceContextListPage<ResourceAllowedAttributeValueItem>>
   listAttributeOptions: (
     input: ResourceAttributeOptionListInput,
   ) => Promise<ResourceContextListPage<ResourceAttributeOption>>
@@ -450,8 +458,6 @@ const attributeApplicabilities = [
 
 const attributeSelections = ['SELECTED', 'SHADOWED', 'SUPPRESSED', 'NONE']
 
-const attributeDataTypes = ['TEXTO', 'NUMERO', 'BOOLEANO', 'OPCION']
-
 const attributeAssignmentItem = (
   value: unknown,
 ): ResourceAttributeAssignment => {
@@ -502,51 +508,71 @@ export function parseAttributeAssignmentsPage(
   return { ...result, items: result.items.map(attributeAssignmentItem) }
 }
 
-const attributeDefinitionItem = (
-  value: unknown,
-): ResourceAttributeDefinition => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    typeof value.clave !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    (has(value, 'descripcion') &&
-      value.descripcion !== undefined &&
-      typeof value.descripcion !== 'string') ||
-    !attributeDataTypes.includes(value.tipoDato as string) ||
-    (has(value, 'unidadId') &&
-      value.unidadId !== undefined &&
-      !definedId(value.unidadId)) ||
-    typeof value.activo !== 'boolean' ||
-    value.revision === undefined ||
-    value.revision === null ||
-    typeof value.effective !== 'boolean' ||
-    !Array.isArray(value.effectiveReasons) ||
-    !value.effectiveReasons.every((reason) => typeof reason === 'string')
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    clave: value.clave,
-    nombre: value.nombre,
-    ...(value.descripcion === undefined
-      ? {}
-      : { descripcion: value.descripcion as string }),
-    tipoDato: value.tipoDato as ResourceAttributeDataType,
-    ...(value.unidadId === undefined ? {} : { unidadId: value.unidadId }),
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-    effectiveReasons: [...value.effectiveReasons],
-  }
-}
+const attributeContractIdSchema = z.string().min(1)
+const attributeDefinitionSchema = z
+  .object({
+    id: attributeContractIdSchema,
+    clave: z.string(),
+    nombre: z.string(),
+    descripcion: z.string().optional(),
+    tipoDato: z.enum(['TEXTO', 'NUMERO', 'BOOLEANO', 'OPCION']),
+    modoCaptura: z.enum(['SELECCION', 'LIBRE']),
+    unidadId: attributeContractIdSchema.optional(),
+    activo: z.boolean(),
+    revision: z.number(),
+    effective: z.boolean(),
+    effectiveReasons: z.array(z.string()),
+  })
+  .strict()
+const allowedAttributeValueSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('TEXTO'), value: z.string() }).strict(),
+  z.object({ kind: z.literal('NUMERO'), value: z.number() }).strict(),
+  z.object({ kind: z.literal('BOOLEANO'), value: z.boolean() }).strict(),
+  z
+    .object({
+      kind: z.literal('OPCION'),
+      opcionAtributoId: attributeContractIdSchema,
+    })
+    .strict(),
+])
+const allowedAttributeValueItemSchema = z
+  .object({
+    id: attributeContractIdSchema,
+    definicionAtributoId: attributeContractIdSchema,
+    clave: z.string(),
+    valor: allowedAttributeValueSchema,
+    nombre: z.string(),
+    descripcion: z.string().optional(),
+    orden: z.number(),
+    activo: z.boolean(),
+    revision: z.number(),
+    effective: z.boolean(),
+    effectiveReasons: z.array(z.string()),
+  })
+  .strict()
+const allowedAttributeValuesPageSchema = z
+  .object({
+    items: z.array(allowedAttributeValueItemSchema),
+    continuationCursor: z.string().nullable(),
+    isExhausted: z.boolean(),
+  })
+  .strict()
 
 export function parseAttributeDefinition(
   value: unknown,
 ): ResourceAttributeDefinition | null {
   if (value === null) return null
-  return attributeDefinitionItem(value)
+  const result = attributeDefinitionSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data
+}
+
+export function parseAllowedAttributeValuesPage(
+  value: unknown,
+): ResourceContextListPage<ResourceAllowedAttributeValueItem> {
+  const result = allowedAttributeValuesPageSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data
 }
 
 const attributeOptionItem = (value: unknown): ResourceAttributeOption => {
@@ -742,6 +768,18 @@ const attributeAssignmentArgs = (input: ResourceAttributeAssignmentListInput) =>
     ...contextListArgs(input),
   })
 
+const allowedAttributeValueArgs = (
+  input: ResourceAllowedAttributeValueListInput,
+) => {
+  const result: Record<string, unknown> = {
+    definicionAtributoId: input.definicionAtributoId,
+  }
+  if (input.cursor !== undefined) result.cursor = input.cursor
+  if (input.pageSize !== undefined) result.pageSize = input.pageSize
+  if (input.modo !== undefined) result.modo = input.modo
+  return Object.freeze(result)
+}
+
 const attributeOptionArgs = (input: ResourceAttributeOptionListInput) =>
   Object.freeze({
     definicionAtributoId: input.definicionAtributoId,
@@ -770,6 +808,7 @@ const queryReference = (
     | ResourceUnitDetailOperation
     | ResourceAttributeAssignmentListOperation
     | ResourceAttributeDefinitionOperation
+    | ResourceAllowedAttributeValueListOperation
     | ResourceAttributeOptionListOperation,
 ) => makeFunctionReference<'query', Record<string, unknown>, unknown>(name)
 
@@ -820,6 +859,8 @@ const listAttributeAssignmentsReference: ResourceQueryReference =
 const getAttributeDefinitionReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/atributos:obtenerDefinicionAtributo',
 )
+const listAllowedAttributeValuesReference: ResourceQueryReference =
+  queryReference('catalogoAdmin/atributos:listarValoresPermitidosAtributo')
 const listAttributeOptionsReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/atributos:listarOpcionesAtributo',
 )
@@ -883,6 +924,10 @@ export function createResourcesMasterConvexApi(
           })
         case 'catalogoAdmin/atributos:obtenerDefinicionAtributo':
           return client.query(getAttributeDefinitionReference, {
+            ...requestArgs,
+          })
+        case 'catalogoAdmin/atributos:listarValoresPermitidosAtributo':
+          return client.query(listAllowedAttributeValuesReference, {
             ...requestArgs,
           })
         case 'catalogoAdmin/atributos:listarOpcionesAtributo':
@@ -1037,6 +1082,15 @@ export function createResourcesMasterApi(
         await transport.invoke(
           'catalogoAdmin/atributos:obtenerDefinicionAtributo',
           { definicionAtributoId: input.definicionAtributoId },
+        ),
+      )
+    },
+    async listAllowedAttributeValues(input) {
+      if (!definedId(input.definicionAtributoId)) return bad()
+      return parseAllowedAttributeValuesPage(
+        await transport.invoke(
+          'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
+          allowedAttributeValueArgs(input),
         ),
       )
     },

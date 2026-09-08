@@ -243,21 +243,51 @@ export type ResourceAttributeDataType =
   | 'BOOLEANO'
   | 'OPCION'
 
+export type ResourceAttributeCaptureMode = 'SELECCION' | 'LIBRE'
+
 export interface ResourceAttributeDefinition {
   id: ResourceId
   clave: string
   nombre: string
   descripcion?: string
   tipoDato: ResourceAttributeDataType
+  modoCaptura: ResourceAttributeCaptureMode
   unidadId?: ResourceId
   activo: boolean
-  revision: unknown
+  revision: number
   effective: boolean
   effectiveReasons: string[]
 }
 
 export interface ResourceAttributeDefinitionInput {
   readonly definicionAtributoId: ResourceId
+}
+
+export type ResourceAllowedAttributeValue =
+  | { kind: 'TEXTO'; value: string }
+  | { kind: 'NUMERO'; value: number }
+  | { kind: 'BOOLEANO'; value: boolean }
+  | { kind: 'OPCION'; opcionAtributoId: ResourceId }
+
+export interface ResourceAllowedAttributeValueItem {
+  id: ResourceId
+  definicionAtributoId: ResourceId
+  clave: string
+  valor: ResourceAllowedAttributeValue
+  nombre: string
+  descripcion?: string
+  orden: number
+  activo: boolean
+  revision: number
+  effective: boolean
+  effectiveReasons: string[]
+}
+
+export interface ResourceAllowedAttributeValueListInput {
+  readonly definicionAtributoId: ResourceId
+  readonly cursor?: string | null
+  readonly pageSize?: number
+  readonly modo?: ResourceLifecycle
 }
 
 export interface ResourceAttributeOption {

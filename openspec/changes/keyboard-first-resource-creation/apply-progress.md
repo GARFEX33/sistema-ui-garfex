@@ -915,3 +915,32 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 ## Deferred parent-owned lifecycle actions
 
 - Tracker, chain targeting, bounded review, verification, sync, and archive remain parent-owned; their task rows were preserved byte-for-byte.
+
+---
+
+## PR 12A — Definition and allowed-value query contracts
+
+- **Status:** manual structured status produced after parent context omitted native JSON: `artifactStore: openspec`; proposal, nested spec, design, tasks, and prior progress present; pre-apply `ready`; repo-local allowed surfaces only; no warnings. CodeGraph MCP was unavailable after the existing index check, so source reads were used.
+- **Boundary:** authorized `auto-chain` / feature-branch-chain `… → PR 11 → 📍 PR 12A`; no evaluator, create, lease, UI, legacy option adapter, backend, dependency, commit, review, or lifecycle work.
+- **Completed / persisted:** PR 12A RED, GREEN, and TRIANGULATE/REFACTOR rows are visibly `[x]` in `tasks.md`.
+- **Files:** `resourcesMaster.types.ts`, `resourcesMaster.api.ts`, `resourcesMasterApi.test.ts`, tasks, and this progress record.
+- **Behavior:** exact Zod definition and allowed-value schemas reject unknown capture modes/kinds, null optionals, malformed fields, and malformed envelopes; the adapter sends only supplied `{ definicionAtributoId, cursor?, pageSize?, modo? }` fields to `catalogoAdmin/atributos:listarValoresPermitidosAtributo` and propagates transport rejection.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 12A contracts | API baseline 23/23 | 3 failures: missing capture mode, parser, and adapter | 26/26 plus typecheck | All four typed variants, optional absence, null/malformed rejection, cursor/page/mode, transport rejection; dead parser imports removed and focused suite remained 31/31 |
+
+- **Verification:** focused API + architecture 31/31; full `pnpm test` 38 files / 435 tests; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- **Workload / rollback:** current source/test A+D is 330 before this concise progress/tasks update, below 399; rollback removes only these schemas/types/mapping/tests. No compatibility compromise: `ResourceAttributeDefinition.revision` is intentionally tightened from `unknown` to `number` per published contract.
+- **Remaining:** the prior “18 unchecked” count is superseded; PR 12B begins with these persisted unchecked rows:
+  - `- [ ] **RED:** Add failing exact-fixture tests for \`INCOMPLETE | VALID | INVALID\`, \`valid\` consistency, nullable generated identity, resolved assignments, 13 issue codes, fingerprint, and malformed/unknown evaluation rejection. <!-- sdd-owner: implementation -->`
+  - `- [ ] **GREEN:** Add only the exact evaluation Zod schema/parser and its \`ResourceOperation\`, \`ResourceTransport\`, and \`ResourcesMasterApi\` query-adapter mapping; do not adopt evaluation into the model or add create behavior. <!-- sdd-owner: implementation -->`
+  - `- [ ] **TRIANGULATE/REFACTOR:** Prove each status, absent selected value, unknown disposition/issue rejection, and transport rejection fail closed through the focused command; retain no lease/create/UI path. <!-- sdd-owner: implementation -->`
+---
+## PR 12A exact-ID correction
+- **Correction:** `attributeContractIdSchema` now accepts only non-empty strings, closing its prior non-string acceptance.
+- **TDD:** the focused malformed-ID boundary test RED-failed before the one-line schema GREEN correction; adapter malformed-ID coverage passed.
+- **Verification:** focused 27/27; full `pnpm test` 38 files / 436 tests; typecheck, lint, format check, and `git diff --check` passed.
+- **Workload:** candidate remains exactly 399 A+D; no task checkbox, commit, review, or lifecycle action changed.

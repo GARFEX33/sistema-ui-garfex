@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createResourcesMasterApi,
+  parseAllowedAttributeValuesPage,
+  parseAttributeDefinition,
   parseAttributeAssignmentsPage,
   parseAttributeOptionsPage,
   parseContextClassesPage,
@@ -683,6 +685,7 @@ describe('resources master API boundary', () => {
     clave: 'GRANULOMETRIA',
     nombre: 'Granulometría',
     tipoDato: 'OPCION',
+    modoCaptura: 'SELECCION',
     activo: true,
     revision: 1,
     effective: true,
@@ -718,6 +721,10 @@ describe('resources master API boundary', () => {
     await expect(
       api.getAttributeDefinition({ definicionAtributoId: 'definicion-1' }),
     ).rejects.toThrow()
+    invoke.mockResolvedValueOnce(attributeDefinition({ id: false }))
+    await expect(
+      api.getAttributeDefinition({ definicionAtributoId: 'definicion-1' }),
+    ).rejects.toThrow('Invalid resources master response')
     await expect(
       api.getAttributeDefinition({ definicionAtributoId: undefined as never }),
     ).rejects.toThrow()
@@ -756,5 +763,190 @@ describe('resources master API boundary', () => {
     await expect(
       api.listAttributeOptions({ definicionAtributoId: undefined as never }),
     ).rejects.toThrow()
+  })
+
+  const attributeDefinitionV1 = (extra: Record<string, unknown> = {}) => ({
+    id: 'definition-1',
+    clave: 'COLOR',
+    nombre: 'Color',
+    tipoDato: 'OPCION',
+    modoCaptura: 'SELECCION',
+    activo: true,
+    revision: 7,
+    effective: true,
+    effectiveReasons: ['ACTIVE'],
+    ...extra,
+  })
+
+  const allowedValue = (extra: Record<string, unknown> = {}) => ({
+    id: 'allowed-1',
+    definicionAtributoId: 'definition-1',
+    clave: 'ROJO',
+    nombre: 'Rojo',
+    orden: 4,
+    activo: true,
+    revision: 8,
+    effective: true,
+    effectiveReasons: ['ACTIVE'],
+    valor: { kind: 'TEXTO', value: 'rojo' },
+    ...extra,
+  })
+
+  const allowedValuesPage = (
+    items: unknown[] = [allowedValue()],
+    extra: Record<string, unknown> = {},
+  ) => ({
+    items,
+    continuationCursor: 'next-page',
+    isExhausted: false,
+    ...extra,
+  })
+
+  it('parses only the published nullable attribute definition contract', () => {
+    expect(parseAttributeDefinition(null)).toBeNull()
+    expect(parseAttributeDefinition(attributeDefinitionV1())).toEqual(
+      attributeDefinitionV1(),
+    )
+    expect(
+      parseAttributeDefinition(
+        attributeDefinitionV1({
+          modoCaptura: 'LIBRE',
+          descripcion: 'Sólo catálogo',
+          unidadId: 'unit-1',
+        }),
+      ),
+    ).toEqual(
+      attributeDefinitionV1({
+        modoCaptura: 'LIBRE',
+        descripcion: 'Sólo catálogo',
+        unidadId: 'unit-1',
+      }),
+    )
+
+    for (const malformed of [
+      attributeDefinitionV1({ modoCaptura: 'UNKNOWN' }),
+      attributeDefinitionV1({ descripcion: null }),
+      attributeDefinitionV1({ unidadId: null }),
+      attributeDefinitionV1({ revision: '7' }),
+      attributeDefinitionV1({ effectiveReasons: [false] }),
+    ])
+      expect(() => parseAttributeDefinition(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('rejects non-string IDs and unknown keys at every v1 boundary', () => {
+    for (const malformed of [
+      attributeDefinitionV1({ id: 7 }),
+      attributeDefinitionV1({ unknownDefinitionKey: true }),
+    ])
+      expect(() => parseAttributeDefinition(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+
+    for (const malformed of [
+      allowedValuesPage([], { unknownPageKey: true }),
+      allowedValuesPage([allowedValue({ id: false })]),
+      allowedValuesPage([allowedValue({ definicionAtributoId: {} })]),
+      allowedValuesPage([
+        allowedValue({
+          valor: { kind: 'OPCION', opcionAtributoId: true },
+        }),
+      ]),
+      allowedValuesPage([
+        allowedValue({
+          valor: { kind: 'TEXTO', value: 'rojo', opcionAtributoId: 'option-1' },
+        }),
+      ]),
+      allowedValuesPage([allowedValue({ unknownItemKey: true })]),
+    ])
+      expect(() => parseAllowedAttributeValuesPage(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('parses exact typed allowed-value pages and rejects malformed variants', () => {
+    const variants = [
+      allowedValue({ valor: { kind: 'TEXTO', value: 'rojo' } }),
+      allowedValue({ id: 'allowed-2', valor: { kind: 'NUMERO', value: 2.5 } }),
+      allowedValue({
+        id: 'allowed-3',
+        valor: { kind: 'BOOLEANO', value: false },
+      }),
+      allowedValue({
+        id: 'allowed-4',
+        valor: { kind: 'OPCION', opcionAtributoId: 'option-1' },
+      }),
+    ]
+    expect(
+      parseAllowedAttributeValuesPage(allowedValuesPage(variants)),
+    ).toEqual(allowedValuesPage(variants))
+
+    for (const malformed of [
+      allowedValuesPage([], { continuationCursor: 1 }),
+      allowedValuesPage([], { isExhausted: 'false' }),
+      allowedValuesPage([allowedValue({ descripcion: null })]),
+      allowedValuesPage([
+        allowedValue({ valor: { kind: 'UNKNOWN', value: 'x' } }),
+      ]),
+      allowedValuesPage([allowedValue({ valor: { kind: 'TEXTO' } })]),
+      allowedValuesPage([
+        allowedValue({ valor: { kind: 'NUMERO', value: '2' } }),
+      ]),
+      allowedValuesPage([
+        allowedValue({ valor: { kind: 'BOOLEANO', value: null } }),
+      ]),
+      allowedValuesPage([
+        allowedValue({
+          valor: { kind: 'OPCION', value: 'red', opcionAtributoId: 'option-1' },
+        }),
+      ]),
+      allowedValuesPage([allowedValue({ orden: '4' })]),
+      allowedValuesPage([allowedValue({ effectiveReasons: 'ACTIVE' })]),
+    ])
+      expect(() => parseAllowedAttributeValuesPage(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('lists allowed attribute values with only supplied published arguments', async () => {
+    const invoke = vi.fn().mockResolvedValue(allowedValuesPage())
+    const api = createResourcesMasterApi({ invoke })
+
+    await expect(
+      api.listAllowedAttributeValues({ definicionAtributoId: 'definition-1' }),
+    ).resolves.toEqual(allowedValuesPage())
+    await api.listAllowedAttributeValues({
+      definicionAtributoId: 'definition-1',
+      cursor: null,
+      pageSize: 25,
+      modo: 'INACTIVE',
+    })
+
+    expect(invoke.mock.calls).toEqual([
+      [
+        'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
+        { definicionAtributoId: 'definition-1' },
+      ],
+      [
+        'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
+        {
+          definicionAtributoId: 'definition-1',
+          cursor: null,
+          pageSize: 25,
+          modo: 'INACTIVE',
+        },
+      ],
+    ])
+
+    invoke.mockRejectedValueOnce(new Error('transport down'))
+    await expect(
+      api.listAllowedAttributeValues({ definicionAtributoId: 'definition-1' }),
+    ).rejects.toThrow('transport down')
+    await expect(
+      api.listAllowedAttributeValues({
+        definicionAtributoId: undefined as never,
+      }),
+    ).rejects.toThrow('Invalid resources master response')
   })
 })
