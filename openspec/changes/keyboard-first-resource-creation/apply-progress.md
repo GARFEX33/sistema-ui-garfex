@@ -785,3 +785,18 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Deviation:** none; no controller, hydrator, UI, API, or payload semantics changed.
 - **Remaining:** the three combined PR 11 closure rows and all parent lifecycle rows remain unchecked/deferred.
 - **Workload / rollback:** PR 11A boundary; revert these three files; final diff is 399 A+D including this record.
+
+---
+## PR 11B — local hierarchy back navigation and focus restoration
+- **Status / action context:** consumed authoritative `gentle-ai.sdd-status@2`: `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, and no blockers. Repo-local workspace and parent allowlist were safe without warnings.
+- **Boundary / persistence:** source and RTL slice only; PR 11's combined browser/closure task rows remain visibly unchecked, so `tasks.md` was intentionally not changed. Parent-owned lifecycle rows remain untouched.
+- **Behavior:** local dialog bubbling handles Escape as `pending → Unidad → Tipo → Familia → Clase → close`, focuses the newly-current selector at every local return, and preserves reducer-authoritative rail navigation without clearing drafts. ArrowLeft has the same non-editing back path only when unmodified, unconsumed, and outside editable content; there is no global listener. Closing from Clase restores the connected trigger or the existing Recursos-sidebar fallback.
+
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 11B local back | 20/20 RTL | 22 tests: 20 passed, 2 failed — after the second Escape the expected Tipo searchbox was absent because the dialog closed; the ArrowLeft guard assertion expected Unidad search focus but the option retained focus | 22/22 focused RTL plus typecheck | Covered each Escape step/focus, editable/defaultPrevented/composing/modified ArrowLeft guards, and disconnected-trigger sidebar fallback; Prettier check stayed green |
+
+- **Verification:** focused RTL 22/22; keyboard/resource-creation architecture 11/11; full `pnpm test` 429/429; `pnpm typecheck`; targeted ESLint and Prettier; `git diff --check` all passed.
+- **Files / workload:** `CrearRecursoSurface.tsx`, `crearRecursoSurface.test.tsx`, and this record; source/test A+D is 133 before this concise record, below the 399-line PR boundary. No commit, push, PR, review, receipt, browser fixture, API/backend, styling, dependency, attribute/evaluation/create, or global-listener work occurred.
+- **Deviation / rollback:** none; revert the local handler/focus effect and their RTL coverage to restore the prior behavior.

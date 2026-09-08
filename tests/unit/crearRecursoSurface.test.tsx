@@ -712,18 +712,84 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
   })
 
-  it('closes on Escape and restores focus to the trigger', async () => {
+  it('backs one Escape stage at a time and focuses each current selector before closing', async () => {
     const user = userEvent.setup()
     renderSurface(fakeApi())
     const trigger = screen.getByRole('button', { name: 'Nuevo recurso' })
     await user.click(trigger)
-    await screen.findByRole('dialog', { name: 'Creador de recursos' })
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    await user.click(
+      await screen.findByRole('option', { name: 'Metro cúbico (m³)' }),
+    )
+    await screen.findByRole('heading', { name: 'Contrato pendiente' })
+
+    for (const label of ['Unidad natural', 'Tipo', 'Familia', 'Clase']) {
+      await user.keyboard('{Escape}')
+      const search = await screen.findByRole('searchbox', { name: label })
+      expect(search).toHaveFocus()
+    }
+
     await user.keyboard('{Escape}')
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     )
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     expect(trigger).toHaveFocus()
+  })
+
+  it('uses ArrowLeft only for unmodified, unconsumed, non-editable local back navigation', async () => {
+    const user = userEvent.setup()
+    renderSurface(fakeApi())
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    const search = await screen.findByRole('searchbox', {
+      name: 'Unidad natural',
+    })
+    const option = screen.getByRole('option', {
+      name: 'Metro cúbico (m³)',
+    })
+
+    search.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(search).toHaveFocus()
+    option.focus()
+    fireEvent.keyDown(option, { key: 'ArrowLeft', ctrlKey: true })
+    fireEvent.keyDown(option, { key: 'ArrowLeft', isComposing: true })
+    option.addEventListener('keydown', (event) => event.preventDefault(), {
+      once: true,
+    })
+    fireEvent.keyDown(option, { key: 'ArrowLeft' })
+    expect(
+      screen.getByRole('searchbox', { name: 'Unidad natural' }),
+    ).toBeVisible()
+
+    option.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toHaveFocus()
+  })
+
+  it('falls back to the Recursos sidebar when the trigger is disconnected before Class Escape closes', async () => {
+    const user = userEvent.setup()
+    renderSurface(fakeApi())
+    const trigger = screen.getByRole('button', { name: 'Nuevo recurso' })
+    await user.click(trigger)
+    await screen.findByRole('dialog', { name: 'Creador de recursos' })
+    const fallback = document.createElement('button')
+    fallback.dataset.spatialId = 'sidebar.recursos'
+    document.body.append(fallback)
+    trigger.remove()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(fallback).toHaveFocus()
+    fallback.remove()
   })
 })
 

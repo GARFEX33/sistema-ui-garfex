@@ -35,6 +35,14 @@ export interface CrearRecursoSurfaceProps {
 
 const key = (id: ResourceId) => String(id)
 
+const isEditableTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  Boolean(
+    target.closest(
+      'input, textarea, select, [contenteditable], [role="textbox"]',
+    ),
+  )
+
 export function CrearRecursoSurface({
   api,
   initialHierarchySnapshot,
@@ -96,9 +104,20 @@ export function CrearRecursoSurface({
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
 
   useEffect(() => {
-    if (step !== 1 || flow.state.stage.kind !== 'unit') return
+    if (step !== 1) return
+    const labelByStage = {
+      class: 'Clase',
+      family: 'Familia',
+      type: 'Tipo',
+      unit: 'Unidad natural',
+    }
+    const label =
+      flow.state.stage.kind === 'contract-pending'
+        ? null
+        : labelByStage[flow.state.stage.kind]
+    if (!label) return
     dialogRef.current
-      ?.querySelector<HTMLInputElement>('input[aria-label="Unidad natural"]')
+      ?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
       ?.focus()
   }, [flow.state.stage.kind, step])
 
@@ -210,6 +229,26 @@ export function CrearRecursoSurface({
     returnToUnit()
   }
 
+  const moveBack = () => {
+    if (step === 'contract-pending') {
+      backToContext()
+      return true
+    }
+    if (flow.state.stage.kind === 'unit') {
+      navigateRailStage('type')
+      return true
+    }
+    if (flow.state.stage.kind === 'type') {
+      navigateRailStage('family')
+      return true
+    }
+    if (flow.state.stage.kind === 'family') {
+      navigateRailStage('class')
+      return true
+    }
+    return false
+  }
+
   return (
     <div className="resources-create-surface">
       <Button
@@ -230,11 +269,25 @@ export function CrearRecursoSurface({
         <div
           className="flex min-h-0 flex-1 flex-col"
           onKeyDown={(event: React.KeyboardEvent) => {
-            if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+            if (event.defaultPrevented || event.nativeEvent.isComposing) return
+            if (event.key === 'Escape') {
               event.preventDefault()
               event.stopPropagation()
-              if (step === 'contract-pending') backToContext()
-              else close()
+              if (!moveBack()) close()
+              return
+            }
+            if (
+              event.key !== 'ArrowLeft' ||
+              event.ctrlKey ||
+              event.altKey ||
+              event.metaKey ||
+              event.shiftKey ||
+              isEditableTarget(event.target)
+            )
+              return
+            if (moveBack()) {
+              event.preventDefault()
+              event.stopPropagation()
             }
           }}
         >
