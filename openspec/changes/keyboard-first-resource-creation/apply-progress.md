@@ -1191,3 +1191,5 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Complete:** the rail presents non-navigable `Atributos · n de total` and review-pending markers; command copy now covers attribute/review stages without owning key behavior.
 - **TDD:** five RED assertions; GREEN rail/command/surface proof passed 36/36 and full suite 516/516.
 - **Boundary:** D4b owns the presenter; four slices remain, forecast 1,140–1,550 A+D.
+
+PR 13D4b complete: isolated current-assignment presenter, selector autofocus, and compact RTL cover selection, pagination/retry, omission, LIBRE, and honest blocking states; RED missing-module failure, GREEN 15/15. D5 is ready; 3 slices remain; forecast D5 300–395 +14 320–395 +15 260–370 = 880–1,160 A+D.

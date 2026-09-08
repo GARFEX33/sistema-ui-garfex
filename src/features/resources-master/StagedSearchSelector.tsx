@@ -23,6 +23,7 @@ export type SelectorLoadState =
 
 type StagedSearchSelectorProps<T> = {
   label: string
+  autoFocus?: boolean
   items: readonly T[]
   itemKey: (item: T) => string
   itemName: (item: T) => string
@@ -37,6 +38,7 @@ type StagedSearchSelectorProps<T> = {
 
 export function StagedSearchSelector<T>({
   label,
+  autoFocus = false,
   items,
   itemKey,
   itemName,
@@ -122,6 +124,7 @@ export function StagedSearchSelector<T>({
         <Input
           ref={inputRef}
           aria-label={label}
+          autoFocus={autoFocus}
           className="min-h-9 rounded border border-border bg-surface px-3 text-text-primary outline-none focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-focus"
           onKeyDown={(event) => {
             if (
