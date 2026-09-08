@@ -22,6 +22,7 @@ const creationRuntimeFiles = [
   'ResourceCreationContractPending.tsx',
   'ResourceCreationShell.tsx',
   'StagedSearchSelector.tsx',
+  'resourceCreation.attributeSequence.ts',
   'resourceCreation.dependentLoader.ts',
   'resourceCreation.evaluationLease.ts',
   'resourceCreation.loaders.ts',

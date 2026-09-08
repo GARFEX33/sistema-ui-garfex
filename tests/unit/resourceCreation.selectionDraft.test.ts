@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clearSelectionOmission,
   confirmSelection,
   createSelectionBuckets,
   keepSuspended,
@@ -78,6 +79,18 @@ describe('resource creation selection buckets', () => {
     expect(confirmed).not.toBe(buckets)
     expect(Object.hasOwn(confirmed.active, key)).toBe(true)
     expect(projectActiveSelections(confirmed)).toEqual({ [key]: undefined })
+  })
+
+  it('clears an omission without changing an already-clear bucket', () => {
+    const buckets = omitSelection(createSelectionBuckets(), 'assignment-1')
+    const clear = createSelectionBuckets()
+
+    expect(clearSelectionOmission(buckets, 'assignment-1')).toEqual({
+      active: {},
+      suspended: {},
+      omitted: new Set(),
+    })
+    expect(clearSelectionOmission(clear, 'assignment-1')).toBe(clear)
   })
 
   it('omits a suspended selection exclusively', () => {

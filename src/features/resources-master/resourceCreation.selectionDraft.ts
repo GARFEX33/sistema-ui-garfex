@@ -50,6 +50,17 @@ export const confirmSelection = <TSelection>(
   }
 }
 
+export const clearSelectionOmission = <TSelection>(
+  buckets: SelectionBuckets<TSelection>,
+  key: AssignmentKey,
+): SelectionBuckets<TSelection> => {
+  if (!buckets.omitted.has(key)) return buckets
+
+  const omitted = new Set(buckets.omitted)
+  omitted.delete(key)
+  return { ...buckets, omitted }
+}
+
 export const omitSelection = <TSelection>(
   buckets: SelectionBuckets<TSelection>,
   key: AssignmentKey,

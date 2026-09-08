@@ -1082,3 +1082,13 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - [ ] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->
 - [ ] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->
 ```
+
+---
+
+## PR 13A — authoritative sequence and bucket reconciliation
+
+- **State:** completed pure work unit; no transport, React, reducer, API, or create path changed.
+- **TDD:** RED `pnpm exec vitest run tests/unit/resourceCreation.attributeSequence.test.ts` failed because the new module was absent; GREEN/TRIANGULATE `pnpm exec vitest run tests/unit/resourceCreation.attributeSequence.test.ts tests/unit/resourceCreation.selectionDraft.test.ts && pnpm typecheck` passed 13/13 and typecheck.
+- **Behavior:** backend order is filtered to required/optional without sorting; assignment-ID buckets reconcile active/suspended/omitted selections and retain the current pending assignment when still pending. Suspended values are excluded by the existing active-only projection.
+- **Files:** `resourceCreation.attributeSequence.ts`, `resourceCreation.selectionDraft.ts`, their unit tests, and these PR 13A task/progress updates.
+- **Rollback:** remove the pure reconciliation module, stable omission helper, focused tests, and this PR 13A documentation entry.
