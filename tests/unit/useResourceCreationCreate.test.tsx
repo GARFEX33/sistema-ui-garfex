@@ -158,6 +158,7 @@ describe('useResourceCreationCreate', () => {
       const accepted = result(disposition)
       const createResourceFromSelections = vi.fn().mockResolvedValue(accepted)
       const mounted = renderDriver(state(), createResourceFromSelections)
+      const removeQueries = vi.spyOn(mounted.client, 'removeQueries')
 
       act(() => expect(mounted.result.current.create()).toBe(true))
       await waitFor(() =>
@@ -167,6 +168,12 @@ describe('useResourceCreationCreate', () => {
         }),
       )
       expect(mounted.result.current.create()).toBe(false)
+      if (disposition === 'CATALOG_CHANGED')
+        expect(removeQueries.mock.calls).toEqual([
+          [{ queryKey: ['resources-master', 'creation-attribute-definition'] }],
+          [{ queryKey: ['resources-master', 'creation-allowed-values'] }],
+        ])
+      else expect(removeQueries).not.toHaveBeenCalled()
       expect(createResourceFromSelections).toHaveBeenCalledTimes(1)
     },
   )
@@ -177,6 +184,7 @@ describe('useResourceCreationCreate', () => {
       const response = deferred<ResourceCreationResult>()
       const createResourceFromSelections = vi.fn(() => response.promise)
       const mounted = renderDriver(state(), createResourceFromSelections)
+      const removeQueries = vi.spyOn(mounted.client, 'removeQueries')
 
       act(() => expect(mounted.result.current.create()).toBe(true))
       mounted.rerender({
@@ -184,11 +192,12 @@ describe('useResourceCreationCreate', () => {
       })
       await act(async () =>
         kind === 'success'
-          ? response.resolve(result('CREATED'))
+          ? response.resolve(result('CATALOG_CHANGED'))
           : response.reject(new Error('backend secret')),
       )
       await waitFor(() => expect(mounted.result.current.status).toBe('idle'))
       expect(mounted.result.current).not.toHaveProperty('result')
+      expect(removeQueries).not.toHaveBeenCalled()
     },
   )
 

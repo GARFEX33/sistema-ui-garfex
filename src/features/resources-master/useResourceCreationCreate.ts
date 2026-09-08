@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import {
   asResourceCreationCreateToken,
@@ -36,6 +36,7 @@ export function useResourceCreationCreate({
   ownership,
   state,
 }: ResourceCreationCreateDriverOptions) {
+  const queryClient = useQueryClient()
   const authority = useRef({ ownership, state })
   authority.current = { ownership, state }
   const nextToken = useRef(0)
@@ -89,9 +90,17 @@ export function useResourceCreationCreate({
       mutation.mutate(captured, {
         onSuccess: (result) => {
           inFlight.current = false
-          if (leaseIsCurrent(captured.lease))
+          if (leaseIsCurrent(captured.lease)) {
+            if (result.disposition === 'CATALOG_CHANGED') {
+              queryClient.removeQueries({
+                queryKey: ['resources-master', 'creation-attribute-definition'],
+              })
+              queryClient.removeQueries({
+                queryKey: ['resources-master', 'creation-allowed-values'],
+              })
+            }
             setProjection({ status: 'result', lease: captured.lease, result })
-          else if (activeToken.current === captured.lease.createToken)
+          } else if (activeToken.current === captured.lease.createToken)
             activeToken.current = null
         },
         onError: () => {

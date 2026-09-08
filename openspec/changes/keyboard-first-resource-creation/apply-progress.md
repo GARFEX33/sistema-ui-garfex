@@ -1298,3 +1298,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** `ADOPT_CREATE_EVALUATION` accepts only current review-pending VALID authority with an exact nonblank fingerprint, atomically adopts the backend evaluation and pre-reconciled buckets, returns to attributes, and consumes revision authority once.
 - **TDD:** RED: 11 new adoption cases failed because the reducer treated the event as a type confirmation; GREEN: focused model suite passed 40/40.
 - **Boundary:** PR 14D2 owns flow/catalog dispatch for non-`CREATED` dispositions; PR 14D3 owns the surface outcome. Replan: 46 children total; D2, D3, E, and 15 remain (forecast 600–900 A+D).
+
+---
+
+## PR 14D2a — create flow adoption
+
+- **Complete:** the flow composes one create driver, leaves `CREATED` exposed, and reducer-adopts reconciled non-created evaluations; explicit `CATALOG_CHANGED` clears definition/value caches and ignores stale knowledge.
+- **Proof:** focused flow dispositions cover all four results and exact cache prefixes; unrelated flow/surface tests isolate the create driver with an idle mock.
+- **Reset:** the combined formatted candidate was 402 A+D and is preserved at `/tmp/kfrc-pr14d2-overbudget-1788909248`; readiness triangulation moved to D2b.

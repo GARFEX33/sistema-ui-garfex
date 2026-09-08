@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createParentGatedListController } from '../../shared/hierarchy/parentGatedListController'
-import { asAllowedValueId } from './resourceCreation.attributeSequence'
+import {
+  asAllowedValueId,
+  reconcileAttributeSequence,
+} from './resourceCreation.attributeSequence'
 import type { NormalizedResourceHierarchyPrefix } from './resourceCreation.model'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
 import { useResourceCreationAttributeQueries } from './useResourceCreationAttributeQueries'
+import { useResourceCreationCreate } from './useResourceCreationCreate'
 import { useResourceCreationEvaluation } from './useResourceCreationEvaluation'
 import {
   createUnitCandidateHydrator,
@@ -53,9 +57,40 @@ export function useResourceCreationFlow(
     setState,
     allowedValuesByDefinition: attributes.allowedValuesKnowledge,
   })
+  const creation = useResourceCreationCreate({ api, ownership, state })
 
   useEffect(() => {
-    if (attributes.step.kind !== 'complete') {
+    if (creation.status !== 'result') return
+    const result = creation.result
+    if (result === undefined || result.disposition === 'CREATED') return
+
+    const expectedCatalogFingerprint = state.draft.catalogFingerprint
+    if (expectedCatalogFingerprint === null) return
+    const reconciliation = reconcileAttributeSequence(
+      result.evaluation,
+      state.draft.selectionBuckets,
+      result.disposition === 'CATALOG_CHANGED'
+        ? {}
+        : attributes.allowedValuesKnowledge,
+      null,
+    )
+    dispatch((current) =>
+      resourceCreationReducer(current, {
+        type: 'ADOPT_CREATE_EVALUATION',
+        expectedCatalogFingerprint,
+        evaluation: result.evaluation,
+        selectionBuckets: reconciliation.selectionBuckets,
+      }),
+    )
+  }, [
+    attributes.allowedValuesKnowledge,
+    creation,
+    state.draft.catalogFingerprint,
+    state.draft.selectionBuckets,
+  ])
+
+  useEffect(() => {
+    if (attributes.step.kind !== 'complete' || evaluation.status !== 'ready') {
       completedAttributesRef.current = null
       return
     }
@@ -68,6 +103,7 @@ export function useResourceCreationFlow(
     )
   }, [
     attributes.step.kind,
+    evaluation.status,
     state.draft.revision,
     state.openGeneration,
     state.stage.kind,
@@ -400,6 +436,11 @@ export function useResourceCreationFlow(
     evaluation: {
       status: evaluation.status,
       retry: evaluation.retry,
+    },
+    creation: {
+      status: creation.status,
+      ...(creation.status === 'result' ? { result: creation.result } : {}),
+      create: creation.create,
     },
     attributes,
     begin,

@@ -108,6 +108,7 @@ describe('resource creation safety wall', () => {
     expect(flowSource.match(/useResourceCreationEvaluation\(\{/g)).toHaveLength(
       1,
     )
+    expect(flowSource.match(/useResourceCreationCreate\(\{/g)).toHaveLength(1)
     expect(flowSource).toContain('useResourceCreationAttributeQueries({')
     expect(flowSource).toContain(
       'allowedValuesByDefinition: attributes.allowedValuesKnowledge',
@@ -115,6 +116,8 @@ describe('resource creation safety wall', () => {
     expect(flowSource).toContain('evaluation: {')
     expect(flowSource).toContain('status: evaluation.status')
     expect(flowSource).toContain('retry: evaluation.retry')
+    expect(flowSource).toContain('creation: {')
+    expect(flowSource).not.toContain('api.createResourceFromSelections')
   })
 
   it('keeps the definition driver bounded to current definitions', () => {

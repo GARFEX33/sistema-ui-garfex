@@ -34,6 +34,12 @@ vi.mock(
   () => ({ useResourceCreationEvaluation: useResourceCreationEvaluationSpy }),
 )
 vi.mock(
+  '../../src/features/resources-master/useResourceCreationCreate',
+  () => ({
+    useResourceCreationCreate: () => ({ status: 'idle', create: vi.fn() }),
+  }),
+)
+vi.mock(
   '../../src/features/resources-master/useResourceCreationAttributeQueries',
   () => ({
     useResourceCreationAttributeQueries: useResourceCreationAttributeQueriesSpy,
@@ -78,7 +84,7 @@ beforeEach(() => {
         },
       }))
     }, [options])
-    return { status: 'idle', retry: () => Promise.resolve() }
+    return { status: 'ready', retry: () => Promise.resolve() }
   })
 })
 

@@ -19,6 +19,8 @@ const attributeDefinitionHookPath =
   'src/features/resources-master/useResourceCreationAttributeDefinition.ts'
 const allowedValuesHookPath =
   'src/features/resources-master/useResourceCreationAllowedValues.ts'
+const createHookPath =
+  'src/features/resources-master/useResourceCreationCreate.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
@@ -26,10 +28,7 @@ const queryBindings = new Map([
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
   [allowedValuesHookPath, ['useInfiniteQuery']],
-  [
-    'src/features/resources-master/useResourceCreationCreate.ts',
-    ['useMutation'],
-  ],
+  [createHookPath, ['useMutation', 'useQueryClient']],
 ])
 const convexFiles = new Set([
   apiPath,
@@ -233,7 +232,11 @@ const analyze = (file: string, input: string) => {
       }
       if (
         queryBindings.has(file) &&
-        forbiddenHookMembers.has(property(node.expression) ?? '')
+        forbiddenHookMembers.has(property(node.expression) ?? '') &&
+        !(
+          file === createHookPath &&
+          property(node.expression) === 'removeQueries'
+        )
       )
         issues.push(
           `Forbidden Query cache/action member in hook: ${property(node.expression)}`,
