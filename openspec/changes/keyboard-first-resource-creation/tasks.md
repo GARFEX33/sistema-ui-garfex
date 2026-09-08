@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,660–2,300 A+D remaining; 31 implementation child slices total (6 remaining) plus planning-doc slicing. Conservative sum: PR 13D2b 220–350 + PR 13D3 280–395 + PR 13D4 280–395 + PR 13D5 300–395 + PR 14 320–395 + PR 15 260–370. |
+| Estimated changed lines | 1,440–1,950 A+D remaining; 31 implementation child slices total (5 remaining) plus planning-doc slicing. Conservative sum: PR 13D3 280–395 + PR 13D4 280–395 + PR 13D5 300–395 + PR 14 320–395 + PR 15 260–370. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4 attribute UI/rail/commands → PR 13D5 one-at-a-time integration → PR 14 review/create → PR 15 backend closure |
@@ -60,8 +60,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13D0 | Complete | `… → PR 13C1b2 → 📍 PR 13D0` / PR 13C1b2 | Flow selector-state/helper extraction only; no user behavior; 322 A+D actual |
 | 13D1 | Complete | `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1` / PR 13D0 | Context-stage extraction from surface; 260–390 A+D |
 | 13D2a | Complete | `… → PR 13D0 → PR 13D1 → 📍 PR 13D2a` / PR 13D1 | Current assignment definition query only; 220–350 A+D |
-| 13D2b | Ready after PR 13D2a | `… → PR 13D1 → PR 13D2a → 📍 PR 13D2b` / PR 13D2a | Allowed-values paging only; 220–350 A+D |
-| 13D3 | Ready after PR 13D2b | `… → PR 13D2a → PR 13D2b → 📍 PR 13D3` / PR 13D2b | Reducer-owned attributes/review-pending stages and complete BACK chain; 280–395 A+D |
+| 13D2b | Complete | `… → PR 13D1 → PR 13D2a → 📍 PR 13D2b` / PR 13D2a | Allowed-values paging only; 220–350 A+D |
+| 13D3 | Ready | `… → PR 13D2a → PR 13D2b → 📍 PR 13D3` / PR 13D2b | Reducer-owned attributes/review-pending stages and complete BACK chain; 280–395 A+D |
 | 13D4 | Ready after PR 13D3 | `… → PR 13D2b → PR 13D3 → 📍 PR 13D4` / PR 13D3 | Attribute stage component, rail, and commands; 280–395 A+D |
 | 13D5 | Ready after PR 13D4 | `… → PR 13D3 → PR 13D4 → 📍 PR 13D5` / PR 13D4 | Surface/flow/allowed-knowledge integration, one-at-a-time behavior; 300–395 A+D |
 | 14 | Ready after PR 13D5 / unstarted | `… → PR 13D4 → PR 13D5 → 📍 PR 14` / PR 13D5 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
@@ -277,9 +277,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 13D2a. **Dependency diagram:** `… → PR 13D1 → PR 13D2a → 📍 PR 13D2b`. **Start → finish:** current definition query → stale-safe allowed-values continuation and retry paging, without rendering or reducer-stage adoption. **Budget:** 220–350 A+D. **Verify:** focused driver/unit Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only allowed-values paging and its focused proof.
 
-- [ ] **RED:** Add failing unit proof for current definition allowed-value continuation and retry paging. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Drive only published allowed-values queries with current-definition guards; do not issue a create request or add a free-value path. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove stale definition rejection, paging, and transport retry; run and record the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing unit proof for current definition allowed-value continuation and retry paging. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Drive only published allowed-values queries with current-definition guards; do not issue a create request or add a free-value path. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove stale definition rejection, paging, and transport retry; run and record the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 13D3 — Reducer-owned attribute and review-pending stages
 

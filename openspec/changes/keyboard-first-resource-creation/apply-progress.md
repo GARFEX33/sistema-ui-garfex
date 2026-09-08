@@ -1173,3 +1173,5 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **TDD/evidence:** RED failed on the missing definition hook; GREEN/TRIANGULATE covers null blocking, exact active/effective definitions, LIBRE unsupported status, retry, and stale deferred-response isolation.
 - **Behavior:** one TanStack definition query is keyed by assignment and definition IDs, fails closed, and knows neither allowed-values nor paging.
 - **Workload:** 31 child slices total, six remaining, forecast 1,660–2,300 A+D; rollback removes only this hook, focused proof, guards, and record.
+## PR 13D2b — allowed-values paging driver
+- **Complete:** stale-safe selection paging filters/dedupes backend order, fails closed on missing cursors, and supports retry; RED missing-hook import, GREEN focused 6/6. 31 child slices total, five remaining; forecast 1,440–1,950 A+D. Rollback is this driver, proof, inventory, and record.

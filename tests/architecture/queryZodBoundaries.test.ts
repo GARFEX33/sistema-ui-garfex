@@ -17,12 +17,15 @@ const evaluationHookPath =
   'src/features/resources-master/useResourceCreationEvaluation.ts'
 const attributeDefinitionHookPath =
   'src/features/resources-master/useResourceCreationAttributeDefinition.ts'
+const allowedValuesHookPath =
+  'src/features/resources-master/useResourceCreationAllowedValues.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [hookPath, ['useInfiniteQuery', 'useQueryClient']],
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
+  [allowedValuesHookPath, ['useInfiniteQuery']],
 ])
 const convexFiles = new Set([
   apiPath,
