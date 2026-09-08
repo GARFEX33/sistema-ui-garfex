@@ -2,7 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { useEffect, useRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { asAllowedValueId } from '../../src/features/resources-master/resourceCreation.attributeSequence'
+import {
+  asAllowedValueId,
+  type AllowedValueId,
+} from '../../src/features/resources-master/resourceCreation.attributeSequence'
+import type { SelectionBuckets } from '../../src/features/resources-master/resourceCreation.selectionDraft'
 import type { ResourceCreationEvaluationDriverOptions } from '../../src/features/resources-master/useResourceCreationEvaluation'
 import { useResourceCreationFlow } from '../../src/features/resources-master/useResourceCreationFlow'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
@@ -16,8 +20,36 @@ const allowedValuesKnowledge = {
   definition: { status: 'EXHAUSTED' as const, values: [] },
 }
 
+const staleAllowedValuesKnowledge = {
+  definition: {
+    status: 'EXHAUSTED' as const,
+    values: [
+      {
+        id: asAllowedValueId('value'),
+        definicionAtributoId: 'definition',
+        clave: 'VALUE',
+        valor: { kind: 'TEXTO' as const, value: 'Value' },
+        nombre: 'Value',
+        orden: 1,
+        activo: true,
+        revision: 1,
+        effective: true,
+        effectiveReasons: [],
+      },
+    ],
+  },
+}
+
+const activeSelectionBuckets = (): SelectionBuckets<AllowedValueId> => ({
+  active: { assignment: asAllowedValueId('value') },
+  omitted: new Set(),
+  suspended: {},
+})
+
 let evaluationStatus: 'loading' | 'ready' = 'loading'
 let shouldAdoptEvaluation = true
+let adoptedSelectionBuckets = activeSelectionBuckets()
+let attributesAllowedValuesKnowledge = allowedValuesKnowledge
 let createProjection:
   | { status: 'idle'; create: typeof create }
   | {
@@ -109,6 +141,8 @@ const clients: QueryClient[] = []
 beforeEach(() => {
   evaluationStatus = 'loading'
   shouldAdoptEvaluation = true
+  adoptedSelectionBuckets = activeSelectionBuckets()
+  attributesAllowedValuesKnowledge = allowedValuesKnowledge
   createProjection = { status: 'idle', create }
   create.mockReset()
   useResourceCreationCreateSpy.mockImplementation((options) =>
@@ -120,7 +154,7 @@ beforeEach(() => {
     step: { kind: 'complete' },
     definition: { status: 'idle' },
     allowedValues: {},
-    allowedValuesKnowledge,
+    allowedValuesKnowledge: attributesAllowedValuesKnowledge,
   }))
   useResourceCreationEvaluationSpy.mockImplementation(
     (options: ResourceCreationEvaluationDriverOptions) => {
@@ -135,11 +169,7 @@ beforeEach(() => {
             ...current.draft,
             authoritativeEvaluation: evaluation(),
             catalogFingerprint: 'fingerprint',
-            selectionBuckets: {
-              active: { assignment: asAllowedValueId('value') },
-              omitted: new Set(),
-              suspended: {},
-            },
+            selectionBuckets: adoptedSelectionBuckets,
           },
         }))
       }, [options])
@@ -236,4 +266,45 @@ describe('useResourceCreationFlow create disposition authority', () => {
       )
     },
   )
+
+  it('keeps a returned catalog-change selection suspended without stale allowed-values knowledge', async () => {
+    attributesAllowedValuesKnowledge = staleAllowedValuesKnowledge
+    adoptedSelectionBuckets = {
+      active: {},
+      omitted: new Set(),
+      suspended: { assignment: asAllowedValueId('value') },
+    }
+    const mounted = renderFlow()
+    await waitFor(() =>
+      expect(mounted.result.current.state.stage).toEqual({
+        kind: 'review-pending',
+      }),
+    )
+    const revision = mounted.result.current.state.draft.revision
+    const returned = result('CATALOG_CHANGED')
+    createProjection = { status: 'result', result: returned, create }
+
+    act(() => mounted.rerender())
+    await waitFor(() =>
+      expect(mounted.result.current.state.stage).toEqual({
+        kind: 'attributes',
+      }),
+    )
+
+    expect(mounted.result.current.state.draft.revision).toBe(revision + 1)
+    expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
+      returned.evaluation,
+    )
+    expect(mounted.result.current.state.draft.catalogFingerprint).toBe(
+      'fingerprint-next',
+    )
+    expect(mounted.result.current.state.draft.selectionBuckets.active).toEqual(
+      {},
+    )
+    expect(
+      mounted.result.current.state.draft.selectionBuckets.suspended,
+    ).toEqual({
+      assignment: asAllowedValueId('value'),
+    })
+  })
 })

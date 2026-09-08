@@ -15,9 +15,10 @@ let adoptedEvaluation: ResourceCreationEvaluation | null = null
 let attributeStep: { kind: 'complete' | 'unavailable' } = {
   kind: 'unavailable',
 }
+let evaluationStatus: 'loading' | 'ready' = 'ready'
 
 type EvaluationDriver = (options: ResourceCreationEvaluationDriverOptions) => {
-  status: 'idle'
+  status: 'loading' | 'ready'
   retry: () => Promise<void>
 }
 
@@ -64,6 +65,7 @@ const evaluation = (
 beforeEach(() => {
   adoptedEvaluation = null
   attributeStep = { kind: 'unavailable' }
+  evaluationStatus = 'ready'
   useResourceCreationAttributeQueriesSpy.mockImplementation(() => ({
     step: attributeStep,
     definition: { status: 'idle' },
@@ -84,7 +86,7 @@ beforeEach(() => {
         },
       }))
     }, [options])
-    return { status: 'ready', retry: () => Promise.resolve() }
+    return { status: evaluationStatus, retry: () => Promise.resolve() }
   })
 })
 
@@ -165,4 +167,27 @@ describe('useResourceCreationFlow attribute authority', () => {
       await waitFor(() => expect(result.current.state.stage.kind).toBe(stage))
     },
   )
+
+  it('waits for evaluation readiness before completing authoritative valid attributes', async () => {
+    adoptedEvaluation = evaluation('VALID')
+    attributeStep = { kind: 'complete' }
+    evaluationStatus = 'loading'
+    const { result, rerender } = renderHook(() =>
+      useResourceCreationFlow({} as ResourcesMasterApi, { kind: 'GLOBAL' }),
+    )
+
+    await waitFor(() =>
+      expect(result.current.state.draft.authoritativeEvaluation).toBe(
+        adoptedEvaluation,
+      ),
+    )
+    expect(result.current.state.stage).toEqual({ kind: 'attributes' })
+
+    evaluationStatus = 'ready'
+    act(rerender)
+
+    await waitFor(() =>
+      expect(result.current.state.stage).toEqual({ kind: 'review-pending' }),
+    )
+  })
 })

@@ -1306,3 +1306,30 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** the flow composes one create driver, leaves `CREATED` exposed, and reducer-adopts reconciled non-created evaluations; explicit `CATALOG_CHANGED` clears definition/value caches and ignores stale knowledge.
 - **Proof:** focused flow dispositions cover all four results and exact cache prefixes; unrelated flow/surface tests isolate the create driver with an idle mock.
 - **Reset:** the combined formatted candidate was 402 A+D and is preserved at `/tmp/kfrc-pr14d2-overbudget-1788909248`; readiness triangulation moved to D2b.
+
+---
+
+## PR 14D2b — evaluation readiness and fresh catalog knowledge proof
+
+- **State / status:** completed only parent-authorized PR 14D2b under native `proceed` continuation token `sha256:dcfdcc2d2337e97fbae4589de454362abe4b98de0744f262b53502d6f0a8a9af`; `gentle-ai.sdd-status@2` reported this change ready in the repo-local allowed root without warnings. No attempt settlement, commit, branch, review, push, PR, or PR 14D3 work was performed.
+- **Completed / persisted:** the implementation-owned PR 14D2b task is visibly `[x]` in `tasks.md`. Parent-owned lifecycle rows are unchanged.
+- **Proof:** completion stays at attributes while the evaluation driver is `loading`, then advances to review only after it becomes `ready`; a returned `CATALOG_CHANGED` evaluation reconciles with empty knowledge, so a formerly suspended selection remains suspended despite stale exhaustive cached knowledge that would otherwise restore it.
+- **Production correction:** none. The supplied dirty RED candidates passed on their first focused execution, demonstrating that PR 14D2a already owns both protections; their first-pass Green result is recorded rather than manufacturing a failure or altering surface behavior.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 14D2b readiness | `useResourceCreationFlow.attributes.test.tsx` | Hook integration | 5 pre-existing tests passed | Dirty candidate passed initially (existing gate) | 6/6 passed | Loading-to-ready transition verifies both blocked and released states | Targeted Prettier unchanged; final focused run green |
+| PR 14D2b catalog knowledge | `useResourceCreationFlow.create.test.tsx` | Hook integration | 5 pre-existing tests passed | Dirty candidate passed initially (existing cache reset) | 6/6 passed | Existing non-created disposition matrix plus suspended stale-knowledge case | Targeted Prettier normalized the dirty test; final focused run green |
+
+- **Verification:** focused Vitest passed 12/12; `pnpm typecheck`, targeted ESLint, targeted Prettier check, and `git diff --check` passed. The first targeted Prettier check correctly found the supplied create test unformatted; it was formatted and every focused gate was rerun green.
+- **Files:** `tests/unit/useResourceCreationFlow.attributes.test.tsx`, `tests/unit/useResourceCreationFlow.create.test.tsx`, `tasks.md`, and this cumulative record. No permitted production file required a change; no surface outcome or `onCreated` behavior changed.
+- **Workload / rollback:** PR 14D2b only (`PR 14D2a → 📍 PR 14D2b → PR 14D3`); final numstat is recorded after this progress update and remains below 399 A+D. Roll back only the two proof additions and this checkbox/evidence record.
+- **Remaining implementation tasks:** `- [ ] **PR 14D3:** Published disposition surface outcome with only \`CREATED\` invoking the existing success seam. <!-- sdd-owner: implementation -->`; `- [ ] **PR 14E:** Stale, unknown, and transport-rejection integration proof plus focused review/create closure. <!-- sdd-owner: implementation -->`.
+- **Next:** `parent-lifecycle` for attempt settlement; PR 14D3 is the only subsequent implementation slice and remains untouched.
+
+### PR 14D2b metadata reconciliation
+
+- Updated only the Review Workload Forecast and PR 14A–E chain-map summary to record PR 14D2b as complete, three remaining implementation slices (PR 14D3, PR 14E, PR 15), and PR 14D3 targeting PR 14D2b.
+- No production, test, scope, checkbox, lifecycle, or surface-outcome behavior changed; prior focused-test/typecheck evidence remains authoritative.
