@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 950–1,360 A+D remaining after PR 14B; 43 implementation child slices total (4 remaining: PR 14C, PR 14D, PR 14E, PR 15) plus planning-doc slicing. |
+| Estimated changed lines | 770–1,100 A+D remaining after PR 14C1; 44 implementation child slices total (4 remaining: PR 14C2, PR 14D, PR 14E, PR 15) plus planning-doc slicing. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d1a base projection → PR 13D5d1b selection projection → PR 13D5d2a back navigation → PR 13D5d2b surface integration → PR 13D5d2c surface proof → PR 14 review/create → PR 15 backend closure |
@@ -351,7 +351,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 - [x] **PR 14A:** Exact v1 selection-create input/result types, strict parser, and `crearRecursoDesdeSelecciones` mutation adapter with focused API proof. <!-- sdd-owner: implementation -->
 - [x] **PR 14B:** Valid-evaluation review projection only; render generated identity, assignments, and issues without mutation behavior. <!-- sdd-owner: implementation -->
-- [ ] **PR 14C:** Current-fingerprint mutation wiring from active selections only; no success presentation. <!-- sdd-owner: implementation -->
+- [x] **PR 14C1:** Pure current-fingerprint create request and stale-safe authority lease from active selections only; no mutation, adoption, hook, or UI. <!-- sdd-owner: implementation -->
+- [ ] **PR 14C2:** Current-fingerprint mutation hook using PR 14C1 authority only; no response adoption or success presentation. <!-- sdd-owner: implementation -->
 - [ ] **PR 14D:** Published disposition presentation with only `CREATED` invoking the existing success seam. <!-- sdd-owner: implementation -->
 - [ ] **PR 14E:** Stale, unknown, and transport-rejection integration proof plus focused review/create closure. <!-- sdd-owner: implementation -->
 

@@ -36,7 +36,7 @@ export const normalizeResourceCreationEvaluationOwnership = (
   if (
     ownership.kind === 'ORGANIZATION' &&
     typeof ownership.organizacionId === 'string' &&
-    ownership.organizacionId.length > 0
+    ownership.organizacionId.trim().length > 0
   )
     return Object.freeze({
       kind: 'ORGANIZATION',

@@ -1277,3 +1277,8 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** feature-local review shows only generated identity, compact assignment counts, and backend issue messages; raw IDs and normalized primitives remain hidden.
 - **TDD:** missing-presenter RED; focused presenter/boundary suite passed 24/24 and full suite 565/565.
 - **Gate:** create is visible only for complete VALID authority and supports an explicit pending state; PR 14C owns mutation authority.
+
+---
+
+## PR 14C1 — pure create lease
+- **Complete:** frozen create authority requires current review, exact VALID evaluation/fingerprint, active-only request, ownership, context, generation, revision, and state identity; focused 22/22 and full 574/574 passed.

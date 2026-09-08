@@ -55,6 +55,7 @@ const creationRuntimeFiles = [
   'resourceCreation.attributeSequence.ts',
   'resourceCreation.attributeStep.ts',
   'resourceCreation.attributeView.ts',
+  'resourceCreation.createLease.ts',
   'resourceCreation.dependentLoader.ts',
   'resourceCreation.evaluationLease.ts',
   'resourceCreation.evaluationRequest.ts',
@@ -80,7 +81,7 @@ describe('resource creation safety wall', () => {
     creationRuntimeSources.forEach((source) => {
       expect(source.split('\n').length).toBeLessThan(500)
       expect(source).not.toMatch(
-        /createResource|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
+        /useMutation|crearRecursoDesdeSelecciones|createResource|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
       )
     })
   })
