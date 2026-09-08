@@ -168,9 +168,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 12B1. **Dependency diagram:** `… → PR 12A → PR 12B1 → 📍 PR 12B2`. **Start → finish:** validated evaluation parser → the query input, API method, `ResourceOperation`, `ResourceTransport`, and factory mapping are added without lease/model/create/UI adoption. **Budget:** 120–220 A+D. **Rollback:** remove only query-adapter mapping/tests.
 
-- [ ] **RED:** Add failing exact query-adapter invocation and transport-rejection tests. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add only the published evaluation query input, API method, operation, transport, and factory mapping through the PR 12B1 parser. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove supplied request fields, malformed response rejection, and transport rejection through the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing exact query-adapter invocation and transport-rejection tests. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Add only the published evaluation query input, API method, operation, transport, and factory mapping through the PR 12B1 parser. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove supplied request fields, malformed response rejection, and transport rejection through the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 12C — Pure stale-safe authoritative evaluation lease
 

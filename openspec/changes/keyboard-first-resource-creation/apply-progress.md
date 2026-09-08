@@ -971,3 +971,49 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Deviation / rollback:** none; rollback removes only the public response types, parser schemas, and exact fixtures. Runtime is N/A because this is a pure parser.
 - **Retained blocker evidence:** the preceding PR 12B aggregate-trial budget-stop record remains intact; B1 is its one authorized cohesive split, while B2 alone owns the deferred query adapter.
 - **Remaining:** `- [ ] **RED:** Add failing exact query-adapter invocation and transport-rejection tests. <!-- sdd-owner: implementation -->`; `- [ ] **GREEN:** Add only the published evaluation query input, API method, operation, transport, and factory mapping through the PR 12B1 parser. <!-- sdd-owner: implementation -->`; `- [ ] **TRIANGULATE/REFACTOR:** Prove supplied request fields, malformed response rejection, and transport rejection through the focused command. <!-- sdd-owner: implementation -->`
+
+---
+
+## PR 12B2 — Evaluation query adapter
+
+### Status
+
+- **State:** completed for parent-delegated PR 12B2 only. The local `gentle-ai sdd` command is unavailable, so this run reconstructed the authoritative OpenSpec status after directly reading proposal, nested spec, design, tasks, prior progress, and `openspec/config.yaml`.
+- **Structured status:** `schemaName: spec-driven`; `changeName: keyboard-first-resource-creation`; `artifactStore: openspec`; proposal/spec/design/tasks/apply-progress present; pre-apply `applyState: ready`; `nextRecommended: apply`; `actionContext.mode: repo-local`; workspace and allowed edit root `/home/garfex/PROGRAMACION/sistema-ui-garfex`; no warnings.
+- **Workload / PR boundary:** authorized `auto-chain` / `feature-branch-chain`, `… → PR 12A → PR 12B1 → 📍 PR 12B2`; final change is below the 399 A+D cap. No commit, branch, PR, review, receipt, UI, model, lease, create, or lifecycle action was performed.
+
+### Completed tasks and persisted checkbox updates
+
+- [x] PR 12B2 RED — persisted the exact invocation and transport-rejection test task.
+- [x] PR 12B2 GREEN — persisted the exact request type, query adapter, transport, and Convex factory mapping task.
+- [x] PR 12B2 TRIANGULATE/REFACTOR — persisted parser-adoption, malformed-response, request-validation, and transport evidence task.
+
+### Implementation
+
+- Added strict public `ResourceCreationEvaluationInput` request contracts with non-empty string hierarchy/unit IDs, exact selection entries, and exact GLOBAL/ORGANIZATION ownership variants.
+- Added `evaluateResourceCreation` through `catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones`, the query FunctionReference, Convex query switch, and existing `parseResourceCreationEvaluation` response parser.
+- Strict request validation preserves selection order and duplicates, rejects malformed or extra/manual request fields before transport, and propagates ordinary transport errors unchanged.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 12B2 adapter | `tests/unit/resourcesMasterApi.test.ts` | Unit | 37/37 focused API/architecture tests passed | Exact GLOBAL evaluation call failed because `evaluateResourceCreation` did not exist | Added the strict request schema, adapter, query mapping, and parser adoption; API test passed 33/33 and typecheck passed | Added exact ORGANIZATION call, duplicate/order preservation, malformed response, transport rejection, and zero-transport malformed-input cases; API test passed 36/36 | Prettier formatted the bounded files; focused API/architecture suite passed 41/41 |
+
+### Verification
+
+- `pnpm exec vitest run tests/unit/resourcesMasterApi.test.ts tests/architecture/queryZodBoundaries.test.ts` — passed 41/41.
+- `pnpm test` — passed 38 files and 445 tests.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` — passed.
+- **Runtime:** N/A; this is a pure query-adapter contract consumed by PR 12C.
+
+### Files, deviation, rollback, and remaining work
+
+- **Files:** `resourcesMaster.types.ts`, `resourcesMaster.api.ts`, `resourcesMasterApi.test.ts`, `tasks.md`, and this cumulative progress record.
+- **Deviation:** none; no response parser, model, lease, UI, mutation/create, or legacy behavior changed.
+- **Rollback:** remove only the evaluation request types, strict request schema, query mapping, adapter method, and matching tests.
+- Remaining implementation-owned tasks begin at PR 12C:
+  - `- [ ] **RED:** Add failing lease/model/architecture tests for current-token adoption, stale or out-of-order token rejection, hierarchy/Unidad context mismatch, draft-revision mismatch, and no create path before PR 14. <!-- sdd-owner: implementation -->`
+  - `- [ ] **GREEN:** Implement the pure feature-local \`evaluationLease\` and minimum model seam so only a current validated PR 12B evaluation can be adopted and every hierarchy, Unidad, or draft mutation clears the lease/fingerprint. <!-- sdd-owner: implementation -->`
+  - `- [ ] **TRIANGULATE/REFACTOR:** Prove replacement Unidad, same revision with old context, malformed-adapter absence, and transport rejection cannot retain a lease or enable review/create; run the focused command and preserve the no-create architecture guard. <!-- sdd-owner: implementation -->`
+- Parent-owned tracker, chain, review, verification, sync, and archive lines remain deferred byte-for-byte.

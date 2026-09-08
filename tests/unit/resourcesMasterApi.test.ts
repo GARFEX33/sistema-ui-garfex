@@ -1127,4 +1127,128 @@ describe('resources master API boundary', () => {
         parseResourceCreationEvaluation(evaluation({ issues: [malformed] })),
       ).toThrow('Invalid resources master response')
   })
+
+  it('evaluates creation through the exact published query and adopts its parsed response', async () => {
+    const invoke = vi.fn().mockResolvedValue(evaluation())
+    const api = createResourcesMasterApi({ invoke })
+    const input = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [
+        { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+        { asignacionAtributoId: 'assignment-1', valorPermitidoId: 'allowed-1' },
+        { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+      ],
+      ownership: { kind: 'GLOBAL' as const },
+    }
+
+    await expect(api.evaluateResourceCreation(input)).resolves.toEqual(
+      evaluation(),
+    )
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+      input,
+    )
+  })
+
+  it('serializes ORGANIZATION ownership exactly while preserving selection order and duplicates', async () => {
+    const invoke = vi.fn().mockResolvedValue(evaluation())
+    const api = createResourcesMasterApi({ invoke })
+    const input = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [
+        { asignacionAtributoId: 'assignment-3', valorPermitidoId: 'allowed-3' },
+        { asignacionAtributoId: 'assignment-3', valorPermitidoId: 'allowed-3' },
+      ],
+      ownership: {
+        kind: 'ORGANIZATION' as const,
+        organizacionId: 'organization-1',
+      },
+    }
+
+    await api.evaluateResourceCreation(input)
+
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+      input,
+    )
+  })
+
+  it('fails closed before transport for malformed evaluation requests', async () => {
+    const invoke = vi.fn()
+    const api = createResourcesMasterApi({ invoke })
+    const base = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [
+        { asignacionAtributoId: 'assignment-1', valorPermitidoId: 'allowed-1' },
+      ],
+      ownership: { kind: 'GLOBAL' },
+    }
+
+    for (const invalid of [
+      { ...base, claseRecursoId: '' },
+      { ...base, familiaRecursoId: 1 },
+      {
+        ...base,
+        selecciones: [
+          { asignacionAtributoId: '', valorPermitidoId: 'allowed-1' },
+        ],
+      },
+      {
+        ...base,
+        selecciones: [
+          {
+            asignacionAtributoId: 'assignment-1',
+            valorPermitidoId: 'allowed-1',
+            manual: true,
+          },
+        ],
+      },
+      {
+        ...base,
+        ownership: { kind: 'GLOBAL', organizacionId: 'organization-1' },
+      },
+      { ...base, ownership: { kind: 'ORGANIZATION' } },
+      {
+        ...base,
+        nombre: 'manual',
+        descripcion: 'manual',
+        omision: 'assignment-1',
+      },
+    ])
+      await expect(
+        api.evaluateResourceCreation(invalid as never),
+      ).rejects.toThrow('Invalid resources master response')
+
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed evaluation responses and propagates transport failures', async () => {
+    const invoke = vi.fn().mockResolvedValue(evaluation({ unknownKey: true }))
+    const api = createResourcesMasterApi({ invoke })
+    const input = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [],
+      ownership: { kind: 'GLOBAL' as const },
+    }
+
+    await expect(api.evaluateResourceCreation(input)).rejects.toThrow(
+      'Invalid resources master response',
+    )
+    invoke.mockRejectedValueOnce(new Error('transport down'))
+    await expect(api.evaluateResourceCreation(input)).rejects.toThrow(
+      'transport down',
+    )
+  })
 })

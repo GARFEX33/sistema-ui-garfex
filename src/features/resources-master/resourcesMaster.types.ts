@@ -307,6 +307,24 @@ export interface ResourceAttributeOptionListInput
   definicionAtributoId: ResourceId
 }
 
+export interface ResourceCreationEvaluationSelection {
+  readonly asignacionAtributoId: string
+  readonly valorPermitidoId: string
+}
+
+export type ResourceCreationEvaluationOwnership =
+  | { readonly kind: 'GLOBAL' }
+  | { readonly kind: 'ORGANIZATION'; readonly organizacionId: string }
+
+export interface ResourceCreationEvaluationInput {
+  readonly claseRecursoId: string
+  readonly familiaRecursoId: string
+  readonly tipoRecursoId: string
+  readonly unidadId: string
+  readonly selecciones: readonly ResourceCreationEvaluationSelection[]
+  readonly ownership: ResourceCreationEvaluationOwnership
+}
+
 export type ResourceCreationEvaluationStatus =
   | 'INCOMPLETE'
   | 'VALID'

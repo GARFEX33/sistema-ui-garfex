@@ -12,6 +12,7 @@ import type {
   ResourceAttributeOption,
   ResourceAttributeOptionListInput,
   ResourceCreationEvaluation,
+  ResourceCreationEvaluationInput,
   ResourceChangeResult,
   ResourceClassificationStatus,
   ResourceContextClassItem,
@@ -78,6 +79,9 @@ export type ResourceAllowedAttributeValueListOperation =
 export type ResourceAttributeOptionListOperation =
   'catalogoAdmin/atributos:listarOpcionesAtributo'
 
+export type ResourceCreationEvaluationOperation =
+  'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones'
+
 export type ResourceOperation =
   | ResourceListOperation
   | ResourceDetailOperation
@@ -91,6 +95,7 @@ export type ResourceOperation =
   | ResourceAttributeDefinitionOperation
   | ResourceAllowedAttributeValueListOperation
   | ResourceAttributeOptionListOperation
+  | ResourceCreationEvaluationOperation
 
 export interface ResourceTransport {
   invoke: (
@@ -148,6 +153,9 @@ export interface ResourcesMasterApi {
   listAttributeOptions: (
     input: ResourceAttributeOptionListInput,
   ) => Promise<ResourceContextListPage<ResourceAttributeOption>>
+  evaluateResourceCreation: (
+    input: ResourceCreationEvaluationInput,
+  ) => Promise<ResourceCreationEvaluation>
 }
 
 type ResourceRecord = Record<string, unknown>
@@ -646,6 +654,32 @@ export function parseResourceCreationEvaluation(
   return result.data
 }
 
+const resourceCreationEvaluationInputSchema = z
+  .object({
+    claseRecursoId: attributeContractIdSchema,
+    familiaRecursoId: attributeContractIdSchema,
+    tipoRecursoId: attributeContractIdSchema,
+    unidadId: attributeContractIdSchema,
+    selecciones: z.array(
+      z
+        .object({
+          asignacionAtributoId: attributeContractIdSchema,
+          valorPermitidoId: attributeContractIdSchema,
+        })
+        .strict(),
+    ),
+    ownership: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('GLOBAL') }).strict(),
+      z
+        .object({
+          kind: z.literal('ORGANIZATION'),
+          organizacionId: attributeContractIdSchema,
+        })
+        .strict(),
+    ]),
+  })
+  .strict()
+
 const attributeOptionItem = (value: unknown): ResourceAttributeOption => {
   if (
     !record(value) ||
@@ -880,7 +914,8 @@ const queryReference = (
     | ResourceAttributeAssignmentListOperation
     | ResourceAttributeDefinitionOperation
     | ResourceAllowedAttributeValueListOperation
-    | ResourceAttributeOptionListOperation,
+    | ResourceAttributeOptionListOperation
+    | ResourceCreationEvaluationOperation,
 ) => makeFunctionReference<'query', Record<string, unknown>, unknown>(name)
 
 const mutationReference = (
@@ -935,6 +970,8 @@ const listAllowedAttributeValuesReference: ResourceQueryReference =
 const listAttributeOptionsReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/atributos:listarOpcionesAtributo',
 )
+const evaluateResourceCreationReference: ResourceQueryReference =
+  queryReference('catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones')
 
 const configuredUrl = (options: ResourcesMasterConvexApiOptions) =>
   'url' in options ? options.url : import.meta.env.VITE_CONVEX_URL
@@ -1003,6 +1040,10 @@ export function createResourcesMasterConvexApi(
           })
         case 'catalogoAdmin/atributos:listarOpcionesAtributo':
           return client.query(listAttributeOptionsReference, { ...requestArgs })
+        case 'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones':
+          return client.query(evaluateResourceCreationReference, {
+            ...requestArgs,
+          })
       }
     },
   }
@@ -1171,6 +1212,16 @@ export function createResourcesMasterApi(
         await transport.invoke(
           'catalogoAdmin/atributos:listarOpcionesAtributo',
           attributeOptionArgs(input),
+        ),
+      )
+    },
+    async evaluateResourceCreation(input) {
+      const request = resourceCreationEvaluationInputSchema.safeParse(input)
+      if (!request.success) return bad()
+      return parseResourceCreationEvaluation(
+        await transport.invoke(
+          'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+          request.data,
         ),
       )
     },
