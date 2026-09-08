@@ -835,3 +835,23 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - Remaining implementation tasks are unchanged, beginning with the persisted PR 12 `- [ ] **RED:** Write failing parser tests from the published exact DTO fixtures for all evaluator statuses, values, issues, fingerprint, and malformed/unknown response rejection. <!-- sdd-owner: implementation -->`.
 - **Deviation:** no design or task artifact was edited; the user-requested documentation boundary was retained apart from this mandatory cumulative progress record.
 - **Rollback:** revert only the contract wording in `proposal.md` and the nested normative `spec.md`; no runtime behavior or task state changes.
+
+---
+
+## Accepted backend-v1 baseline reconciliation
+
+- **State / structured status:** documentation-only delegated slice complete. Consumed native `gentle-ai.sdd-status@2`: `artifactStore: openspec`, proposal/spec/design/tasks/apply-progress present, `applyState: ready`, `nextRecommended: apply`, no blockers; 35/52 implementation rows complete and 17 remain pending.
+- **Action context:** `repo-local` workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`; edits stayed inside the three supplied documentation surfaces. No action-context warning occurred.
+- **Workload / boundary:** documentation-only baseline reconciliation below the 399 cap. No code, tests, task checkbox, commit, branch, PR, review, receipt, or backend edit was attempted.
+
+### Completed documentation work
+
+- Re-read accepted backend `23e9440c2b832edb8e557134018ea812979c6452` through CodeGraph: `convex/catalogoAdmin/{atributos.ts,recursos.ts,resourceValidators.ts}` and domain evaluation/assignment-ordering sources.
+- Updated only `design.md` and `design-details.md` with four public paths, nullable/optional semantics, paginated allowed values, shared selection input, evaluation/create unions, catalog-only fingerprint, and authoritative reconciliation.
+- Removed unsupported `DERIVADO` and corrected “contract unavailable” wording while preserving the frontend-pending boundary.
+
+### Verification and remaining work
+
+- Ran backend commit/source comparison, targeted contradiction grep, `git diff --check`, and `git diff --numstat`; no runtime test applies to documentation-only work. `pnpm exec prettier --check` remains nonzero for these three files, as it also does for their HEAD versions; no broad formatting rewrite was applied.
+- No implementation-owned task was completed, so `tasks.md` remains unchanged; persisted PR 12 RED remains `- [ ] **RED:** Write failing parser tests from the published exact DTO fixtures for all evaluator statuses, values, issues, fingerprint, and malformed/unknown response rejection. <!-- sdd-owner: implementation -->`.
+- **Deviation / rollback:** no deviation; revert only this section and the two design documents to remove the reconciliation.

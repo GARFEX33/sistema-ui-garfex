@@ -107,27 +107,26 @@ Operaciones puras disponibles para pruebas, sin simular backend:
 - `keepSuspended(key)`: conserva el valor retenido cuando ya no puede restaurarse;
 - `dropAssignments(keys)`: se reserva para invalidación jerárquica, no para interpretar condiciones.
 
-Antes del DTO v1, tests de estas funciones usan valores opacos locales y comandos explícitos; no crean respuestas falsas de `evaluarCreacionDesdeSelecciones`.
+En los cortes backend-independent anteriores a la integración frontend v1, los tests de estas funciones usan valores opacos locales y comandos explícitos; no crean respuestas falsas de `evaluarCreacionDesdeSelecciones`.
 
-## 4. Reconciliación futura tras evaluación autoritativa
+## 4. Reconciliación frontend v1 desde evaluación autoritativa
 
-La reconciliación no evalúa `CONDITIONAL`. Después de integrar DTOs exactos, un adapter validado convertirá cada respuesta vigente en hechos UI explícitos. El detalle exacto de esos hechos se diseñará a partir del DTO publicado; no se fija aquí un interface TypeScript.
+El baseline aceptado es `23e9440c2b832edb8e557134018ea812979c6452` (rutas y campos compactos en [design.md](./design.md#baseline-contractual-backend-v1-aceptado)). El adapter valida la respuesta antes de React; no evalúa `CONDITIONAL` ni crea campos locales de transporte.
 
 Semántica obligatoria:
 
 1. Descartar la respuesta si no coincide su token de request, contexto jerárquico, Unidad y `draft.revision` capturados.
-2. Adoptar status, fingerprint, issues, nombre, identidad y orden de asignaciones únicamente desde esa respuesta.
-3. Para cada assignment ID que backend diga que dejó de aplicar, mover active → suspended.
-4. Para cada assignment ID que backend diga que volvió a aplicar y cuyo valor retenido backend confirme aún permitido, mover suspended → active.
-5. Si vuelve a aplicar pero el valor ya no está permitido, conservarlo suspended y presentar esa asignación como decisión pendiente sin enviarlo como active.
-6. No eliminar selecciones suspendidas por reordenamiento ni por una evaluación incompleta.
-7. Proyectar futuras requests sólo desde selecciones activas y omisiones que el contrato exacto admita.
+2. Adoptar únicamente sus campos publicados: `status`, `valid`, `catalogFingerprint`, nombre/identidad anulables, asignaciones ordenadas, faltantes, inválidas, normalizados e `issues`; `valid` es `true` si y sólo si `status` es `VALID`.
+3. Usar por assignment ID los hechos `aplicabilidadResuelta` y `selectedValueId`; `CONDITIONAL` no existe en la respuesta resuelta. `selectedValueId` confirma sólo una selección active que fue enviada: una suspended ausente del request nunca puede validarse por ese campo.
+4. `FORBIDDEN` o `NOT_APPLICABLE` oculta la asignación activa y mueve active → suspended. Si vuelve `REQUIRED` u `OPTIONAL`, restaurar el valor retenido sólo cuando figure activo y efectivo en el listado autoritativo de su `definicionAtributoId`; no existe ni se infiere `retained-valid`.
+5. Si ese valor no sigue permitido, conservarlo suspended y presentar la asignación como pendiente; no enviarlo como active. La evaluación siguiente validará cualquier restauración enviada. No eliminar suspendidas por reordenamiento o evaluación incompleta.
+6. Proyectar evaluate/create sólo desde selecciones activas como `{ asignacionAtributoId, valorPermitidoId }`; **Omitir** significa que no hay entrada para ese assignment ID.
 
-La evaluación adoptada es una lease ligada a `draft.revision`. Cualquier selección, omisión, restauración, Unidad o cambio jerárquico la elimina junto con su fingerprint antes de iniciar otra request.
+El fingerprint es una lease de catálogo vivo independiente de las selecciones enviadas. Token, contexto y revisión siguen siendo guards frontend; toda confirmación, omisión, restauración, Unidad o cambio jerárquico elimina lease y fingerprint antes de la siguiente request.
 
-## 5. Secuencia futura de atributos
+## 5. Secuencia de atributos frontend v1
 
-Cuando backend v1 exista, las etapas adicionales se incorporarán sin alterar la secuencia inicial:
+Cuando la integración frontend v1 se incorpore, las etapas adicionales se añadirán sin alterar la secuencia inicial:
 
 ```ts
 // Forma local de navegación; no es un DTO.
@@ -147,8 +146,7 @@ El orden procede de las asignaciones resueltas de la evaluación vigente. La nav
 - Nunca se muestran todas las asignaciones como controles simultáneos.
 - Sólo `modoCaptura: SELECCION` ofrece valores permitidos.
 - `LIBRE` muestra “Modo no soportado” sin input.
-- `DERIVADO` muestra “Fuera de v1” sin valor simulado.
-- **Omitir** aparece sólo si el resultado autoritativo/contrato lo permite.
+- **Omitir** aparece sólo para una asignación resuelta `OPTIONAL`; no fabrica valor y deja ese assignment ID ausente de `selecciones`.
 - Una requerida pendiente no puede desembocar en evaluación `VALID`.
 
 No se reutilizan `listAttributeAssignments`, `listAttributeOptions` ni `tipoDato` actuales para fabricar esta secuencia: no aportan `modoCaptura`, valores tipados ni resolución condicional autoritativa.
@@ -266,7 +264,7 @@ Al cambiar etapa:
 
 - selector → enfoca Search;
 - contrato pendiente → enfoca heading/estado;
-- futura revisión/resultado → enfoca heading;
+- revisión/resultado frontend v1 → enfoca heading;
 - si el elemento queda bajo la barra sticky, usa `scrollIntoView({ block: 'nearest' })` antes/de forma coordinada con foco, sin animación forzada.
 
 ### `CreationStageRail`
@@ -281,8 +279,8 @@ Permanece visible pero no tapa foco. Expone únicamente comandos válidos:
 
 - selectores: `↑/↓ Mover`, `Enter Confirmar`, `← Anterior` cuando aplica, `Esc Volver/Cerrar`;
 - contrato pendiente: botón **Volver** y ayuda `Esc Volver`; no muestra Crear;
-- futura asignación opcional: añade **Omitir** sólo si está autorizado;
-- futura revisión VALID: **Crear recurso** sólo con lease/fingerprint vigentes.
+- asignación opcional frontend v1: añade **Omitir** sólo si está autorizado;
+- revisión frontend v1 VALID: **Crear recurso** sólo con lease/fingerprint vigentes.
 
 Los controles usan `Button`; las ayudas `<kbd>` son texto informativo, no controles. Todos los botones/rail/list items alcanzan 44 CSS px de hit area mediante layout local sin duplicar el chrome de Button.
 
@@ -313,10 +311,10 @@ La restauración conserva `restoreFocusNextFrame(openerRef, [trigger, sidebar.re
 | partial-error | conserva datos, `role=alert`, retry del mismo cursor |
 | Unit hydration pending/error | bloquea confirmación hasta resolver/retry |
 | contract-pending | heading enfocado, explicación explícita, Volver/Cerrar; sin atributos/review/create |
-| future INCOMPLETE | sólo respuesta backend; señala decisión pendiente |
-| future INVALID | issues backend accionables; create ausente/disabled |
-| future VALID | review backend y create habilitado sólo con fingerprint vigente |
-| future create unknown/stale | disposición contractual; nunca éxito inferido |
+| v1 INCOMPLETE | sólo respuesta backend; señala decisión pendiente |
+| v1 INVALID | issues backend accionables; create ausente/disabled |
+| v1 VALID | review backend y create habilitado sólo con fingerprint vigente |
+| v1 create unknown/stale | disposición contractual; nunca éxito inferido |
 
 No se añade token de error especulativo. ARIA, texto e iconografía/forma aportan significado. Los tokens Light y clases Tailwind existentes son la única fuente de color.
 
@@ -340,9 +338,9 @@ No se añade token de error especulativo. ARIA, texto e iconografía/forma aport
 | `ResourcesMasterScreen.tsx` | Mantener snapshot y seam `onCreated` |
 | `resourcesMaster.api.ts` / `.types.ts` | Sin cambio por esta capacidad; contratos legados quedan fuera del Creador |
 
-### Bloqueados
+### Frontend v1 pendiente
 
-Sólo tras DTOs exactos se decidirán nombres finales de archivos/adapters para definición/modo, valores permitidos, evaluator y create. En ese slice sí se extenderán operaciones, tipos y validadores de transporte con el contrato real. No se reserva ahora una interface vacía que pueda convertirse accidentalmente en API de facto.
+El baseline exacto ya fija definición/modo, valores permitidos, evaluator y create; el slice frontend decidirá sus nombres feature-locales y extenderá operaciones, tipos y validadores con ese contrato real. No se reserva una interface vacía que pueda convertirse accidentalmente en API de facto.
 
 `resourcesMaster.css` se elimina sólo cuando no tenga consumidores. Lo nuevo usa composición shared + Tailwind/tokens; no se copia CSS legado.
 
@@ -375,31 +373,20 @@ Sólo tras DTOs exactos se decidirán nombres finales de archivos/adapters para 
 - `resourceCreationBoundaries.test.ts`: componentes permanecen feature-locales, runtime <500 líneas, sin React Query/store/Catálogo y sin uso de `createResource`/`ResourceCreateInput` en archivos del Creador.
 - `queryZodBoundaries`, `catalogHierarchyBoundaries` y `runtimeFixtureIsolation` conservan sus contratos.
 
-No se crean dobles de evaluator/create v1 antes de conocer DTOs exactos. Los valores opacos usados para probar el modelo puro no pretenden ser fixtures de transporte.
+Los dobles de evaluator/create v1 se crearán sólo como fixtures exactos del baseline aceptado. Los valores opacos usados para probar el modelo puro no pretenden ser fixtures de transporte.
 
-## 14. Integración backend v1: gate verificable
+## 14. Integración backend v1: baseline verificable
 
-Antes del primer test de adapter deben estar disponibles:
+Las referencias definitivas ya fueron comparadas contra `23e9440c2b832edb8e557134018ea812979c6452`: `convex/catalogoAdmin/atributos.ts` para definición/listado y `convex/catalogoAdmin/{resourceValidators.ts,recursos.ts}` para evaluate/create. El slice frontend debe:
 
-1. referencias de operación definitivas;
-2. requests y responses exactos;
-3. discriminantes/nulabilidad de valores tipados y `modoCaptura`;
-4. significado y orden de asignaciones resueltas;
-5. hechos que permiten decidir suspend/restore/invalid value sin interpretar `CONDITIONAL`;
-6. forma de issues, generated name, technical identity y fingerprint;
-7. obligación y ubicación de `expectedCatalogFingerprint`;
-8. lista completa de disposiciones y errores de create, incluida concurrencia/stale.
+- escribir primero schemas/parsers y fixtures de las cuatro rutas públicas;
+- validar definición nullable, `modoCaptura: SELECCION | LIBRE`, campos opcionales ausentes y el envelope paginado de valores permitidos;
+- normalizar evaluate con los 13 códigos, aplicabilidad resuelta sin `CONDITIONAL`, identidad/nombre anulables y valores normalizados sin ID de valor permitido;
+- conectar la lease `{token, context, revision}` y reconciliar sólo con asignaciones autoritativas, `selectedValueId` y el listado active/effective;
+- representar create con `expectedCatalogFingerprint`: fingerprint distinto produce primero `CATALOG_CHANGED`, luego se respetan `INCOMPLETE | INVALID`, y sólo una evaluación vigente `VALID` intenta persistir; `CREATED` tiene `item`, las otras disposiciones tienen `evaluation`, e identidad duplicada es `INVALID`;
+- fallar cerrada para respuesta desconocida o transporte, que no es un retorno tipado de aplicación.
 
-Con ese material:
-
-- primero se escriben schemas/parsers y pruebas de transporte;
-- después el adapter normaliza hechos para React;
-- luego se conecta evaluación con guard `{token, context, revision}`;
-- después atributos SELECCION y reconciliación;
-- por último review/create y disposiciones;
-- cualquier respuesta no validada falla cerrada y nunca habilita Crear.
-
-No se deriva el contrato desde `crearRecurso`, `ResourceCreateInput`, `ResourceAttributeDataType` ni los DTOs actuales de opciones.
+No se deriva nada desde `crearRecurso`, `ResourceCreateInput`, `ResourceAttributeDataType` ni DTOs legados de opciones.
 
 ## 15. Cadena de entrega y presupuesto
 
@@ -414,7 +401,7 @@ E  retirar UI/loader legacy de atributos manteniendo pending
 F  retirar Resource Data/review/payload/submit legado
 G  active/suspended pure model
 H  focus transfer, Escape escalonado, a11y y architecture/browser closure
-— gate backend v1 —
+— integración frontend v1 —
 I  parsers/adapters exactos + evaluation lease
 J  atributos SELECCION + reconciliación autoritativa
 K  review autoritativa + create fingerprint/disposiciones
@@ -439,4 +426,4 @@ pnpm format:check
 pnpm build
 ```
 
-Durante la capacidad backend-independent, ningún test debe esperar evaluación, nombre generado, atributos o create simulados. Después del gate, esas pruebas se agregan contra parsers y fixtures exactos.
+Durante la capacidad backend-independent, ningún test debe esperar evaluación, nombre generado, atributos o create simulados. En el slice frontend v1, esas pruebas se agregan contra parsers y fixtures exactos.

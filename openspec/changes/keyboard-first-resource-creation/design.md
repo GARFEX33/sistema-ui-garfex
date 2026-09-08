@@ -13,11 +13,11 @@ Esta revisión sustituye expresamente el diseño anterior de **Datos del recurso
 La arquitectura tendrá una única composición feature-local, **ResourceCreationShell**, pero dos capacidades entregables separadas por una pared contractual:
 
 1. **Capacidad backend-independent disponible ahora:** shell GARFEX, rail, barra de comandos, selector search-list, Clase, Familia, Tipo, Unidad natural, invalidación jerárquica y borrador puro de selecciones activas/suspendidas.
-2. **Capacidad backend v1 bloqueada:** atributos dinámicos, evaluación, revisión autoritativa y creación desde selecciones.
+2. **Capacidad frontend v1 pendiente:** atributos dinámicos, evaluación, revisión autoritativa y creación desde selecciones.
 
 Tras confirmar Unidad natural, el bundle actual terminará honestamente en **Contrato pendiente**. No cargará las asignaciones/opciones legadas, no mostrará atributos simulados, no pedirá Nombre o Descripción y no llamará `crearRecurso`. Esta pared es parte del producto actual, no un fallback de error.
 
-Cuando existan los DTOs exactos, la misma shell continuará con evaluaciones autoritativas y una secuencia `Atributos · n de total` keyed por assignment ID. La integración se diseñará contra esos DTOs publicados; este diseño no declara interfaces de transporte provisionales.
+El baseline v1 ya está aceptado en el backend; la misma shell lo integrará con parsers feature-locales y una secuencia `Atributos · n de total` keyed por assignment ID. Este diseño registra los hechos públicos compactos, no copia los `.d.ts` generados ni declara transporte provisional.
 
 ## Alcance y compatibilidad con `e52b9b2`
 
@@ -29,7 +29,7 @@ El runtime sigue centrado en `src/features/resources-master` y su composición m
 - `createDependentLoader` como base paginada/stale-safe;
 - `StagedSearchSelector` y su modelo de filtro local;
 - trigger `N`, `Dialog`, registro de overlay y restauración de foco;
-- `onCreated → refetchActive()` como seam futuro, sin invocación mientras no exista creación v1 confirmada.
+- `onCreated → refetchActive()` como seam para creación frontend v1, sin invocación mientras no exista creación v1 confirmada.
 
 Se reemplazan, aunque ya tengan pruebas históricas:
 
@@ -75,7 +75,7 @@ El diálogo se titula **Creador de recursos**; el trigger puede conservar **Nuev
 6. estados de carga, vacío, error o contrato pendiente;
 7. `CreationCommandBar` persistente.
 
-El rail contiene Clase, Familia, Tipo y Unidad natural. Cuando backend v1 exista añade una sola entrada agregada `Atributos · n de total`; nunca una miga por asignación. Revisión/Resultado aparecen sólo cuando una evaluación real permita llegar a ellas. El contexto jerárquico confirmado continúa visible durante todos los atributos.
+El rail contiene Clase, Familia, Tipo y Unidad natural. Cuando la integración frontend v1 se incorpore añade una sola entrada agregada `Atributos · n de total`; nunca una miga por asignación. Revisión/Resultado aparecen sólo cuando una evaluación real permita llegar a ellas. El contexto jerárquico confirmado continúa visible durante todos los atributos.
 
 Candidato enfocado y selección confirmada no comparten semántica: foco usa contorno y marcador de posición; una selección confirmada usa texto/check y queda reflejada en el rail. Ningún estado depende sólo del color.
 
@@ -105,9 +105,9 @@ Cambiar un ancestro invalida descendientes en una sola transición. Cambiar Unid
 
 La búsqueda sólo filtra candidatos cargados. El contador dirá, por ejemplo, “3 coincidencias entre 20 opciones cargadas”; si existe cursor, **Cargar más…** permanece explícito. Nunca se afirma una búsqueda global.
 
-## Flujo futuro, bloqueado por backend v1
+## Integración frontend v1 pendiente con baseline aceptado
 
-Una vez publicado y aceptado el contrato:
+El contrato backend ya está publicado y aceptado; permanece pendiente únicamente su slice frontend:
 
 ```text
 confirmed hierarchy + Unit + active selection IDs
@@ -139,18 +139,18 @@ explicit contractual disposition → UI result
 
 El frontend no analiza expresiones `CONDITIONAL`, no calcula aplicabilidad, no genera nombre/identidad y no valida valores permitidos por su cuenta. Sólo aplica hechos explícitos ya normalizados desde la evaluación vigente. Cada confirmación, omisión o cambio elimina inmediatamente la evaluación y el fingerprint anteriores antes de iniciar otra evaluación.
 
-## Pared contractual backend
+## Baseline contractual backend v1 aceptado
 
-Las responsabilidades están confirmadas, pero se difieren deliberadamente nombres de campos, interfaces TypeScript, schemas, nulabilidad, códigos de error y disposiciones. No se añadirá un “tipo aproximado”, endpoint falso ni mock productivo.
+**Autoridad:** backend `23e9440c2b832edb8e557134018ea812979c6452`; fuentes `convex/catalogoAdmin/{atributos.ts,recursos.ts}` y `resourceValidators.ts`, con consumidores generados bajo `api.catalogoAdmin`. Las cuatro rutas públicas son `api.catalogoAdmin.atributos.obtenerDefinicionAtributo`, `api.catalogoAdmin.atributos.listarValoresPermitidosAtributo`, `api.catalogoAdmin.recursos.evaluarCreacionDesdeSelecciones` y `api.catalogoAdmin.recursos.crearRecursoDesdeSelecciones`.
 
-La integración sólo puede comenzar cuando estén disponibles, para cada operación, el request/response exacto y ejemplos contractuales de:
+- **Definición:** `obtener…({ definicionAtributoId })` devuelve `null` o `{ id, clave, nombre, descripcion?, tipoDato, modoCaptura, unidadId?, activo, revision, effective, effectiveReasons }`; `modoCaptura` es sólo `SELECCION | LIBRE` y los opcionales se omiten, no se sustituyen por `null`.
+- **Valores permitidos:** `listar…({ definicionAtributoId, cursor?: string | null, pageSize?, modo?: ALL | ACTIVE | INACTIVE })` devuelve `{ items, continuationCursor, isExhausted }`. Cada item contiene `{ id, definicionAtributoId, clave, valor, nombre, descripcion?, orden, activo, revision, effective, effectiveReasons }`; `valor` es `TEXTO { value } | NUMERO { value } | BOOLEANO { value } | OPCION { opcionAtributoId }`. El cursor está ligado a definición/modo/orden y el orden ascendente es `orden`, `clave`, `adminSortId`.
+- **Input compartido evaluate/create:** `{ claseRecursoId, familiaRecursoId, tipoRecursoId, unidadId, selecciones: [{ asignacionAtributoId, valorPermitidoId }], ownership: { kind: GLOBAL } | { kind: ORGANIZATION, organizacionId } }`; una omisión está ausente de `selecciones`.
+- **Evaluación:** devuelve `{ status, valid, catalogFingerprint, nombre, identificadorTecnico, asignaciones, faltantesRequeridos, seleccionesInvalidas, valoresNormalizados, issues }`. `valid` es `true` si y sólo si `status === VALID`; `nombre` e `identificadorTecnico` son `string | null`. Cada asignación incluye `{ asignacionAtributoId, definicionAtributoId, aplicabilidadResuelta, participaIdentidad, orden, effectiveReasons, selectedValueId? }`, con aplicabilidad `REQUIRED | OPTIONAL | FORBIDDEN | NOT_APPLICABLE` (nunca `CONDITIONAL`); Tipo reemplaza Familia por definición y después ordena por `orden`, clave de definición e ID. `valoresNormalizados` no expone `valorPermitidoId`. Los 13 códigos son `HIERARCHY_INVALID`, `UNIT_INVALID`, `OWNERSHIP_INVALID`, `ASSIGNMENT_UNKNOWN`, `ASSIGNMENT_DUPLICATE`, `ALLOWED_VALUE_UNKNOWN`, `ALLOWED_VALUE_FOREIGN`, `ALLOWED_VALUE_INACTIVE`, `SELECTION_NON_EFFECTIVE`, `SELECTION_FORBIDDEN`, `SELECTION_NOT_APPLICABLE`, `UNSUPPORTED_FREE_CAPTURE`, `IDENTITY_CONFLICT`.
+- **Lease y reconciliación:** el fingerprint se calcula sólo del catálogo vivo y del contexto, no de las selecciones enviadas. El frontend conserva guards de token, contexto y revisión; reconcilia con `asignaciones`, `aplicabilidadResuelta` y `selectedValueId`, y consulta el listado para confirmar que el valor permitido retenido sigue activo/efectivo. No inventa un flag retained-valid; `FORBIDDEN` o `NOT_APPLICABLE` oculta/suspende cualquier selección activa.
+- **Create:** añade `expectedCatalogFingerprint`. La unión exacta es `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`: un fingerprint distinto produce `CATALOG_CHANGED` antes de adoptar `INCOMPLETE` o `INVALID`; sólo después de una evaluación vigente `VALID` se intenta persistir. Únicamente `CREATED` devuelve `{ disposition, item }`; las otras devuelven `{ disposition, evaluation }`. Un conflicto de identidad al persistir vuelve como `INVALID` con `IDENTITY_CONFLICT`; errores de transporte no pertenecen a una unión de retorno tipada.
 
-- `obtenerDefinicionAtributo`, incluido `modoCaptura: SELECCION | LIBRE | DERIVADO`;
-- `listarValoresPermitidosAtributo`, con identidad seleccionable y valor tipado;
-- `evaluarCreacionDesdeSelecciones`, con estados, fingerprint, asignaciones resueltas, incidencias, nombre e identidad;
-- `crearRecursoDesdeSelecciones`, con IDs, `expectedCatalogFingerprint`, errores y disposiciones explícitas.
-
-En ese momento se hará una revisión corta de proposal/design si el contrato exige decisiones no previstas. Después se añadirán parsers de transporte antes de React y tests con dobles exactos limitados a pruebas. `crearRecurso` seguirá disponible pero no será llamado por esta capacidad.
+Se escribirán parsers de transporte antes de React y fixtures exactos sólo para pruebas. `crearRecurso` seguirá disponible pero no será llamado por esta capacidad.
 
 ## Accesibilidad, foco y movimiento
 
@@ -213,4 +213,4 @@ El rollback se hace en orden inverso por cortes feature-locales. No requiere mig
 
 El diseño backend-independent queda implementable cuando Clase → Familia → Tipo → Unidad funciona por selección explícita, paginada y stale-safe; el contexto permanece visible; la barra explica comandos; el teclado cumple la transferencia de foco; el final dice Contrato pendiente; y no existe una ruta productiva desde el Creador hacia captura manual, atributos legados, evaluación local o `crearRecurso`.
 
-La integración final continúa bloqueada hasta disponer de DTOs backend v1 exactos y sólo se cierra cuando revisión y creación provienen de evaluación autoritativa vigente con fingerprint obligatorio y disposición explícita.
+La integración final permanece pendiente de su slice frontend y sólo se cierra cuando revisión y creación provienen de la evaluación autoritativa vigente, con fingerprint obligatorio y disposición explícita.
