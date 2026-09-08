@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 860–1,160 A+D remaining after PR 13D5d1b; 37 implementation child slices total (3 remaining: PR 13D5d2, PR 14, PR 15) plus planning-doc slicing. |
+| Estimated changed lines | 980–1,380 A+D remaining after PR 13D5d2a; 39 implementation child slices total (4 remaining: PR 13D5d2b, PR 13D5d2c, PR 14, PR 15) plus planning-doc slicing. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d1a base projection → PR 13D5d1b selection projection → PR 13D5d2 surface integration → PR 14 review/create → PR 15 backend closure |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d1a base projection → PR 13D5d1b selection projection → PR 13D5d2a back navigation → PR 13D5d2b surface integration → PR 13D5d2c surface proof → PR 14 review/create → PR 15 backend closure |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
 
@@ -69,9 +69,11 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13D5c | Complete | `… → PR 13D5a → PR 13D5b → 📍 PR 13D5c` / PR 13D5b | Flow actions and authoritative completion; 180–300 A+D |
 | 13D5d1a | Complete | `… → PR 13D5c → 📍 PR 13D5d1a` / PR 13D5c | Base pure presenter projection; 180–300 A+D |
 | 13D5d1b | Complete | `… → PR 13D5d1a → 📍 PR 13D5d1b` / PR 13D5d1a | Selection projection with allowed values/buckets/callbacks; 180–300 A+D |
-| 13D5d2 | Ready | `… → PR 13D5d1b → 📍 PR 13D5d2` / PR 13D5d1b | Surface authority/render integration; 280–395 A+D |
-| 14 | Ready after PR 13D5d2 / unstarted | `… → PR 13D5d2 → 📍 PR 14` / PR 13D5d2 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
-| 15 | Ready after PR 14 / unstarted | `… → PR 13D5d2 → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
+| 13D5d2a | Complete | `… → PR 13D5d1b → 📍 PR 13D5d2a` / PR 13D5d1b | Reducer-owned Back exposure and review re-entry guard; under 100 A+D |
+| 13D5d2b | Ready | `… → PR 13D5d2a → 📍 PR 13D5d2b` / PR 13D5d2a | Primary surface authority/render adoption; 300–395 A+D |
+| 13D5d2c | Ready after PR 13D5d2b | `… → PR 13D5d2b → 📍 PR 13D5d2c` / PR 13D5d2b | Surface keyboard and transition triangulation; 100–220 A+D |
+| 14 | Ready after PR 13D5d2c / unstarted | `… → PR 13D5d2c → 📍 PR 14` / PR 13D5d2c | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
+| 15 | Ready after PR 14 / unstarted | `… → PR 13D5d2c → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
 ## Executable now — backend-independent implementation
 
@@ -339,7 +341,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 - [x] **PR 13D5d1a:** Base pure presenter projection maps evaluation, current-step, definition, and optional omission authority without allowed-value/bucket/callback mapping.
 - [x] **PR 13D5d1b:** Add selection projection for allowed values, buckets, and callbacks; 180–300 A+D.
-- [ ] **PR 13D5d2:** Render the projected current presenter from the surface after D5d1b; 280–395 A+D. With an explicit non-null ownership fixture, cover one assignment at a time, selection confirmation, required/optional transitions, and terminal pending review. `INVALID` with assignments allows correction but blocks completion.
+- [x] **PR 13D5d2a:** Expose reducer-owned Back and guard deliberate return from review against immediate automatic re-entry.
+- [ ] **PR 13D5d2b:** Adopt flow-owned stages and render the projected current presenter; 300–395 A+D.
+- [ ] **PR 13D5d2c:** Triangulate keyboard transitions, optional omission, `INVALID` correction, and terminal pending review; 100–220 A+D.
 
 ### PR 14 — Authoritative review and fingerprinted creation
 

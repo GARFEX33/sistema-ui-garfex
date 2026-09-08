@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createParentGatedListController } from '../../shared/hierarchy/parentGatedListController'
 import { asAllowedValueId } from './resourceCreation.attributeSequence'
 import type { NormalizedResourceHierarchyPrefix } from './resourceCreation.model'
@@ -39,6 +39,7 @@ export function useResourceCreationFlow(
   ownership: ResourceCreationEvaluationOwnership | null,
 ) {
   const [state, dispatch] = useState(createInitialCreationState)
+  const completedAttributesRef = useRef<string | null>(null)
   const setState = dispatch
   const attributes = useResourceCreationAttributeQueries({
     api,
@@ -54,15 +55,23 @@ export function useResourceCreationFlow(
   })
 
   useEffect(() => {
-    if (
-      state.stage.kind !== 'attributes' ||
-      attributes.step.kind !== 'complete'
-    )
+    if (attributes.step.kind !== 'complete') {
+      completedAttributesRef.current = null
       return
+    }
+    if (state.stage.kind !== 'attributes') return
+    const completionKey = `${state.openGeneration}:${state.draft.revision}`
+    if (completedAttributesRef.current === completionKey) return
+    completedAttributesRef.current = completionKey
     dispatch((current) =>
       resourceCreationReducer(current, { type: 'COMPLETE_ATTRIBUTES' }),
     )
-  }, [attributes.step.kind, state])
+  }, [
+    attributes.step.kind,
+    state.draft.revision,
+    state.openGeneration,
+    state.stage.kind,
+  ])
   const [classes] = useState(() =>
     createParentGatedListController<
       ResourceContextClassItem,
@@ -352,6 +361,7 @@ export function useResourceCreationFlow(
         )
       )
         return
+      completedAttributesRef.current = null
       dispatch((current) =>
         resourceCreationReducer(current, {
           type: 'CONFIRM_UNIT',
@@ -393,6 +403,8 @@ export function useResourceCreationFlow(
     },
     attributes,
     begin,
+    back: () =>
+      dispatch((current) => resourceCreationReducer(current, { type: 'BACK' })),
     enterClass,
     enterFamily,
     enterType,

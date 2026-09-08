@@ -1236,3 +1236,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** maps structural allowed-value paging, active confirmation, exact callbacks, and optional omission without transport or primitive-value presentation.
 - **TDD:** RED failed on the missing projector; GREEN/TRIANGULATE focused view, presenter, and boundary suite passed 27/27.
 - **Plan:** D5d2 is ready; 37 children total, 3 remain. Forecast: 860–1,160 A+D.
+
+---
+
+## PR 13D5d2a — reducer-owned Back navigation
+
+- Exposed flow `back()` through the reducer and suppressed immediate automatic review re-entry for the same completed revision; reconfirming a valid Unit clears the suppression.
+- RED/GREEN proof covers review → attributes → Unit without draft mutation; focused flow/model tests and typecheck pass.
+- Reset: the combined surface candidate reached 497 A+D before docs and was preserved at `/tmp/kfrc-pr13d5d2-overbudget-1788901142`; D5d2 is now three bounded children.

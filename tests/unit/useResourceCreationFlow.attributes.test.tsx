@@ -125,6 +125,25 @@ describe('useResourceCreationFlow attribute authority', () => {
     ).toBe(true)
   })
 
+  it('exposes reducer-owned Back from review through attributes without changing the draft', async () => {
+    adoptedEvaluation = evaluation('VALID')
+    attributeStep = { kind: 'complete' }
+    const { result } = renderHook(() =>
+      useResourceCreationFlow({} as ResourcesMasterApi, { kind: 'GLOBAL' }),
+    )
+
+    await waitFor(() =>
+      expect(result.current.state.stage).toEqual({ kind: 'review-pending' }),
+    )
+    const draft = result.current.state.draft
+    act(() => result.current.back())
+    expect(result.current.state.stage).toEqual({ kind: 'attributes' })
+    expect(result.current.state.draft).toBe(draft)
+    act(() => result.current.back())
+    expect(result.current.state.stage).toEqual({ kind: 'unit' })
+    expect(result.current.state.draft).toBe(draft)
+  })
+
   it.each([
     ['VALID', 'review-pending'],
     ['INVALID', 'attributes'],
