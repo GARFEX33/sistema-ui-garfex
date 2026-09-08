@@ -1183,3 +1183,11 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Complete:** Unidad enters `attributes`; guarded completion reaches `review-pending` only for a current VALID evaluation with every required/optional assignment resolved.
 - **TDD:** focused RED failed 11 assertions; GREEN passed 48/48 for INVALID/INCOMPLETE, missing, suspended, required omission, invalidation, cursor absence, and the full Back chain.
 - **Boundary:** UI retains its temporary contract wall until D5; D4 is ready, four slices remain, forecast 1,160–1,555 A+D.
+
+---
+
+## PR 13D4a — attribute chrome
+
+- **Complete:** the rail presents non-navigable `Atributos · n de total` and review-pending markers; command copy now covers attribute/review stages without owning key behavior.
+- **TDD:** five RED assertions; GREEN rail/command/surface proof passed 36/36 and full suite 516/516.
+- **Boundary:** D4b owns the presenter; four slices remain, forecast 1,140–1,550 A+D.

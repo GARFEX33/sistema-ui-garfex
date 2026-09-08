@@ -2,13 +2,15 @@ import type { ReactNode } from 'react'
 import { DialogActions } from '../../shared/ui/Dialog'
 
 type CreationCommandBarProps = {
-  stage: 'context' | 'contract-pending'
+  stage: 'context' | 'attributes' | 'review-pending' | 'contract-pending'
   children: ReactNode
 }
 
 const commandCopy = {
   context: 'Esc Cerrar',
-  'contract-pending': 'Esc Volver',
+  attributes: 'Esc / ← Volver · Enter Confirmar',
+  'review-pending': 'Esc / ← Volver',
+  'contract-pending': 'Esc / ← Volver',
 } as const
 
 export function CreationCommandBar({

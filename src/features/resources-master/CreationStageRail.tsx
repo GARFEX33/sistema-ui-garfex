@@ -5,17 +5,23 @@ export type CreationRailStage =
   | 'family'
   | 'type'
   | 'unit'
+  | 'attributes'
+  | 'review-pending'
   | 'contract-pending'
 
 type CreationStageRailProps = {
   currentStage: CreationRailStage
+  attributeProgress?: Readonly<{
+    current: number
+    total: number
+  }>
   selections: Readonly<{
     className: string
     familyName: string
     typeName: string
     unitName: string
   }>
-  onNavigate: (stage: Exclude<CreationRailStage, 'contract-pending'>) => void
+  onNavigate: (stage: 'class' | 'family' | 'type' | 'unit') => void
 }
 
 const stages = [
@@ -27,6 +33,7 @@ const stages = [
 
 export function CreationStageRail({
   currentStage,
+  attributeProgress,
   selections,
   onNavigate,
 }: CreationStageRailProps) {
@@ -65,6 +72,30 @@ export function CreationStageRail({
           </li>
         )
       })}
+      {currentStage === 'attributes' && (
+        <li>
+          <span
+            aria-current="step"
+            className="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-secondary"
+          >
+            <span aria-hidden="true">●</span>
+            {attributeProgress
+              ? `Atributos · ${attributeProgress.current} de ${attributeProgress.total}`
+              : 'Atributos · pendiente'}
+          </span>
+        </li>
+      )}
+      {currentStage === 'review-pending' && (
+        <li>
+          <span
+            aria-current="step"
+            className="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-secondary"
+          >
+            <span aria-hidden="true">●</span>
+            Revisión · pendiente
+          </span>
+        </li>
+      )}
       {currentStage === 'contract-pending' && (
         <li>
           <span
