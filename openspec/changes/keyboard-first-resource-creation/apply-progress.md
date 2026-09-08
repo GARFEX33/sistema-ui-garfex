@@ -1269,3 +1269,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **TDD:** RED focused API test failed because `parseResourceCreationResult` and `createResourceFromSelections` were absent; GREEN and triangulation passed 39/39.
 - **Contract proof:** rejects extra keys, blank IDs/fingerprint, explicit optional-organization `undefined`, malformed dispositions, and disposition/status mismatches; preserves duplicate selection order and accepts `CATALOG_CHANGED` with nested `INCOMPLETE`.
 - **Replan:** PR 14 is split into 14A adapter, 14B review, 14C mutation wiring, 14D dispositions, and 14E closure; each child remains below 399 A+D.
+
+---
+
+## PR 14B — authoritative review presenter
+
+- **Complete:** feature-local review shows only generated identity, compact assignment counts, and backend issue messages; raw IDs and normalized primitives remain hidden.
+- **TDD:** missing-presenter RED; focused presenter/boundary suite passed 24/24 and full suite 565/565.
+- **Gate:** create is visible only for complete VALID authority and supports an explicit pending state; PR 14C owns mutation authority.

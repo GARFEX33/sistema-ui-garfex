@@ -48,6 +48,7 @@ const creationRuntimeFiles = [
   'CrearRecursoSurface.tsx',
   'CreationStageRail.tsx',
   'ResourceCreationContractPending.tsx',
+  'ResourceCreationReview.tsx',
   'ResourceCreationShell.tsx',
   'ResourceCreationContextStage.tsx',
   'StagedSearchSelector.tsx',
@@ -150,6 +151,20 @@ describe('resource creation safety wall', () => {
   it('keeps attribute view projection transport-free and independent of query hooks', () => {
     expect(attributeViewSource).not.toMatch(
       /api\.|useQuery|useResourceCreation|issues|valoresNormalizados/,
+    )
+  })
+
+  it('keeps the review presenter transport-free and free of raw evaluation internals', () => {
+    const reviewSource = readFileSync(
+      resolve(
+        process.cwd(),
+        'src/features/resources-master/ResourceCreationReview.tsx',
+      ),
+      'utf8',
+    )
+
+    expect(reviewSource).not.toMatch(
+      /api\.|useQuery|useMutation|asignacionAtributoId|definicionAtributoId|selectedValueId|valoresNormalizados|opcionAtributoId/,
     )
   })
 
