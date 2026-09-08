@@ -1129,3 +1129,11 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **State:** completed after the user-authorized split of the formatted 446-A+D trial; this child is bounded below 399 and remediates its failed evidence.
 - **TDD:** missing-hook RED; focused core proves null clearing, exact Unit request/current adoption, and old-response rejection after selection revision.
 - **Boundary:** unintegrated TanStack Query hook plus query/runtime guards only; reconciliation/retry tests and flow integration remain PR 13C1b1b/13C1b2.
+
+---
+
+## PR 13C1b1b — evaluation reconciliation and retry proof
+
+- **State:** completed characterization slice; production hook required no change.
+- **Evidence:** 6/6 hook cases prove FORBIDDEN/NOT_APPLICABLE suspension, one active-free replacement request, stable final adoption, transport error plus explicit retry, and identical-context reopen cache isolation.
+- **Boundary:** only focused tests and these task/progress updates; flow integration remains PR 13C1b2.

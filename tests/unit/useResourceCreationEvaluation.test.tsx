@@ -41,6 +41,22 @@ const evaluation = (
   issues: [],
 })
 
+const evaluationPrefix = {
+  classItem: item('class'),
+  familyItem: item('family'),
+  typeItem: item('type'),
+  depth: 3 as const,
+}
+
+const stateWithUnit = () =>
+  resourceCreationReducer(
+    resourceCreationReducer(createInitialCreationState(), {
+      type: 'OPEN',
+      prefix: evaluationPrefix,
+    }),
+    { type: 'CONFIRM_UNIT', unitId: 'unit' },
+  )
+
 const deferred = <T,>() => {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((resolvePromise) => {
@@ -188,6 +204,140 @@ describe('useResourceCreationEvaluation', () => {
     await waitFor(() =>
       expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
         current,
+      ),
+    )
+  })
+
+  it.each(['FORBIDDEN', 'NOT_APPLICABLE'] as const)(
+    'suspends active selections when authoritative applicability is %s',
+    async (aplicabilidadResuelta) => {
+      const forbidden = deferred<ResourceCreationEvaluation>()
+      const replacement = deferred<ResourceCreationEvaluation>()
+      const evaluateResourceCreation = vi
+        .fn()
+        .mockReturnValueOnce(forbidden.promise)
+        .mockReturnValueOnce(replacement.promise)
+      const initial = resourceCreationReducer(stateWithUnit(), {
+        type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+        assignmentId: 'assignment',
+        allowedValueId: 'value',
+      })
+      const mounted = renderDriver(initial, evaluateResourceCreation)
+      const revision = initial.draft.revision
+
+      await waitFor(() =>
+        expect(evaluateResourceCreation).toHaveBeenCalledTimes(1),
+      )
+      await act(async () =>
+        forbidden.resolve(
+          evaluation([
+            {
+              asignacionAtributoId: 'assignment',
+              definicionAtributoId: 'definition',
+              aplicabilidadResuelta,
+              participaIdentidad: false,
+              orden: 1,
+              effectiveReasons: [],
+              selectedValueId: 'value',
+            },
+          ]),
+        ),
+      )
+
+      await waitFor(() =>
+        expect(evaluateResourceCreation).toHaveBeenCalledTimes(2),
+      )
+      expect(mounted.result.current.state.draft.revision).toBe(revision + 1)
+      expect(
+        mounted.result.current.state.draft.authoritativeEvaluation,
+      ).toBeNull()
+      expect(evaluateResourceCreation.mock.calls[1][0].selecciones).toEqual([])
+      expect(
+        mounted.result.current.state.draft.selectionBuckets.suspended,
+      ).toEqual({ assignment: 'value' })
+
+      const final = evaluation()
+      await act(async () => replacement.resolve(final))
+      await waitFor(() =>
+        expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
+          final,
+        ),
+      )
+      expect(evaluateResourceCreation).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it('exposes transport rejection and retries one current request before adoption', async () => {
+    const accepted = evaluation()
+    const evaluateResourceCreation = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('transport failed'))
+      .mockResolvedValueOnce(accepted)
+    const mounted = renderDriver(stateWithUnit(), evaluateResourceCreation)
+
+    await waitFor(() =>
+      expect(mounted.result.current.driver.isError).toBe(true),
+    )
+    expect(
+      mounted.result.current.state.draft.authoritativeEvaluation,
+    ).toBeNull()
+    expect(evaluateResourceCreation).toHaveBeenCalledTimes(1)
+
+    await act(() => mounted.result.current.driver.retry())
+    await waitFor(() =>
+      expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
+        accepted,
+      ),
+    )
+    expect(evaluateResourceCreation).toHaveBeenCalledTimes(2)
+  })
+
+  it('reopens identical context with a new request rather than prior-open cache data', async () => {
+    const first = deferred<ResourceCreationEvaluation>()
+    const second = deferred<ResourceCreationEvaluation>()
+    const evaluateResourceCreation = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const mounted = renderDriver(stateWithUnit(), evaluateResourceCreation)
+    const priorGeneration = mounted.result.current.state.openGeneration
+
+    await waitFor(() =>
+      expect(evaluateResourceCreation).toHaveBeenCalledTimes(1),
+    )
+    const priorOpen = evaluation()
+    await act(async () => first.resolve(priorOpen))
+    await waitFor(() =>
+      expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
+        priorOpen,
+      ),
+    )
+
+    act(() => {
+      mounted.result.current.dispatch({
+        type: 'OPEN',
+        prefix: evaluationPrefix,
+      })
+      mounted.result.current.dispatch({ type: 'CONFIRM_UNIT', unitId: 'unit' })
+    })
+    expect(mounted.result.current.state.openGeneration).toBe(
+      priorGeneration + 1,
+    )
+    await waitFor(() =>
+      expect(evaluateResourceCreation).toHaveBeenCalledTimes(2),
+    )
+    expect(evaluateResourceCreation.mock.calls[1][0]).toEqual(
+      evaluateResourceCreation.mock.calls[0][0],
+    )
+    expect(
+      mounted.result.current.state.draft.authoritativeEvaluation,
+    ).toBeNull()
+
+    const reopened = evaluation()
+    await act(async () => second.resolve(reopened))
+    await waitFor(() =>
+      expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
+        reopened,
       ),
     )
   })

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,040–1,475 A+D remaining; 25 implementation child slices total (5 remaining) plus planning-doc slicing |
+| Estimated changed lines | 960–1,335 A+D remaining; 25 implementation child slices total (4 remaining) plus planning-doc slicing |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D one-at-a-time attributes UI → PR 14 review/create → PR 15 backend closure |
@@ -55,7 +55,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13C0 | Complete | `… → PR 13A → PR 13B → 📍 PR 13C0` / PR 13B | Required product-owned ownership seam and honest pending copy; 150–240 A+D |
 | 13C1a | Complete | `… → PR 13B → PR 13C0 → 📍 PR 13C1a` / PR 13C0 | Pure ownership-aware authority and exact request projection; 200–320 A+D |
 | 13C1b1a | Complete | `… → PR 13C1a → 📍 PR 13C1b1a` / PR 13C1a | Query hook core and stale rejection; 240–360 A+D |
-| 13C1b1b | Ready after PR 13C1b1a / unstarted | `… → PR 13C1b1a → 📍 PR 13C1b1b` / PR 13C1b1a | Reconciliation-loop and retry proof; 80–140 A+D |
+| 13C1b1b | Complete | `… → PR 13C1b1a → 📍 PR 13C1b1b` / PR 13C1b1a | Reconciliation-loop and retry proof; 80–140 A+D |
 | 13C1b2 | Ready after PR 13C1b1b / unstarted | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
 | 13D | Ready after PR 13C1b2 / unstarted | `… → PR 13C1b2 → 📍 PR 13D` / PR 13C1b2 | One-at-a-time selection UI; null ownership remains blocked; 280–390 A+D |
 | 14 | Ready after PR 13D / unstarted | `… → PR 13C1b2 → PR 13D → 📍 PR 14` / PR 13D | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
@@ -231,9 +231,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 13C1b1a. Add focused reconciliation-loop, transport-error, explicit retry, and reopened-cache tests without changing production behavior. **Budget:** 80–140 A+D.
 
-- [ ] **RED:** Add failing reconciliation/retry/cache-isolation cases. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Prove current hook behavior; change production only for a demonstrated defect. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Run focused/full verification and record exact results. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing reconciliation/retry/cache-isolation cases. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Prove current hook behavior; change production only for a demonstrated defect. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Run focused/full verification and record exact results. <!-- sdd-owner: implementation -->
 
 ### PR 13C1b2 — Flow integration
 
