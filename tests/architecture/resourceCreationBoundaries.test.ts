@@ -23,6 +23,13 @@ const flowSource = readFileSync(
   ),
   'utf8',
 )
+const selectorStateSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/resourceCreation.selectorState.ts',
+  ),
+  'utf8',
+)
 const creationRuntimeFiles = [
   'CrearRecursoSurface.tsx',
   'CreationStageRail.tsx',
@@ -36,6 +43,7 @@ const creationRuntimeFiles = [
   'resourceCreation.loaders.ts',
   'resourceCreation.model.ts',
   'resourceCreation.selectionDraft.ts',
+  'resourceCreation.selectorState.ts',
   'useResourceCreationEvaluation.ts',
   'useResourceCreationFlow.ts',
 ]
@@ -64,6 +72,16 @@ describe('resource creation safety wall', () => {
     expect(flowSource).toContain('evaluation: {')
     expect(flowSource).toContain('status: evaluation.status')
     expect(flowSource).toContain('retry: evaluation.retry')
+  })
+
+  it('keeps selector-state mapping and controller subscription behind the local flow boundary', () => {
+    expect(flowSource).toContain("} from './resourceCreation.selectorState'")
+    expect(flowSource).not.toContain('const selectorLoadState')
+    expect(flowSource).not.toContain('const unitSelectorLoadState')
+    expect(flowSource).not.toContain('const useControllerState')
+    expect(selectorStateSource).toContain('export const selectorLoadState')
+    expect(selectorStateSource).toContain('export const unitSelectorLoadState')
+    expect(selectorStateSource).toContain('export const useControllerState')
   })
 
   it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {

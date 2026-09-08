@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 860–1,155 A+D remaining; 25 implementation child slices total (3 remaining) plus planning-doc slicing |
+| Estimated changed lines | 1,960–2,735 A+D remaining; 30 implementation child slices total (7 remaining) plus planning-doc slicing |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D one-at-a-time attributes UI → PR 14 review/create → PR 15 backend closure |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2 definition/value driver → PR 13D3 reducer attribute/review stages → PR 13D4 attribute UI/rail/commands → PR 13D5 one-at-a-time integration → PR 14 review/create → PR 15 backend closure |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
 
@@ -57,9 +57,14 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13C1b1a | Complete | `… → PR 13C1a → 📍 PR 13C1b1a` / PR 13C1a | Query hook core and stale rejection; 240–360 A+D |
 | 13C1b1b | Complete | `… → PR 13C1b1a → 📍 PR 13C1b1b` / PR 13C1b1a | Reconciliation-loop and retry proof; 80–140 A+D |
 | 13C1b2 | Complete | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
-| 13D | Ready | `… → PR 13C1b2 → 📍 PR 13D` / PR 13C1b2 | One-at-a-time selection UI; null ownership remains blocked; 280–390 A+D |
-| 14 | Ready after PR 13D / unstarted | `… → PR 13C1b2 → PR 13D → 📍 PR 14` / PR 13D | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
-| 15 | Ready after PR 14 / unstarted | `… → PR 13D → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
+| 13D0 | Complete | `… → PR 13C1b2 → 📍 PR 13D0` / PR 13C1b2 | Flow selector-state/helper extraction only; no user behavior; 322 A+D actual |
+| 13D1 | Ready | `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1` / PR 13D0 | Context-stage extraction from surface; 260–390 A+D |
+| 13D2 | Ready after PR 13D1 | `… → PR 13D0 → PR 13D1 → 📍 PR 13D2` / PR 13D1 | Attribute definition/allowed-values query driver; 260–390 A+D |
+| 13D3 | Ready after PR 13D2 | `… → PR 13D1 → PR 13D2 → 📍 PR 13D3` / PR 13D2 | Reducer-owned attributes/review-pending stages and complete BACK chain; 280–395 A+D |
+| 13D4 | Ready after PR 13D3 | `… → PR 13D2 → PR 13D3 → 📍 PR 13D4` / PR 13D3 | Attribute stage component, rail, and commands; 280–395 A+D |
+| 13D5 | Ready after PR 13D4 | `… → PR 13D3 → PR 13D4 → 📍 PR 13D5` / PR 13D4 | Surface/flow/allowed-knowledge integration, one-at-a-time behavior; 300–395 A+D |
+| 14 | Ready after PR 13D5 / unstarted | `… → PR 13D4 → PR 13D5 → 📍 PR 14` / PR 13D5 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
+| 15 | Ready after PR 14 / unstarted | `… → PR 13D5 → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
 ## Executable now — backend-independent implementation
 
@@ -243,17 +248,57 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 - [x] **GREEN:** Integrate without another stage authority or manual fetch state. <!-- sdd-owner: implementation -->
 - [x] **TRIANGULATE/REFACTOR:** Prove reopen/ownership/revision lifecycle remains stale-safe. <!-- sdd-owner: implementation -->
 
-### PR 13D — One-at-a-time selection attributes UI
+### PR 13D0 — Flow selector-state helper boundary
 
-**Depends on:** PR 13C1b2. **Dependency diagram:** `… → PR 13C1b1b → PR 13C1b2 → 📍 PR 13D`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** current authoritative sequence → one keyboard-first assignment decision with definition and allowed-value paging. **Concrete targets:** feature-local attribute stage, `ResourceCreationShell.tsx`, and focused RTL/unit tests. **Budget:** 280–390 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this UI composition and tests; retain PRs 13A–13C1b2.
+**Depends on:** PR 13C1b2. **Dependency diagram:** `… → PR 13C1b1b → PR 13C1b2 → 📍 PR 13D0`. **Start → finish:** flow-local selector/load-state helpers → one feature-local module imported by the flow, with exact behavior and public flow API preserved. **Concrete targets:** `useResourceCreationFlow.ts`, `resourceCreation.selectorState.ts`, and focused unit/architecture proof. **Budget:** 322 A+D actual. **Verify:** focused selector-state/architecture Vitest command plus `pnpm typecheck`. **Runtime:** N/A — mechanical boundary with no user-visible behavior. **Rollback:** restore the three helpers to the flow and remove only the local module/proof.
 
-- [ ] **RED:** With an explicit non-null ownership fixture, add failing RTL tests for one assignment at a time, definition and allowed-value paging, `modoCaptura: SELECCION` confirmation, `LIBRE` unsupported presentation, and `Atributos · n de total`. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Render only the current authoritative assignment with selection-only allowed values, optional **Omitir**, visible `Atributos · n de total`, and no free-value editor or simultaneous assignment controls. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover required/optional pending transitions, suspended values remaining absent from requests, sequence changes retaining the pending assignment when possible, and terminal pending review before PR 14; run and record the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Added failing selector-state import and architecture boundary proof; both failed because the feature-local module did not exist. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Extracted `selectorLoadState`, `unitSelectorLoadState`, and `useControllerState` unchanged into `resourceCreation.selectorState.ts`; the flow imports and uses them. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Covered parent-gated status mapping, Unit hydration/policy precedence, and flow-module wiring; focused proof passed. <!-- sdd-owner: implementation -->
+
+### PR 13D1 — Context-stage extraction from surface
+
+**Depends on:** PR 13D0. **Dependency diagram:** `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** monolithic surface context branches → feature-local context-stage composition with no attribute behavior enabled. **Budget:** 260–390 A+D. **Verify:** focused surface RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only the extracted context-stage composition and tests.
+
+- [ ] **RED:** Add failing RTL proof that hierarchy/Unidad context retains its current keyboard behavior through the extracted boundary. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Extract only the existing context-stage surface composition; do not render an attribute assignment, free-value editor, review, or create control. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover Class/Family/Type/Unit return and pending-wall behavior through the extracted component; run and record the focused command. <!-- sdd-owner: implementation -->
+
+### PR 13D2 — Attribute definition and allowed-values query driver
+
+**Depends on:** PR 13D1. **Dependency diagram:** `… → PR 13D0 → PR 13D1 → 📍 PR 13D2`. **Start → finish:** parsed PR 12A query adapters unused by the flow → stale-safe feature-local definition and allowed-value paging driver, without rendering or reducer-stage adoption. **Budget:** 260–390 A+D. **Verify:** focused driver/unit Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only the driver and its focused proof.
+
+- [ ] **RED:** Add failing unit proof for current assignment definition loading and allowed-value continuation/retry paging. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Drive only published definition and allowed-values queries with current-assignment guards; do not issue a create request or add a free-value path. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove stale assignment rejection, definition failure, allowed-value paging, and transport retry; run and record the focused command. <!-- sdd-owner: implementation -->
+
+### PR 13D3 — Reducer-owned attribute and review-pending stages
+
+**Depends on:** PR 13D2. **Dependency diagram:** `… → PR 13D1 → PR 13D2 → 📍 PR 13D3`. **Start → finish:** selection buckets without attribute-stage navigation → reducer-owned attribute/review-pending stages with the complete Back chain. **Budget:** 280–395 A+D. **Verify:** focused model/selection Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only the stage events/navigation and their proof.
+
+- [ ] **RED:** Add failing reducer cases for required and optional pending transitions, omission, sequence reconciliation, and Back from review pending through attributes to Unidad. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only reducer-owned stage transitions and the complete Back chain; preserve suspended selections outside evaluation requests and do not add create behavior. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove sequence changes retain the pending assignment when possible and that `INVALID` with assignments permits correction but blocks completion. <!-- sdd-owner: implementation -->
+
+### PR 13D4 — Attribute stage component, rail, and commands
+
+**Depends on:** PR 13D3. **Dependency diagram:** `… → PR 13D2 → PR 13D3 → 📍 PR 13D4`. **Start → finish:** reducer stages without an attribute presenter → feature-local keyboard-first current-assignment stage, rail, and commands, unconnected from query knowledge. **Budget:** 280–395 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this presenter/rail/command composition and tests.
+
+- [ ] **RED:** With an explicit non-null ownership fixture, add failing RTL tests for one assignment at a time, `modoCaptura: SELECCION` confirmation, `LIBRE` unsupported presentation, optional **Omitir**, and `Atributos · n de total`. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Render only the current authoritative assignment, visible `Atributos · n de total`, and no free-value editor or simultaneous assignment controls. **Product decisions:** `OPTIONAL` `LIBRE` may be omitted; the counter is the current pending position. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover keyboard commands, rail return, and unsupported `LIBRE` presentation without adding an input; run and record the focused command. <!-- sdd-owner: implementation -->
+
+### PR 13D5 — One-at-a-time surface/flow/allowed-knowledge integration
+
+**Depends on:** PR 13D4. **Dependency diagram:** `… → PR 13D3 → PR 13D4 → 📍 PR 13D5`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** isolated driver/stages/presenter → one keyboard-first current authoritative assignment with definition and allowed-value paging. **Budget:** 300–395 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only surface/flow/allowed-knowledge integration and tests; retain PRs 13A–13D4.
+
+- [ ] **RED:** With an explicit non-null ownership fixture, add failing RTL integration tests for definition and allowed-value paging, one assignment at a time, and `modoCaptura: SELECCION` confirmation. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Connect the current authoritative assignment to selection-only allowed values and optional **Omitir**; render no free-value editor or simultaneous assignment controls. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover required/optional pending transitions, suspended values absent from requests, sequence changes retaining the pending assignment when possible, and terminal pending review before PR 14. `INVALID` with assignments allows correction but blocks completion. <!-- sdd-owner: implementation -->
 
 ### PR 14 — Authoritative review and fingerprinted creation
 
-**Depends on:** PR 13D. **Dependency diagram:** `… → PR 13C1b2 → PR 13D → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
+**Depends on:** PR 13D5. **Dependency diagram:** `… → PR 13D4 → PR 13D5 → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
 
 - [ ] **RED:** Write failing exact-fixture tests for `INCOMPLETE | VALID | INVALID` rendering, evaluation invalidation on every selection mutation, required `expectedCatalogFingerprint`, active selection IDs only, `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`, stale/unknown disposition handling, and confirmed-success-only behavior. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Render generated `nombre`, `identificadorTecnico`, assignments, and issues exclusively from validated evaluation output; call `crearRecursoDesdeSelecciones` only with a current `expectedCatalogFingerprint` and represent only published dispositions. <!-- sdd-owner: implementation -->

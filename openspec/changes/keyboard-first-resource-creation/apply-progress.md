@@ -1144,4 +1144,13 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 
 - **State:** completed. `useResourceCreationFlow` requires nullable ownership, invokes the evaluation driver once unconditionally, and exposes evaluation status/retry without a manual fetch or stage change.
 - **Evidence:** strict RED failed for missing status/flow ownership integration; GREEN/TRIANGULATE focused hook, surface, and architecture tests passed 41/41. Explicit GLOBAL/ORGANIZATION and null surface ownership reach the driver; null remains request-blocked.
-- **Boundary:** PR 13D is ready. Three implementation slices remain: PR 13D (280–390), PR 14 (320–395), and PR 15 (260–370), forecast 860–1,155 A+D.
+- **Boundary:** superseded by the bounded PR 13D0–13D5 expansion below.
+
+---
+
+## PR 13D0 — flow selector-state helper boundary
+
+- **State:** completed mechanical extraction; `selectorLoadState`, `unitSelectorLoadState`, and `useControllerState` now live in feature-local `resourceCreation.selectorState.ts`, while the flow imports them unchanged and remains below 440 lines.
+- **TDD/evidence:** RED focused selector-state/architecture run failed because the module was absent; GREEN/TRIANGULATE passed 10/10, covering status mapping, Unit precedence, and flow wiring.
+- **Replan:** former PR 13D is bounded as 13D0 complete plus 13D1 context extraction, 13D2 definition/value driver, 13D3 reducer stages/Back chain, 13D4 presenter/rail/commands, and 13D5 integration. Seven slices remain including PR 14 and PR 15; forecast 1,960–2,735 A+D across 30 total child slices. Product decisions: `INVALID` with assignments permits correction but blocks completion; `OPTIONAL` `LIBRE` may be omitted; the counter is the current pending position.
+- **Rollback:** restore the three helpers to the flow and remove only the selector-state module/proof; no user behavior changed.
