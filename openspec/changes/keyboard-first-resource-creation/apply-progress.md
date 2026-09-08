@@ -855,3 +855,16 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - Ran backend commit/source comparison, targeted contradiction grep, `git diff --check`, and `git diff --numstat`; no runtime test applies to documentation-only work. `pnpm exec prettier --check` remains nonzero for these three files, as it also does for their HEAD versions; no broad formatting rewrite was applied.
 - No implementation-owned task was completed, so `tasks.md` remains unchanged; persisted PR 12 RED remains `- [ ] **RED:** Write failing parser tests from the published exact DTO fixtures for all evaluator statuses, values, issues, fingerprint, and malformed/unknown response rejection. <!-- sdd-owner: implementation -->`.
 - **Deviation / rollback:** no deviation; revert only this section and the two design documents to remove the reconciliation.
+
+---
+
+## Backend-v1 gate acceptance and PR 12 readiness
+
+- **State / structured status:** native `gentle-ai.sdd-status@2` is authoritative for `openspec`: `applyState: ready`, `nextRecommended: apply`, all required artifacts present, and no blockers. It reports 35/52 checked across all ownership rows; exact ownership reconciliation is **35/47 implementation rows complete, 12 unchecked**, plus **0/5 parent rows complete, 5 unchecked**.
+- **Action context:** `repo-local` workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`; both edits stayed inside the parent-provided documentation allowlist. No action-context warning occurred.
+- **Accepted gate authority:** backend `23e9440c2b832edb8e557134018ea812979c6452`; generated `convex/_generated/api.d.ts`; sources `convex/catalogoAdmin/{atributos.ts,recursos.ts,resourceValidators.ts}`; consumer `contract-tests/resource-admin-consumer.ts`; and the four published `api.catalogoAdmin` operations recorded in `tasks.md`. Ordinary Convex transport failures remain outside a typed application-return union.
+- **PR 11 evidence retained:** PR 11C records 60 focused RTL/architecture tests, Playwright 7/7, typecheck, lint, format check, build, and `git diff --check` as passed; no PR 11 evidence was rerun or rewritten by this documentation-only reconciliation.
+- **Persisted task state:** no checkbox changed. PR 12–15 remain visibly unchecked implementation work; parent row 185 remains unchecked because the remaining parent action is explicit delivery authorization of PR 12 RED, not a claim that this slice independently verified backend repository cleanliness.
+- **Workload / boundary:** documentation-only readiness reconciliation for PR 12–15; no implementation, test, backend, proposal, spec, design, commit, PR, review, or receipt action. Next implementation action: PR 12 RED only.
+- **Verification:** `git diff --check`, ownership/checkbox reconciliation, and targeted readiness-token grep passed. `pnpm exec prettier --check` exits 1 for both current and HEAD versions of these two files, so existing format debt was not broadly rewritten; no runtime test applies to this documentation-only slice.
+- **Parent authorization:** after independently confirming clean backend authority `23e9440c2b832edb8e557134018ea812979c6452`, the reconciled artifacts, PR 11 closure, and the user-directed local-only continuation, the parent authorized only the PR 12 RED work unit. Push, PR, merge, release, and backend edits remain unauthorized.
