@@ -52,6 +52,7 @@ export function CrearRecursoSurface({
   initialHierarchySnapshotCaptureRef.current.receive(initialHierarchySnapshot)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const reviewHeadingRef = useRef<HTMLHeadingElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
   const wasOpen = useRef(false)
   const isOpenRef = useRef(isOpen)
@@ -138,6 +139,11 @@ export function CrearRecursoSurface({
       )
       ?.focus()
   }, [isContextStage, isOpen, stageKind])
+
+  useEffect(() => {
+    if (isOpen && stageKind === 'review-pending')
+      reviewHeadingRef.current?.focus()
+  }, [isOpen, stageKind])
 
   useEffect(() => {
     let delayedRestore: number | null = null
@@ -290,8 +296,10 @@ export function CrearRecursoSurface({
             {stageKind === 'review-pending' && !isContractPending && (
               <section aria-labelledby="resource-review-pending-heading">
                 <h2
+                  ref={reviewHeadingRef}
                   className="m-0 text-lg"
                   id="resource-review-pending-heading"
+                  tabIndex={-1}
                 >
                   Revisión pendiente
                 </h2>

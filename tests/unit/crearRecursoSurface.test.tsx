@@ -15,7 +15,10 @@ import { ResourceCreationContractPending } from '../../src/features/resources-ma
 import type { ResourceCreationEvaluationDriverOptions } from '../../src/features/resources-master/useResourceCreationEvaluation'
 import { useResourceCreationFlow } from '../../src/features/resources-master/useResourceCreationFlow'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
-import type { ResourceCreationEvaluationOwnership } from '../../src/features/resources-master/resourcesMaster.types'
+import type {
+  ResourceCreationEvaluation,
+  ResourceCreationEvaluationOwnership,
+} from '../../src/features/resources-master/resourcesMaster.types'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
 type IdleEvaluationDriver = (
@@ -464,6 +467,9 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.getAllByRole('heading').map((heading) => heading.textContent),
     ).toEqual(['Creador de recursos', 'Contrato pendiente'])
     expect(api.listAttributeAssignments).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole('region', { name: 'Etapa de atributos' }),
+    ).not.toBeInTheDocument()
     expect(api.getAttributeDefinition).not.toHaveBeenCalled()
     expect(api.listAttributeOptions).not.toHaveBeenCalled()
     expect(api.createResource).not.toHaveBeenCalled()
@@ -1286,8 +1292,266 @@ describe('CrearRecursoSurface — Clase staged', () => {
       ).getByText('Atributos · 1 de 1'),
     ).toHaveAttribute('aria-current', 'step')
     await user.click(screen.getByRole('option', { name: 'Rojo' }))
+    const reviewHeading = await screen.findByRole('heading', {
+      name: 'Revisión pendiente',
+    })
+    expect(reviewHeading).toBeVisible()
+    expect(reviewHeading).toHaveFocus()
+  })
+
+  it('omits the current optional assignment and reaches review only after VALID authority', async () => {
+    const assignment = {
+      asignacionAtributoId: 'assignment-optional-color',
+      definicionAtributoId: 'definition-color',
+      aplicabilidadResuelta: 'OPTIONAL' as const,
+      participaIdentidad: false,
+      orden: 1,
+      effectiveReasons: [],
+    }
+    const incomplete: ResourceCreationEvaluation = {
+      status: 'INCOMPLETE',
+      valid: false,
+      catalogFingerprint: 'incomplete',
+      nombre: null,
+      identificadorTecnico: null,
+      asignaciones: [assignment],
+      faltantesRequeridos: [],
+      seleccionesInvalidas: [],
+      valoresNormalizados: [],
+      issues: [],
+    }
+    const valid: ResourceCreationEvaluation = {
+      ...incomplete,
+      status: 'VALID',
+      valid: true,
+      catalogFingerprint: 'valid',
+    }
+    useResourceCreationAttributeQueriesSpy.mockImplementation(
+      ({ evaluation, selectionBuckets }) => ({
+        step:
+          evaluation?.status === 'VALID' &&
+          selectionBuckets.omitted.has(assignment.asignacionAtributoId)
+            ? { kind: 'complete' }
+            : { kind: 'current', assignment, position: 1, total: 1 },
+        definition: {
+          status: 'selection-ready',
+          definition: { nombre: 'Color', modoCaptura: 'SELECCION' },
+        },
+        allowedValues: {
+          status: 'ready',
+          values: [{ id: 'allowed-red', nombre: 'Rojo' }],
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          continue: vi.fn(),
+          retry: vi.fn(),
+        },
+        allowedValuesKnowledge: {},
+      }),
+    )
+    useResourceCreationEvaluationSpy.mockImplementation(
+      ({ state, setState }) => {
+        const nextEvaluation = state.draft.selectionBuckets.omitted.has(
+          assignment.asignacionAtributoId,
+        )
+          ? valid
+          : incomplete
+        useEffect(() => {
+          if (
+            state.stage.kind === 'attributes' &&
+            state.draft.authoritativeEvaluation !== nextEvaluation
+          )
+            setState((current) => ({
+              ...current,
+              draft: {
+                ...current.draft,
+                authoritativeEvaluation: nextEvaluation,
+              },
+            }))
+        }, [
+          nextEvaluation,
+          setState,
+          state.draft.authoritativeEvaluation,
+          state.stage.kind,
+        ])
+        return { status: 'ready', retry: () => Promise.resolve() }
+      },
+    )
+    const user = userEvent.setup()
+    renderSurface(fakeApi(), { ownership: { kind: 'GLOBAL' } })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    await user.click(
+      await screen.findByRole('option', { name: 'Metro cúbico (m³)' }),
+    )
+    expect(await screen.findByRole('button', { name: 'Omitir' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Omitir' }))
+
+    expect(
+      useResourceCreationAttributeQueriesSpy.mock.calls.some(([options]) =>
+        options.selectionBuckets.omitted.has(assignment.asignacionAtributoId),
+      ),
+    ).toBe(true)
+    expect(
+      useResourceCreationAttributeQueriesSpy.mock.calls.some(
+        ([options]) => options.evaluation?.status === 'VALID',
+      ),
+    ).toBe(true)
     expect(
       await screen.findByRole('heading', { name: 'Revisión pendiente' }),
     ).toBeVisible()
+  })
+
+  it('keeps INVALID selections correctable until a later VALID evaluation and backs locally', async () => {
+    const assignment = {
+      asignacionAtributoId: 'assignment-required-color',
+      definicionAtributoId: 'definition-color',
+      aplicabilidadResuelta: 'REQUIRED' as const,
+      participaIdentidad: false,
+      orden: 1,
+      effectiveReasons: [],
+    }
+    const invalid: ResourceCreationEvaluation = {
+      status: 'INVALID',
+      valid: false,
+      catalogFingerprint: 'invalid',
+      nombre: null,
+      identificadorTecnico: null,
+      asignaciones: [assignment],
+      faltantesRequeridos: [],
+      seleccionesInvalidas: [assignment.asignacionAtributoId],
+      valoresNormalizados: [],
+      issues: [],
+    }
+    const valid: ResourceCreationEvaluation = {
+      ...invalid,
+      status: 'VALID',
+      valid: true,
+      catalogFingerprint: 'valid',
+      seleccionesInvalidas: [],
+    }
+    let releaseValid: (() => void) | undefined
+    useResourceCreationAttributeQueriesSpy.mockImplementation(
+      ({ evaluation, selectionBuckets }) => ({
+        step:
+          evaluation?.status === 'VALID' &&
+          Object.hasOwn(
+            selectionBuckets.active,
+            assignment.asignacionAtributoId,
+          )
+            ? { kind: 'complete' }
+            : { kind: 'current', assignment, position: 1, total: 1 },
+        definition: {
+          status: 'selection-ready',
+          definition: { nombre: 'Color', modoCaptura: 'SELECCION' },
+        },
+        allowedValues: {
+          status: 'ready',
+          values: [{ id: 'allowed-blue', nombre: 'Azul' }],
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          continue: vi.fn(),
+          retry: vi.fn(),
+        },
+        allowedValuesKnowledge: {},
+      }),
+    )
+    useResourceCreationEvaluationSpy.mockImplementation(
+      ({ state, setState }) => {
+        const hasCorrection = Object.hasOwn(
+          state.draft.selectionBuckets.active,
+          assignment.asignacionAtributoId,
+        )
+        useEffect(() => {
+          if (state.stage.kind !== 'attributes') return
+          if (!hasCorrection) {
+            if (state.draft.authoritativeEvaluation !== invalid)
+              setState((current) => ({
+                ...current,
+                draft: { ...current.draft, authoritativeEvaluation: invalid },
+              }))
+            return
+          }
+          if (releaseValid) return
+          void new Promise<void>((resolve) => {
+            releaseValid = resolve
+          }).then(() =>
+            setState((current) => ({
+              ...current,
+              draft: { ...current.draft, authoritativeEvaluation: valid },
+            })),
+          )
+        }, [
+          hasCorrection,
+          setState,
+          state.draft.authoritativeEvaluation,
+          state.stage.kind,
+        ])
+        return { status: 'ready', retry: () => Promise.resolve() }
+      },
+    )
+    const user = userEvent.setup()
+    renderSurface(fakeApi(), { ownership: { kind: 'GLOBAL' } })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    await user.click(
+      await screen.findByRole('option', { name: 'Metro cúbico (m³)' }),
+    )
+    expect(await screen.findByRole('option', { name: 'Azul' })).toBeVisible()
+
+    await user.click(screen.getByRole('option', { name: 'Azul' }))
+    await waitFor(() => expect(releaseValid).toBeTypeOf('function'))
+    expect(screen.getByRole('option', { name: 'Azul' })).toBeVisible()
+    expect(
+      screen.queryByRole('heading', { name: 'Revisión pendiente' }),
+    ).not.toBeInTheDocument()
+
+    await act(async () => releaseValid?.())
+    await screen.findByRole('heading', { name: 'Revisión pendiente' })
+    await user.keyboard('{Escape}')
+    expect(
+      screen.queryByRole('heading', { name: 'Revisión pendiente' }),
+    ).not.toBeInTheDocument()
+    const rail = screen.getByRole('list', { name: 'Etapas de creación' })
+    expect(within(rail).getByText('Atributos · pendiente')).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+    expect(
+      screen.getByRole('region', { name: 'Comandos disponibles' }),
+    ).toHaveTextContent('Esc / ← Volver')
+    const typeStage = within(rail).getByRole('button', { name: 'Tipo: Arena' })
+    typeStage.focus()
+    await user.keyboard('{ArrowLeft}')
+
+    const unitSearch = await screen.findByRole('searchbox', {
+      name: 'Unidad natural',
+    })
+    expect(unitSearch).toHaveFocus()
+    expect(
+      within(rail).getByRole('button', { name: 'Clase: Material' }),
+    ).toBeVisible()
+    expect(
+      within(rail).getByRole('button', { name: 'Familia: Áridos' }),
+    ).toBeVisible()
+    expect(
+      within(rail).getByRole('button', { name: 'Tipo: Arena' }),
+    ).toBeVisible()
+    expect(
+      within(rail).getByRole('button', { name: 'Unidad: Metro cúbico' }),
+    ).toHaveAttribute('aria-current', 'step')
+    expect(
+      screen.getByRole('region', { name: 'Comandos disponibles' }),
+    ).toHaveTextContent('Esc Cerrar')
+
+    unitSearch.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(unitSearch).toHaveFocus()
   })
 })

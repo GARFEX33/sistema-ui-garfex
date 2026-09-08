@@ -1252,3 +1252,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** the surface derives context, rail, commands, attribute progress, and rendering solely from `flow.state.stage`; null ownership retains the pending wall.
 - **TDD:** RED could not find `Color`; GREEN surface RTL passed 29/29 with projected `Color` selection advancing to review pending.
 - **Boundary:** D5d2c owns keyboard/optional/INVALID triangulation; 39 children total, 3 remain, forecast 680–985 A+D.
+
+---
+
+## PR 13D5d2c — surface transition proof
+
+- **Complete:** optional omission and INVALID correction wait for authoritative VALID review; review Back and local ArrowLeft retain hierarchy.
+- **TDD:** review-heading focus RED failed; focused surface/flow/view/model/architecture RTL passed 87/87 after the minimal focus ref/effect.
+- **Plan:** PR 14 ready; 39 children total, 2 remain, forecast 580–765 A+D.
