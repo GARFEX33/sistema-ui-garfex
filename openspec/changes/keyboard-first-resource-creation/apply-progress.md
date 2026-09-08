@@ -807,3 +807,31 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **TDD Cycle Evidence:** safety net 31 RTL passed; RED failed on user-focus stealing and trigger-over-original restoration; GREEN passed 34 RTL; triangulation covered more-page, partial-error, exhaustion, batched readiness, immediate reopen, and valid keyboard opener; Prettier refactor stayed green.
 - **Verification:** 60 focused RTL/architecture tests, Playwright 7/7, typecheck, lint, format check, build, and `git diff --check` passed; build had only existing Rollup/Zod comments and >500 kB chunk warnings.
 - **Deviation/remaining/workload:** none; PR12–15 exact unchecked backend-gated rows remain unchanged; rollback only these local focus tests/effects; final candidate is below 399 A+D, with no commit or parent action.
+
+---
+
+## Contract acceptance documentation reconciliation
+
+- **State:** complete for the documentation-only contract-acceptance slice; no runtime implementation was performed.
+- **Structured status:** reconstructed authoritative OpenSpec status after `gentle-ai sdd status --change keyboard-first-resource-creation --json` was unavailable in this checkout. Proposal, nested spec, design, tasks, and prior progress were present; implementation-owned tasks remain incomplete, so `applyState: ready` and `nextRecommended: apply` remain unchanged.
+- **Action context:** `repo-local` at `/home/garfex/PROGRAMACION/sistema-ui-garfex`; the two normative-document edits are within the supplied workspace and documentation scope. No unsafe-root warning occurred.
+- **Workload / PR boundary:** delegated documentation-only reconciliation; 110 A+D across proposal and nested spec, below the 399 limit. No commit, branch, PR, review, receipt, code, or test change was attempted.
+
+### Reconciled contract
+
+- Replaced the obsolete unavailable-backend premise with the accepted backend baseline `23e9440c2b832edb8e557134018ea812979c6452` and its four public operations.
+- Recorded the exact `modoCaptura: SELECCION | LIBRE` union, selection-only input, absent omissions, hierarchy/Unit IDs, ownership union, published disposition union, and the distinction between Convex transport failures and application return values.
+- Removed `DERIVADO` and obsolete backend-unavailability contradictions from the two edited documents.
+
+### Persisted task state and verification
+
+- No implementation-owned task was completed by this documentation-only slice; `tasks.md` was intentionally not modified, and parent-owned rows remain byte-for-byte deferred.
+- Exact backend comparison used `_generated/api.d.ts`, `catalogoAdmin/atributos.ts`, `catalogoAdmin/recursos.ts`, `catalogoAdmin/resourceValidators.ts`, and `contract-tests/resource-admin-consumer.ts` at backend commit `23e9440c2b832edb8e557134018ea812979c6452`.
+- `pnpm exec prettier --check openspec/changes/keyboard-first-resource-creation/proposal.md openspec/changes/keyboard-first-resource-creation/specs/keyboard-first-resource-creation/spec.md` — passed after scoped formatting.
+- `git diff --check` — passed; targeted contradiction grep found zero `DERIVADO` or obsolete backend-unavailability matches.
+
+### Remaining tasks, deviations, and rollback
+
+- Remaining implementation tasks are unchanged, beginning with the persisted PR 12 `- [ ] **RED:** Write failing parser tests from the published exact DTO fixtures for all evaluator statuses, values, issues, fingerprint, and malformed/unknown response rejection. <!-- sdd-owner: implementation -->`.
+- **Deviation:** no design or task artifact was edited; the user-requested documentation boundary was retained apart from this mandatory cumulative progress record.
+- **Rollback:** revert only the contract wording in `proposal.md` and the nested normative `spec.md`; no runtime behavior or task state changes.

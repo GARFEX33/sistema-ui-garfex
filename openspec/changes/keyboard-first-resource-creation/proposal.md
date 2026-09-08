@@ -20,7 +20,7 @@ En cada momento existe una decisión dominante. La jerarquía y el progreso perm
 
 La creación pasa a ser **sólo por selección**. El frontend no solicitará Nombre, Descripción, TEXTO, NUMERO ni ningún otro valor de negocio manual. El backend resolverá reglas condicionales, nombre e identidad técnica y será la autoridad tanto para la revisión como para la creación.
 
-La integración final depende de contratos backend v1 todavía no implementados. El frontend puede avanzar de forma independiente únicamente en la shell, rail/breadcrumb, barra de comandos, interacción search-list, etapas Clase/Familia/Tipo/Unidad natural con contratos actuales y estado puro de selecciones activas/suspendidas. No inventará endpoints, DTOs ni respuestas de producción para completar el flujo.
+El contrato backend v1 aceptado en `23e9440c2b832edb8e557134018ea812979c6452` publica `obtenerDefinicionAtributo`, `listarValoresPermitidosAtributo`, `evaluarCreacionDesdeSelecciones` y `crearRecursoDesdeSelecciones`. La integración frontend sigue siendo un corte posterior: mientras no se incorpore, la shell, rail/breadcrumb, barra de comandos, interacción search-list, etapas Clase/Familia/Tipo/Unidad natural y estado puro de selecciones activas/suspendidas pueden avanzar sin inventar endpoints, DTOs ni respuestas de producción.
 
 ## Problema y oportunidad
 
@@ -115,16 +115,14 @@ El contexto de Clase/Familia/Tipo/Unidad seguirá visible durante toda la secuen
 
 Para cada asignación activa:
 
-- el frontend obtiene su definición y `modoCaptura`;
-- v1 admite únicamente `SELECCION`;
-- los valores permitidos proceden del backend y conservan su valor tipado;
+- el frontend obtiene su definición y el contrato publica exactamente `modoCaptura: SELECCION | LIBRE`;
+- `SELECCION` presenta valores permitidos del backend y conserva su valor tipado;
 - `Enter` confirma un valor permitido;
 - una asignación opcional ofrece **Omitir**;
 - una asignación requerida sin selección impide alcanzar un resultado `VALID`;
-- `LIBRE` no habilita un editor manual y se tratará como modo no soportado por este alcance;
-- `DERIVADO` queda fuera de v1 y no se simulará en frontend.
+- `LIBRE` no habilita un editor manual y se trata como modo no soportado por este alcance.
 
-No existirán campos manuales para Nombre, Descripción, TEXTO, NUMERO u otros valores de negocio. La búsqueda de opciones es la única entrada de texto permitida y nunca se convierte en el valor seleccionado por sí misma.
+No existirán campos manuales para Nombre, Descripción, TEXTO, NUMERO u otros valores de negocio. La búsqueda de opciones es la única entrada de texto permitida y nunca se convierte en el valor seleccionado por sí misma. Las dos operaciones de selección transmiten exclusivamente `claseRecursoId`, `familiaRecursoId`, `tipoRecursoId`, `unidadId`, `selecciones` de `{ asignacionAtributoId, valorPermitidoId }` y `ownership` como `{ kind: GLOBAL } | { kind: ORGANIZATION, organizacionId }`; las omisiones quedan ausentes de `selecciones`. Nunca transmiten valores manuales, Nombre, Descripción, primitivas, IDs de opción, `activo` ni selecciones suspendidas.
 
 ### 5. Condiciones reversibles: selecciones activas y suspendidas
 
@@ -152,26 +150,24 @@ La revisión mostrará, según el contrato definitivo, las asignaciones resuelta
 - Sólo `VALID` habilitará la confirmación final.
 - Cualquier cambio de selección invalidará la evaluación y el fingerprint anteriores.
 
-La creación usará `crearRecursoDesdeSelecciones`, enviará IDs de selección y el `expectedCatalogFingerprint` obligatorio. El backend reevaluará transaccionalmente y devolverá disposiciones explícitas. La UI representará esas disposiciones según el contrato real; no inferirá éxito, no inventará nombres de disposición y no convertirá una respuesta incierta o stale en creación confirmada.
+La creación usará `crearRecursoDesdeSelecciones`, con el mismo contrato de selección y `expectedCatalogFingerprint` obligatorio. El backend reevaluará transaccionalmente y devolverá exactamente `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`; sólo `CREATED` confirma creación. `CATALOG_CHANGED`, `INCOMPLETE` e `INVALID` devuelven la evaluación publicada. Los fallos normales de transporte Convex no pertenecen a esa unión de retorno de aplicación: la UI los tratará como transporte y no inventará un DTO de error.
 
 Nombre e identidad técnica son salidas backend, nunca entradas frontend.
 
-## Dependencia explícita de backend v1
+## Baseline contractual backend v1 aceptado
 
-La integración de atributos, evaluación, revisión y creación queda bloqueada hasta que estén implementados y disponibles los contratos exactos de:
+El backend en `23e9440c2b832edb8e557134018ea812979c6452` publica estos cuatro contratos:
 
-1. `obtenerDefinicionAtributo`, incluyendo `modoCaptura: SELECCION | LIBRE | DERIVADO`;
-2. `listarValoresPermitidosAtributo`, con valores tipados e identidad seleccionable;
-3. `evaluarCreacionDesdeSelecciones`, obligatorio para resolver `CONDITIONAL` y devolver `INCOMPLETE | VALID | INVALID`, `catalogFingerprint`, asignaciones resueltas, incidencias, nombre e identidad técnica;
-4. `crearRecursoDesdeSelecciones`, con IDs de selección, `expectedCatalogFingerprint` obligatorio, reevaluación transaccional y disposiciones explícitas.
+1. `obtenerDefinicionAtributo`, con `modoCaptura: SELECCION | LIBRE`;
+2. `listarValoresPermitidosAtributo`, con identidad seleccionable y valor tipado;
+3. `evaluarCreacionDesdeSelecciones`, que devuelve `INCOMPLETE | VALID | INVALID`, `catalogFingerprint`, asignaciones resueltas, incidencias, nombre e identidad técnica;
+4. `crearRecursoDesdeSelecciones`, que recibe el mismo input de selección más `expectedCatalogFingerprint` y devuelve `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`.
 
-Los nombres y responsabilidades están confirmados, pero el frontend necesita los DTOs definitivos, nulabilidad, errores y disposiciones antes de crear adapters o integración. No los deducirá desde el método legado ni desde la UI.
+La integración debe validar y representar esos DTOs publicados sin deducir campos desde el método legado ni desde la UI. La unión de `ownership` y los IDs de jerarquía/Unidad son los descritos en el contrato funcional; el apéndice completo de campos queda reservado para el siguiente corte de integración. `crearRecurso` permanece disponible y sin cambios, pero no se usará como atajo para este flujo selection-only.
 
-`crearRecurso` permanece disponible y sin cambios en backend. No será eliminado ni modificado por esta iniciativa, pero tampoco se usará como atajo para el nuevo flujo selection-only porque no satisface la evaluación/fingerprint autoritativos.
+## Alcance de integración
 
-## Alcance por disponibilidad
-
-### Frontend que puede continuar antes de backend v1
+### Frontend que puede continuar mientras se programa la integración v1
 
 - shell y denominación **Creador de recursos**;
 - rail/breadcrumb interactivo y barra de comandos persistente;
@@ -179,19 +175,19 @@ Los nombres y responsabilidades están confirmados, pero el frontend necesita lo
 - etapas Clase, Familia, Tipo y Unidad natural usando contratos actuales;
 - invalidación de descendientes al cambiar jerarquía;
 - modelo puro y probado de selecciones activas/suspendidas keyed por assignment ID;
-- estados explícitos de “contrato pendiente” donde el recorrido aún no pueda continuar.
+- estado explícito de integración pendiente donde el corte actual aún no continúe hacia atributos, evaluación, revisión o creación.
 
 Este trabajo no incluirá endpoints falsos, mocks conectados al bundle de producción ni una evaluación condicional local presentada como real.
 
-### Trabajo bloqueado por backend v1
+### Integración frontend v1 programada
 
 - carga productiva de definiciones y valores permitidos de atributos;
-- interpretación autoritativa de asignaciones condicionales;
+- representación autoritativa de asignaciones condicionales;
 - revisión con nombre, identidad técnica, incidencias y fingerprint reales;
 - habilitación de creación;
-- integración de `crearRecursoDesdeSelecciones` y sus disposiciones.
+- integración de `crearRecursoDesdeSelecciones` y su unión publicada de disposiciones.
 
-Los dobles de prueba podrán representar contratos únicamente después de que los DTOs sean exactos y sólo dentro de pruebas; nunca definirán de facto la API productiva.
+Los dobles de prueba usarán los DTOs publicados y sólo dentro de pruebas; nunca definirán de facto la API productiva.
 
 ## Preservación y compatibilidad
 
@@ -236,7 +232,7 @@ Se mantienen además:
 
 ### Dependencia externa
 
-- implementación backend v1 de definición/modo, valores permitidos tipados, evaluación y creación desde selecciones.
+- baseline backend v1 aceptado de definición/modo, valores permitidos tipados, evaluación y creación desde selecciones; la integración frontend continúa como trabajo de este cambio.
 
 No se propone editar backend desde este repositorio.
 
@@ -245,7 +241,7 @@ No se propone editar backend desde este repositorio.
 Este cambio no incluye:
 
 - captura manual de Nombre, Descripción o cualquier valor de negocio;
-- atributos de modo `LIBRE` ni `DERIVADO` en v1;
+- captura manual para atributos de modo `LIBRE`;
 - generación frontend de nombre o identidad técnica;
 - evaluación frontend de reglas `CONDITIONAL`;
 - adivinar DTOs, errores o disposiciones backend;
@@ -260,19 +256,19 @@ Este cambio no incluye:
 
 ## Riesgos y mitigaciones
 
-| Riesgo | Mitigación propuesta |
-| --- | --- |
-| Integrar contra un backend aún indefinido | Separar el trabajo disponible del bloqueado y no escribir adapters hasta disponer de DTOs exactos. |
-| Reintroducir captura libre para desbloquear la UI | Tratar modos no soportados y ausencia de contrato como estados explícitos; no ofrecer fallback manual. |
-| Perder valores por cambios condicionales reversibles | Mantener selecciones activas/suspendidas por assignment ID y restaurar sólo valores todavía permitidos. |
-| Duplicar o contradecir la lógica `CONDITIONAL` | Delegar aplicabilidad y resolución a la evaluación obligatoria; el frontend sólo conserva borrador reversible. |
-| Crear contra un catálogo distinto al revisado | Invalidar evaluación ante cualquier cambio y exigir `expectedCatalogFingerprint`; backend reevalúa transaccionalmente. |
-| Confundir candidato enfocado con selección confirmada | Diferenciar ambos estados sin depender sólo del color y exigir `Enter` para seleccionar. |
-| Perder orientación durante muchos atributos | Mantener jerarquía visible, etiqueta `Atributos · n de total`, contador y barra de comandos. |
-| Interferir con búsqueda, IME o teclado global | Respetar contexto editable/defaultPrevented y encapsular flechas/Enter/Escape en el composite/overlay local. |
-| Enviar descendientes de una jerarquía anterior | Invalidar atómicamente descendientes, evaluación y fingerprint al cambiar un ancestro. |
-| Descartar trabajo histórico válido | Conservar el trabajo compatible hasta `e52b9b2` y reemplazar sólo las premisas manuales incompatibles. |
-| Superar el presupuesto de revisión | Mantener feature-branch-chain y cortes TDD cohesivos menores de 400 A+D; elevar riesgo antes de excederlo. |
+| Riesgo                                                   | Mitigación propuesta                                                                                                                   |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Desalinear la integración frontend del baseline aceptado | Validar adapters contra los cuatro contratos publicados en `23e9440c2b832edb8e557134018ea812979c6452`, sin DTOs ni errores inventados. |
+| Reintroducir captura libre para desbloquear la UI        | Tratar modos no soportados y ausencia de contrato como estados explícitos; no ofrecer fallback manual.                                 |
+| Perder valores por cambios condicionales reversibles     | Mantener selecciones activas/suspendidas por assignment ID y restaurar sólo valores todavía permitidos.                                |
+| Duplicar o contradecir la lógica `CONDITIONAL`           | Delegar aplicabilidad y resolución a la evaluación obligatoria; el frontend sólo conserva borrador reversible.                         |
+| Crear contra un catálogo distinto al revisado            | Invalidar evaluación ante cualquier cambio y exigir `expectedCatalogFingerprint`; backend reevalúa transaccionalmente.                 |
+| Confundir candidato enfocado con selección confirmada    | Diferenciar ambos estados sin depender sólo del color y exigir `Enter` para seleccionar.                                               |
+| Perder orientación durante muchos atributos              | Mantener jerarquía visible, etiqueta `Atributos · n de total`, contador y barra de comandos.                                           |
+| Interferir con búsqueda, IME o teclado global            | Respetar contexto editable/defaultPrevented y encapsular flechas/Enter/Escape en el composite/overlay local.                           |
+| Enviar descendientes de una jerarquía anterior           | Invalidar atómicamente descendientes, evaluación y fingerprint al cambiar un ancestro.                                                 |
+| Descartar trabajo histórico válido                       | Conservar el trabajo compatible hasta `e52b9b2` y reemplazar sólo las premisas manuales incompatibles.                                 |
+| Superar el presupuesto de revisión                       | Mantener feature-branch-chain y cortes TDD cohesivos menores de 400 A+D; elevar riesgo antes de excederlo.                             |
 
 ## Medidas de éxito
 
@@ -286,11 +282,11 @@ La propuesta se considerará lograda cuando exista evidencia observable de que:
 6. Los atributos se identifican por assignment ID, se muestran como `Atributos · n de total` y los opcionales ofrecen **Omitir**.
 7. Cambiar jerarquía invalida todos los descendientes y cualquier evaluación/fingerprint dependiente.
 8. Una selección deshabilitada por condiciones pasa a suspendida y se restaura si vuelve a aplicar y continúa permitida, sin enviarse mientras esté suspendida.
-9. El frontend no habilita revisión/creación autoritativa antes de disponer de los contratos backend v1 exactos y no incorpora endpoints productivos inventados.
-10. Con backend v1 disponible, cada revisión procede de `evaluarCreacionDesdeSelecciones`, representa fielmente `INCOMPLETE | VALID | INVALID` y muestra nombre e identidad técnica generados por backend.
-11. Sólo un resultado `VALID` puede intentar `crearRecursoDesdeSelecciones`, siempre con `expectedCatalogFingerprint`; una disposición no confirmada jamás se presenta como éxito.
+9. El frontend integra únicamente los cuatro contratos backend v1 publicados en `23e9440c2b832edb8e557134018ea812979c6452` y no incorpora endpoints, DTOs ni errores productivos inventados.
+10. Cada revisión procede de `evaluarCreacionDesdeSelecciones`, representa fielmente `INCOMPLETE | VALID | INVALID` y muestra nombre e identidad técnica generados por backend.
+11. Sólo un resultado `VALID` puede intentar `crearRecursoDesdeSelecciones`, siempre con `expectedCatalogFingerprint`; sólo `CREATED` se presenta como éxito y `CATALOG_CHANGED | INCOMPLETE | INVALID` se representan como disposiciones publicadas.
 12. El método legado `crearRecurso`, Catálogo, dependencias, estado global, URL y backend permanecen sin cambios.
-13. El trabajo compatible hasta `e52b9b2` y sus garantías observables se conserva mediante TDD, sin mezclar implementation con contratos todavía ausentes.
+13. El trabajo compatible hasta `e52b9b2` y sus garantías observables se conserva mediante TDD, sin mezclar los cortes backend-independent ya cerrados con la integración v1 posterior.
 
 ## Rollback
 
@@ -301,7 +297,7 @@ El rollback será feature-local y sin migración de datos:
 3. retirar adapters v1 únicamente si hubieran sido añadidos después de la disponibilidad contractual, sin tocar backend;
 4. mantener intactos Catálogo, `crearRecurso`, consultas remotas, Keyboard Controller, rutas, dependencias y estado global.
 
-Mientras backend v1 no esté disponible, el punto seguro de rollback es la última shell/etapa jerárquica compatible, sin simular creación. Después de integrar backend v1, revertir el frontend no requerirá conversión de datos porque no se introduce persistencia local ni se modifica el modelo backend desde este repositorio.
+Mientras la integración frontend v1 no se haya incorporado, el punto seguro de rollback es la última shell/etapa jerárquica compatible, sin simular creación. Después de integrarla, revertir el frontend no requerirá conversión de datos porque no se introduce persistencia local ni se modifica el modelo backend desde este repositorio.
 
 ## Consideración de entrega
 
@@ -311,7 +307,7 @@ La implementación continuará con TDD y feature-branch-chain. Cada corte inclui
 corte 1: shell/rail/barra + contrato search-list/foco
 corte 2: Familia/Tipo/Unidad + invalidación jerárquica
 corte 3: modelo puro active/suspended keyed por assignment ID
-— dependencia backend v1 —
+— integración frontend del baseline v1 aceptado —
 corte 4: adapters exactos + atributos SELECCION/evaluación
 corte 5: revisión autoritativa + creación con fingerprint/disposiciones
 corte 6: recorridos integrados Playwright/axe y regresiones

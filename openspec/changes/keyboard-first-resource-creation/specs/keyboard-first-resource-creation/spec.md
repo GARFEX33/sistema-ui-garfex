@@ -106,7 +106,7 @@ Cuando una etapa admita búsqueda, el sistema MUST proporcionar una búsqueda fi
 
 ### Requirement: Atributos sólo por selección y por ID de asignación
 
-La secuencia de atributos MUST identificar cada decisión por su ID de asignación estable, no por posición ni por ID de definición, y MUST rotular la etapa como **Atributos · n de total**. El contexto de Clase, Familia, Tipo y Unidad natural MUST continuar visible durante esa secuencia. Cada valor de negocio MUST confirmarse exclusivamente seleccionando un valor permitido y tipado devuelto por el backend; la escritura de búsqueda MUST NOT convertirse por sí misma en valor seleccionado. V1 MUST admitir sólo `modoCaptura: SELECCION`. Para `LIBRE`, el Creador MUST comunicar que el modo no está soportado y MUST NOT mostrar editor manual. El Creador MUST NOT simular `DERIVADO`, que queda fuera de v1. Una asignación opcional MUST ofrecer **Omitir**; una asignación requerida sin selección MUST impedir un resultado `VALID`. El Creador MUST NOT ofrecer campos para Nombre, Descripción, TEXTO, NUMERO ni ningún otro valor de negocio manual.
+La secuencia de atributos MUST identificar cada decisión por su ID de asignación estable, no por posición ni por ID de definición, y MUST rotular la etapa como **Atributos · n de total**. El contexto de Clase, Familia, Tipo y Unidad natural MUST continuar visible durante esa secuencia. El contrato publica exactamente `modoCaptura: SELECCION | LIBRE`: cada valor de negocio para `SELECCION` MUST confirmarse exclusivamente seleccionando un valor permitido y tipado devuelto por el backend, y la escritura de búsqueda MUST NOT convertirse por sí misma en valor seleccionado. Para `LIBRE`, el Creador MUST comunicar que el modo no está soportado y MUST NOT mostrar editor manual. Una asignación opcional MUST ofrecer **Omitir**; una asignación requerida sin selección MUST impedir un resultado `VALID`. El Creador MUST NOT ofrecer campos para Nombre, Descripción, TEXTO, NUMERO ni ningún otro valor de negocio manual.
 
 #### Scenario: Una asignación SELECCION conserva el valor permitido confirmado
 
@@ -123,12 +123,12 @@ La secuencia de atributos MUST identificar cada decisión por su ID de asignaci�
 - THEN el Creador avanza sin fabricar un valor
 - AND la omisión queda distinguida de una selección de valor
 
-#### Scenario: Los modos fuera de v1 no habilitan captura libre
+#### Scenario: LIBRE no habilita captura libre
 
-- GIVEN una definición con `modoCaptura: LIBRE` o `modoCaptura: DERIVADO`
+- GIVEN una definición con `modoCaptura: LIBRE`
 - WHEN el Creador llega a esa asignación
-- THEN para `LIBRE` comunica que el modo no está soportado y no ofrece editor
-- AND para `DERIVADO` comunica que está fuera de v1 y no simula un valor
+- THEN comunica que el modo no está soportado
+- AND no ofrece editor ni simula un valor
 
 ### Requirement: Borrador reversible para condiciones resueltas por backend
 
@@ -150,15 +150,15 @@ El borrador MUST distinguir selecciones activas de selecciones suspendidas por I
 - THEN el Creador no restaura el valor como activo
 - AND presenta la asignación como decisión pendiente
 
-### Requirement: Evaluación, revisión y creación autoritativas con backend v1
+### Requirement: Evaluación, revisión y creación autoritativas con el baseline v1 aceptado
 
-Cuando estén disponibles los DTOs v1 exactos, sus nulabilidades, errores y disposiciones, el Creador MUST obtener definiciones mediante `obtenerDefinicionAtributo`, valores permitidos mediante `listarValoresPermitidosAtributo`, y evaluación mediante `evaluarCreacionDesdeSelecciones`. La evaluación MUST proceder de backend y MUST devolver exactamente uno de `INCOMPLETE`, `VALID` o `INVALID`, junto con el `catalogFingerprint` y las salidas previstas por el contrato definitivo. La revisión MUST representar fielmente las asignaciones resueltas, incidencias, nombre generado e identidad técnica devueltos por backend; Nombre e identidad técnica MUST NOT ser entradas ni cálculos frontend. `INCOMPLETE` MUST señalar decisiones pendientes, `INVALID` MUST impedir crear y presentar incidencias accionables, y sólo `VALID` MUST habilitar la confirmación final. Cualquier mutación de selección MUST invalidar la evaluación y el `catalogFingerprint` anteriores.
+El backend aceptado en `23e9440c2b832edb8e557134018ea812979c6452` publica `obtenerDefinicionAtributo`, `listarValoresPermitidosAtributo`, `evaluarCreacionDesdeSelecciones` y `crearRecursoDesdeSelecciones`. El Creador MUST validar y usar esos DTOs publicados. Evaluar y crear MUST transmitir únicamente `claseRecursoId`, `familiaRecursoId`, `tipoRecursoId`, `unidadId`, `selecciones` de `{ asignacionAtributoId, valorPermitidoId }` y `ownership` como `{ kind: GLOBAL } | { kind: ORGANIZATION, organizacionId }`; las omisiones MUST estar ausentes de `selecciones`. MUST NOT transmitir valores manuales, Nombre, Descripción, primitivas, IDs de opción, `activo` ni selecciones suspendidas. La evaluación MUST devolver exactamente uno de `INCOMPLETE`, `VALID` o `INVALID`, junto con el `catalogFingerprint` y sus salidas publicadas. La revisión MUST representar fielmente las asignaciones resueltas, incidencias, nombre generado e identidad técnica devueltos por backend; Nombre e identidad técnica MUST NOT ser entradas ni cálculos frontend. `INCOMPLETE` MUST señalar decisiones pendientes, `INVALID` MUST impedir crear y presentar incidencias accionables, y sólo `VALID` MUST habilitar la confirmación final. Cualquier mutación de selección MUST invalidar la evaluación y el `catalogFingerprint` anteriores.
 
-La creación desde el Creador MUST invocar `crearRecursoDesdeSelecciones` únicamente con IDs de selección activos y con `expectedCatalogFingerprint` obligatorio. Esa creación MUST reevaluar las selecciones transaccionalmente contra el catálogo vigente y MUST devolver disposiciones explícitas. La interfaz MUST representar las disposiciones definidas por el contrato real y MUST NOT inferir éxito ni tratar una respuesta incierta o stale como creación confirmada.
+La creación desde el Creador MUST invocar `crearRecursoDesdeSelecciones` con ese mismo input y `expectedCatalogFingerprint` obligatorio. Esa creación MUST reevaluar las selecciones transaccionalmente contra el catálogo vigente y devolver exactamente `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`; sólo `CREATED` confirma creación, y las otras disposiciones contienen la evaluación publicada. Los fallos normales de transporte Convex MUST NOT representarse como una unión de retorno de error de aplicación ni mediante un DTO de error inventado. La interfaz MUST NOT inferir éxito ni tratar una respuesta incierta o stale como creación confirmada.
 
 #### Scenario: La evaluación gobierna la revisión y la habilitación de creación
 
-- GIVEN DTOs v1 exactos disponibles y un borrador de selecciones activas
+- GIVEN el baseline backend v1 aceptado y un borrador de selecciones activas
 - WHEN el Creador invoca `evaluarCreacionDesdeSelecciones`
 - THEN presenta el estado `INCOMPLETE`, `VALID` o `INVALID` devuelto por backend
 - AND muestra nombre, identidad técnica, incidencias y asignaciones sólo como salidas del contrato
@@ -179,15 +179,15 @@ La creación desde el Creador MUST invocar `crearRecursoDesdeSelecciones` única
 - AND espera la disposición explícita de `crearRecursoDesdeSelecciones`
 - AND comunica éxito sólo si la disposición contractual confirma la creación
 
-### Requirement: Límite explícito antes de contratos backend v1
+### Requirement: Límite explícito del corte frontend antes de integrar v1
 
-Antes de que existan los contratos backend v1 exactos, el Creador MUST permitir únicamente la shell, el rail, la barra de comandos, la interacción search-list, las etapas Clase, Familia, Tipo y Unidad natural con contratos actuales, la invalidación jerárquica y el modelo puro de selecciones activas/suspendidas. En ese estado, el Creador MUST comunicar que el contrato está pendiente al alcanzar atributos, evaluación, revisión o creación bloqueados. El frontend MUST NOT inventar endpoints, DTOs, errores, disposiciones, adaptadores productivos ni una evaluación `CONDITIONAL` local. Los dobles de prueba MUST utilizarse sólo después de conocer los DTOs exactos y sólo dentro de pruebas.
+Hasta que este corte frontend incorpore el baseline v1 aceptado, el Creador MUST permitir únicamente la shell, el rail, la barra de comandos, la interacción search-list, las etapas Clase, Familia, Tipo y Unidad natural con contratos actuales, la invalidación jerárquica y el modelo puro de selecciones activas/suspendidas. En ese estado, el Creador MUST comunicar que la integración está pendiente al alcanzar atributos, evaluación, revisión o creación. El frontend MUST NOT inventar endpoints, DTOs, errores, disposiciones, adaptadores productivos ni una evaluación `CONDITIONAL` local. Los dobles de prueba MUST usar los DTOs publicados y sólo dentro de pruebas.
 
-#### Scenario: El recorrido se detiene honestamente sin backend v1
+#### Scenario: El recorrido se detiene honestamente antes de la integración frontend v1
 
-- GIVEN que los contratos backend v1 exactos no están disponibles
+- GIVEN que este corte frontend aún no incorpora el baseline backend v1 aceptado
 - WHEN la persona completa Clase, Familia, Tipo y Unidad natural
-- THEN el Creador muestra un estado explícito de contrato pendiente antes de atributos o revisión autoritativa
+- THEN el Creador muestra un estado explícito de integración pendiente antes de atributos o revisión autoritativa
 - AND no habilita creación
 - AND no presenta datos simulados como respuesta productiva
 
