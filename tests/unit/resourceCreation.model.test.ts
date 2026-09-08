@@ -7,6 +7,7 @@ import {
   resourceCreationReducer,
   resourceIdKey,
 } from '../../src/features/resources-master/resourceCreation.model'
+import { asResourceCreationEvaluationRequestToken } from '../../src/features/resources-master/resourceCreation.evaluationLease'
 import type { ResourceCreationEvaluation } from '../../src/features/resources-master/resourcesMaster.types'
 
 const classItem = {
@@ -335,6 +336,198 @@ const withEvaluation = (
     authoritativeEvaluation,
     catalogFingerprint: authoritativeEvaluation.catalogFingerprint,
   },
+})
+
+describe('create evaluation adoption', () => {
+  const reviewPending = () => {
+    const selectionBuckets = {
+      active: { required: 'value-required' },
+      suspended: {},
+      omitted: new Set<string>(),
+    }
+    const sourceEvaluation = evaluation([assignment('required')], {
+      catalogFingerprint: 'catalog-current',
+    })
+
+    return resourceCreationReducer(
+      withEvaluation(attributes(), sourceEvaluation, selectionBuckets),
+      { type: 'COMPLETE_ATTRIBUTES' },
+    )
+  }
+
+  it.each([
+    [
+      'INCOMPLETE',
+      evaluation([], {
+        status: 'INCOMPLETE',
+        valid: false,
+        catalogFingerprint: 'catalog-incomplete',
+      }),
+    ],
+    [
+      'INVALID',
+      evaluation([], {
+        status: 'INVALID',
+        valid: false,
+        catalogFingerprint: 'catalog-invalid',
+      }),
+    ],
+    [
+      'CATALOG_CHANGED-style VALID',
+      evaluation([], { catalogFingerprint: 'catalog-changed' }),
+    ],
+  ] as const)(
+    'adopts a backend %s evaluation without interpreting its disposition',
+    (_, returnedEvaluation) => {
+      const before = {
+        ...reviewPending(),
+        openGeneration: 7,
+        evaluationRequestToken:
+          asResourceCreationEvaluationRequestToken('evaluation-token'),
+        evaluationOwnershipIdentity: Object.freeze({ kind: 'GLOBAL' } as const),
+      }
+      const selectionBuckets = {
+        active: { replacement: 'value-replacement' },
+        suspended: { suspended: 'value-suspended' },
+        omitted: new Set<string>(['omitted']),
+      }
+
+      const adopted = resourceCreationReducer(before, {
+        type: 'ADOPT_CREATE_EVALUATION',
+        expectedCatalogFingerprint: 'catalog-current',
+        evaluation: returnedEvaluation,
+        selectionBuckets,
+      })
+
+      expect(adopted).not.toBe(before)
+      expect(adopted.stage).toEqual({ kind: 'attributes' })
+      expect(adopted.draft.authoritativeEvaluation).toBe(returnedEvaluation)
+      expect(adopted.draft.catalogFingerprint).toBe(
+        returnedEvaluation.catalogFingerprint,
+      )
+      expect(adopted.draft.selectionBuckets).toBe(selectionBuckets)
+      expect(adopted.draft.revision).toBe(before.draft.revision + 1)
+      expect(adopted.draft.hierarchy).toBe(before.draft.hierarchy)
+      expect(adopted.draft.unitId).toBe(before.draft.unitId)
+      expect(adopted.openGeneration).toBe(before.openGeneration)
+      expect(adopted.evaluationRequestToken).toBe(before.evaluationRequestToken)
+      expect(adopted.evaluationOwnershipIdentity).toBe(
+        before.evaluationOwnershipIdentity,
+      )
+    },
+  )
+
+  it('consumes create authority even when it re-adopts the same evaluation and buckets', () => {
+    const before = reviewPending()
+    const adopted = resourceCreationReducer(before, {
+      type: 'ADOPT_CREATE_EVALUATION',
+      expectedCatalogFingerprint: 'catalog-current',
+      evaluation: before.draft.authoritativeEvaluation!,
+      selectionBuckets: before.draft.selectionBuckets,
+    })
+
+    expect(adopted.draft.revision).toBe(before.draft.revision + 1)
+    expect(adopted.draft.authoritativeEvaluation).toBe(
+      before.draft.authoritativeEvaluation,
+    )
+    expect(adopted.draft.selectionBuckets).toBe(before.draft.selectionBuckets)
+  })
+
+  it.each([
+    [
+      'wrong stage',
+      (state: ReturnType<typeof reviewPending>) => ({
+        ...state,
+        stage: { kind: 'attributes' } as const,
+      }),
+      'catalog-current',
+    ],
+    [
+      'missing current evaluation',
+      (state: ReturnType<typeof reviewPending>) => ({
+        ...state,
+        draft: { ...state.draft, authoritativeEvaluation: null },
+      }),
+      'catalog-current',
+    ],
+    [
+      'non-VALID current evaluation',
+      (state: ReturnType<typeof reviewPending>) => ({
+        ...state,
+        draft: {
+          ...state.draft,
+          authoritativeEvaluation: evaluation([], {
+            status: 'INVALID',
+            valid: false,
+            catalogFingerprint: 'catalog-current',
+          }),
+        },
+      }),
+      'catalog-current',
+    ],
+    [
+      'blank current fingerprint',
+      (state: ReturnType<typeof reviewPending>) => ({
+        ...state,
+        draft: { ...state.draft, catalogFingerprint: '' },
+      }),
+      'catalog-current',
+    ],
+    [
+      'mismatched current evaluation fingerprint',
+      (state: ReturnType<typeof reviewPending>) => ({
+        ...state,
+        draft: { ...state.draft, catalogFingerprint: 'catalog-stale' },
+      }),
+      'catalog-current',
+    ],
+    [
+      'stale expected fingerprint',
+      (state: ReturnType<typeof reviewPending>) => state,
+      'catalog-stale',
+    ],
+  ] as const)(
+    'fails closed for %s',
+    (_, arrange, expectedCatalogFingerprint) => {
+      const before = arrange(reviewPending())
+
+      expect(
+        resourceCreationReducer(before, {
+          type: 'ADOPT_CREATE_EVALUATION',
+          expectedCatalogFingerprint,
+          evaluation: evaluation([], {
+            catalogFingerprint: 'catalog-returned',
+          }),
+          selectionBuckets: {
+            active: {},
+            suspended: {},
+            omitted: new Set<string>(),
+          },
+        }),
+      ).toBe(before)
+    },
+  )
+
+  it('returns to attributes first, then permits only normal guarded completion', () => {
+    const before = reviewPending()
+    const adopted = resourceCreationReducer(before, {
+      type: 'ADOPT_CREATE_EVALUATION',
+      expectedCatalogFingerprint: 'catalog-current',
+      evaluation: evaluation([assignment('required')], {
+        catalogFingerprint: 'catalog-returned',
+      }),
+      selectionBuckets: {
+        active: { required: 'value-required' },
+        suspended: {},
+        omitted: new Set<string>(),
+      },
+    })
+
+    expect(adopted.stage).toEqual({ kind: 'attributes' })
+    expect(
+      resourceCreationReducer(adopted, { type: 'COMPLETE_ATTRIBUTES' }).stage,
+    ).toEqual({ kind: 'review-pending' })
+  })
 })
 
 describe('resource creation attribute and review-pending stages', () => {

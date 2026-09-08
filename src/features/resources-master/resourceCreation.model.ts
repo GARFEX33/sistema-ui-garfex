@@ -186,6 +186,12 @@ export type CreationEvent =
       assignmentId: AssignmentKey
       allowedValueId: AllowedValueId
     }
+  | {
+      type: 'ADOPT_CREATE_EVALUATION'
+      expectedCatalogFingerprint: string
+      evaluation: ResourceCreationEvaluation
+      selectionBuckets: SelectionBuckets<AllowedValueId>
+    }
   | { type: 'COMPLETE_ATTRIBUTES' }
   | { type: 'NAVIGATE_TO_STAGE'; stage: CreationNavigationStage }
   | { type: 'BACK' }
@@ -352,6 +358,33 @@ export const resourceCreationReducer = (
       )
       ? { ...state, stage: { kind: 'review-pending' } }
       : state
+
+  if (event.type === 'ADOPT_CREATE_EVALUATION') {
+    const currentEvaluation = draft.authoritativeEvaluation
+    const currentFingerprint = draft.catalogFingerprint
+    if (
+      state.stage.kind !== 'review-pending' ||
+      currentEvaluation?.status !== 'VALID' ||
+      !currentEvaluation.valid ||
+      !currentFingerprint ||
+      currentFingerprint.trim().length === 0 ||
+      currentFingerprint !== event.expectedCatalogFingerprint ||
+      currentEvaluation.catalogFingerprint !== event.expectedCatalogFingerprint
+    )
+      return state
+
+    return {
+      ...state,
+      draft: {
+        ...draft,
+        selectionBuckets: event.selectionBuckets,
+        authoritativeEvaluation: event.evaluation,
+        catalogFingerprint: event.evaluation.catalogFingerprint,
+        revision: draft.revision + 1,
+      },
+      stage: { kind: 'attributes' },
+    }
+  }
 
   if (event.type === 'CONFIRM_CLASS') {
     const nextState = hasSameId(draft.hierarchy.classItem, event.item)
