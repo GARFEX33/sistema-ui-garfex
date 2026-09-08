@@ -45,6 +45,7 @@ const creationRuntimeFiles = [
   'ResourceCreationContextStage.tsx',
   'StagedSearchSelector.tsx',
   'resourceCreation.attributeSequence.ts',
+  'resourceCreation.attributeStep.ts',
   'resourceCreation.dependentLoader.ts',
   'resourceCreation.evaluationLease.ts',
   'resourceCreation.evaluationRequest.ts',
@@ -128,6 +129,21 @@ describe('resource creation safety wall', () => {
     expect(modelSource).not.toContain("kind: 'contract-pending'")
     expect(modelSource).toContain("kind: 'attributes'")
     expect(modelSource).toContain("kind: 'review-pending'")
+  })
+
+  it('keeps current-attribute derivation transport-free and sequence-owned', () => {
+    const attributeStepSource = readFileSync(
+      resolve(
+        process.cwd(),
+        'src/features/resources-master/resourceCreation.attributeStep.ts',
+      ),
+      'utf8',
+    )
+
+    expect(attributeStepSource).toContain('deriveAttributeSequence')
+    expect(attributeStepSource).not.toMatch(
+      /api\.|useQuery|listAllowedAttributeValues|getAttributeDefinition|orden\.sort/,
+    )
   })
 
   it('keeps legacy attribute draft mechanics out of the current reducer boundary', () => {

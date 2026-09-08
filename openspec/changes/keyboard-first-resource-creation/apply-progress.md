@@ -1193,3 +1193,12 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Boundary:** D4b owns the presenter; four slices remain, forecast 1,140–1,550 A+D.
 
 PR 13D4b complete: isolated current-assignment presenter, selector autofocus, and compact RTL cover selection, pagination/retry, omission, LIBRE, and honest blocking states; RED missing-module failure, GREEN 15/15. D5 is ready; 3 slices remain; forecast D5 300–395 +14 320–395 +15 260–370 = 880–1,160 A+D.
+
+---
+
+## PR 13D5a — current-attribute derivation
+
+- **Complete:** `deriveCurrentAttributeStep` returns unavailable, complete, or the first unresolved assignment with its 1-based backend-order position.
+- **TDD:** missing-module RED; focused pure/sequence/architecture suite passed 19/19 and full suite 526/526.
+- **Safety:** null or duplicate assignment identity fails closed; suspended/required omission remain unresolved; only resolved VALID completes.
+- **Plan:** D5b orchestration, D5c flow, D5d surface, PR14 and PR15 remain; 35 slices total, forecast 1,320–1,850 A+D.
