@@ -123,7 +123,7 @@ describe('resource creation selection buckets', () => {
     expect(projectActiveSelections(omitted)).toEqual({})
   })
 
-  it('suspends an active opaque value and only restores it when authorized', () => {
+  it('suspends an active opaque value and restores only its exact confirmed value', () => {
     const suspended = suspendSelection(
       confirmSelection(createSelectionBuckets(), 'assignment-1', cable),
       'assignment-1',
@@ -134,8 +134,11 @@ describe('resource creation selection buckets', () => {
       suspended: { 'assignment-1': cable },
       omitted: new Set(),
     })
-    expect(restoreSelection(suspended, 'assignment-1', false)).toBe(suspended)
-    expect(restoreSelection(suspended, 'assignment-1', true)).toEqual({
+    expect(restoreSelection(suspended, 'assignment-1', fiber)).toBe(suspended)
+    expect(restoreSelection(suspended, 'missing-assignment', cable)).toBe(
+      suspended,
+    )
+    expect(restoreSelection(suspended, 'assignment-1', cable)).toEqual({
       active: { 'assignment-1': cable },
       suspended: {},
       omitted: new Set(),

@@ -4,7 +4,6 @@ import {
   createInitialHierarchySnapshotCapture,
   deriveInitialHierarchySnapshot,
   normalizeInitialHierarchySnapshot,
-  replaceSelectionBuckets,
   resourceCreationReducer,
   resourceIdKey,
 } from '../../src/features/resources-master/resourceCreation.model'
@@ -337,25 +336,6 @@ describe('resource creation contract-pending safety wall', () => {
     expect(replacement.stage).toEqual({
       kind: 'contract-pending',
       blockedCapability: 'attributes-v1',
-    })
-  })
-
-  it('revises and invalidates the lease only when selection buckets change', () => {
-    const before = populatedDraft().draft
-    const buckets = {
-      ...before.selectionBuckets,
-      omitted: new Set(['assignment-omitted']),
-    }
-    const changed = replaceSelectionBuckets(before, buckets)
-
-    expect(replaceSelectionBuckets(before, before.selectionBuckets)).toBe(
-      before,
-    )
-    expect(changed).toMatchObject({
-      selectionBuckets: buckets,
-      authoritativeEvaluation: null,
-      catalogFingerprint: null,
-      revision: before.revision + 1,
     })
   })
 

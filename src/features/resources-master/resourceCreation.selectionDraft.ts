@@ -95,15 +95,18 @@ export const suspendSelection = <TSelection>(
 export const restoreSelection = <TSelection>(
   buckets: SelectionBuckets<TSelection>,
   key: AssignmentKey,
-  isAuthoritativelyApplicableAndValid: boolean,
+  confirmedSelection: TSelection,
 ): SelectionBuckets<TSelection> => {
-  if (!isAuthoritativelyApplicableAndValid || !hasKey(buckets.suspended, key))
+  if (
+    !hasKey(buckets.suspended, key) ||
+    buckets.suspended[key] !== confirmedSelection
+  )
     return buckets
 
   const omitted = new Set(buckets.omitted)
   omitted.delete(key)
   return {
-    active: { ...buckets.active, [key]: buckets.suspended[key] },
+    active: { ...buckets.active, [key]: confirmedSelection },
     suspended: withoutKey(buckets.suspended, key),
     omitted,
   }

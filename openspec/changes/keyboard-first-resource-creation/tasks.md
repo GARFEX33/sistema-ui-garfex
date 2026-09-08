@@ -195,9 +195,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 13A. **Dependency diagram:** `… → PR 12C → PR 13A → 📍 PR 13B`. **Start → finish:** pure reconciliation result → the creation reducer owns confirm, omit, reconcile, and restore mutations through one invalidation seam. **Concrete targets:** `resourceCreation.model.ts`, `resourceCreation.selectionDraft.ts`, and unit tests. **Budget:** 240–360 A+D. **Verify:** focused model/selection Vitest command plus `pnpm typecheck`. **Runtime:** N/A — PR 13C consumes the reducer state. **Rollback:** remove only these reducer events, seam, and tests; retain PR 13A's pure contract.
 
-- [ ] **RED:** Add failing reducer tests for confirm, omit, reconcile, and restore events; effective changes increment revision and clear evaluation, fingerprint, and request token through one seam, while no-ops remain stable. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement reducer-owned confirm/omit/reconcile/restore events using the single invalidation seam; preserve existing hierarchy and Unidad mutation semantics and do not issue evaluation requests from the reducer. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate confirmations, repeated omissions, unchanged reconciliation, valid restoration, hierarchy replacement, and Unidad replacement have the prescribed stable or invalidating result; run and record the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing reducer tests for confirm, omit, reconcile, and restore events; effective changes increment revision and clear evaluation, fingerprint, and request token through one seam, while no-ops remain stable. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Implement reducer-owned confirm/omit/reconcile/restore events using the single invalidation seam; preserve existing hierarchy and Unidad mutation semantics and do not issue evaluation requests from the reducer. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove duplicate confirmations, repeated omissions, unchanged reconciliation, valid restoration, hierarchy replacement, and Unidad replacement have the prescribed stable or invalidating result; run and record the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 13C — Lease-safe evaluation driver (blocked by ownership source)
 

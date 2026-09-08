@@ -10,6 +10,13 @@ import {
   resourceCreationReducer,
 } from '../../src/features/resources-master/resourceCreation.model'
 import type { ResourceCreationEvaluation } from '../../src/features/resources-master/resourcesMaster.types'
+import { asAllowedValueId } from '../../src/features/resources-master/resourceCreation.attributeSequence'
+import {
+  confirmSelection,
+  createSelectionBuckets,
+  omitSelection,
+  suspendSelection,
+} from '../../src/features/resources-master/resourceCreation.selectionDraft'
 
 const classId = 'class-1'
 const classItem = {
@@ -73,6 +80,28 @@ const capture = (state = withUnit(), value = 'request-1') =>
     state,
     asResourceCreationEvaluationRequestToken(value),
   )
+const adoptedState = (selectionBuckets = createSelectionBuckets()) => {
+  const state = withUnit()
+  const captured = capture({
+    ...state,
+    draft: { ...state.draft, selectionBuckets },
+  })
+
+  return adoptResourceCreationEvaluation(
+    captured.state,
+    captured.lease,
+    evaluation(),
+  )
+}
+const expectInvalidated = (
+  before: ReturnType<typeof adoptedState>,
+  next: typeof before,
+) => {
+  expect(next.draft.revision).toBe(before.draft.revision + 1)
+  expect(next.draft.authoritativeEvaluation).toBeNull()
+  expect(next.draft.catalogFingerprint).toBeNull()
+  expect(next.evaluationRequestToken).toBeNull()
+}
 
 describe('resource creation evaluation lease', () => {
   it('captures and atomically adopts a current parsed evaluation without altering draft revision, stage, or buckets', () => {
@@ -163,6 +192,151 @@ describe('resource creation evaluation lease', () => {
             },
           }
         : resourceCreationReducer(captured.state, event)
+
+    expect(
+      adoptResourceCreationEvaluation(changed, captured.lease, evaluation()),
+    ).toBe(changed)
+  })
+
+  it('invalidates adopted authority for every effective selection event', () => {
+    const value = asAllowedValueId('allowed-value-1')
+    const active = confirmSelection(
+      createSelectionBuckets(),
+      'assignment-1',
+      value,
+    )
+    const reconciled = confirmSelection(
+      createSelectionBuckets(),
+      'assignment-2',
+      value,
+    )
+    const transitions = [
+      [
+        adoptedState(),
+        {
+          type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+          assignmentId: 'assignment-1',
+          allowedValueId: value,
+        },
+      ],
+      [
+        adoptedState(),
+        { type: 'OMIT_ALLOWED_VALUE_ASSIGNMENT', assignmentId: 'assignment-1' },
+      ],
+      [
+        adoptedState(),
+        {
+          type: 'RECONCILE_ALLOWED_VALUE_SELECTIONS',
+          selectionBuckets: reconciled,
+        },
+      ],
+      [
+        adoptedState(suspendSelection(active, 'assignment-1')),
+        {
+          type: 'RESTORE_ALLOWED_VALUE_SELECTION',
+          assignmentId: 'assignment-1',
+          allowedValueId: value,
+        },
+      ],
+    ] as const
+
+    transitions.forEach(([before, event]) => {
+      const next = resourceCreationReducer(before, event)
+
+      expectInvalidated(before, next)
+      expect(next.stage).toBe(before.stage)
+      expect(next.openGeneration).toBe(before.openGeneration)
+    })
+  })
+
+  it('keeps no-op selection events and adopted authority by state identity', () => {
+    const value = asAllowedValueId('allowed-value-1')
+    const active = confirmSelection(
+      createSelectionBuckets(),
+      'assignment-1',
+      value,
+    )
+    const omitted = omitSelection(createSelectionBuckets(), 'assignment-1')
+    const suspended = suspendSelection(active, 'assignment-1')
+    const sameBuckets = createSelectionBuckets()
+    const transitions = [
+      [
+        adoptedState(active),
+        {
+          type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+          assignmentId: 'assignment-1',
+          allowedValueId: value,
+        },
+      ],
+      [
+        adoptedState(omitted),
+        { type: 'OMIT_ALLOWED_VALUE_ASSIGNMENT', assignmentId: 'assignment-1' },
+      ],
+      [
+        adoptedState(sameBuckets),
+        {
+          type: 'RECONCILE_ALLOWED_VALUE_SELECTIONS',
+          selectionBuckets: sameBuckets,
+        },
+      ],
+      [
+        adoptedState(suspended),
+        {
+          type: 'RESTORE_ALLOWED_VALUE_SELECTION',
+          assignmentId: 'assignment-1',
+          allowedValueId: asAllowedValueId('other'),
+        },
+      ],
+      [
+        adoptedState(suspended),
+        {
+          type: 'RESTORE_ALLOWED_VALUE_SELECTION',
+          assignmentId: 'missing',
+          allowedValueId: value,
+        },
+      ],
+    ] as const
+
+    transitions.forEach(([before, event]) => {
+      expect(resourceCreationReducer(before, event)).toBe(before)
+    })
+  })
+
+  it('resets buckets for hierarchy replacement and preserves them for Unit replacement', () => {
+    const buckets = confirmSelection(
+      createSelectionBuckets(),
+      'assignment-1',
+      asAllowedValueId('allowed-value-1'),
+    )
+    const hierarchyBefore = adoptedState(buckets)
+    const unitBefore = adoptedState(buckets)
+    const hierarchyChanged = resourceCreationReducer(hierarchyBefore, {
+      type: 'CONFIRM_CLASS',
+      item: { ...classItem, id: 'class-2' },
+    })
+    const unitChanged = resourceCreationReducer(unitBefore, {
+      type: 'CONFIRM_UNIT',
+      unitId: 'unit-2',
+    })
+
+    expect(hierarchyChanged.draft.selectionBuckets).toEqual(
+      createSelectionBuckets(),
+    )
+    expect(unitChanged.draft.selectionBuckets).toBe(buckets)
+    expectInvalidated(hierarchyBefore, hierarchyChanged)
+    expectInvalidated(unitBefore, unitChanged)
+  })
+
+  it('rejects an old lease after authoritative reconciliation changes buckets', () => {
+    const captured = capture()
+    const changed = resourceCreationReducer(captured.state, {
+      type: 'RECONCILE_ALLOWED_VALUE_SELECTIONS',
+      selectionBuckets: confirmSelection(
+        createSelectionBuckets(),
+        'assignment-1',
+        asAllowedValueId('allowed-value-1'),
+      ),
+    })
 
     expect(
       adoptResourceCreationEvaluation(changed, captured.lease, evaluation()),

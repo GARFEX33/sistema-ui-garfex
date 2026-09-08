@@ -1092,3 +1092,12 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Behavior:** backend order is filtered to required/optional without sorting; assignment-ID buckets reconcile active/suspended/omitted selections and retain the current pending assignment when still pending. Suspended values are excluded by the existing active-only projection.
 - **Files:** `resourceCreation.attributeSequence.ts`, `resourceCreation.selectionDraft.ts`, their unit tests, and these PR 13A task/progress updates.
 - **Rollback:** remove the pure reconciliation module, stable omission helper, focused tests, and this PR 13A documentation entry.
+
+---
+
+## PR 13B — reducer selection invalidation
+
+- **State:** completed; confirm, omit, reconciliation, and exact restore are reducer-owned through one authority invalidation seam.
+- **TDD:** RED focused suite failed 4 assertions (unknown reducer events and unsafe restore); GREEN/TRIANGULATE passed 48/48, full 461/461, typecheck, and lint.
+- **Behavior:** effective changes clear evaluation, fingerprint, and request token and increment once; duplicate, repeated, identical, missing, and mismatched events retain state identity. Hierarchy replacement resets buckets; Unidad replacement preserves them while invalidating authority.
+- **Rollback:** remove the PR 13B reducer events, exact restore guard, focused tests, and these task/progress updates.

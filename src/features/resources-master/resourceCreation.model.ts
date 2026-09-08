@@ -6,8 +6,13 @@ import type {
   ResourceId,
 } from './resourcesMaster.types'
 import type { ResourceCreationEvaluationRequestToken } from './resourceCreation.evaluationLease'
+import type { AllowedValueId } from './resourceCreation.attributeSequence'
 import {
+  confirmSelection,
   createSelectionBuckets,
+  omitSelection,
+  restoreSelection,
+  type AssignmentKey,
   type SelectionBuckets,
 } from './resourceCreation.selectionDraft'
 
@@ -135,7 +140,7 @@ export type CreationStage =
 export type CreationDraft = Readonly<{
   hierarchy: InitialResourceHierarchySnapshot
   unitId: ResourceId | null
-  selectionBuckets: SelectionBuckets<never>
+  selectionBuckets: SelectionBuckets<AllowedValueId>
   authoritativeEvaluation: ResourceCreationEvaluation | null
   catalogFingerprint: string | null
   revision: number
@@ -154,13 +159,28 @@ export type CreationEvent =
   | { type: 'CONFIRM_FAMILY'; item: ResourceContextFamilyItem }
   | { type: 'CONFIRM_TYPE'; item: ResourceContextTypeItem }
   | { type: 'CONFIRM_UNIT'; unitId: ResourceId }
+  | {
+      type: 'CONFIRM_ALLOWED_VALUE_SELECTION'
+      assignmentId: AssignmentKey
+      allowedValueId: AllowedValueId
+    }
+  | { type: 'OMIT_ALLOWED_VALUE_ASSIGNMENT'; assignmentId: AssignmentKey }
+  | {
+      type: 'RECONCILE_ALLOWED_VALUE_SELECTIONS'
+      selectionBuckets: SelectionBuckets<AllowedValueId>
+    }
+  | {
+      type: 'RESTORE_ALLOWED_VALUE_SELECTION'
+      assignmentId: AssignmentKey
+      allowedValueId: AllowedValueId
+    }
   | { type: 'NAVIGATE_TO_STAGE'; stage: CreationStage }
   | { type: 'BACK' }
 
 const emptyDraft = (): CreationDraft => ({
   hierarchy: emptySnapshot,
   unitId: null,
-  selectionBuckets: createSelectionBuckets(),
+  selectionBuckets: createSelectionBuckets<AllowedValueId>(),
   authoritativeEvaluation: null,
   catalogFingerprint: null,
   revision: 0,
@@ -190,28 +210,45 @@ const hierarchyFromPrefix = (
   typeItem: prefix.typeItem,
 })
 
-export const replaceSelectionBuckets = (
+const invalidateDraft = (
+  state: CreationState,
   draft: CreationDraft,
-  selectionBuckets: SelectionBuckets<never>,
-): CreationDraft =>
-  selectionBuckets === draft.selectionBuckets
-    ? draft
+): CreationState =>
+  draft === state.draft
+    ? state
     : {
-        ...draft,
-        selectionBuckets,
-        authoritativeEvaluation: null,
-        catalogFingerprint: null,
-        revision: draft.revision + 1,
+        ...state,
+        draft: {
+          ...draft,
+          authoritativeEvaluation: null,
+          catalogFingerprint: null,
+          revision: state.draft.revision + 1,
+        },
+        evaluationRequestToken: null,
       }
 
+export const replaceSelectionBuckets = (
+  state: CreationState,
+  selectionBuckets: SelectionBuckets<AllowedValueId>,
+): CreationState =>
+  selectionBuckets === state.draft.selectionBuckets
+    ? state
+    : invalidateDraft(state, { ...state.draft, selectionBuckets })
+
 const clearDependentPlaceholders = (
-  draft: CreationDraft,
+  state: CreationState,
   hierarchy: InitialResourceHierarchySnapshot,
-): CreationDraft => ({
-  ...replaceSelectionBuckets(draft, createSelectionBuckets()),
-  hierarchy,
-  unitId: null,
-})
+): CreationState => {
+  const invalidated = replaceSelectionBuckets(
+    state,
+    createSelectionBuckets<AllowedValueId>(),
+  )
+
+  return {
+    ...invalidated,
+    draft: { ...invalidated.draft, hierarchy, unitId: null },
+  }
+}
 
 const hasSameId = (
   current: { id: ResourceId } | null,
@@ -245,71 +282,73 @@ export const resourceCreationReducer = (
   if (event.type === 'BACK') return { ...state, stage: backStage(state.stage) }
 
   if (event.type === 'CONFIRM_CLASS') {
-    const nextDraft = hasSameId(draft.hierarchy.classItem, event.item)
-      ? draft
-      : clearDependentPlaceholders(draft, {
+    const nextState = hasSameId(draft.hierarchy.classItem, event.item)
+      ? state
+      : clearDependentPlaceholders(state, {
           classItem: event.item,
           familyItem: null,
           typeItem: null,
         })
-    return {
-      ...state,
-      draft: nextDraft,
-      evaluationRequestToken:
-        nextDraft === draft ? state.evaluationRequestToken : null,
-      stage: { kind: 'family' },
-    }
+    return { ...nextState, stage: { kind: 'family' } }
   }
 
   if (event.type === 'CONFIRM_UNIT') {
-    const nextDraft =
+    const nextState =
       draft.unitId !== null &&
       resourceIdKey(draft.unitId) === resourceIdKey(event.unitId)
-        ? draft
-        : {
-            ...draft,
-            unitId: event.unitId,
-            authoritativeEvaluation: null,
-            catalogFingerprint: null,
-            revision: draft.revision + 1,
-          }
+        ? state
+        : invalidateDraft(state, { ...draft, unitId: event.unitId })
     return {
-      ...state,
-      draft: nextDraft,
-      evaluationRequestToken:
-        nextDraft === draft ? state.evaluationRequestToken : null,
+      ...nextState,
       stage: { kind: 'contract-pending', blockedCapability: 'attributes-v1' },
     }
   }
 
+  if (event.type === 'CONFIRM_ALLOWED_VALUE_SELECTION')
+    return replaceSelectionBuckets(
+      state,
+      confirmSelection(
+        draft.selectionBuckets,
+        event.assignmentId,
+        event.allowedValueId,
+      ),
+    )
+
+  if (event.type === 'OMIT_ALLOWED_VALUE_ASSIGNMENT')
+    return replaceSelectionBuckets(
+      state,
+      omitSelection(draft.selectionBuckets, event.assignmentId),
+    )
+
+  if (event.type === 'RECONCILE_ALLOWED_VALUE_SELECTIONS')
+    return replaceSelectionBuckets(state, event.selectionBuckets)
+
+  if (event.type === 'RESTORE_ALLOWED_VALUE_SELECTION')
+    return replaceSelectionBuckets(
+      state,
+      restoreSelection(
+        draft.selectionBuckets,
+        event.assignmentId,
+        event.allowedValueId,
+      ),
+    )
+
   if (event.type === 'CONFIRM_FAMILY') {
-    const nextDraft = hasSameId(draft.hierarchy.familyItem, event.item)
-      ? draft
-      : clearDependentPlaceholders(draft, {
+    const nextState = hasSameId(draft.hierarchy.familyItem, event.item)
+      ? state
+      : clearDependentPlaceholders(state, {
           ...draft.hierarchy,
           familyItem: event.item,
           typeItem: null,
         })
-    return {
-      ...state,
-      draft: nextDraft,
-      evaluationRequestToken:
-        nextDraft === draft ? state.evaluationRequestToken : null,
-      stage: { kind: 'type' },
-    }
+    return { ...nextState, stage: { kind: 'type' } }
   }
 
-  const nextDraft = hasSameId(draft.hierarchy.typeItem, event.item)
-    ? draft
-    : clearDependentPlaceholders(draft, {
+  const nextState = hasSameId(draft.hierarchy.typeItem, event.item)
+    ? state
+    : clearDependentPlaceholders(state, {
         ...draft.hierarchy,
         typeItem: event.item,
       })
-  return {
-    ...state,
-    draft: nextDraft,
-    evaluationRequestToken:
-      nextDraft === draft ? state.evaluationRequestToken : null,
-    stage: { kind: 'unit' },
-  }
+  return { ...nextState, stage: { kind: 'unit' } }
 }
