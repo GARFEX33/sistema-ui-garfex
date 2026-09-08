@@ -2,8 +2,10 @@ import type {
   ResourceContextClassItem,
   ResourceContextFamilyItem,
   ResourceContextTypeItem,
+  ResourceCreationEvaluation,
   ResourceId,
 } from './resourcesMaster.types'
+import type { ResourceCreationEvaluationRequestToken } from './resourceCreation.evaluationLease'
 import {
   createSelectionBuckets,
   type SelectionBuckets,
@@ -134,14 +136,16 @@ export type CreationDraft = Readonly<{
   hierarchy: InitialResourceHierarchySnapshot
   unitId: ResourceId | null
   selectionBuckets: SelectionBuckets<never>
-  authoritativeEvaluation: null
-  catalogFingerprint: null
+  authoritativeEvaluation: ResourceCreationEvaluation | null
+  catalogFingerprint: string | null
   revision: number
 }>
 
 export type CreationState = Readonly<{
   draft: CreationDraft
   stage: CreationStage
+  openGeneration: number
+  evaluationRequestToken: ResourceCreationEvaluationRequestToken | null
 }>
 
 export type CreationEvent =
@@ -165,6 +169,8 @@ const emptyDraft = (): CreationDraft => ({
 export const createInitialCreationState = (): CreationState => ({
   draft: emptyDraft(),
   stage: { kind: 'class' },
+  openGeneration: 0,
+  evaluationRequestToken: null,
 })
 
 const firstMissingStage = (
@@ -230,6 +236,8 @@ export const resourceCreationReducer = (
     return {
       draft: { ...emptyDraft(), hierarchy: hierarchyFromPrefix(event.prefix) },
       stage: firstMissingStage(event.prefix),
+      openGeneration: state.openGeneration + 1,
+      evaluationRequestToken: null,
     }
 
   if (event.type === 'NAVIGATE_TO_STAGE')
@@ -244,7 +252,13 @@ export const resourceCreationReducer = (
           familyItem: null,
           typeItem: null,
         })
-    return { ...state, draft: nextDraft, stage: { kind: 'family' } }
+    return {
+      ...state,
+      draft: nextDraft,
+      evaluationRequestToken:
+        nextDraft === draft ? state.evaluationRequestToken : null,
+      stage: { kind: 'family' },
+    }
   }
 
   if (event.type === 'CONFIRM_UNIT') {
@@ -262,6 +276,8 @@ export const resourceCreationReducer = (
     return {
       ...state,
       draft: nextDraft,
+      evaluationRequestToken:
+        nextDraft === draft ? state.evaluationRequestToken : null,
       stage: { kind: 'contract-pending', blockedCapability: 'attributes-v1' },
     }
   }
@@ -274,7 +290,13 @@ export const resourceCreationReducer = (
           familyItem: event.item,
           typeItem: null,
         })
-    return { ...state, draft: nextDraft, stage: { kind: 'type' } }
+    return {
+      ...state,
+      draft: nextDraft,
+      evaluationRequestToken:
+        nextDraft === draft ? state.evaluationRequestToken : null,
+      stage: { kind: 'type' },
+    }
   }
 
   const nextDraft = hasSameId(draft.hierarchy.typeItem, event.item)
@@ -283,5 +305,11 @@ export const resourceCreationReducer = (
         ...draft.hierarchy,
         typeItem: event.item,
       })
-  return { ...state, draft: nextDraft, stage: { kind: 'unit' } }
+  return {
+    ...state,
+    draft: nextDraft,
+    evaluationRequestToken:
+      nextDraft === draft ? state.evaluationRequestToken : null,
+    stage: { kind: 'unit' },
+  }
 }

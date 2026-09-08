@@ -276,6 +276,21 @@ describe('resource creation navigation and hierarchy cascades', () => {
   })
 })
 
+it('increments the open generation for every OPEN without mutating the new draft revision', () => {
+  const first = open()
+  const reopened = resourceCreationReducer(first, {
+    type: 'OPEN',
+    prefix: normalizeInitialHierarchySnapshot({
+      classItem,
+      familyItem,
+      typeItem,
+    }),
+  })
+
+  expect(first).toMatchObject({ openGeneration: 1, draft: { revision: 0 } })
+  expect(reopened).toMatchObject({ openGeneration: 2, draft: { revision: 0 } })
+})
+
 describe('resource creation contract-pending safety wall', () => {
   it('ends an explicit Unit confirmation at contract-pending with no lease', () => {
     const state = resourceCreationReducer(open(), {

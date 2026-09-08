@@ -1017,3 +1017,32 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
   - `- [ ] **GREEN:** Implement the pure feature-local \`evaluationLease\` and minimum model seam so only a current validated PR 12B evaluation can be adopted and every hierarchy, Unidad, or draft mutation clears the lease/fingerprint. <!-- sdd-owner: implementation -->`
   - `- [ ] **TRIANGULATE/REFACTOR:** Prove replacement Unidad, same revision with old context, malformed-adapter absence, and transport rejection cannot retain a lease or enable review/create; run the focused command and preserve the no-create architecture guard. <!-- sdd-owner: implementation -->`
 - Parent-owned tracker, chain, review, verification, sync, and archive lines remain deferred byte-for-byte.
+
+---
+
+## PR 12C — Pure stale-safe authoritative evaluation lease
+
+- **Status / action context:** consumed authoritative native `gentle-ai.sdd-status@2`: `artifactStore: openspec`, `applyState: ready`, `nextRecommended: apply`, all required artifacts present, no blockers. `repo-local` workspace and allowed root were `/home/garfex/PROGRAMACION/sistema-ui-garfex`; all edits stayed within the delegated surfaces and no warnings occurred.
+- **Boundary / workload:** authorized `auto-chain` / `feature-branch-chain`, `… → PR 12A → PR 12B1 → PR 12B2 → 📍 PR 12C`; current work unit is 391 A+D including tests, task checkboxes, and progress, below the hard 399 cap. Pure/model only: no React, API/transport call, create, reconciliation, UI, commit, review, receipt, or lifecycle work was performed.
+- **Completed / persisted:** PR 12C RED, GREEN, and TRIANGULATE/REFACTOR rows are visibly `[x]` in `tasks.md`; parent-owned rows remain byte-for-byte deferred.
+- **Implementation:** added the immutable `ResourceCreationEvaluationLease` and opaque request-token seam. Capture requires non-empty exact string Class/Family/Type/Unit IDs; incomplete or opaque-ID contexts leave the state/token unchanged, and `resourceIdKey` remains the pure `String` conversion. Adoption accepts only a current token, open generation, revision, and all four identity keys, then atomically stores the parsed evaluation and fingerprint without changing stage, buckets, or revision. `OPEN` increments `openGeneration` and clears state; effective hierarchy/Unit mutations clear the token and the existing draft invalidation clears evaluation/fingerprint.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- |
+| PR 12C lease/model | `resourceCreation.evaluationLease.test.ts`, `resourceCreation.model.test.ts`, `resourceCreationBoundaries.test.ts` | Unit + architecture | Initial 28/28; correction 36/36 passed | New lease import and runtime-inventory file both failed resolution; correction RED failed two pure-ID assertions | Focused lease/model/architecture suite passed 35/35, then correction GREEN passed 36/36 and typecheck | Added repeated-OPEN generation proof; current, stale/out-of-order, reopened, hierarchy/Unit, revision, incomplete or opaque-ID contexts, INVALID, and INCOMPLETE cases passed 36/36; Prettier refactor rerun stayed green |
+
+### Verification
+
+- Focused: `pnpm exec vitest run tests/unit/resourceCreation.evaluationLease.test.ts tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts` — 36/36 passed.
+- Full: `pnpm test` — 39 files, 453 tests passed; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- **Runtime:** N/A — this is an intentionally pure lease/model seam with no runtime boundary until PR 13/14.
+- **Deviation / rollback:** none. Roll back only the lease module, model seam, focused tests, boundary inventory, and these task/progress updates.
+
+### Remaining implementation tasks
+
+- `- [ ] **RED:** Write failing tests using only exact DTO fixtures for ordering by assignment ID, \`modoCaptura: SELECCION\` typed-value confirmation, authorized **Omitir** for \`OPTIONAL\`, \`LIBRE\` unsupported, \`REQUIRED | OPTIONAL | FORBIDDEN | NOT_APPLICABLE\`, active→suspended, valid restore, and invalid retained selection. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Render one selection-only assignment at a time from validated \`aplicabilidadResuelta\`/\`selectedValueId\` facts, label the rail \`Atributos · n de total\`, and reconcile buckets without parsing or simplifying \`CONDITIONAL\`. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Prove a changed authoritative sequence preserves the current pending assignment when possible and never sends suspended values, then run and record the focused command. <!-- sdd-owner: implementation -->`
+- PR 14 and PR 15 implementation rows remain visibly unchecked and are deferred to their chain-owned slices; parent-owned tracker, review, verification, sync, and archive rows remain unchanged.
