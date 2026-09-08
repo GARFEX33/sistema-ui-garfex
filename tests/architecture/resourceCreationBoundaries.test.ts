@@ -44,6 +44,13 @@ const selectorStateSource = readFileSync(
   ),
   'utf8',
 )
+const createDriverSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/useResourceCreationCreate.ts',
+  ),
+  'utf8',
+)
 const creationRuntimeFiles = [
   'CrearRecursoSurface.tsx',
   'CreationStageRail.tsx',
@@ -66,6 +73,7 @@ const creationRuntimeFiles = [
   'useResourceCreationAllowedValues.ts',
   'useResourceCreationAttributeDefinition.ts',
   'useResourceCreationAttributeQueries.ts',
+  'useResourceCreationCreate.ts',
   'useResourceCreationEvaluation.ts',
   'useResourceCreationFlow.ts',
 ]
@@ -81,9 +89,18 @@ describe('resource creation safety wall', () => {
     creationRuntimeSources.forEach((source) => {
       expect(source.split('\n').length).toBeLessThan(500)
       expect(source).not.toMatch(
-        /useMutation|crearRecursoDesdeSelecciones|createResource|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
+        /createResource(?!FromSelections)|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
       )
     })
+  })
+
+  it('allows the sole creation mutation driver without legacy creation types', () => {
+    expect(createDriverSource.split('\n').length).toBeLessThan(500)
+    expect(createDriverSource).toContain('useMutation')
+    expect(createDriverSource).toContain('createResourceFromSelections')
+    expect(createDriverSource).not.toMatch(
+      /createResource(?!FromSelections)|ResourceCreateInput|onCreated/,
+    )
   })
 
   it('integrates one ownership-aware evaluation driver through the flow', () => {

@@ -26,6 +26,10 @@ const queryBindings = new Map([
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
   [allowedValuesHookPath, ['useInfiniteQuery']],
+  [
+    'src/features/resources-master/useResourceCreationCreate.ts',
+    ['useMutation'],
+  ],
 ])
 const convexFiles = new Set([
   apiPath,

@@ -1282,3 +1282,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 
 ## PR 14C1 — pure create lease
 - **Complete:** frozen create authority requires current review, exact VALID evaluation/fingerprint, active-only request, ownership, context, generation, revision, and state identity; focused 22/22 and full 574/574 passed.
+
+---
+
+## PR 14C2 — authority-bound create mutation
+- **Complete:** added the single-flight `useMutation` driver, accepting only a current PR 14C1 lease and suppressing stale settlements; no response adoption or presentation changed.
+- **Validation:** focused create/architecture suite passed 28/28; full suite passed 585/585; typecheck, lint, and scoped Prettier passed.
+- **TDD:** strict TDD was not activated for this delegated continuation; no RED/GREEN claim.
+- **Boundary:** PR 14D owns disposition presentation; PR 14E and PR 15 remain.
