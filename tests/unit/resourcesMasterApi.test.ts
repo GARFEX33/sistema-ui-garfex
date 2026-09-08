@@ -11,6 +11,7 @@ import {
   parseResourceChangeResult,
   parseResourceCreated,
   parseResourceCreationEvaluation,
+  parseResourceCreationResult,
   parseResourceDetail,
   parseResourceListPage,
   parseUnitPoliciesPage,
@@ -1229,6 +1230,150 @@ describe('resources master API boundary', () => {
       ).rejects.toThrow('Invalid resources master response')
 
     expect(invoke).not.toHaveBeenCalled()
+  })
+
+  const selectionCreateInput = (extra: Record<string, unknown> = {}) => ({
+    claseRecursoId: 'class-1',
+    familiaRecursoId: 'family-1',
+    tipoRecursoId: 'type-1',
+    unidadId: 'unit-1',
+    expectedCatalogFingerprint: 'catalog-v1',
+    selecciones: [
+      { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+      { asignacionAtributoId: 'assignment-1', valorPermitidoId: 'allowed-1' },
+      { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+    ],
+    ownership: { kind: 'GLOBAL' as const },
+    ...extra,
+  })
+  const createdItem = (extra: Record<string, unknown> = {}) => ({
+    id: 'resource-1',
+    tipoRecursoId: 'type-1',
+    unidadId: 'unit-1',
+    identificadorTecnico: 'CABLE-ROJO',
+    nombre: 'Cable rojo',
+    activo: true,
+    revision: 1,
+    classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
+    ...extra,
+  })
+
+  it('parses only the exact published selection-creation result union', () => {
+    expect(
+      parseResourceCreationResult({
+        disposition: 'CREATED',
+        item: createdItem(),
+      }),
+    ).toEqual({ disposition: 'CREATED', item: createdItem() })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'CREATED',
+        item: createdItem({ organizacionId: 'organization-1' }),
+      }),
+    ).toEqual({
+      disposition: 'CREATED',
+      item: createdItem({ organizacionId: 'organization-1' }),
+    })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      }),
+    ).toMatchObject({
+      disposition: 'CATALOG_CHANGED',
+      evaluation: { status: 'INCOMPLETE' },
+    })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'INCOMPLETE',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      }),
+    ).toMatchObject({
+      disposition: 'INCOMPLETE',
+      evaluation: { status: 'INCOMPLETE' },
+    })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'INVALID',
+        evaluation: evaluation({ status: 'INVALID', valid: false }),
+      }),
+    ).toMatchObject({
+      disposition: 'INVALID',
+      evaluation: { status: 'INVALID' },
+    })
+  })
+
+  it('fails closed for extra, incomplete, or inconsistent selection-creation results', () => {
+    for (const malformed of [
+      { disposition: 'CREATED', item: createdItem({ id: '' }) },
+      { disposition: 'CREATED', item: createdItem({ id: '   ' }) },
+      { disposition: 'CREATED', item: createdItem({ tipoRecursoId: '' }) },
+      { disposition: 'CREATED', item: createdItem({ unidadId: '' }) },
+      { disposition: 'CREATED', item: createdItem({ organizacionId: '' }) },
+      { disposition: 'CREATED', item: createdItem({ unknownKey: true }) },
+      {
+        disposition: 'CREATED',
+        item: createdItem({ organizacionId: undefined }),
+      },
+      {
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ status: 'VALID', valid: true }),
+        item: createdItem(),
+      },
+      {
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ catalogFingerprint: '' }),
+      },
+      {
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ catalogFingerprint: '   ' }),
+      },
+      {
+        disposition: 'INCOMPLETE',
+        evaluation: evaluation({ status: 'INVALID', valid: false }),
+      },
+      {
+        disposition: 'INVALID',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      },
+      { disposition: 'UNKNOWN', evaluation: evaluation() },
+    ])
+      expect(() => parseResourceCreationResult(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('maps the v1 selection-create mutation exactly and rejects malformed input before transport', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'CREATED', item: createdItem() })
+    const api = createResourcesMasterApi({ invoke })
+    const input = selectionCreateInput()
+
+    await expect(api.createResourceFromSelections(input)).resolves.toEqual({
+      disposition: 'CREATED',
+      item: createdItem(),
+    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+      input,
+    )
+
+    for (const invalid of [
+      selectionCreateInput({ claseRecursoId: '' }),
+      selectionCreateInput({ expectedCatalogFingerprint: '' }),
+      selectionCreateInput({ expectedCatalogFingerprint: '   ' }),
+      selectionCreateInput({ unknownKey: true }),
+      selectionCreateInput({
+        selecciones: [
+          { asignacionAtributoId: '', valorPermitidoId: 'allowed-1' },
+        ],
+      }),
+    ])
+      await expect(
+        api.createResourceFromSelections(invalid as never),
+      ).rejects.toThrow('Invalid resources master response')
+    expect(invoke).toHaveBeenCalledTimes(1)
   })
 
   it('rejects malformed evaluation responses and propagates transport failures', async () => {

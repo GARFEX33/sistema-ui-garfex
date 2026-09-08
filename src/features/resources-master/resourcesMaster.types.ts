@@ -385,3 +385,44 @@ export interface ResourceCreationEvaluation {
   valoresNormalizados: ResourceNormalizedCreationValue[]
   issues: ResourceCreationEvaluationIssue[]
 }
+
+export interface ResourceCreateFromSelectionsInput {
+  readonly claseRecursoId: string
+  readonly familiaRecursoId: string
+  readonly tipoRecursoId: string
+  readonly unidadId: string
+  readonly expectedCatalogFingerprint: string
+  readonly selecciones: ResourceCreationEvaluationSelection[]
+  readonly ownership: ResourceCreationEvaluationOwnership
+}
+
+export interface ResourceCreatedItem {
+  readonly id: string
+  readonly tipoRecursoId: string
+  readonly unidadId: string
+  readonly identificadorTecnico: string
+  readonly nombre: string
+  readonly activo: boolean
+  readonly revision: number
+  readonly classificationStatus: ResourceClassificationStatus
+  readonly organizacionId?: string
+}
+
+export type ResourceCreationResult =
+  | { readonly disposition: 'CREATED'; readonly item: ResourceCreatedItem }
+  | {
+      readonly disposition: 'CATALOG_CHANGED'
+      readonly evaluation: ResourceCreationEvaluation
+    }
+  | {
+      readonly disposition: 'INCOMPLETE'
+      readonly evaluation: ResourceCreationEvaluation & {
+        readonly status: 'INCOMPLETE'
+      }
+    }
+  | {
+      readonly disposition: 'INVALID'
+      readonly evaluation: ResourceCreationEvaluation & {
+        readonly status: 'INVALID'
+      }
+    }

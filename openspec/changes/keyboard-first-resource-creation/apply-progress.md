@@ -1260,3 +1260,12 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** optional omission and INVALID correction wait for authoritative VALID review; review Back and local ArrowLeft retain hierarchy.
 - **TDD:** review-heading focus RED failed; focused surface/flow/view/model/architecture RTL passed 87/87 after the minimal focus ref/effect.
 - **Plan:** PR 14 ready; 39 children total, 2 remain, forecast 580–765 A+D.
+
+---
+
+## PR 14A — exact selection-create adapter
+
+- **Complete:** added distinct v1 selection-create types, strict `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` parsing, and the exact `crearRecursoDesdeSelecciones` mutation adapter; legacy `crearRecurso` remains untouched.
+- **TDD:** RED focused API test failed because `parseResourceCreationResult` and `createResourceFromSelections` were absent; GREEN and triangulation passed 39/39.
+- **Contract proof:** rejects extra keys, blank IDs/fingerprint, explicit optional-organization `undefined`, malformed dispositions, and disposition/status mismatches; preserves duplicate selection order and accepts `CATALOG_CHANGED` with nested `INCOMPLETE`.
+- **Replan:** PR 14 is split into 14A adapter, 14B review, 14C mutation wiring, 14D dispositions, and 14E closure; each child remains below 399 A+D.

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 580–765 A+D remaining after PR 13D5d2c; 39 implementation child slices total (2 remaining: PR 14, PR 15) plus planning-doc slicing. |
+| Estimated changed lines | 1,130–1,640 A+D remaining after PR 14A; 43 implementation child slices total (5 remaining: PR 14B, PR 14C, PR 14D, PR 14E, PR 15) plus planning-doc slicing. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d1a base projection → PR 13D5d1b selection projection → PR 13D5d2a back navigation → PR 13D5d2b surface integration → PR 13D5d2c surface proof → PR 14 review/create → PR 15 backend closure |
@@ -72,8 +72,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13D5d2a | Complete | `… → PR 13D5d1b → 📍 PR 13D5d2a` / PR 13D5d1b | Reducer-owned Back exposure and review re-entry guard; under 100 A+D |
 | 13D5d2b | Complete | `… → PR 13D5d2a → 📍 PR 13D5d2b` / PR 13D5d2a | Primary surface authority/render adoption; under 399 A+D |
 | 13D5d2c | Complete | `… → PR 13D5d2b → 📍 PR 13D5d2c` / PR 13D5d2b | Surface keyboard and transition triangulation; 100–220 A+D |
-| 14 | Ready / unstarted | `… → PR 13D5d2c → 📍 PR 14` / PR 13D5d2c | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
-| 15 | Ready after PR 14 / unstarted | `… → PR 13D5d2c → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
+| 14A–E | 14A complete; B–E unstarted | `… → PR 13D5d2c → 📍 PR 14A → PR 14B → PR 14C → PR 14D → PR 14E` / PR 13D5d2c | Split exact adapter, review, mutation, disposition, and closure work into <399 A+D children |
+| 15 | Ready after PR 14E / unstarted | `… → PR 13D5d2c → PR 14A → PR 14B → PR 14C → PR 14D → PR 14E → 📍 PR 15` / PR 14E | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
 ## Executable now — backend-independent implementation
 
@@ -345,13 +345,15 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 - [x] **PR 13D5d2b:** Adopt flow-owned stages and render the projected current presenter; under 399 A+D.
 - [x] **PR 13D5d2c:** Triangulate keyboard transitions, optional omission, `INVALID` correction, and terminal pending review; 100–220 A+D.
 
-### PR 14 — Authoritative review and fingerprinted creation
+### PR 14A–E — Authoritative review and fingerprinted creation
 
-**Depends on:** PR 13D5d. **Dependency diagram:** `… → PR 13D5c → PR 13D5d → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
+**Depends on:** PR 13D5d. **Dependency diagram:** `… → PR 13D5c → PR 13D5d → 📍 PR 14A → PR 14B → PR 14C → PR 14D → PR 14E`. Each child remains below 399 A+D and retains the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` union.
 
-- [ ] **RED:** Write failing exact-fixture tests for `INCOMPLETE | VALID | INVALID` rendering, evaluation invalidation on every selection mutation, required `expectedCatalogFingerprint`, active selection IDs only, `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`, stale/unknown disposition handling, and confirmed-success-only behavior. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Render generated `nombre`, `identificadorTecnico`, assignments, and issues exclusively from validated evaluation output; call `crearRecursoDesdeSelecciones` only with a current `expectedCatalogFingerprint` and represent only published dispositions. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove a concurrent, stale, unknown, or transport-rejected response never presents success or calls `onCreated`; run the focused command and record its exact result. <!-- sdd-owner: implementation -->
+- [x] **PR 14A:** Exact v1 selection-create input/result types, strict parser, and `crearRecursoDesdeSelecciones` mutation adapter with focused API proof. <!-- sdd-owner: implementation -->
+- [ ] **PR 14B:** Valid-evaluation review projection only; render generated identity, assignments, and issues without mutation behavior. <!-- sdd-owner: implementation -->
+- [ ] **PR 14C:** Current-fingerprint mutation wiring from active selections only; no success presentation. <!-- sdd-owner: implementation -->
+- [ ] **PR 14D:** Published disposition presentation with only `CREATED` invoking the existing success seam. <!-- sdd-owner: implementation -->
+- [ ] **PR 14E:** Stale, unknown, and transport-rejection integration proof plus focused review/create closure. <!-- sdd-owner: implementation -->
 
 ### PR 15 — Backend-enabled browser and regression closure
 

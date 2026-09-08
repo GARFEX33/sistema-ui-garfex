@@ -13,6 +13,8 @@ import type {
   ResourceAttributeOptionListInput,
   ResourceCreationEvaluation,
   ResourceCreationEvaluationInput,
+  ResourceCreationResult,
+  ResourceCreateFromSelectionsInput,
   ResourceChangeResult,
   ResourceClassificationStatus,
   ResourceContextClassItem,
@@ -51,6 +53,9 @@ export type ResourceDetailOperation =
 
 export type ResourceCreateOperation = 'catalogoAdmin/recursos:crearRecurso'
 
+export type ResourceCreateFromSelectionsOperation =
+  'catalogoAdmin/recursos:crearRecursoDesdeSelecciones'
+
 export type ResourceUpdateOperation = 'catalogoAdmin/recursos:actualizarRecurso'
 
 export type ResourceLifecycleOperation =
@@ -86,6 +91,7 @@ export type ResourceOperation =
   | ResourceListOperation
   | ResourceDetailOperation
   | ResourceCreateOperation
+  | ResourceCreateFromSelectionsOperation
   | ResourceUpdateOperation
   | ResourceLifecycleOperation
   | ResourceContextListOperation
@@ -119,6 +125,9 @@ export interface ResourcesMasterApi {
     input: ResourceDetailInput,
   ) => Promise<ResourceDetail | null>
   createResource: (input: ResourceCreateInput) => Promise<ResourceCreated>
+  createResourceFromSelections: (
+    input: ResourceCreateFromSelectionsInput,
+  ) => Promise<ResourceCreationResult>
   updateResource: (input: ResourceUpdateInput) => Promise<ResourceChangeResult>
   activateResource: (
     input: ResourceLifecycleInput,
@@ -517,7 +526,9 @@ export function parseAttributeAssignmentsPage(
   return { ...result, items: result.items.map(attributeAssignmentItem) }
 }
 
-const attributeContractIdSchema = z.string().min(1)
+const attributeContractIdSchema = z
+  .string()
+  .refine((value) => value.trim().length > 0)
 const attributeDefinitionSchema = z
   .object({
     id: attributeContractIdSchema,
@@ -654,6 +665,76 @@ export function parseResourceCreationEvaluation(
   return result.data
 }
 
+const resourceCreatedItemSchema = z
+  .object({
+    id: attributeContractIdSchema,
+    tipoRecursoId: attributeContractIdSchema,
+    unidadId: attributeContractIdSchema,
+    identificadorTecnico: z.string(),
+    nombre: z.string(),
+    activo: z.boolean(),
+    revision: z.number(),
+    classificationStatus: z
+      .object({
+        state: z.enum(['EFFECTIVE', 'INERT', 'BROKEN_REFERENCE']),
+        reasons: z.array(z.string()),
+      })
+      .strict(),
+    organizacionId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ('organizacionId' in value && value.organizacionId === undefined)
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['organizacionId'],
+      })
+  })
+
+const resourceCreationResultEvaluationSchema =
+  resourceCreationEvaluationSchema.refine(
+    (value) => value.catalogFingerprint.trim().length > 0,
+  )
+
+const resourceCreationResultSchema = z.discriminatedUnion('disposition', [
+  z
+    .object({
+      disposition: z.literal('CREATED'),
+      item: resourceCreatedItemSchema,
+    })
+    .strict(),
+  z
+    .object({
+      disposition: z.literal('CATALOG_CHANGED'),
+      evaluation: resourceCreationResultEvaluationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      disposition: z.literal('INCOMPLETE'),
+      evaluation: resourceCreationResultEvaluationSchema.refine(
+        (value) => value.status === 'INCOMPLETE',
+      ),
+    })
+    .strict(),
+  z
+    .object({
+      disposition: z.literal('INVALID'),
+      evaluation: resourceCreationResultEvaluationSchema.refine(
+        (value) => value.status === 'INVALID',
+      ),
+    })
+    .strict(),
+])
+
+export function parseResourceCreationResult(
+  value: unknown,
+): ResourceCreationResult {
+  const result = resourceCreationResultSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data as ResourceCreationResult
+}
+
 const resourceCreationEvaluationInputSchema = z
   .object({
     claseRecursoId: attributeContractIdSchema,
@@ -679,6 +760,11 @@ const resourceCreationEvaluationInputSchema = z
     ]),
   })
   .strict()
+
+const resourceCreateFromSelectionsInputSchema =
+  resourceCreationEvaluationInputSchema
+    .extend({ expectedCatalogFingerprint: attributeContractIdSchema })
+    .strict()
 
 const attributeOptionItem = (value: unknown): ResourceAttributeOption => {
   if (
@@ -921,6 +1007,7 @@ const queryReference = (
 const mutationReference = (
   name:
     | ResourceCreateOperation
+    | ResourceCreateFromSelectionsOperation
     | ResourceUpdateOperation
     | ResourceLifecycleOperation,
 ) => makeFunctionReference<'mutation', Record<string, unknown>, unknown>(name)
@@ -937,6 +1024,8 @@ const getDetailReference: ResourceQueryReference = queryReference(
 const createResourceReference: ResourceMutationReference = mutationReference(
   'catalogoAdmin/recursos:crearRecurso',
 )
+const createResourceFromSelectionsReference: ResourceMutationReference =
+  mutationReference('catalogoAdmin/recursos:crearRecursoDesdeSelecciones')
 const updateResourceReference: ResourceMutationReference = mutationReference(
   'catalogoAdmin/recursos:actualizarRecurso',
 )
@@ -1008,6 +1097,10 @@ export function createResourcesMasterConvexApi(
           return client.query(getDetailReference, { ...requestArgs })
         case 'catalogoAdmin/recursos:crearRecurso':
           return client.mutation(createResourceReference, { ...requestArgs })
+        case 'catalogoAdmin/recursos:crearRecursoDesdeSelecciones':
+          return client.mutation(createResourceFromSelectionsReference, {
+            ...requestArgs,
+          })
         case 'catalogoAdmin/recursos:actualizarRecurso':
           return client.mutation(updateResourceReference, { ...requestArgs })
         case 'catalogoAdmin/recursos:activarRecurso':
@@ -1096,6 +1189,16 @@ export function createResourcesMasterApi(
         await transport.invoke(
           'catalogoAdmin/recursos:crearRecurso',
           requestArgs,
+        ),
+      )
+    },
+    async createResourceFromSelections(input) {
+      const request = resourceCreateFromSelectionsInputSchema.safeParse(input)
+      if (!request.success) return bad()
+      return parseResourceCreationResult(
+        await transport.invoke(
+          'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+          request.data,
         ),
       )
     },
