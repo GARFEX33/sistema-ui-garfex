@@ -8,7 +8,7 @@ import {
   within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ComponentProps } from 'react'
+import { type ComponentProps, useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CrearRecursoSurface } from '../../src/features/resources-master/CrearRecursoSurface'
 import { ResourceCreationContractPending } from '../../src/features/resources-master/ResourceCreationContractPending'
@@ -25,10 +25,19 @@ type IdleEvaluationDriver = (
   retry: () => Promise<void>
 }
 
-const { useResourceCreationEvaluationSpy } = vi.hoisted(() => ({
+const {
+  useResourceCreationEvaluationSpy,
+  useResourceCreationAttributeQueriesSpy,
+} = vi.hoisted(() => ({
   useResourceCreationEvaluationSpy: vi.fn<IdleEvaluationDriver>(() => ({
     status: 'idle',
     retry: () => Promise.resolve(),
+  })),
+  useResourceCreationAttributeQueriesSpy: vi.fn(() => ({
+    step: { kind: 'unavailable' },
+    definition: { status: 'idle' },
+    allowedValues: {},
+    allowedValuesKnowledge: {},
   })),
 }))
 
@@ -41,12 +50,7 @@ vi.mock(
 vi.mock(
   '../../src/features/resources-master/useResourceCreationAttributeQueries',
   () => ({
-    useResourceCreationAttributeQueries: () => ({
-      step: { kind: 'unavailable' },
-      definition: { status: 'idle' },
-      allowedValues: {},
-      allowedValuesKnowledge: {},
-    }),
+    useResourceCreationAttributeQueries: useResourceCreationAttributeQueriesSpy,
   }),
 )
 
@@ -1217,5 +1221,73 @@ describe('CrearRecursoSurface — Clase staged', () => {
     expect(await screen.findByRole('searchbox', { name: 'Clase' })).toHaveValue(
       '',
     )
+  })
+
+  it('renders the projected assignment and advances a valid selection to review', async () => {
+    const assignment = {
+      asignacionAtributoId: 'assignment-color',
+      aplicabilidadResuelta: 'REQUIRED',
+    }
+    const evaluation = {
+      status: 'VALID',
+      valid: true,
+      asignaciones: [assignment],
+    }
+    useResourceCreationAttributeQueriesSpy.mockImplementation(
+      ({ selectionBuckets }) => ({
+        step: Object.hasOwn(selectionBuckets.active, 'assignment-color')
+          ? { kind: 'complete' }
+          : { kind: 'current', assignment, position: 1, total: 1 },
+        definition: {
+          status: 'selection-ready',
+          definition: { nombre: 'Color', modoCaptura: 'SELECCION' },
+        },
+        allowedValues: {
+          status: 'ready',
+          values: [{ id: 'allowed-red', nombre: 'Rojo' }],
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          continue: vi.fn(),
+          retry: vi.fn(),
+        },
+      }),
+    )
+    useResourceCreationEvaluationSpy.mockImplementation(
+      ({ state, setState }) => {
+        useEffect(() => {
+          if (
+            state.stage.kind === 'attributes' &&
+            state.draft.authoritativeEvaluation !== evaluation
+          )
+            setState((current) => ({
+              ...current,
+              draft: { ...current.draft, authoritativeEvaluation: evaluation },
+            }))
+        }, [state.draft.authoritativeEvaluation, state.stage.kind, setState])
+        return { status: 'ready', retry: () => Promise.resolve() }
+      },
+    )
+    const user = userEvent.setup()
+    renderSurface(fakeApi(), { ownership: { kind: 'GLOBAL' } })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    await chooseOption(user, 'Clase', 'Material')
+    await chooseOption(user, 'Familia', 'Áridos')
+    await chooseOption(user, 'Tipo', 'Arena')
+    await user.click(
+      await screen.findByRole('option', { name: 'Metro cúbico (m³)' }),
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Color' })).toBeVisible()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(
+      within(
+        screen.getByRole('list', { name: 'Etapas de creación' }),
+      ).getByText('Atributos · 1 de 1'),
+    ).toHaveAttribute('aria-current', 'step')
+    await user.click(screen.getByRole('option', { name: 'Rojo' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Revisión pendiente' }),
+    ).toBeVisible()
   })
 })

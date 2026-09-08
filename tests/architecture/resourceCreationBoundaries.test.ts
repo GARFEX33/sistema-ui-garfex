@@ -131,14 +131,17 @@ describe('resource creation safety wall', () => {
     expect(contextStageSource).toContain('hidden={flow.state.stage.kind !==')
   })
 
-  it('keeps the temporary UI contract wall distinct from reducer-owned stages', () => {
-    const continuation = surfaceSource.match(
-      /const confirmUnit = \([\s\S]*?\n\s+const currentRailStage/,
-    )?.[0]
-
-    expect(continuation).toContain("setStep('contract-pending')")
-    expect(continuation).not.toContain('loadStep2')
-    expect(surfaceSource).not.toContain('{step === 2 && (')
+  it('keeps flow state authoritative and projects attributes only at the surface boundary', () => {
+    expect(surfaceSource).not.toMatch(
+      /const \[step|railStageOverride|const \[classId|const \[familyId|const \[typeId/,
+    )
+    expect(surfaceSource).toContain("from './ResourceCreationAttributesStage'")
+    expect(surfaceSource).toContain("from './resourceCreation.attributeView'")
+    expect(surfaceSource).toContain('projectResourceCreationAttributeView(')
+    expect(surfaceSource).toContain(
+      'projectResourceCreationAttributeSelectionView(',
+    )
+    expect(surfaceSource).toContain('<ResourceCreationAttributesStage')
     expect(modelSource).not.toContain("kind: 'contract-pending'")
     expect(modelSource).toContain("kind: 'attributes'")
     expect(modelSource).toContain("kind: 'review-pending'")

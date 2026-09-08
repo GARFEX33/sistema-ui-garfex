@@ -1244,3 +1244,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - Exposed flow `back()` through the reducer and suppressed immediate automatic review re-entry for the same completed revision; reconfirming a valid Unit clears the suppression.
 - RED/GREEN proof covers review → attributes → Unit without draft mutation; focused flow/model tests and typecheck pass.
 - Reset: the combined surface candidate reached 497 A+D before docs and was preserved at `/tmp/kfrc-pr13d5d2-overbudget-1788901142`; D5d2 is now three bounded children.
+
+---
+
+## PR 13D5d2b — primary surface adoption
+
+- **Complete:** the surface derives context, rail, commands, attribute progress, and rendering solely from `flow.state.stage`; null ownership retains the pending wall.
+- **TDD:** RED could not find `Color`; GREEN surface RTL passed 29/29 with projected `Color` selection advancing to review pending.
+- **Boundary:** D5d2c owns keyboard/optional/INVALID triangulation; 39 children total, 3 remain, forecast 680–985 A+D.

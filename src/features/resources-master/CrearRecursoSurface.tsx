@@ -8,19 +8,22 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CreationStageRail, type CreationRailStage } from './CreationStageRail'
 import { CreationCommandBar } from './CreationCommandBar'
+import { ResourceCreationAttributesStage } from './ResourceCreationAttributesStage'
 import { ResourceCreationContextStage } from './ResourceCreationContextStage'
 import { ResourceCreationContractPending } from './ResourceCreationContractPending'
 import { ResourceCreationShell } from './ResourceCreationShell'
+import {
+  projectResourceCreationAttributeSelectionView,
+  projectResourceCreationAttributeView,
+  type ResourceCreationAttributeSelectionViewInput,
+} from './resourceCreation.attributeView'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
 import {
   createInitialHierarchySnapshotCapture,
   type InitialResourceHierarchySnapshot,
 } from './resourceCreation.model'
 import { useResourceCreationFlow } from './useResourceCreationFlow'
-import type {
-  ResourceCreationEvaluationOwnership,
-  ResourceId,
-} from './resourcesMaster.types'
+import type { ResourceCreationEvaluationOwnership } from './resourcesMaster.types'
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
@@ -28,8 +31,6 @@ export interface CrearRecursoSurfaceProps {
   initialHierarchySnapshot?: InitialResourceHierarchySnapshot
   onCreated?: () => void
 }
-
-const key = (id: ResourceId) => String(id)
 
 const isEditableTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
@@ -57,15 +58,40 @@ export function CrearRecursoSurface({
   isOpenRef.current = isOpen
   const { registerAction, registerOverlay } = useKeyboardController()
 
-  const [step, setStep] = useState<1 | 'contract-pending'>(1)
-  const [railStageOverride, setRailStageOverride] = useState<Exclude<
-    CreationRailStage,
-    'contract-pending'
-  > | null>(null)
-  const [classId, setClassId] = useState<ResourceId | null>(null)
-  const [familyId, setFamilyId] = useState<ResourceId | null>(null)
-  const [typeId, setTypeId] = useState<ResourceId | null>(null)
   const flow = useResourceCreationFlow(api, ownership)
+  const stageKind = flow.state.stage.kind
+  const isContextStage =
+    stageKind === 'class' ||
+    stageKind === 'family' ||
+    stageKind === 'type' ||
+    stageKind === 'unit'
+  const isContractPending =
+    ownership === null &&
+    (stageKind === 'attributes' || stageKind === 'review-pending')
+  const attributeStageView = useMemo(() => {
+    if (stageKind !== 'attributes') return null
+    const projected = projectResourceCreationAttributeView({
+      evaluation: flow.evaluation,
+      step: flow.attributes.step,
+      definition: flow.attributes.definition,
+      onOmit: () => {
+        if (flow.attributes.step.kind === 'current')
+          flow.omitAllowedValue(
+            flow.attributes.step.assignment.asignacionAtributoId,
+          )
+      },
+    })
+    if (projected.kind === 'complete') return null
+    if (projected.kind === 'presenter') return projected.view
+    return projectResourceCreationAttributeSelectionView({
+      selectionContext: projected,
+      allowed: flow.attributes
+        .allowedValues as ResourceCreationAttributeSelectionViewInput['allowed'],
+      selectionBuckets: flow.state.draft.selectionBuckets,
+      onConfirmAllowedValue: flow.confirmAllowedValue,
+      onOmit: flow.omitAllowedValue,
+    })
+  }, [flow, stageKind])
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
@@ -75,14 +101,7 @@ export function CrearRecursoSurface({
         opener !== document.documentElement
           ? opener
           : null
-      const prefix = initialHierarchySnapshotCaptureRef.current.captureOnOpen()
-      flow.begin(prefix)
-      setStep(1)
-      setRailStageOverride(null)
-      setClassId(prefix.classItem?.id ?? null)
-      setFamilyId(prefix.familyItem?.id ?? null)
-      setTypeId(null)
-      if (prefix.typeItem) setTypeId(prefix.typeItem.id)
+      flow.begin(initialHierarchySnapshotCaptureRef.current.captureOnOpen())
       setIsOpen(true)
     },
     [flow],
@@ -106,23 +125,19 @@ export function CrearRecursoSurface({
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
 
   useEffect(() => {
-    if (!isOpen || step !== 1) return
+    if (!isOpen || !isContextStage) return
     const labelByStage = {
       class: 'Clase',
       family: 'Familia',
       type: 'Tipo',
       unit: 'Unidad natural',
     }
-    if (
-      flow.state.stage.kind === 'attributes' ||
-      flow.state.stage.kind === 'review-pending'
-    )
-      return
-    const label = labelByStage[flow.state.stage.kind]
     dialogRef.current
-      ?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
+      ?.querySelector<HTMLInputElement>(
+        `input[aria-label="${labelByStage[stageKind]}"]`,
+      )
       ?.focus()
-  }, [flow.state.stage.kind, isOpen, step])
+  }, [isContextStage, isOpen, stageKind])
 
   useEffect(() => {
     let delayedRestore: number | null = null
@@ -150,113 +165,42 @@ export function CrearRecursoSurface({
     }
   }, [isOpen])
 
-  const selectClass = (item: (typeof flow.classes)[number]) => {
-    const id = item.id
-    flow.confirmClass(item)
-    setRailStageOverride(null)
-    if (classId !== null && key(classId) === key(id)) return
-    setClassId(id)
-    setFamilyId(null)
-    setTypeId(null)
-  }
-
-  const selectFamily = (item: (typeof flow.families)[number]) => {
-    flow.confirmFamily(item)
-    setRailStageOverride(null)
-    if (familyId !== null && key(familyId) === key(item.id)) return
-    setFamilyId(item.id)
-    setTypeId(null)
-  }
-
-  const selectType = (item: (typeof flow.types)[number]) => {
-    const id = item.id
-    flow.confirmType(item)
-    setRailStageOverride(null)
-    if (typeId !== null && key(typeId) === key(id)) return
-    setTypeId(id)
-  }
-
   const returnToUnit = () => {
     const typeItem = flow.state.draft.hierarchy.typeItem
     if (typeItem) flow.confirmType(typeItem)
   }
 
-  const backToContext = () => {
-    setRailStageOverride(null)
-    returnToUnit()
-    setStep(1)
+  const navigateRailStage = (stage: 'class' | 'family' | 'type' | 'unit') => {
+    if (stage === 'class') return flow.enterClass()
+    if (stage === 'family') return flow.enterFamily()
+    if (stage === 'type') return flow.enterType()
+    return returnToUnit()
   }
-
-  const selectedClassName = flow.state.draft.hierarchy.classItem?.nombre ?? ''
-  const selectedFamilyName = flow.state.draft.hierarchy.familyItem?.nombre ?? ''
-  const selectedTypeName = flow.state.draft.hierarchy.typeItem?.nombre ?? ''
+  const moveBack = () => {
+    if (stageKind === 'class') return false
+    flow.back()
+    return true
+  }
   const selectedUnit = flow.units.find(
     (unit) =>
       flow.state.draft.unitId !== null &&
-      key(unit.unidadId) === key(flow.state.draft.unitId),
+      String(unit.unidadId) === String(flow.state.draft.unitId),
   )
-  const showUnitSelector = step === 1 && flow.state.stage.kind === 'unit'
-  const confirmUnit = (candidate: (typeof flow.units)[number]) => {
-    if (
-      flow.unitLoadState.status !== 'ready' &&
-      flow.unitLoadState.status !== 'loading-more'
-    )
-      return
-    flow.confirmUnit(candidate)
-    setStep('contract-pending')
-  }
-  const currentRailStage: CreationRailStage =
-    step === 'contract-pending'
-      ? 'contract-pending'
-      : (railStageOverride ??
-        (classId === null
-          ? 'class'
-          : familyId === null
-            ? 'family'
-            : typeId === null
-              ? 'type'
-              : 'unit'))
-  const navigateRailStage = (
-    stage: Exclude<CreationRailStage, 'contract-pending'>,
-  ) => {
-    if (stage === 'class') {
-      setRailStageOverride(stage)
-      flow.enterClass()
-      return
-    }
-    if (stage === 'family') {
-      setRailStageOverride(stage)
-      flow.enterFamily()
-      return
-    }
-    if (stage === 'type') {
-      setRailStageOverride(stage)
-      flow.enterType()
-      return
-    }
-    setRailStageOverride(null)
-    returnToUnit()
-  }
-
-  const moveBack = () => {
-    if (step === 'contract-pending') {
-      backToContext()
-      return true
-    }
-    if (flow.state.stage.kind === 'unit') {
-      navigateRailStage('type')
-      return true
-    }
-    if (flow.state.stage.kind === 'type') {
-      navigateRailStage('family')
-      return true
-    }
-    if (flow.state.stage.kind === 'family') {
-      navigateRailStage('class')
-      return true
-    }
-    return false
-  }
+  const attributeProgress =
+    stageKind === 'attributes' && flow.attributes.step.kind === 'current'
+      ? {
+          current: flow.attributes.step.position,
+          total: flow.attributes.step.total,
+        }
+      : undefined
+  const currentRailStage: CreationRailStage = isContractPending
+    ? 'contract-pending'
+    : stageKind
+  const commandStage = isContractPending
+    ? 'contract-pending'
+    : isContextStage
+      ? 'context'
+      : stageKind
 
   return (
     <div className="resources-create-surface">
@@ -304,57 +248,73 @@ export function CrearRecursoSurface({
             rail={
               <CreationStageRail
                 currentStage={currentRailStage}
+                attributeProgress={attributeProgress}
                 onNavigate={navigateRailStage}
                 selections={{
-                  className: selectedClassName,
-                  familyName: selectedFamilyName,
-                  typeName: selectedTypeName,
+                  className: flow.state.draft.hierarchy.classItem?.nombre ?? '',
+                  familyName:
+                    flow.state.draft.hierarchy.familyItem?.nombre ?? '',
+                  typeName: flow.state.draft.hierarchy.typeItem?.nombre ?? '',
                   unitName: selectedUnit?.nombre ?? '',
                 }}
               />
             }
             stageHeading={
-              step === 1
-                ? showUnitSelector
+              isContextStage
+                ? stageKind === 'unit'
                   ? 'Elegí una Unidad natural'
-                  : flow.state.stage.kind === 'class'
+                  : stageKind === 'class'
                     ? 'Elegí una Clase'
                     : 'Completá el contexto'
                 : undefined
             }
           />
           <div className="resources-dialog-content">
-            {step === 1 && (
+            {isContextStage && (
               <ResourceCreationContextStage
                 flow={flow}
-                onConfirmClass={selectClass}
-                onConfirmFamily={selectFamily}
-                onConfirmType={selectType}
-                onConfirmUnit={confirmUnit}
+                onConfirmClass={flow.confirmClass}
+                onConfirmFamily={flow.confirmFamily}
+                onConfirmType={flow.confirmType}
+                onConfirmUnit={flow.confirmUnit}
               />
             )}
-
-            {step === 'contract-pending' && (
-              <ResourceCreationContractPending ownership={ownership} />
+            {isContractPending && (
+              <ResourceCreationContractPending ownership={null} />
+            )}
+            {stageKind === 'attributes' &&
+              !isContractPending &&
+              attributeStageView && (
+                <ResourceCreationAttributesStage view={attributeStageView} />
+              )}
+            {stageKind === 'review-pending' && !isContractPending && (
+              <section aria-labelledby="resource-review-pending-heading">
+                <h2
+                  className="m-0 text-lg"
+                  id="resource-review-pending-heading"
+                >
+                  Revisión pendiente
+                </h2>
+                <p className="mt-2 text-text-secondary" role="status">
+                  La revisión de creación estará disponible próximamente.
+                </p>
+              </section>
             )}
           </div>
-          <CreationCommandBar
-            stage={step === 'contract-pending' ? 'contract-pending' : 'context'}
-          >
-            {step === 1 && (
+          <CreationCommandBar stage={commandStage}>
+            {isContextStage ? (
               <>
                 <Button variant="outline" onPress={close} type="button">
                   Cancelar
                 </Button>
-                {flow.state.stage.kind !== 'unit' && (
+                {stageKind !== 'unit' && (
                   <Button type="button" isDisabled>
                     Siguiente
                   </Button>
                 )}
               </>
-            )}
-            {step === 'contract-pending' && (
-              <Button variant="outline" onPress={backToContext} type="button">
+            ) : (
+              <Button variant="outline" onPress={moveBack} type="button">
                 Volver
               </Button>
             )}
