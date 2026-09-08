@@ -11,8 +11,10 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CrearRecursoSurface } from '../../src/features/resources-master/CrearRecursoSurface'
+import { ResourceCreationContractPending } from '../../src/features/resources-master/ResourceCreationContractPending'
 import { useResourceCreationFlow } from '../../src/features/resources-master/useResourceCreationFlow'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
+import type { ResourceCreationEvaluationOwnership } from '../../src/features/resources-master/resourcesMaster.types'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
 beforeEach(() => {
@@ -304,11 +306,14 @@ it('keeps resolved Unidad candidates retryable without implicitly confirming one
 
 const renderSurface = (
   api: ResourcesMasterApi,
-  props: Omit<ComponentProps<typeof CrearRecursoSurface>, 'api'> = {},
+  props?: Omit<
+    ComponentProps<typeof CrearRecursoSurface>,
+    'api' | 'ownership'
+  > & { ownership?: ResourceCreationEvaluationOwnership | null },
 ) =>
   render(
     <KeyboardControllerProvider activeSurface="recursos">
-      <CrearRecursoSurface api={api} {...props} />
+      <CrearRecursoSurface api={api} ownership={null} {...props} />
     </KeyboardControllerProvider>,
   )
 
@@ -331,9 +336,28 @@ const chooseOption = async (
 }
 
 describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
+  it('distinguishes a missing creation ownership from pending evaluation integration', () => {
+    const { rerender } = render(
+      <ResourceCreationContractPending ownership={null} />,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No se puede continuar hasta que el contexto actual defina la titularidad del recurso.',
+    )
+    expect(screen.getByRole('status')).not.toHaveTextContent(/backend/i)
+
+    const ownership: ResourceCreationEvaluationOwnership = { kind: 'GLOBAL' }
+    rerender(<ResourceCreationContractPending ownership={ownership} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'La integración de evaluación de creación todavía está pendiente.',
+    )
+    expect(screen.getByRole('status')).not.toHaveTextContent(/backend/i)
+  })
+
   it('opens with the N shortcut on the recursos surface and loads Clases', async () => {
     const api = fakeApi()
-    renderSurface(api)
+    renderSurface(api, { ownership: null })
     fireEvent.keyDown(document, { key: 'n' })
     expect(
       screen.getByRole('dialog', { name: 'Creador de recursos' }),
@@ -349,7 +373,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
   it('does not register the shortcut outside the recursos surface', () => {
     render(
       <KeyboardControllerProvider activeSurface="catalog">
-        <CrearRecursoSurface api={fakeApi()} />
+        <CrearRecursoSurface api={fakeApi()} ownership={null} />
       </KeyboardControllerProvider>,
     )
     fireEvent.keyDown(document, { key: 'n' })
@@ -360,7 +384,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     const api = fakeApi()
     const onCreated = vi.fn()
     const user = userEvent.setup()
-    renderSurface(api, { onCreated })
+    renderSurface(api, { ownership: null, onCreated })
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
     expect(
       screen.getByRole('dialog', { name: 'Creador de recursos' }),
@@ -421,7 +445,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
   })
 
   it('keeps the shell title for initial and deep snapshot openings', async () => {
-    const initial = renderSurface(fakeApi())
+    const initial = renderSurface(fakeApi(), { ownership: null })
     fireEvent.keyDown(document, { key: 'n' })
     expect(
       screen.getByRole('dialog', { name: 'Creador de recursos' }),

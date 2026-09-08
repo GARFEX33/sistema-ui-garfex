@@ -8,7 +8,11 @@ import {
   type ResourcesListCriteria,
 } from './useResourcesMasterListQuery'
 import { useResourcesHierarchy } from './useResourcesHierarchy'
-import type { ResourceId, ResourceSummary } from './resourcesMaster.types'
+import type {
+  ResourceCreationEvaluationOwnership,
+  ResourceId,
+  ResourceSummary,
+} from './resourcesMaster.types'
 import { useKeyboardController } from '../../shared/keyboard/keyboardControllerContext'
 import { isValidFocusCandidate } from '../../shared/keyboard/focusRestoration'
 import { CrearRecursoSurface } from './CrearRecursoSurface'
@@ -32,7 +36,13 @@ const diagnosticsLabel: Record<
 const project = (items: readonly { id: ResourceId; nombre: string }[]) =>
   items.map((item) => ({ id: item.id as string, label: item.nombre }))
 
-export function ResourcesMasterScreen() {
+export interface ResourcesMasterScreenProps {
+  creationOwnership: ResourceCreationEvaluationOwnership | null
+}
+
+export function ResourcesMasterScreen({
+  creationOwnership,
+}: ResourcesMasterScreenProps) {
   const [api] = useState<ResourcesMasterApi>(() =>
     createResourcesMasterConvexApi(),
   )
@@ -162,6 +172,7 @@ export function ResourcesMasterScreen() {
         action={
           <CrearRecursoSurface
             api={api}
+            ownership={creationOwnership}
             initialHierarchySnapshot={initialHierarchySnapshot}
             onCreated={() => {
               void refetchActive()

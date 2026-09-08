@@ -1,6 +1,13 @@
 import { useEffect, useRef } from 'react'
+import type { ResourceCreationEvaluationOwnership } from './resourcesMaster.types'
 
-export function ResourceCreationContractPending() {
+export interface ResourceCreationContractPendingProps {
+  ownership: ResourceCreationEvaluationOwnership | null
+}
+
+export function ResourceCreationContractPending({
+  ownership,
+}: ResourceCreationContractPendingProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -20,8 +27,9 @@ export function ResourceCreationContractPending() {
         Contrato pendiente
       </h2>
       <p className="mt-2 text-text-secondary" role="status">
-        La continuación requiere el contrato backend v1 para atributos y
-        creación.
+        {ownership === null
+          ? 'No se puede continuar hasta que el contexto actual defina la titularidad del recurso.'
+          : 'La integración de evaluación de creación todavía está pendiente.'}
       </p>
     </section>
   )

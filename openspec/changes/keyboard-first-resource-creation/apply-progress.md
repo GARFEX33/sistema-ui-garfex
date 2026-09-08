@@ -1101,3 +1101,14 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **TDD:** RED focused suite failed 4 assertions (unknown reducer events and unsafe restore); GREEN/TRIANGULATE passed 48/48, full 461/461, typecheck, and lint.
 - **Behavior:** effective changes clear evaluation, fingerprint, and request token and increment once; duplicate, repeated, identical, missing, and mismatched events retain state identity. Hierarchy replacement resets buckets; Unidad replacement preserves them while invalidating authority.
 - **Rollback:** remove the PR 13B reducer events, exact restore guard, focused tests, and these task/progress updates.
+
+---
+
+## PR 13C0 — required creation-ownership seam
+
+- **State:** completed; `ResourcesMasterEntry` is the composition host and explicitly supplies `creationOwnership: ResourceCreationEvaluationOwnership | null = null` without changing the route.
+- **Behavior:** Screen requires and forwards `creationOwnership`; Creador requires `ownership`. Null ownership blocks continuation with ownership-specific copy, while a present ownership value reports pending evaluation integration. No evaluation request, driver, reconciliation, review, create behavior, `GLOBAL` default, or invented organization ID was added.
+- **TDD:** RED `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx` failed 1/25 because the old pending copy said the backend-v1 contract was required. GREEN focused surface/screen/refetch/architecture tests passed 47/47; `pnpm typecheck` passed.
+- **Tasks:** split PR 13C into completed 13C0 and ready 13C1; the driver is implementable with explicit fixtures but remains runtime-gated while Entry passes null. The forecast is 22 child slices total with 4 remaining. Only the three 13C0 rows and the parent ownership-seam row were checked.
+- **Files:** `ResourcesMasterEntry.tsx`, `ResourcesMasterScreen.tsx`, `CrearRecursoSurface.tsx`, `ResourceCreationContractPending.tsx`, focused surface/screen/refetch tests, `tasks.md`, and this progress record.
+- **Rollback:** remove only the ownership prop seam, pending-copy distinction, focused tests, and these PR 13C0 documentation updates; retain PRs 13A–13B.

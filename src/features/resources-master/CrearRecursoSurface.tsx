@@ -21,6 +21,7 @@ import type {
   ResourceContextClassItem,
   ResourceContextFamilyItem,
   ResourceContextTypeItem,
+  ResourceCreationEvaluationOwnership,
   ResourceId,
 } from './resourcesMaster.types'
 
@@ -29,6 +30,7 @@ const unitLabel = (unit: { nombre: string; simbolo?: string }) =>
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
+  ownership: ResourceCreationEvaluationOwnership | null
   initialHierarchySnapshot?: InitialResourceHierarchySnapshot
   onCreated?: () => void
 }
@@ -45,6 +47,7 @@ const isEditableTarget = (target: EventTarget | null) =>
 
 export function CrearRecursoSurface({
   api,
+  ownership,
   initialHierarchySnapshot,
 }: CrearRecursoSurfaceProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -408,7 +411,9 @@ export function CrearRecursoSurface({
               </>
             )}
 
-            {step === 'contract-pending' && <ResourceCreationContractPending />}
+            {step === 'contract-pending' && (
+              <ResourceCreationContractPending ownership={ownership} />
+            )}
           </div>
           <CreationCommandBar
             stage={step === 'contract-pending' ? 'contract-pending' : 'context'}
