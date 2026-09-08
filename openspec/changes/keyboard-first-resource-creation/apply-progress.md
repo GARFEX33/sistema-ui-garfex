@@ -1202,3 +1202,11 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **TDD:** missing-module RED; focused pure/sequence/architecture suite passed 19/19 and full suite 526/526.
 - **Safety:** null or duplicate assignment identity fails closed; suspended/required omission remain unresolved; only resolved VALID completes.
 - **Plan:** D5b orchestration, D5c flow, D5d surface, PR14 and PR15 remain; 35 slices total, forecast 1,320–1,850 A+D.
+
+---
+
+## PR 13D5b — attribute query orchestration
+
+- **Complete:** composed current-step definition and selection-only allowed-value drivers; null/unavailable/complete stay idle, LIBRE blocks values, and same-definition assignment changes rekey child knowledge.
+- **TDD:** missing-hook RED; GREEN focused orchestration suite passed 4/4; full suite passed 530/530 and typecheck passed.
+- **Plan:** D5c is ready; four slices remain, forecast D5c 180–300 + D5d 300–395 + 14 320–395 + 15 260–370 = 1,060–1,460 A+D.

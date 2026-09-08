@@ -55,6 +55,7 @@ const creationRuntimeFiles = [
   'resourceCreation.selectorState.ts',
   'useResourceCreationAllowedValues.ts',
   'useResourceCreationAttributeDefinition.ts',
+  'useResourceCreationAttributeQueries.ts',
   'useResourceCreationEvaluation.ts',
   'useResourceCreationFlow.ts',
 ]
