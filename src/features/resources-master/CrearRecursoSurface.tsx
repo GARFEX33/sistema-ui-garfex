@@ -71,7 +71,7 @@ export function CrearRecursoSurface({
   const [classId, setClassId] = useState<ResourceId | null>(null)
   const [familyId, setFamilyId] = useState<ResourceId | null>(null)
   const [typeId, setTypeId] = useState<ResourceId | null>(null)
-  const flow = useResourceCreationFlow(api)
+  const flow = useResourceCreationFlow(api, ownership)
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {

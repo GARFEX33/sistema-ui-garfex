@@ -16,6 +16,13 @@ const modelSource = readFileSync(
   ),
   'utf8',
 )
+const flowSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/useResourceCreationFlow.ts',
+  ),
+  'utf8',
+)
 const creationRuntimeFiles = [
   'CrearRecursoSurface.tsx',
   'CreationStageRail.tsx',
@@ -47,6 +54,16 @@ describe('resource creation safety wall', () => {
         /createResource|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
       )
     })
+  })
+
+  it('integrates one ownership-aware evaluation driver through the flow', () => {
+    expect(surfaceSource).toContain('useResourceCreationFlow(api, ownership)')
+    expect(flowSource.match(/useResourceCreationEvaluation\(\{/g)).toHaveLength(
+      1,
+    )
+    expect(flowSource).toContain('evaluation: {')
+    expect(flowSource).toContain('status: evaluation.status')
+    expect(flowSource).toContain('retry: evaluation.retry')
   })
 
   it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {

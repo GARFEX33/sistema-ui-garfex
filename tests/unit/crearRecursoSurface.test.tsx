@@ -12,12 +12,35 @@ import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CrearRecursoSurface } from '../../src/features/resources-master/CrearRecursoSurface'
 import { ResourceCreationContractPending } from '../../src/features/resources-master/ResourceCreationContractPending'
+import type { ResourceCreationEvaluationDriverOptions } from '../../src/features/resources-master/useResourceCreationEvaluation'
 import { useResourceCreationFlow } from '../../src/features/resources-master/useResourceCreationFlow'
 import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
 import type { ResourceCreationEvaluationOwnership } from '../../src/features/resources-master/resourcesMaster.types'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
+type IdleEvaluationDriver = (
+  options: ResourceCreationEvaluationDriverOptions,
+) => {
+  status: 'idle'
+  retry: () => Promise<void>
+}
+
+const { useResourceCreationEvaluationSpy } = vi.hoisted(() => ({
+  useResourceCreationEvaluationSpy: vi.fn<IdleEvaluationDriver>(() => ({
+    status: 'idle',
+    retry: () => Promise.resolve(),
+  })),
+}))
+
+vi.mock(
+  '../../src/features/resources-master/useResourceCreationEvaluation',
+  () => ({
+    useResourceCreationEvaluation: useResourceCreationEvaluationSpy,
+  }),
+)
+
 beforeEach(() => {
+  useResourceCreationEvaluationSpy.mockClear()
   // react-aria-components' Popover positioning reads layout APIs jsdom does
   // not implement; a no-op is enough since we never assert real geometry.
   global.ResizeObserver ??= class {
@@ -168,7 +191,7 @@ it('resolves only the current Tipo policy candidates and confirms Unidad explici
             }),
     ),
   })
-  const { result } = renderHook(() => useResourceCreationFlow(api))
+  const { result } = renderHook(() => useResourceCreationFlow(api, null))
 
   act(() =>
     result.current.begin({
@@ -274,7 +297,7 @@ it('keeps resolved Unidad candidates retryable without implicitly confirming one
         effective: true,
       }),
   })
-  const { result } = renderHook(() => useResourceCreationFlow(api))
+  const { result } = renderHook(() => useResourceCreationFlow(api, null))
 
   act(() =>
     result.current.begin({
@@ -354,6 +377,24 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     )
     expect(screen.getByRole('status')).not.toHaveTextContent(/backend/i)
   })
+
+  it.each([
+    ['GLOBAL', { kind: 'GLOBAL' }],
+    [
+      'ORGANIZATION',
+      { kind: 'ORGANIZATION', organizacionId: 'organization-1' },
+    ],
+    ['null', null],
+  ] as const)(
+    'forwards explicit %s ownership into the evaluation flow',
+    (_kind, ownership) => {
+      renderSurface(fakeApi(), { ownership })
+
+      expect(useResourceCreationEvaluationSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ ownership }),
+      )
+    },
+  )
 
   it('opens with the N shortcut on the recursos surface and loads Clases', async () => {
     const api = fakeApi()

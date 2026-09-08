@@ -130,6 +130,7 @@ describe('useResourceCreationEvaluation', () => {
 
     await act(async () => {})
 
+    expect(mounted.result.current.driver.status).toBe('idle')
     expect(evaluateResourceCreation).not.toHaveBeenCalled()
     expect(mounted.result.current.state.evaluationRequestToken).toBeNull()
     expect(mounted.result.current.state.evaluationOwnershipIdentity).toBeNull()
@@ -165,6 +166,7 @@ describe('useResourceCreationEvaluation', () => {
     await waitFor(() =>
       expect(evaluateResourceCreation).toHaveBeenCalledTimes(1),
     )
+    expect(mounted.result.current.driver.status).toBe('loading')
     expect(evaluateResourceCreation).toHaveBeenLastCalledWith({
       claseRecursoId: 'class',
       familiaRecursoId: 'family',
@@ -206,6 +208,7 @@ describe('useResourceCreationEvaluation', () => {
         current,
       ),
     )
+    expect(mounted.result.current.driver.status).toBe('ready')
   })
 
   it.each(['FORBIDDEN', 'NOT_APPLICABLE'] as const)(
@@ -269,26 +272,32 @@ describe('useResourceCreationEvaluation', () => {
 
   it('exposes transport rejection and retries one current request before adoption', async () => {
     const accepted = evaluation()
+    const retried = deferred<ResourceCreationEvaluation>()
     const evaluateResourceCreation = vi
       .fn()
       .mockRejectedValueOnce(new Error('transport failed'))
-      .mockResolvedValueOnce(accepted)
+      .mockReturnValueOnce(retried.promise)
     const mounted = renderDriver(stateWithUnit(), evaluateResourceCreation)
 
     await waitFor(() =>
-      expect(mounted.result.current.driver.isError).toBe(true),
+      expect(mounted.result.current.driver.status).toBe('error'),
     )
     expect(
       mounted.result.current.state.draft.authoritativeEvaluation,
     ).toBeNull()
     expect(evaluateResourceCreation).toHaveBeenCalledTimes(1)
 
-    await act(() => mounted.result.current.driver.retry())
+    act(() => void mounted.result.current.driver.retry())
+    await waitFor(() =>
+      expect(mounted.result.current.driver.status).toBe('loading'),
+    )
+    await act(async () => retried.resolve(accepted))
     await waitFor(() =>
       expect(mounted.result.current.state.draft.authoritativeEvaluation).toBe(
         accepted,
       ),
     )
+    expect(mounted.result.current.driver.status).toBe('ready')
     expect(evaluateResourceCreation).toHaveBeenCalledTimes(2)
   })
 

@@ -6,6 +6,7 @@ import {
 } from '../../shared/hierarchy/parentGatedListController'
 import type { SelectorLoadState } from './StagedSearchSelector'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
+import { useResourceCreationEvaluation } from './useResourceCreationEvaluation'
 import {
   createUnitCandidateHydrator,
   createUnitPolicyPageController,
@@ -24,6 +25,7 @@ import type {
   ResourceContextClassItem,
   ResourceContextFamilyItem,
   ResourceContextTypeItem,
+  ResourceCreationEvaluationOwnership,
   ResourceId,
 } from './resourcesMaster.types'
 
@@ -90,8 +92,18 @@ const unitSelectorLoadState = (
   return { status: 'loading' }
 }
 
-export function useResourceCreationFlow(api: ResourcesMasterApi) {
+export function useResourceCreationFlow(
+  api: ResourcesMasterApi,
+  ownership: ResourceCreationEvaluationOwnership | null,
+) {
   const [state, dispatch] = useState(createInitialCreationState)
+  const setState = dispatch
+  const evaluation = useResourceCreationEvaluation({
+    api,
+    ownership,
+    state,
+    setState,
+  })
   const [classes] = useState(() =>
     createParentGatedListController<
       ResourceContextClassItem,
@@ -395,6 +407,10 @@ export function useResourceCreationFlow(api: ResourcesMasterApi) {
 
   return {
     state,
+    evaluation: {
+      status: evaluation.status,
+      retry: evaluation.retry,
+    },
     begin,
     enterClass,
     enterFamily,

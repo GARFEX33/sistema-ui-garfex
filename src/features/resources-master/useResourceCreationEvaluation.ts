@@ -22,6 +22,12 @@ type SetCreationState = (
   update: (current: CreationState) => CreationState,
 ) => void
 
+export type ResourceCreationEvaluationDriverStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'error'
+
 export type ResourceCreationEvaluationDriverOptions = Readonly<{
   api: Pick<ResourcesMasterApi, 'evaluateResourceCreation'>
   ownership: ResourceCreationEvaluationOwnership | null
@@ -134,8 +140,20 @@ export function useResourceCreationEvaluation({
     })
   }, [activeLease, allowedValuesByDefinition, query.data, setState])
 
+  const status: ResourceCreationEvaluationDriverStatus =
+    request === null
+      ? 'idle'
+      : activeLease !== null && query.isError
+        ? 'error'
+        : activeLease === null ||
+            query.isFetching ||
+            query.data === undefined ||
+            state.draft.authoritativeEvaluation !== query.data
+          ? 'loading'
+          : 'ready'
+
   return {
-    isError: query.isError,
+    status,
     retry: () =>
       activeLease === null || !query.isError
         ? Promise.resolve()

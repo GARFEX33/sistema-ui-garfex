@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 960–1,335 A+D remaining; 25 implementation child slices total (4 remaining) plus planning-doc slicing |
+| Estimated changed lines | 860–1,155 A+D remaining; 25 implementation child slices total (3 remaining) plus planning-doc slicing |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D one-at-a-time attributes UI → PR 14 review/create → PR 15 backend closure |
@@ -56,8 +56,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13C1a | Complete | `… → PR 13B → PR 13C0 → 📍 PR 13C1a` / PR 13C0 | Pure ownership-aware authority and exact request projection; 200–320 A+D |
 | 13C1b1a | Complete | `… → PR 13C1a → 📍 PR 13C1b1a` / PR 13C1a | Query hook core and stale rejection; 240–360 A+D |
 | 13C1b1b | Complete | `… → PR 13C1b1a → 📍 PR 13C1b1b` / PR 13C1b1a | Reconciliation-loop and retry proof; 80–140 A+D |
-| 13C1b2 | Ready after PR 13C1b1b / unstarted | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
-| 13D | Ready after PR 13C1b2 / unstarted | `… → PR 13C1b2 → 📍 PR 13D` / PR 13C1b2 | One-at-a-time selection UI; null ownership remains blocked; 280–390 A+D |
+| 13C1b2 | Complete | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
+| 13D | Ready | `… → PR 13C1b2 → 📍 PR 13D` / PR 13C1b2 | One-at-a-time selection UI; null ownership remains blocked; 280–390 A+D |
 | 14 | Ready after PR 13D / unstarted | `… → PR 13C1b2 → PR 13D → 📍 PR 14` / PR 13D | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
 | 15 | Ready after PR 14 / unstarted | `… → PR 13D → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
@@ -239,9 +239,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 13C1b1b. Integrate the hook into `useResourceCreationFlow`, pass required nullable ownership, and expose status/retry; null remains request-blocked. **Budget:** 100–180 A+D.
 
-- [ ] **RED:** Prove explicit ownership evaluates after Unidad while null does not. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Integrate without another stage authority or manual fetch state. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove reopen/ownership/revision lifecycle remains stale-safe. <!-- sdd-owner: implementation -->
+- [x] **RED:** Prove explicit ownership evaluates after Unidad while null does not. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Integrate without another stage authority or manual fetch state. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove reopen/ownership/revision lifecycle remains stale-safe. <!-- sdd-owner: implementation -->
 
 ### PR 13D — One-at-a-time selection attributes UI
 

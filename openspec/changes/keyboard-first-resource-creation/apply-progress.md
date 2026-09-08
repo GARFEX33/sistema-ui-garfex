@@ -1137,3 +1137,11 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **State:** completed characterization slice; production hook required no change.
 - **Evidence:** 6/6 hook cases prove FORBIDDEN/NOT_APPLICABLE suspension, one active-free replacement request, stable final adoption, transport error plus explicit retry, and identical-context reopen cache isolation.
 - **Boundary:** only focused tests and these task/progress updates; flow integration remains PR 13C1b2.
+
+---
+
+## PR 13C1b2 — flow integration
+
+- **State:** completed. `useResourceCreationFlow` requires nullable ownership, invokes the evaluation driver once unconditionally, and exposes evaluation status/retry without a manual fetch or stage change.
+- **Evidence:** strict RED failed for missing status/flow ownership integration; GREEN/TRIANGULATE focused hook, surface, and architecture tests passed 41/41. Explicit GLOBAL/ORGANIZATION and null surface ownership reach the driver; null remains request-blocked.
+- **Boundary:** PR 13D is ready. Three implementation slices remain: PR 13D (280–390), PR 14 (320–395), and PR 15 (260–370), forecast 860–1,155 A+D.
