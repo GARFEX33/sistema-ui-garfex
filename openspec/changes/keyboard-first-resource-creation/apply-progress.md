@@ -1123,3 +1123,9 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Tasks:** split former PR 13C1 into completed 13C1a and ready 13C1b; PR 13D depends on 13C1b. Forecast is 23 child slices total with 4 remaining; only the three 13C1a rows were checked.
 - **Files:** `resourceCreation.evaluationRequest.ts`, lease/model authority seams, focused request/lease tests, runtime inventory, `tasks.md`, and this record.
 - **Rollback:** remove the request module and ownership-authority additions only; retain PRs 13A–13C0.
+
+---
+## PR 13C1b1a — evaluation hook core
+- **State:** completed after the user-authorized split of the formatted 446-A+D trial; this child is bounded below 399 and remediates its failed evidence.
+- **TDD:** missing-hook RED; focused core proves null clearing, exact Unit request/current adoption, and old-response rejection after selection revision.
+- **Boundary:** unintegrated TanStack Query hook plus query/runtime guards only; reconciliation/retry tests and flow integration remain PR 13C1b1b/13C1b2.

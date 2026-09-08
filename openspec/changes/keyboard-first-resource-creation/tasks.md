@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,080–1,475 A+D remaining; 23 implementation child slices total (4 remaining) plus planning-doc slicing |
+| Estimated changed lines | 1,040–1,475 A+D remaining; 25 implementation child slices total (5 remaining) plus planning-doc slicing |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b evaluation driver → PR 13D one-at-a-time attributes UI → PR 14 review/create → PR 15 backend closure |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D one-at-a-time attributes UI → PR 14 review/create → PR 15 backend closure |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
 
@@ -54,9 +54,11 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13B | Complete | `… → PR 13A → 📍 PR 13B` / PR 13A | Reducer-owned selection mutations and one invalidation seam; 240–360 A+D |
 | 13C0 | Complete | `… → PR 13A → PR 13B → 📍 PR 13C0` / PR 13B | Required product-owned ownership seam and honest pending copy; 150–240 A+D |
 | 13C1a | Complete | `… → PR 13B → PR 13C0 → 📍 PR 13C1a` / PR 13C0 | Pure ownership-aware authority and exact request projection; 200–320 A+D |
-| 13C1b | Ready after PR 13C1a / unstarted | `… → PR 13C0 → PR 13C1a → 📍 PR 13C1b` / PR 13C1a | Lease-safe evaluation driver; null ownership remains request-blocked; 220–320 A+D |
-| 13D | Ready after PR 13C1b / unstarted | `… → PR 13C0 → PR 13C1a → PR 13C1b → 📍 PR 13D` / PR 13C1b | One-at-a-time selection UI; null ownership remains blocked; 280–390 A+D |
-| 14 | Ready after PR 13D / unstarted | `… → PR 13C1b → PR 13D → 📍 PR 14` / PR 13D | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
+| 13C1b1a | Complete | `… → PR 13C1a → 📍 PR 13C1b1a` / PR 13C1a | Query hook core and stale rejection; 240–360 A+D |
+| 13C1b1b | Ready after PR 13C1b1a / unstarted | `… → PR 13C1b1a → 📍 PR 13C1b1b` / PR 13C1b1a | Reconciliation-loop and retry proof; 80–140 A+D |
+| 13C1b2 | Ready after PR 13C1b1b / unstarted | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
+| 13D | Ready after PR 13C1b2 / unstarted | `… → PR 13C1b2 → 📍 PR 13D` / PR 13C1b2 | One-at-a-time selection UI; null ownership remains blocked; 280–390 A+D |
+| 14 | Ready after PR 13D / unstarted | `… → PR 13C1b2 → PR 13D → 📍 PR 14` / PR 13D | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
 | 15 | Ready after PR 14 / unstarted | `… → PR 13D → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
 ## Executable now — backend-independent implementation
@@ -217,17 +219,33 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 - [x] **GREEN:** Project active selections only and bind lease/state authority to a normalized ownership identity that invalidates a different ownership immediately. <!-- sdd-owner: implementation -->
 - [x] **TRIANGULATE/REFACTOR:** Prove opaque IDs are never stringified, stale/null ownership responses are rejected, same-ownership retries retain authority, reducer mutations/OPEN clear it, and runtime inventory includes the request module. <!-- sdd-owner: implementation -->
 
-### PR 13C1b — Lease-safe evaluation driver
+### PR 13C1b1a — Evaluation hook core
 
-**Depends on:** PR 13C1a. **Dependency diagram:** `… → PR 13B → PR 13C0 → PR 13C1a → 📍 PR 13C1b`. **Runtime gate:** Entry deliberately supplies `null`, so the driver must issue no evaluation until a product integration supplies ownership. This does not block implementing and testing the driver with an explicit ownership fixture. Do not default `GLOBAL` or invent an organization ID. **Start → finish:** reducer state with ownership-aware evaluation authority → a new feature-local evaluation hook invokes evaluation after Unit and effective mutations only when ownership is non-null. **Concrete targets:** a new hook separate from the 425-line `useResourceCreationFlow.ts`, its focused tests, and no review/create UI. **Budget:** 220–320 A+D. **Verify:** focused driver Vitest command plus `pnpm typecheck`. **Rollback:** remove only the driver hook and tests; retain PRs 13A–13C1a.
+**Depends on:** PR 13C1a. **Dependency diagram:** `… → PR 13C1a → 📍 PR 13C1b1a`. **Start → finish:** pure authority → unintegrated TanStack Query hook with two-phase lease arming, null clearing, current adoption, and stale-key guards. **Budget:** 240–360 A+D.
 
-- [ ] **RED:** With explicit null and non-null ownership fixtures, add failing driver tests for no request before Unit/source, evaluation after Unit or an effective selection mutation, lease-token stale rejection, and transport failure without adopting facts. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add the separate lease-safe evaluation driver hook; capture ownership, context, revision, and token; request only after Unit/mutations; and route validated facts through PR 13A reconciliation without loops. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove out-of-order responses, stale context/revision, transport retry, and reconciliation-caused state changes neither re-adopt stale facts nor create evaluation loops; run and record the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add a failing hook import and null/current request fixtures. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Implement the formatted query hook without flow/UI integration. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Reject an old response after a selection revision and include open generation/revision in the query key. <!-- sdd-owner: implementation -->
+
+### PR 13C1b1b — Reconciliation and retry proof
+
+**Depends on:** PR 13C1b1a. Add focused reconciliation-loop, transport-error, explicit retry, and reopened-cache tests without changing production behavior. **Budget:** 80–140 A+D.
+
+- [ ] **RED:** Add failing reconciliation/retry/cache-isolation cases. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Prove current hook behavior; change production only for a demonstrated defect. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Run focused/full verification and record exact results. <!-- sdd-owner: implementation -->
+
+### PR 13C1b2 — Flow integration
+
+**Depends on:** PR 13C1b1b. Integrate the hook into `useResourceCreationFlow`, pass required nullable ownership, and expose status/retry; null remains request-blocked. **Budget:** 100–180 A+D.
+
+- [ ] **RED:** Prove explicit ownership evaluates after Unidad while null does not. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Integrate without another stage authority or manual fetch state. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove reopen/ownership/revision lifecycle remains stale-safe. <!-- sdd-owner: implementation -->
 
 ### PR 13D — One-at-a-time selection attributes UI
 
-**Depends on:** PR 13C1b. **Dependency diagram:** `… → PR 13C0 → PR 13C1a → PR 13C1b → 📍 PR 13D`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** current authoritative sequence → one keyboard-first assignment decision with definition and allowed-value paging. **Concrete targets:** feature-local attribute stage, `ResourceCreationShell.tsx`, and focused RTL/unit tests. **Budget:** 280–390 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this UI composition and tests; retain PRs 13A–13C1b.
+**Depends on:** PR 13C1b2. **Dependency diagram:** `… → PR 13C1b1b → PR 13C1b2 → 📍 PR 13D`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** current authoritative sequence → one keyboard-first assignment decision with definition and allowed-value paging. **Concrete targets:** feature-local attribute stage, `ResourceCreationShell.tsx`, and focused RTL/unit tests. **Budget:** 280–390 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this UI composition and tests; retain PRs 13A–13C1b2.
 
 - [ ] **RED:** With an explicit non-null ownership fixture, add failing RTL tests for one assignment at a time, definition and allowed-value paging, `modoCaptura: SELECCION` confirmation, `LIBRE` unsupported presentation, and `Atributos · n de total`. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Render only the current authoritative assignment with selection-only allowed values, optional **Omitir**, visible `Atributos · n de total`, and no free-value editor or simultaneous assignment controls. <!-- sdd-owner: implementation -->
@@ -235,7 +253,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 ### PR 14 — Authoritative review and fingerprinted creation
 
-**Depends on:** PR 13D. **Dependency diagram:** `… → PR 13C1b → PR 13D → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
+**Depends on:** PR 13D. **Dependency diagram:** `… → PR 13C1b2 → PR 13D → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
 
 - [ ] **RED:** Write failing exact-fixture tests for `INCOMPLETE | VALID | INVALID` rendering, evaluation invalidation on every selection mutation, required `expectedCatalogFingerprint`, active selection IDs only, `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`, stale/unknown disposition handling, and confirmed-success-only behavior. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Render generated `nombre`, `identificadorTecnico`, assignments, and issues exclusively from validated evaluation output; call `crearRecursoDesdeSelecciones` only with a current `expectedCatalogFingerprint` and represent only published dispositions. <!-- sdd-owner: implementation -->

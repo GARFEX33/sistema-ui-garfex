@@ -13,10 +13,13 @@ const sourceFiles = readdirSync(join(root, 'src'), { recursive: true })
 const read = (file: string) => readFileSync(join(root, file), 'utf8')
 const providerPath = 'src/app/providers/AppProviders.tsx'
 const hookPath = 'src/features/resources-master/useResourcesMasterListQuery.ts'
+const evaluationHookPath =
+  'src/features/resources-master/useResourceCreationEvaluation.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [hookPath, ['useInfiniteQuery', 'useQueryClient']],
+  [evaluationHookPath, ['useQuery']],
 ])
 const convexFiles = new Set([
   apiPath,
@@ -219,7 +222,7 @@ const analyze = (file: string, input: string) => {
           issues.push(`Query integration is forbidden: ${module}`)
       }
       if (
-        file === hookPath &&
+        queryBindings.has(file) &&
         forbiddenHookMembers.has(property(node.expression) ?? '')
       )
         issues.push(

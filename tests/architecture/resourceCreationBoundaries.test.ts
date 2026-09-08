@@ -29,6 +29,7 @@ const creationRuntimeFiles = [
   'resourceCreation.loaders.ts',
   'resourceCreation.model.ts',
   'resourceCreation.selectionDraft.ts',
+  'useResourceCreationEvaluation.ts',
   'useResourceCreationFlow.ts',
 ]
 const creationRuntimeSources = creationRuntimeFiles.map((file) =>
