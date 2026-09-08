@@ -16,8 +16,35 @@ const modelSource = readFileSync(
   ),
   'utf8',
 )
+const creationRuntimeFiles = [
+  'CrearRecursoSurface.tsx',
+  'CreationStageRail.tsx',
+  'ResourceCreationContractPending.tsx',
+  'ResourceCreationShell.tsx',
+  'StagedSearchSelector.tsx',
+  'resourceCreation.dependentLoader.ts',
+  'resourceCreation.loaders.ts',
+  'resourceCreation.model.ts',
+  'resourceCreation.selectionDraft.ts',
+  'useResourceCreationFlow.ts',
+]
+const creationRuntimeSources = creationRuntimeFiles.map((file) =>
+  readFileSync(
+    resolve(process.cwd(), 'src/features/resources-master', file),
+    'utf8',
+  ),
+)
 
 describe('resource creation safety wall', () => {
+  it('keeps creation runtime modules bounded and free of legacy or global keyboard ownership', () => {
+    creationRuntimeSources.forEach((source) => {
+      expect(source.split('\n').length).toBeLessThan(500)
+      expect(source).not.toMatch(
+        /createResource|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
+      )
+    })
+  })
+
   it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {
     const continuation = surfaceSource.match(
       /const confirmUnit = \([\s\S]*?\n\s+const currentRailStage/,

@@ -771,3 +771,17 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Verification:** focused API/loader/flow Vitest 59/59; full `pnpm test` 426/426; `pnpm typecheck`; targeted ESLint; targeted Prettier; and `git diff --check` passed.
 - **Files:** `resourcesMaster.types.ts`, `resourcesMaster.api.ts`, `resourceCreation.loaders.ts`, `useResourceCreationFlow.ts`, three focused test files, and this record.
 - **Deviation / rollback:** none; revert this adapter/context/test slice to restore the prior direct-Type policy query behavior.
+
+---
+## PR 11A — dependent-loader boundary
+- **Status:** consumed native OpenSpec `apply: ready`; repo-local allowed root had no warnings.
+- **Completed/task artifact:** extracted the generic loader; combined PR 11 rows remain unchecked because browser/closure work is unassigned.
+### TDD Cycle Evidence
+| Task | Safety net | RED | GREEN | TRIANGULATE/REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 11A boundary | 21/21 focused | Guard failed: loader 649 lines | 22/22 + typecheck | Facade approval and all runtime scans passed |
+- **Files:** loader facade, new dependent loader, and architecture guard only.
+- **Verification:** focused/full Vitest 22/22 and 427/427; typecheck, targeted ESLint/Prettier, and diff check passed.
+- **Deviation:** none; no controller, hydrator, UI, API, or payload semantics changed.
+- **Remaining:** the three combined PR 11 closure rows and all parent lifecycle rows remain unchecked/deferred.
+- **Workload / rollback:** PR 11A boundary; revert these three files; final diff is 399 A+D including this record.
