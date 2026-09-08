@@ -4,7 +4,12 @@ import type {
   ResourceCreationAttributesStageView,
 } from './ResourceCreationAttributesStage'
 import type { AttributeStep } from './resourceCreation.attributeStep'
-import type { ResourceAttributeDefinition } from './resourcesMaster.types'
+import type { AllowedValueId } from './resourceCreation.attributeSequence'
+import type { SelectionBuckets } from './resourceCreation.selectionDraft'
+import type {
+  ResourceAllowedAttributeValueItem,
+  ResourceAttributeDefinition,
+} from './resourcesMaster.types'
 
 type ResourceCreationAttributeDefinitionDriver =
   | Readonly<{ status: 'idle'; retry: () => void }>
@@ -32,21 +37,45 @@ export type ResourceCreationAttributeViewInput = Readonly<{
   onOmit: () => void
 }>
 
+export type ResourceCreationAttributeSelectionContext = Readonly<{
+  kind: 'selection-context'
+  assignment: ResourceCreationAttributeAssignmentView
+  authoritativeAssignment: Extract<
+    AttributeStep,
+    { kind: 'current' }
+  >['assignment']
+  definition: ResourceCreationAttributeDefinitionView
+}>
+
 export type ResourceCreationAttributeViewResult =
   | Readonly<{ kind: 'complete' }>
   | Readonly<{
       kind: 'presenter'
       view: ResourceCreationAttributesStageView
     }>
-  | Readonly<{
-      kind: 'selection-context'
-      assignment: ResourceCreationAttributeAssignmentView
-      authoritativeAssignment: Extract<
-        AttributeStep,
-        { kind: 'current' }
-      >['assignment']
-      definition: ResourceCreationAttributeDefinitionView
-    }>
+  | ResourceCreationAttributeSelectionContext
+
+type ResourceCreationAllowedValuesDriver = Readonly<{
+  status: 'idle' | 'loading' | 'ready' | 'error'
+  values: readonly ResourceAllowedAttributeValueItem[]
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  continue: () => void
+  retry: () => void
+}>
+
+type ResourceCreationSelectionReadyView = Extract<
+  ResourceCreationAttributesStageView,
+  { status: 'selection-ready' }
+>
+
+export type ResourceCreationAttributeSelectionViewInput = Readonly<{
+  selectionContext: ResourceCreationAttributeSelectionContext
+  allowed: ResourceCreationAllowedValuesDriver
+  selectionBuckets: SelectionBuckets<AllowedValueId>
+  onConfirmAllowedValue: (assignmentId: string, valueId: string) => void
+  onOmit: (assignmentId: string) => void
+}>
 
 const assignmentView = (
   step: Extract<AttributeStep, { kind: 'current' }>,
@@ -67,6 +96,61 @@ const definitionView = (
     ? {}
     : { description: definition.descripcion }),
 })
+
+const allowedValueLoadState = ({
+  status,
+  values,
+  hasNextPage,
+  isFetchingNextPage,
+}: ResourceCreationAllowedValuesDriver): ResourceCreationSelectionReadyView['loadState'] => {
+  if (status === 'idle' || status === 'loading') return { status: 'loading' }
+  if (status === 'error')
+    return values.length === 0
+      ? { status: 'initial-error' }
+      : { status: 'partial-error' }
+  if (isFetchingNextPage) return { status: 'loading-more' }
+  return { status: 'ready', exhausted: !hasNextPage }
+}
+
+export const projectResourceCreationAttributeSelectionView = ({
+  selectionContext,
+  allowed,
+  selectionBuckets,
+  onConfirmAllowedValue,
+  onOmit,
+}: ResourceCreationAttributeSelectionViewInput): ResourceCreationSelectionReadyView => {
+  const assignmentId =
+    selectionContext.authoritativeAssignment.asignacionAtributoId
+  const values = allowed.values.map(({ id, nombre }) => ({
+    key: String(id),
+    displayName: nombre,
+  }))
+  const confirmedKey = Object.hasOwn(selectionBuckets.active, assignmentId)
+    ? String(selectionBuckets.active[assignmentId])
+    : null
+
+  return {
+    status: 'selection-ready',
+    assignment: selectionContext.assignment,
+    definition: selectionContext.definition,
+    values,
+    loadState: allowedValueLoadState(allowed),
+    confirmedKey,
+    onConfirm: (value) => {
+      const allowedValue = allowed.values.find(
+        ({ id }) => String(id) === value.key,
+      )
+      if (allowedValue)
+        onConfirmAllowedValue(assignmentId, String(allowedValue.id))
+    },
+    onLoadMore: allowed.continue,
+    onRetry: allowed.retry,
+    ...(selectionContext.authoritativeAssignment.aplicabilidadResuelta ===
+    'OPTIONAL'
+      ? { onOmit: () => onOmit(assignmentId) }
+      : {}),
+  }
+}
 
 export const projectResourceCreationAttributeView = ({
   evaluation,

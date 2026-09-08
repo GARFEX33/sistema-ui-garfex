@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { projectResourceCreationAttributeView } from '../../src/features/resources-master/resourceCreation.attributeView'
+import {
+  projectResourceCreationAttributeSelectionView,
+  projectResourceCreationAttributeView,
+  type ResourceCreationAttributeSelectionContext,
+} from '../../src/features/resources-master/resourceCreation.attributeView'
+import { asAllowedValueId } from '../../src/features/resources-master/resourceCreation.attributeSequence'
+import { createSelectionBuckets } from '../../src/features/resources-master/resourceCreation.selectionDraft'
 import type { AttributeStep } from '../../src/features/resources-master/resourceCreation.attributeStep'
 import type {
   ResourceAttributeDefinition,
@@ -181,5 +187,177 @@ describe('projectResourceCreationAttributeView', () => {
       authoritativeAssignment: assignment,
       definition: { name: 'Color', description: 'Color de referencia.' },
     })
+  })
+})
+
+const selectionContext: ResourceCreationAttributeSelectionContext = {
+  kind: 'selection-context',
+  assignment: { current: 2, total: 3, applicability: 'OPTIONAL' },
+  authoritativeAssignment: assignment,
+  definition: { name: 'Color', description: 'Color de referencia.' },
+}
+
+const allowedValue = (id: unknown, nombre: string) => ({
+  id,
+  definicionAtributoId: 'definition-1',
+  clave: 'RED',
+  valor: { kind: 'OPCION' as const, opcionAtributoId: 'option-red' },
+  nombre,
+  orden: 1,
+  activo: true,
+  revision: 1,
+  effective: true,
+  effectiveReasons: [],
+})
+
+const projectSelection = (
+  overrides: Partial<
+    Parameters<typeof projectResourceCreationAttributeSelectionView>[0]
+  > = {},
+) =>
+  projectResourceCreationAttributeSelectionView({
+    selectionContext,
+    allowed: {
+      status: 'ready',
+      values: [allowedValue(7, 'Rojo')],
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      continue: vi.fn(),
+      retry: vi.fn(),
+    },
+    selectionBuckets: createSelectionBuckets(),
+    onConfirmAllowedValue: vi.fn(),
+    onOmit: vi.fn(),
+    ...overrides,
+  })
+
+describe('projectResourceCreationAttributeSelectionView', () => {
+  it('maps paging and retained-value errors to exact selector states', () => {
+    const states = [
+      ['idle', false, false, [], { status: 'loading' }],
+      ['loading', false, false, [], { status: 'loading' }],
+      ['ready', true, true, [], { status: 'loading-more' }],
+      ['ready', true, false, [], { status: 'ready', exhausted: false }],
+      [
+        'ready',
+        false,
+        false,
+        [allowedValue(7, 'Rojo')],
+        { status: 'ready', exhausted: true },
+      ],
+      ['error', false, false, [], { status: 'initial-error' }],
+      [
+        'error',
+        false,
+        false,
+        [allowedValue(7, 'Rojo')],
+        { status: 'partial-error' },
+      ],
+    ] as const
+
+    states.forEach(
+      ([status, hasNextPage, isFetchingNextPage, values, loadState]) =>
+        expect(
+          projectSelection({
+            allowed: {
+              status,
+              values,
+              hasNextPage,
+              isFetchingNextPage,
+              continue: vi.fn(),
+              retry: vi.fn(),
+            },
+          }).loadState,
+        ).toEqual(loadState),
+    )
+  })
+
+  it('maps only allowed IDs and names, then confirms the current exact IDs', () => {
+    const onConfirmAllowedValue = vi.fn()
+    const onLoadMore = vi.fn()
+    const onRetry = vi.fn()
+    const view = projectSelection({
+      allowed: {
+        status: 'ready',
+        values: [allowedValue(7, 'Rojo')],
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        continue: onLoadMore,
+        retry: onRetry,
+      },
+      onConfirmAllowedValue,
+    })
+
+    expect(view.values).toEqual([{ key: '7', displayName: 'Rojo' }])
+    expect(view.onLoadMore).toBe(onLoadMore)
+    expect(view.onRetry).toBe(onRetry)
+    view.onConfirm(view.values[0])
+    view.onConfirm({ key: 'unknown', displayName: 'Desconocido' })
+    view.onLoadMore()
+    view.onRetry()
+    expect(onConfirmAllowedValue).toHaveBeenCalledExactlyOnceWith(
+      'assignment-2',
+      '7',
+    )
+    expect(onLoadMore).toHaveBeenCalledOnce()
+    expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it('exposes only the current own active confirmation, never suspended or omitted', () => {
+    const active = projectSelection({
+      selectionBuckets: {
+        active: { 'assignment-2': asAllowedValueId('7') },
+        suspended: {},
+        omitted: new Set(),
+      },
+    })
+    const suspended = projectSelection({
+      selectionBuckets: {
+        active: {},
+        suspended: { 'assignment-2': asAllowedValueId('7') },
+        omitted: new Set(),
+      },
+    })
+    const omitted = projectSelection({
+      selectionBuckets: {
+        active: {},
+        suspended: {},
+        omitted: new Set(['assignment-2']),
+      },
+    })
+    const inherited = projectSelection({
+      selectionBuckets: {
+        active: Object.create({ 'assignment-2': asAllowedValueId('7') }),
+        suspended: {},
+        omitted: new Set(),
+      },
+    })
+
+    expect(active.confirmedKey).toBe('7')
+    expect(suspended.confirmedKey).toBeNull()
+    expect(omitted.confirmedKey).toBeNull()
+    expect(inherited.confirmedKey).toBeNull()
+  })
+
+  it('closes omission over the current ID only when optional', () => {
+    const onOmit = vi.fn()
+    const optional = projectSelection({ onOmit })
+    optional.onOmit?.()
+    const required = projectSelection({
+      selectionContext: {
+        ...selectionContext,
+        assignment: {
+          ...selectionContext.assignment,
+          applicability: 'REQUIRED',
+        },
+        authoritativeAssignment: {
+          ...assignment,
+          aplicabilidadResuelta: 'REQUIRED',
+        },
+      },
+    })
+
+    expect(onOmit).toHaveBeenCalledExactlyOnceWith('assignment-2')
+    expect(required.onOmit).toBeUndefined()
   })
 })

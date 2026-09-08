@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,040–1,460 A+D remaining after PR 13D5d1a; 37 implementation child slices total (4 remaining: PR 13D5d1b, PR 13D5d2, PR 14, PR 15) plus planning-doc slicing. |
+| Estimated changed lines | 860–1,160 A+D remaining after PR 13D5d1b; 37 implementation child slices total (3 remaining: PR 13D5d2, PR 14, PR 15) plus planning-doc slicing. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d1a base projection → PR 13D5d1b selection projection → PR 13D5d2 surface integration → PR 14 review/create → PR 15 backend closure |
@@ -68,8 +68,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13D5b | Complete | `… → PR 13D4b → PR 13D5a → 📍 PR 13D5b` / PR 13D5a | Attribute orchestration hook; 260–390 A+D |
 | 13D5c | Complete | `… → PR 13D5a → PR 13D5b → 📍 PR 13D5c` / PR 13D5b | Flow actions and authoritative completion; 180–300 A+D |
 | 13D5d1a | Complete | `… → PR 13D5c → 📍 PR 13D5d1a` / PR 13D5c | Base pure presenter projection; 180–300 A+D |
-| 13D5d1b | Ready | `… → PR 13D5d1a → 📍 PR 13D5d1b` / PR 13D5d1a | Selection projection with allowed values/buckets/callbacks; 180–300 A+D |
-| 13D5d2 | Ready after PR 13D5d1b | `… → PR 13D5d1b → 📍 PR 13D5d2` / PR 13D5d1b | Surface authority/render integration; 280–395 A+D |
+| 13D5d1b | Complete | `… → PR 13D5d1a → 📍 PR 13D5d1b` / PR 13D5d1a | Selection projection with allowed values/buckets/callbacks; 180–300 A+D |
+| 13D5d2 | Ready | `… → PR 13D5d1b → 📍 PR 13D5d2` / PR 13D5d1b | Surface authority/render integration; 280–395 A+D |
 | 14 | Ready after PR 13D5d2 / unstarted | `… → PR 13D5d2 → 📍 PR 14` / PR 13D5d2 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
 | 15 | Ready after PR 14 / unstarted | `… → PR 13D5d2 → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
@@ -338,7 +338,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 ### PR 13D5d replan — base projection, selection projection, and surface
 
 - [x] **PR 13D5d1a:** Base pure presenter projection maps evaluation, current-step, definition, and optional omission authority without allowed-value/bucket/callback mapping.
-- [ ] **PR 13D5d1b:** Add selection projection for allowed values, buckets, and callbacks; 180–300 A+D.
+- [x] **PR 13D5d1b:** Add selection projection for allowed values, buckets, and callbacks; 180–300 A+D.
 - [ ] **PR 13D5d2:** Render the projected current presenter from the surface after D5d1b; 280–395 A+D. With an explicit non-null ownership fixture, cover one assignment at a time, selection confirmation, required/optional transitions, and terminal pending review. `INVALID` with assignments allows correction but blocks completion.
 
 ### PR 14 — Authoritative review and fingerprinted creation
