@@ -1154,3 +1154,13 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **TDD/evidence:** RED focused selector-state/architecture run failed because the module was absent; GREEN/TRIANGULATE passed 10/10, covering status mapping, Unit precedence, and flow wiring.
 - **Replan:** former PR 13D is bounded as 13D0 complete plus 13D1 context extraction, 13D2 definition/value driver, 13D3 reducer stages/Back chain, 13D4 presenter/rail/commands, and 13D5 integration. Seven slices remain including PR 14 and PR 15; forecast 1,960–2,735 A+D across 30 total child slices. Product decisions: `INVALID` with assignments permits correction but blocks completion; `OPTIONAL` `LIBRE` may be omitted; the counter is the current pending position.
 - **Rollback:** restore the three helpers to the flow and remove only the selector-state module/proof; no user behavior changed.
+
+---
+
+## PR 13D1 — context-stage extraction
+
+- **State:** completed; `ResourceCreationContextStage` owns only the existing mounted/hidden Clase, Familia, Tipo, and conditional Unidad selectors.
+- **TDD/evidence:** RED architecture proof failed with missing component `ENOENT`; GREEN/TRIANGULATE surface plus architecture tests passed 37/37, retaining keyboard/focus, confirmation/preference, label, pagination, retry, and pending-wall wiring.
+- **Verification:** `pnpm typecheck` passed; no attribute, review, or create UI was added.
+- **Workload/replan:** 243 A+D actual (260–390 planned); forecast is 1,717–2,492 A+D with six slices remaining. Product decisions remain: `INVALID` permits correction but blocks completion; optional `LIBRE` may be omitted; counter is current pending position.
+- **Next:** PR 13D2 is ready; rollback removes only the context component, surface wiring, and boundary proof.

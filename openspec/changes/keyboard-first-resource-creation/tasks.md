@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,960–2,735 A+D remaining; 30 implementation child slices total (7 remaining) plus planning-doc slicing |
+| Estimated changed lines | 1,717–2,492 A+D remaining; 30 implementation child slices total (6 remaining) plus planning-doc slicing. Conservative range: prior 1,960–2,735 less PR 13D1's 243 A+D actual (260–390 A+D range). |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2 definition/value driver → PR 13D3 reducer attribute/review stages → PR 13D4 attribute UI/rail/commands → PR 13D5 one-at-a-time integration → PR 14 review/create → PR 15 backend closure |
@@ -58,8 +58,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13C1b1b | Complete | `… → PR 13C1b1a → 📍 PR 13C1b1b` / PR 13C1b1a | Reconciliation-loop and retry proof; 80–140 A+D |
 | 13C1b2 | Complete | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
 | 13D0 | Complete | `… → PR 13C1b2 → 📍 PR 13D0` / PR 13C1b2 | Flow selector-state/helper extraction only; no user behavior; 322 A+D actual |
-| 13D1 | Ready | `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1` / PR 13D0 | Context-stage extraction from surface; 260–390 A+D |
-| 13D2 | Ready after PR 13D1 | `… → PR 13D0 → PR 13D1 → 📍 PR 13D2` / PR 13D1 | Attribute definition/allowed-values query driver; 260–390 A+D |
+| 13D1 | Complete | `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1` / PR 13D0 | Context-stage extraction from surface; 260–390 A+D |
+| 13D2 | Ready | `… → PR 13D0 → PR 13D1 → 📍 PR 13D2` / PR 13D1 | Attribute definition/allowed-values query driver; 260–390 A+D |
 | 13D3 | Ready after PR 13D2 | `… → PR 13D1 → PR 13D2 → 📍 PR 13D3` / PR 13D2 | Reducer-owned attributes/review-pending stages and complete BACK chain; 280–395 A+D |
 | 13D4 | Ready after PR 13D3 | `… → PR 13D2 → PR 13D3 → 📍 PR 13D4` / PR 13D3 | Attribute stage component, rail, and commands; 280–395 A+D |
 | 13D5 | Ready after PR 13D4 | `… → PR 13D3 → PR 13D4 → 📍 PR 13D5` / PR 13D4 | Surface/flow/allowed-knowledge integration, one-at-a-time behavior; 300–395 A+D |
@@ -260,9 +260,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 13D0. **Dependency diagram:** `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** monolithic surface context branches → feature-local context-stage composition with no attribute behavior enabled. **Budget:** 260–390 A+D. **Verify:** focused surface RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only the extracted context-stage composition and tests.
 
-- [ ] **RED:** Add failing RTL proof that hierarchy/Unidad context retains its current keyboard behavior through the extracted boundary. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Extract only the existing context-stage surface composition; do not render an attribute assignment, free-value editor, review, or create control. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Cover Class/Family/Type/Unit return and pending-wall behavior through the extracted component; run and record the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing architecture proof that hierarchy/Unidad context retains its current keyboard behavior through the extracted boundary. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Extract only the existing context-stage surface composition; do not render an attribute assignment, free-value editor, review, or create control. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Cover Class/Family/Type/Unit return and pending-wall behavior through the extracted component; run and record the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 13D2 — Attribute definition and allowed-values query driver
 

@@ -9,6 +9,13 @@ const surfaceSource = readFileSync(
   ),
   'utf8',
 )
+const contextStageSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/ResourceCreationContextStage.tsx',
+  ),
+  'utf8',
+)
 const modelSource = readFileSync(
   resolve(
     process.cwd(),
@@ -35,6 +42,7 @@ const creationRuntimeFiles = [
   'CreationStageRail.tsx',
   'ResourceCreationContractPending.tsx',
   'ResourceCreationShell.tsx',
+  'ResourceCreationContextStage.tsx',
   'StagedSearchSelector.tsx',
   'resourceCreation.attributeSequence.ts',
   'resourceCreation.dependentLoader.ts',
@@ -82,6 +90,16 @@ describe('resource creation safety wall', () => {
     expect(selectorStateSource).toContain('export const selectorLoadState')
     expect(selectorStateSource).toContain('export const unitSelectorLoadState')
     expect(selectorStateSource).toContain('export const useControllerState')
+  })
+
+  it('keeps staged selector wiring inside the context-stage boundary', () => {
+    expect(surfaceSource).toContain(
+      "import { ResourceCreationContextStage } from './ResourceCreationContextStage'",
+    )
+    expect(surfaceSource).toContain('<ResourceCreationContextStage')
+    expect(surfaceSource).not.toContain('<StagedSearchSelector')
+    expect(contextStageSource).toContain('<StagedSearchSelector')
+    expect(contextStageSource).toContain('hidden={flow.state.stage.kind !==')
   })
 
   it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {

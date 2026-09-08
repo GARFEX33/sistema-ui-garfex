@@ -8,9 +8,9 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CreationStageRail, type CreationRailStage } from './CreationStageRail'
 import { CreationCommandBar } from './CreationCommandBar'
+import { ResourceCreationContextStage } from './ResourceCreationContextStage'
 import { ResourceCreationContractPending } from './ResourceCreationContractPending'
 import { ResourceCreationShell } from './ResourceCreationShell'
-import { StagedSearchSelector } from './StagedSearchSelector'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
 import {
   createInitialHierarchySnapshotCapture,
@@ -18,15 +18,9 @@ import {
 } from './resourceCreation.model'
 import { useResourceCreationFlow } from './useResourceCreationFlow'
 import type {
-  ResourceContextClassItem,
-  ResourceContextFamilyItem,
-  ResourceContextTypeItem,
   ResourceCreationEvaluationOwnership,
   ResourceId,
 } from './resourcesMaster.types'
-
-const unitLabel = (unit: { nombre: string; simbolo?: string }) =>
-  unit.simbolo ? `${unit.nombre} (${unit.simbolo})` : unit.nombre
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
@@ -155,7 +149,7 @@ export function CrearRecursoSurface({
     }
   }, [isOpen])
 
-  const selectClass = (item: ResourceContextClassItem) => {
+  const selectClass = (item: (typeof flow.classes)[number]) => {
     const id = item.id
     flow.confirmClass(item)
     setRailStageOverride(null)
@@ -165,7 +159,7 @@ export function CrearRecursoSurface({
     setTypeId(null)
   }
 
-  const selectFamily = (item: ResourceContextFamilyItem) => {
+  const selectFamily = (item: (typeof flow.families)[number]) => {
     flow.confirmFamily(item)
     setRailStageOverride(null)
     if (familyId !== null && key(familyId) === key(item.id)) return
@@ -173,7 +167,7 @@ export function CrearRecursoSurface({
     setTypeId(null)
   }
 
-  const selectType = (item: ResourceContextTypeItem) => {
+  const selectType = (item: (typeof flow.types)[number]) => {
     const id = item.id
     flow.confirmType(item)
     setRailStageOverride(null)
@@ -200,10 +194,6 @@ export function CrearRecursoSurface({
       flow.state.draft.unitId !== null &&
       key(unit.unidadId) === key(flow.state.draft.unitId),
   )
-  const preferredUnitKey =
-    flow.units.find((unit) => unit.principal)?.unidadId ??
-    flow.units.find((unit) => unit.selected)?.unidadId ??
-    null
   const showUnitSelector = step === 1 && flow.state.stage.kind === 'unit'
   const confirmUnit = (candidate: (typeof flow.units)[number]) => {
     if (
@@ -334,81 +324,13 @@ export function CrearRecursoSurface({
           />
           <div className="resources-dialog-content">
             {step === 1 && (
-              <>
-                <div hidden={flow.state.stage.kind !== 'class'}>
-                  <StagedSearchSelector
-                    label="Clase"
-                    items={flow.classes}
-                    itemKey={(item) => flow.classKey(item.id)}
-                    itemName={(item) => item.nombre}
-                    loadState={flow.classLoadState}
-                    onConfirm={selectClass}
-                    onLoadMore={() => void flow.continueClasses()}
-                    onRetry={() => void flow.retryClasses()}
-                  />
-                </div>
-                <div hidden={flow.state.stage.kind !== 'family'}>
-                  <StagedSearchSelector
-                    label="Familia"
-                    items={flow.families}
-                    itemKey={(item) => flow.classKey(item.id)}
-                    itemName={(item) => item.nombre}
-                    confirmedKey={
-                      flow.state.draft.hierarchy.familyItem
-                        ? flow.classKey(
-                            flow.state.draft.hierarchy.familyItem.id,
-                          )
-                        : null
-                    }
-                    loadState={flow.familyLoadState}
-                    onConfirm={selectFamily}
-                    onLoadMore={() => void flow.continueFamilies()}
-                    onRetry={() => void flow.retryFamilies()}
-                  />
-                </div>
-
-                <div hidden={flow.state.stage.kind !== 'type'}>
-                  <StagedSearchSelector
-                    label="Tipo"
-                    items={flow.types}
-                    itemKey={(item) => flow.classKey(item.id)}
-                    itemName={(item) => item.nombre}
-                    confirmedKey={
-                      flow.state.draft.hierarchy.typeItem
-                        ? flow.classKey(flow.state.draft.hierarchy.typeItem.id)
-                        : null
-                    }
-                    loadState={flow.typeLoadState}
-                    onConfirm={selectType}
-                    onLoadMore={() => void flow.continueTypes()}
-                    onRetry={() => void flow.retryTypes()}
-                  />
-                </div>
-
-                {showUnitSelector && (
-                  <StagedSearchSelector
-                    label="Unidad natural"
-                    items={flow.units}
-                    itemKey={(item) => flow.classKey(item.unidadId)}
-                    itemName={unitLabel}
-                    renderItem={unitLabel}
-                    confirmedKey={
-                      flow.state.draft.unitId === null
-                        ? null
-                        : flow.classKey(flow.state.draft.unitId)
-                    }
-                    preferredActiveKey={
-                      preferredUnitKey === null
-                        ? null
-                        : flow.classKey(preferredUnitKey)
-                    }
-                    loadState={flow.unitLoadState}
-                    onConfirm={confirmUnit}
-                    onLoadMore={() => void flow.continueUnits()}
-                    onRetry={() => void flow.retryUnits()}
-                  />
-                )}
-              </>
+              <ResourceCreationContextStage
+                flow={flow}
+                onConfirmClass={selectClass}
+                onConfirmFamily={selectFamily}
+                onConfirmType={selectType}
+                onConfirmUnit={confirmUnit}
+              />
             )}
 
             {step === 'contract-pending' && (
