@@ -138,7 +138,15 @@ export type CreationStage =
   | { kind: 'family' }
   | { kind: 'type' }
   | { kind: 'unit' }
-  | { kind: 'contract-pending'; blockedCapability: 'attributes-v1' }
+  | { kind: 'attributes' }
+  | { kind: 'review-pending' }
+
+export type CreationNavigationStage =
+  | { kind: 'class' }
+  | { kind: 'family' }
+  | { kind: 'type' }
+  | { kind: 'unit' }
+  | { kind: 'attributes' }
 
 export type CreationDraft = Readonly<{
   hierarchy: InitialResourceHierarchySnapshot
@@ -178,7 +186,8 @@ export type CreationEvent =
       assignmentId: AssignmentKey
       allowedValueId: AllowedValueId
     }
-  | { type: 'NAVIGATE_TO_STAGE'; stage: CreationStage }
+  | { type: 'COMPLETE_ATTRIBUTES' }
+  | { type: 'NAVIGATE_TO_STAGE'; stage: CreationNavigationStage }
   | { type: 'BACK' }
 
 const emptyDraft = (): CreationDraft => ({
@@ -280,11 +289,40 @@ const hasSameId = (
   next: { id: ResourceId },
 ) => current !== null && resourceIdKey(current.id) === resourceIdKey(next.id)
 
+const hasSelection = <TSelection>(
+  selections: Readonly<Record<AssignmentKey, TSelection>>,
+  assignmentId: AssignmentKey,
+) => Object.prototype.hasOwnProperty.call(selections, assignmentId)
+
+export const isResourceCreationCompletionAuthoritative = (
+  evaluation: ResourceCreationEvaluation | null,
+  selectionBuckets: SelectionBuckets<AllowedValueId>,
+) => {
+  if (evaluation?.status !== 'VALID' || !evaluation.valid) return false
+
+  return evaluation.asignaciones.every((assignment) => {
+    if (
+      assignment.aplicabilidadResuelta !== 'REQUIRED' &&
+      assignment.aplicabilidadResuelta !== 'OPTIONAL'
+    )
+      return true
+
+    if (hasSelection(selectionBuckets.active, assignment.asignacionAtributoId))
+      return true
+
+    return (
+      assignment.aplicabilidadResuelta === 'OPTIONAL' &&
+      selectionBuckets.omitted.has(assignment.asignacionAtributoId)
+    )
+  })
+}
+
 const backStage = (stage: CreationStage): CreationStage => {
-  if (stage.kind === 'family') return { kind: 'class' }
-  if (stage.kind === 'type') return { kind: 'family' }
+  if (stage.kind === 'review-pending') return { kind: 'attributes' }
+  if (stage.kind === 'attributes') return { kind: 'unit' }
   if (stage.kind === 'unit') return { kind: 'type' }
-  if (stage.kind === 'contract-pending') return { kind: 'unit' }
+  if (stage.kind === 'type') return { kind: 'family' }
+  if (stage.kind === 'family') return { kind: 'class' }
   return stage
 }
 
@@ -306,6 +344,14 @@ export const resourceCreationReducer = (
   if (event.type === 'NAVIGATE_TO_STAGE')
     return { ...state, stage: event.stage }
   if (event.type === 'BACK') return { ...state, stage: backStage(state.stage) }
+  if (event.type === 'COMPLETE_ATTRIBUTES')
+    return state.stage.kind === 'attributes' &&
+      isResourceCreationCompletionAuthoritative(
+        draft.authoritativeEvaluation,
+        draft.selectionBuckets,
+      )
+      ? { ...state, stage: { kind: 'review-pending' } }
+      : state
 
   if (event.type === 'CONFIRM_CLASS') {
     const nextState = hasSameId(draft.hierarchy.classItem, event.item)
@@ -324,10 +370,7 @@ export const resourceCreationReducer = (
       resourceIdKey(draft.unitId) === resourceIdKey(event.unitId)
         ? state
         : invalidateDraft(state, { ...draft, unitId: event.unitId })
-    return {
-      ...nextState,
-      stage: { kind: 'contract-pending', blockedCapability: 'attributes-v1' },
-    }
+    return { ...nextState, stage: { kind: 'attributes' } }
   }
 
   if (event.type === 'CONFIRM_ALLOWED_VALUE_SELECTION')

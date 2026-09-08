@@ -259,10 +259,7 @@ it('resolves only the current Tipo policy candidates and confirms Unidad explici
 
   await act(async () => result.current.confirmUnit(result.current.units[0]!))
   expect(result.current.state.draft.unitId).toBe('KG')
-  expect(result.current.state.stage).toEqual({
-    kind: 'contract-pending',
-    blockedCapability: 'attributes-v1',
-  })
+  expect(result.current.state.stage).toEqual({ kind: 'attributes' })
 })
 
 it('keeps resolved Unidad candidates retryable without implicitly confirming one', async () => {

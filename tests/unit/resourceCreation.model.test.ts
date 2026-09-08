@@ -7,6 +7,7 @@ import {
   resourceCreationReducer,
   resourceIdKey,
 } from '../../src/features/resources-master/resourceCreation.model'
+import type { ResourceCreationEvaluation } from '../../src/features/resources-master/resourcesMaster.types'
 
 const classItem = {
   id: 'class-1',
@@ -290,84 +291,194 @@ it('increments the open generation for every OPEN without mutating the new draft
   expect(reopened).toMatchObject({ openGeneration: 2, draft: { revision: 0 } })
 })
 
-describe('resource creation contract-pending safety wall', () => {
-  it('ends an explicit Unit confirmation at contract-pending with no lease', () => {
-    const state = resourceCreationReducer(open(), {
-      type: 'CONFIRM_UNIT',
-      unitId: 'unit-1',
-    })
+const evaluation = (
+  assignments: ResourceCreationEvaluation['asignaciones'],
+  overrides: Partial<ResourceCreationEvaluation> = {},
+): ResourceCreationEvaluation => ({
+  status: 'VALID',
+  valid: true,
+  catalogFingerprint: 'catalog-1',
+  nombre: null,
+  identificadorTecnico: null,
+  asignaciones: assignments,
+  faltantesRequeridos: [],
+  seleccionesInvalidas: [],
+  valoresNormalizados: [],
+  issues: [],
+  ...overrides,
+})
 
-    expect(state.stage).toEqual({
-      kind: 'contract-pending',
-      blockedCapability: 'attributes-v1',
-    })
+const assignment = (
+  asignacionAtributoId: string,
+  aplicabilidadResuelta: 'REQUIRED' | 'OPTIONAL' = 'REQUIRED',
+) => ({
+  asignacionAtributoId,
+  definicionAtributoId: `${asignacionAtributoId}-definition`,
+  aplicabilidadResuelta,
+  participaIdentidad: false,
+  orden: 0,
+  effectiveReasons: [],
+})
+
+const attributes = () =>
+  resourceCreationReducer(open(), { type: 'CONFIRM_UNIT', unitId: 'unit-1' })
+
+const withEvaluation = (
+  state: ReturnType<typeof attributes>,
+  authoritativeEvaluation: ResourceCreationEvaluation,
+  selectionBuckets = state.draft.selectionBuckets,
+) => ({
+  ...state,
+  draft: {
+    ...state.draft,
+    selectionBuckets,
+    authoritativeEvaluation,
+    catalogFingerprint: authoritativeEvaluation.catalogFingerprint,
+  },
+})
+
+describe('resource creation attribute and review-pending stages', () => {
+  it('enters attributes after explicit Unit confirmation with no cursor state', () => {
+    const state = attributes()
+
+    expect(state.stage).toEqual({ kind: 'attributes' })
     expect(state.draft).toMatchObject({
       unitId: 'unit-1',
       authoritativeEvaluation: null,
       catalogFingerprint: null,
     })
+    expect(state).not.toHaveProperty('assignmentCursor')
+    expect(state.draft).not.toHaveProperty('assignmentCursor')
   })
 
-  it('keeps same-ID Unit confirmation non-mutating and revises a replacement', () => {
-    const first = resourceCreationReducer(open(), {
-      type: 'CONFIRM_UNIT',
-      unitId: 'unit-1',
-    })
-    const same = resourceCreationReducer(first, {
-      type: 'CONFIRM_UNIT',
-      unitId: 'unit-1',
-    })
-    const replacement = resourceCreationReducer(same, {
-      type: 'CONFIRM_UNIT',
-      unitId: 'unit-2',
-    })
+  it('enters review-pending only for a VALID evaluation with every required selection and optional omission resolved', () => {
+    const state = withEvaluation(
+      attributes(),
+      evaluation([assignment('required'), assignment('optional', 'OPTIONAL')]),
+      {
+        active: { required: 'value-required' },
+        suspended: {},
+        omitted: new Set(['optional']),
+      },
+    )
 
-    expect(same.draft).toBe(first.draft)
-    expect(same.draft).toMatchObject({
-      authoritativeEvaluation: null,
-      catalogFingerprint: null,
-    })
-    expect(replacement.draft).toMatchObject({
-      unitId: 'unit-2',
-      authoritativeEvaluation: null,
-      catalogFingerprint: null,
-      revision: first.draft.revision + 1,
-    })
-    expect(replacement.stage).toEqual({
-      kind: 'contract-pending',
-      blockedCapability: 'attributes-v1',
-    })
+    expect(
+      resourceCreationReducer(state, { type: 'COMPLETE_ATTRIBUTES' }).stage,
+    ).toEqual({ kind: 'review-pending' })
   })
 
-  it('clears every selection bucket with hierarchy changes and preserves them for a Unit change', () => {
+  it.each([
+    [
+      'INVALID evaluations with assignments',
+      evaluation([assignment('required')], { status: 'INVALID', valid: false }),
+      {
+        active: { required: 'value-required' },
+        suspended: {},
+        omitted: new Set(),
+      },
+    ],
+    [
+      'INCOMPLETE evaluations',
+      evaluation([assignment('required')], {
+        status: 'INCOMPLETE',
+        valid: false,
+      }),
+      {
+        active: { required: 'value-required' },
+        suspended: {},
+        omitted: new Set(),
+      },
+    ],
+    [
+      'missing required selections',
+      evaluation([assignment('required')]),
+      { active: {}, suspended: {}, omitted: new Set() },
+    ],
+    [
+      'suspended selections',
+      evaluation([assignment('required')]),
+      {
+        active: {},
+        suspended: { required: 'value-required' },
+        omitted: new Set(),
+      },
+    ],
+    [
+      'required omissions',
+      evaluation([assignment('required')]),
+      { active: {}, suspended: {}, omitted: new Set(['required']) },
+    ],
+  ])(
+    'keeps %s in attributes',
+    (_, authoritativeEvaluation, selectionBuckets) => {
+      const state = withEvaluation(
+        attributes(),
+        authoritativeEvaluation,
+        selectionBuckets,
+      )
+
+      expect(
+        resourceCreationReducer(state, { type: 'COMPLETE_ATTRIBUTES' }),
+      ).toBe(state)
+    },
+  )
+
+  it('clears authority on a selection mutation so completion stays blocked until reevaluation', () => {
+    const state = withEvaluation(
+      attributes(),
+      evaluation([assignment('required')]),
+      { active: { required: 'value-old' }, suspended: {}, omitted: new Set() },
+    )
+    const changed = resourceCreationReducer(state, {
+      type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+      assignmentId: 'required',
+      allowedValueId: 'value-new',
+    })
+
+    expect(changed.draft.authoritativeEvaluation).toBeNull()
+    expect(changed.draft.catalogFingerprint).toBeNull()
+    expect(
+      resourceCreationReducer(changed, { type: 'COMPLETE_ATTRIBUTES' }),
+    ).toBe(changed)
+  })
+
+  it('backs from review-pending through attributes to Class without changing the draft identity', () => {
+    const review = resourceCreationReducer(
+      withEvaluation(attributes(), evaluation([assignment('required')]), {
+        active: { required: 'value-required' },
+        suspended: {},
+        omitted: new Set(),
+      }),
+      { type: 'COMPLETE_ATTRIBUTES' },
+    )
+    const draft = review.draft
+    const stages = ['attributes', 'unit', 'type', 'family', 'class']
+
+    stages.reduce((state, kind) => {
+      const next = resourceCreationReducer(state, { type: 'BACK' })
+      expect(next.stage).toEqual({ kind })
+      expect(next.draft).toBe(draft)
+      return next
+    }, review)
+  })
+
+  it('preserves selection buckets for a changed Unit while it returns to attributes', () => {
     const buckets = {
-      active: { 'assignment-active': undefined as never },
-      suspended: { 'assignment-suspended': undefined as never },
+      active: { 'assignment-active': 'value-active' },
+      suspended: { 'assignment-suspended': 'value-suspended' },
       omitted: new Set(['assignment-omitted']),
     }
     const before = {
       ...populatedDraft(),
-      draft: {
-        ...populatedDraft().draft,
-        selectionBuckets: buckets,
-      },
+      draft: { ...populatedDraft().draft, selectionBuckets: buckets },
     }
-    const hierarchyChanged = resourceCreationReducer(before, {
-      type: 'CONFIRM_CLASS',
-      item: { ...classItem, id: 'class-2' },
-    })
     const unitChanged = resourceCreationReducer(before, {
       type: 'CONFIRM_UNIT',
       unitId: 'unit-2',
     })
 
-    expect(hierarchyChanged.draft).toMatchObject({
-      selectionBuckets: { active: {}, suspended: {}, omitted: new Set() },
-      authoritativeEvaluation: null,
-      catalogFingerprint: null,
-      revision: before.draft.revision + 1,
-    })
     expect(unitChanged.draft.selectionBuckets).toBe(buckets)
     expect(unitChanged.draft.revision).toBe(before.draft.revision + 1)
+    expect(unitChanged.stage).toEqual({ kind: 'attributes' })
   })
 })

@@ -117,7 +117,7 @@ describe('resource creation safety wall', () => {
     expect(contextStageSource).toContain('hidden={flow.state.stage.kind !==')
   })
 
-  it('keeps Unidad at contract-pending without a legacy attribute renderer', () => {
+  it('keeps the temporary UI contract wall distinct from reducer-owned stages', () => {
     const continuation = surfaceSource.match(
       /const confirmUnit = \([\s\S]*?\n\s+const currentRailStage/,
     )?.[0]
@@ -125,6 +125,9 @@ describe('resource creation safety wall', () => {
     expect(continuation).toContain("setStep('contract-pending')")
     expect(continuation).not.toContain('loadStep2')
     expect(surfaceSource).not.toContain('{step === 2 && (')
+    expect(modelSource).not.toContain("kind: 'contract-pending'")
+    expect(modelSource).toContain("kind: 'attributes'")
+    expect(modelSource).toContain("kind: 'review-pending'")
   })
 
   it('keeps legacy attribute draft mechanics out of the current reducer boundary', () => {

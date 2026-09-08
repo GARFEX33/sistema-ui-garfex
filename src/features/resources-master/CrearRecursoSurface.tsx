@@ -113,11 +113,12 @@ export function CrearRecursoSurface({
       type: 'Tipo',
       unit: 'Unidad natural',
     }
-    const label =
-      flow.state.stage.kind === 'contract-pending'
-        ? null
-        : labelByStage[flow.state.stage.kind]
-    if (!label) return
+    if (
+      flow.state.stage.kind === 'attributes' ||
+      flow.state.stage.kind === 'review-pending'
+    )
+      return
+    const label = labelByStage[flow.state.stage.kind]
     dialogRef.current
       ?.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
       ?.focus()

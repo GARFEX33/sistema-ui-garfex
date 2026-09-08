@@ -1175,3 +1175,11 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Workload:** 31 child slices total, six remaining, forecast 1,660–2,300 A+D; rollback removes only this hook, focused proof, guards, and record.
 ## PR 13D2b — allowed-values paging driver
 - **Complete:** stale-safe selection paging filters/dedupes backend order, fails closed on missing cursors, and supports retry; RED missing-hook import, GREEN focused 6/6. 31 child slices total, five remaining; forecast 1,440–1,950 A+D. Rollback is this driver, proof, inventory, and record.
+
+---
+
+## PR 13D3 — reducer-owned attribute stages
+
+- **Complete:** Unidad enters `attributes`; guarded completion reaches `review-pending` only for a current VALID evaluation with every required/optional assignment resolved.
+- **TDD:** focused RED failed 11 assertions; GREEN passed 48/48 for INVALID/INCOMPLETE, missing, suspended, required omission, invalidation, cursor absence, and the full Back chain.
+- **Boundary:** UI retains its temporary contract wall until D5; D4 is ready, four slices remain, forecast 1,160–1,555 A+D.
