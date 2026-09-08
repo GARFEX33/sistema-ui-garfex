@@ -944,3 +944,30 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **TDD:** the focused malformed-ID boundary test RED-failed before the one-line schema GREEN correction; adapter malformed-ID coverage passed.
 - **Verification:** focused 27/27; full `pnpm test` 38 files / 436 tests; typecheck, lint, format check, and `git diff --check` passed.
 - **Workload:** candidate remains exactly 399 A+D; no task checkbox, commit, review, or lifecycle action changed.
+## PR 12B — budget stop
+| State | Evidence |
+| --- | --- |
+| Blocked | Native `openspec` status was `apply: ready`; repo-local allowed roots were safe; strict-TDD safety net passed 32/32; RED failed 3 evaluator parser/adapter assertions; GREEN passed API 30/30 plus typecheck; the exact parser/adapter trial reached 391 source/test A+D before progress and was reverted rather than leave an over-budget, unformatted work unit. |
+- **Required decision:** authorize a cohesive PR 12B split before a fresh apply; no checkbox was changed because the aggregate PR 12B rows are not persistably complete.
+- `- [ ] **RED:** Add failing exact-fixture tests for \`INCOMPLETE | VALID | INVALID\`, \`valid\` consistency, nullable generated identity, resolved assignments, 13 issue codes, fingerprint, and malformed/unknown evaluation rejection. <!-- sdd-owner: implementation -->`
+- `- [ ] **GREEN:** Add only the exact evaluation Zod schema/parser and its \`ResourceOperation\`, \`ResourceTransport\`, and \`ResourcesMasterApi\` query-adapter mapping; do not adopt evaluation into the model or add create behavior. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Prove each status, absent selected value, unknown disposition/issue rejection, and transport rejection fail closed through the focused command; retain no lease/create/UI path. <!-- sdd-owner: implementation -->`
+
+---
+## PR 12B1 — Exact evaluation response types and parser
+
+- **Status / action context:** consumed authoritative native OpenSpec status `apply: ready`, `nextRecommended: apply`, and repo-local workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`; all edits stayed in supplied roots with no warnings.
+- **Boundary / workload:** auto-chain feature-branch-chain `… → PR 12A → 📍 PR 12B1 → PR 12B2 → PR 12C`; final work-unit diff is recorded below 399 A+D. No request input, API method, operation, transport, factory mapping, lease, create, or UI was added.
+- **Completed / persisted:** the three PR 12B1 implementation rows are visibly `[x]` in `tasks.md`; the new PR 12B2 rows remain unchecked. Parent-owned lifecycle rows were untouched.
+- **Files:** `resourcesMaster.types.ts`, `resourcesMaster.api.ts`, `resourcesMasterApi.test.ts`, `tasks.md`, and this cumulative progress record.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| PR 12B1 parser | API/architecture 32/32 | 5 parser tests failed because the export was absent | API 32/32 plus typecheck | All statuses, 13 codes, strict nested/top-level rejection, primitives, nullable identity, and validity relation; Prettier rerun with API/architecture 37/37 |
+
+- **Verification:** focused API/architecture 37/37; `pnpm test` 38 files / 441 tests; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- **Deviation / rollback:** none; rollback removes only the public response types, parser schemas, and exact fixtures. Runtime is N/A because this is a pure parser.
+- **Retained blocker evidence:** the preceding PR 12B aggregate-trial budget-stop record remains intact; B1 is its one authorized cohesive split, while B2 alone owns the deferred query adapter.
+- **Remaining:** `- [ ] **RED:** Add failing exact query-adapter invocation and transport-rejection tests. <!-- sdd-owner: implementation -->`; `- [ ] **GREEN:** Add only the published evaluation query input, API method, operation, transport, and factory mapping through the PR 12B1 parser. <!-- sdd-owner: implementation -->`; `- [ ] **TRIANGULATE/REFACTOR:** Prove supplied request fields, malformed response rejection, and transport rejection through the focused command. <!-- sdd-owner: implementation -->`

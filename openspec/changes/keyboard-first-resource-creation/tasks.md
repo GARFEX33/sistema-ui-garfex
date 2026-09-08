@@ -7,7 +7,7 @@
 | Estimated changed lines | 1,590–2,230 A+D remaining; 17 implementation child slices total (6 remaining) plus planning-doc slicing |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B evaluation adapter → PR 12C stale-safe evaluation lease → PR 13 attributes/reconciliation → PR 14 review/create → PR 15 backend closure |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13 attributes/reconciliation → PR 14 review/create → PR 15 backend closure |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
 
@@ -47,8 +47,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 10 | Now | `… → PR 9 → 📍 PR 10` / PR 9 | Pure active/suspended buckets by assignment ID; 230–330 A+D |
 | 11 | Now | `… → PR 10 → 📍 PR 11` / PR 10 | Browser, axe, isolation, and architecture closure; 300–395 A+D |
 | 12A | Ready / unstarted | `… → PR 11 → 📍 PR 12A` / PR 11 | Exact definition/allowed-values Zod schemas, parsers, and query adapters; 240–360 A+D |
-| 12B | Ready after PR 12A / unstarted | `… → PR 11 → PR 12A → 📍 PR 12B` / PR 12A | Exact evaluation Zod schema, parser, and query adapter; 250–390 A+D |
-| 12C | Ready after PR 12B / unstarted | `… → PR 11 → PR 12A → PR 12B → 📍 PR 12C` / PR 12B | Pure stale-safe evaluation lease and model/architecture proof; 200–320 A+D |
+| 12B1 | Ready after PR 12A / unstarted | `… → PR 11 → PR 12A → 📍 PR 12B1` / PR 12A | Exact evaluation response types and Zod parser; 250–390 A+D |
+| 12B2 | Ready after PR 12B1 / unstarted | `… → PR 12A → PR 12B1 → 📍 PR 12B2` / PR 12B1 | Evaluation query-adapter mapping only; 120–220 A+D |
+| 12C | Ready after PR 12B2 / unstarted | `… → PR 12A → PR 12B1 → PR 12B2 → 📍 PR 12C` / PR 12B2 | Pure stale-safe evaluation lease and model/architecture proof; 200–320 A+D |
 | 13 | Ready after PR 12C / unstarted | `… → PR 12A → PR 12B → PR 12C → 📍 PR 13` / PR 12C | `modoCaptura: SELECCION` attributes and authoritative reconciliation; 320–395 A+D |
 | 14 | Ready after PR 13 / unstarted | `… → PR 13 → 📍 PR 14` / PR 13 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
 | 15 | Ready after PR 14 / unstarted | `… → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
@@ -155,17 +156,25 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 - [x] **GREEN:** Add only definition and allowed-values Zod schemas/parsers plus their `ResourceOperation`, `ResourceTransport`, and `ResourcesMasterApi` query-adapter mappings; do not add evaluator or create behavior. <!-- sdd-owner: implementation -->
 - [x] **TRIANGULATE/REFACTOR:** Prove optional-field absence, each typed allowed value, pagination continuation, and malformed transport rejection through the focused command; retain no evaluator/create test or production path. <!-- sdd-owner: implementation -->
 
-### PR 12B — Exact evaluation schema, parser, and query adapter
+### PR 12B1 — Exact evaluation response types and parser
 
-**Depends on:** PR 12A. **Dependency diagram:** `… → PR 11 → PR 12A → 📍 PR 12B`. **Start → finish:** validated definition/value query boundary → exact evaluated-creation result is available behind a validated query adapter, without adopting it into UI state. **Concrete frontend targets:** `src/features/resources-master/resourcesMaster.types.ts`, `src/features/resources-master/resourcesMaster.api.ts`, and `tests/unit/resourcesMasterApi.test.ts`. **Budget:** 250–390 A+D. **Verify:** `pnpm exec vitest run tests/unit/resourcesMasterApi.test.ts && pnpm typecheck`. **Runtime:** N/A — pure parser/query-adapter contract consumed by PR 12C. **Rollback:** remove only the evaluation schema, parser, query adapter mapping, and tests. **Out of scope:** lease/model adoption, create input/result parsing, mutation calls, and UI; do not add create in PR 12B.
+**Depends on:** PR 12A. **Dependency diagram:** `… → PR 11 → PR 12A → 📍 PR 12B1`. **Start → finish:** validated definition/value boundary → exact evaluated-creation response types and parser are available without any request input, API method, operation, transport, factory, lease, model, create, or UI adoption. **Targets:** `resourcesMaster.types.ts`, `resourcesMaster.api.ts`, `resourcesMasterApi.test.ts`. **Budget:** 250–390 A+D. **Verify:** `pnpm exec vitest run tests/unit/resourcesMasterApi.test.ts && pnpm typecheck`. **Runtime:** N/A — pure parser consumed by PR 12B2. **Rollback:** remove only response types/parser/tests.
 
-- [ ] **RED:** Add failing exact-fixture tests for `INCOMPLETE | VALID | INVALID`, `valid` consistency, nullable generated identity, resolved assignments, 13 issue codes, fingerprint, and malformed/unknown evaluation rejection. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add only the exact evaluation Zod schema/parser and its `ResourceOperation`, `ResourceTransport`, and `ResourcesMasterApi` query-adapter mapping; do not adopt evaluation into the model or add create behavior. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove each status, absent selected value, unknown disposition/issue rejection, and transport rejection fail closed through the focused command; retain no lease/create/UI path. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing exact-fixture tests for `INCOMPLETE | VALID | INVALID`, `valid` consistency, nullable generated identity, resolved assignments, 13 issue codes, fingerprint, and malformed/unknown evaluation rejection. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Add only public exact evaluation response types and the Zod parser; do not add request input, API method, operation, transport, factory, lease, create, or UI behavior. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove each status, absent selected value, unknown issue/nested/top-level rejection, normalized primitives, and `valid`/status consistency fail closed through the focused command. <!-- sdd-owner: implementation -->
+
+### PR 12B2 — Evaluation query adapter
+
+**Depends on:** PR 12B1. **Dependency diagram:** `… → PR 12A → PR 12B1 → 📍 PR 12B2`. **Start → finish:** validated evaluation parser → the query input, API method, `ResourceOperation`, `ResourceTransport`, and factory mapping are added without lease/model/create/UI adoption. **Budget:** 120–220 A+D. **Rollback:** remove only query-adapter mapping/tests.
+
+- [ ] **RED:** Add failing exact query-adapter invocation and transport-rejection tests. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only the published evaluation query input, API method, operation, transport, and factory mapping through the PR 12B1 parser. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove supplied request fields, malformed response rejection, and transport rejection through the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 12C — Pure stale-safe authoritative evaluation lease
 
-**Depends on:** PR 12B. **Dependency diagram:** `… → PR 11 → PR 12A → PR 12B → 📍 PR 12C`. **Start → finish:** parsed evaluation facts without local adoption → a feature-local lease accepts only current token, hierarchy/Unidad context, and draft revision, clearing stale facts before any future review. **Concrete frontend targets:** new `src/features/resources-master/resourceCreation.evaluationLease.ts`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/resourceCreation.evaluationLease.test.ts`, `tests/unit/resourceCreation.model.test.ts`, and `tests/architecture/resourceCreationBoundaries.test.ts`. **Budget:** 200–320 A+D. **Verify:** `pnpm exec vitest run tests/unit/evaluationLease.test.ts tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** N/A — pure lease consumed by PR 13/14. **Rollback:** remove only the lease module, model seam, tests, and architecture guard. **Out of scope:** create input/result parsing, mutation calls, review/create UI, and any create operation; do not add create in PR 12C.
+**Depends on:** PR 12B2. **Dependency diagram:** `… → PR 11 → PR 12A → PR 12B1 → PR 12B2 → 📍 PR 12C`. **Start → finish:** parsed evaluation facts without local adoption → a feature-local lease accepts only current token, hierarchy/Unidad context, and draft revision, clearing stale facts before any future review. **Concrete frontend targets:** new `src/features/resources-master/resourceCreation.evaluationLease.ts`, `src/features/resources-master/resourceCreation.model.ts`, `tests/unit/resourceCreation.evaluationLease.test.ts`, `tests/unit/resourceCreation.model.test.ts`, and `tests/architecture/resourceCreationBoundaries.test.ts`. **Budget:** 200–320 A+D. **Verify:** `pnpm exec vitest run tests/unit/evaluationLease.test.ts tests/unit/resourceCreation.model.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** N/A — pure lease consumed by PR 13/14. **Rollback:** remove only the lease module, model seam, tests, and architecture guard. **Out of scope:** create input/result parsing, mutation calls, review/create UI, and any create operation; do not add create in PR 12C.
 
 - [ ] **RED:** Add failing lease/model/architecture tests for current-token adoption, stale or out-of-order token rejection, hierarchy/Unidad context mismatch, draft-revision mismatch, and no create path before PR 14. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Implement the pure feature-local `evaluationLease` and minimum model seam so only a current validated PR 12B evaluation can be adopted and every hierarchy, Unidad, or draft mutation clears the lease/fingerprint. <!-- sdd-owner: implementation -->

@@ -306,3 +306,64 @@ export interface ResourceAttributeOptionListInput
   extends ResourceContextListInput {
   definicionAtributoId: ResourceId
 }
+
+export type ResourceCreationEvaluationStatus =
+  | 'INCOMPLETE'
+  | 'VALID'
+  | 'INVALID'
+
+export type ResourceResolvedAssignmentApplicability =
+  | 'REQUIRED'
+  | 'OPTIONAL'
+  | 'FORBIDDEN'
+  | 'NOT_APPLICABLE'
+
+export interface ResourceResolvedCreationAssignment {
+  asignacionAtributoId: string
+  definicionAtributoId: string
+  aplicabilidadResuelta: ResourceResolvedAssignmentApplicability
+  participaIdentidad: boolean
+  orden: number
+  effectiveReasons: string[]
+  selectedValueId?: string
+}
+
+export interface ResourceNormalizedCreationValue {
+  atributoRecursoId: string
+  valor: string | number | boolean
+  opcionAtributoId?: string
+}
+
+export type ResourceCreationEvaluationIssueCode =
+  | 'HIERARCHY_INVALID'
+  | 'UNIT_INVALID'
+  | 'OWNERSHIP_INVALID'
+  | 'ASSIGNMENT_UNKNOWN'
+  | 'ASSIGNMENT_DUPLICATE'
+  | 'ALLOWED_VALUE_UNKNOWN'
+  | 'ALLOWED_VALUE_FOREIGN'
+  | 'ALLOWED_VALUE_INACTIVE'
+  | 'SELECTION_NON_EFFECTIVE'
+  | 'SELECTION_FORBIDDEN'
+  | 'SELECTION_NOT_APPLICABLE'
+  | 'UNSUPPORTED_FREE_CAPTURE'
+  | 'IDENTITY_CONFLICT'
+
+export interface ResourceCreationEvaluationIssue {
+  code: ResourceCreationEvaluationIssueCode
+  message: string
+  asignacionAtributoId?: string
+}
+
+export interface ResourceCreationEvaluation {
+  status: ResourceCreationEvaluationStatus
+  valid: boolean
+  catalogFingerprint: string
+  nombre: string | null
+  identificadorTecnico: string | null
+  asignaciones: ResourceResolvedCreationAssignment[]
+  faltantesRequeridos: string[]
+  seleccionesInvalidas: string[]
+  valoresNormalizados: ResourceNormalizedCreationValue[]
+  issues: ResourceCreationEvaluationIssue[]
+}

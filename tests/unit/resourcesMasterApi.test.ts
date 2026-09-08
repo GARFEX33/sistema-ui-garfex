@@ -10,6 +10,7 @@ import {
   parseContextTypesPage,
   parseResourceChangeResult,
   parseResourceCreated,
+  parseResourceCreationEvaluation,
   parseResourceDetail,
   parseResourceListPage,
   parseUnitPoliciesPage,
@@ -948,5 +949,182 @@ describe('resources master API boundary', () => {
         definicionAtributoId: undefined as never,
       }),
     ).rejects.toThrow('Invalid resources master response')
+  })
+
+  const evaluationAssignment = (extra: Record<string, unknown> = {}) => ({
+    asignacionAtributoId: 'assignment-1',
+    definicionAtributoId: 'definition-1',
+    aplicabilidadResuelta: 'REQUIRED',
+    participaIdentidad: true,
+    orden: 1,
+    effectiveReasons: ['TYPE_OVERRIDE'],
+    ...extra,
+  })
+  const normalizedValue = (extra: Record<string, unknown> = {}) => ({
+    atributoRecursoId: 'assignment-1',
+    valor: 'rojo',
+    ...extra,
+  })
+  const evaluationIssue = (extra: Record<string, unknown> = {}) => ({
+    code: 'HIERARCHY_INVALID',
+    message: 'La jerarquía no es válida.',
+    asignacionAtributoId: 'assignment-1',
+    ...extra,
+  })
+  const evaluation = (extra: Record<string, unknown> = {}) => ({
+    status: 'VALID',
+    valid: true,
+    catalogFingerprint: 'catalog-v1',
+    nombre: 'Cable rojo',
+    identificadorTecnico: 'CABLE-ROJO',
+    asignaciones: [evaluationAssignment({ selectedValueId: 'allowed-1' })],
+    faltantesRequeridos: [],
+    seleccionesInvalidas: [],
+    valoresNormalizados: [normalizedValue()],
+    issues: [evaluationIssue()],
+    ...extra,
+  })
+
+  it('parses exact evaluation fixtures for each published status', () => {
+    expect(parseResourceCreationEvaluation(evaluation())).toEqual(evaluation())
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          status: 'INCOMPLETE',
+          valid: false,
+          nombre: null,
+          identificadorTecnico: null,
+          asignaciones: [
+            evaluationAssignment({ aplicabilidadResuelta: 'OPTIONAL' }),
+          ],
+        }),
+      ),
+    ).toMatchObject({ status: 'INCOMPLETE', valid: false, nombre: null })
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          status: 'INVALID',
+          valid: false,
+          asignaciones: [
+            evaluationAssignment({ aplicabilidadResuelta: 'NOT_APPLICABLE' }),
+          ],
+        }),
+      ),
+    ).toMatchObject({ status: 'INVALID', valid: false })
+  })
+
+  it('fails closed for inconsistent status validity and malformed top-level fields', () => {
+    for (const malformed of [
+      evaluation({ valid: false }),
+      evaluation({ status: 'INCOMPLETE', valid: true }),
+      evaluation({ catalogFingerprint: 1 }),
+      evaluation({ nombre: undefined }),
+      evaluation({ identificadorTecnico: undefined }),
+      evaluation({ unknownTopLevelKey: true }),
+    ])
+      expect(() => parseResourceCreationEvaluation(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('requires strict resolved assignments with only published applicability', () => {
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          asignaciones: [
+            evaluationAssignment({ aplicabilidadResuelta: 'FORBIDDEN' }),
+          ],
+        }),
+      ).asignaciones[0],
+    ).toEqual(evaluationAssignment({ aplicabilidadResuelta: 'FORBIDDEN' }))
+    for (const malformed of [
+      evaluationAssignment({ asignacionAtributoId: '' }),
+      evaluationAssignment({ definicionAtributoId: 1 }),
+      evaluationAssignment({ aplicabilidadResuelta: 'CONDITIONAL' }),
+      evaluationAssignment({ participaIdentidad: 'true' }),
+      evaluationAssignment({ orden: '1' }),
+      evaluationAssignment({ effectiveReasons: [false] }),
+      evaluationAssignment({ selectedValueId: '' }),
+      evaluationAssignment({ unknownAssignmentKey: true }),
+    ])
+      expect(() =>
+        parseResourceCreationEvaluation(
+          evaluation({ asignaciones: [malformed] }),
+        ),
+      ).toThrow('Invalid resources master response')
+  })
+
+  it('requires string identifier arrays and normalized primitive values only', () => {
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          faltantesRequeridos: ['assignment-2'],
+          seleccionesInvalidas: ['assignment-3'],
+          valoresNormalizados: [
+            normalizedValue({ valor: 2 }),
+            normalizedValue({
+              atributoRecursoId: 'assignment-2',
+              valor: false,
+            }),
+            normalizedValue({
+              atributoRecursoId: 'assignment-3',
+              valor: 'azul',
+              opcionAtributoId: 'option-1',
+            }),
+          ],
+        }),
+      ).valoresNormalizados,
+    ).toHaveLength(3)
+    for (const malformed of [
+      evaluation({ faltantesRequeridos: [1] }),
+      evaluation({ seleccionesInvalidas: [''] }),
+      evaluation({ valoresNormalizados: [normalizedValue({ valor: null })] }),
+      evaluation({ valoresNormalizados: [normalizedValue({ valor: {} })] }),
+      evaluation({
+        valoresNormalizados: [
+          normalizedValue({ valorPermitidoId: 'allowed-1' }),
+        ],
+      }),
+      evaluation({
+        valoresNormalizados: [normalizedValue({ opcionAtributoId: null })],
+      }),
+    ])
+      expect(() => parseResourceCreationEvaluation(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('accepts exactly the published issue codes and strict issue fields', () => {
+    const codes = [
+      'HIERARCHY_INVALID',
+      'UNIT_INVALID',
+      'OWNERSHIP_INVALID',
+      'ASSIGNMENT_UNKNOWN',
+      'ASSIGNMENT_DUPLICATE',
+      'ALLOWED_VALUE_UNKNOWN',
+      'ALLOWED_VALUE_FOREIGN',
+      'ALLOWED_VALUE_INACTIVE',
+      'SELECTION_NON_EFFECTIVE',
+      'SELECTION_FORBIDDEN',
+      'SELECTION_NOT_APPLICABLE',
+      'UNSUPPORTED_FREE_CAPTURE',
+      'IDENTITY_CONFLICT',
+    ]
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          issues: codes.map((code) => evaluationIssue({ code })),
+        }),
+      ).issues.map((issue) => issue.code),
+    ).toEqual(codes)
+    for (const malformed of [
+      evaluationIssue({ code: 'UNKNOWN' }),
+      evaluationIssue({ message: 1 }),
+      evaluationIssue({ asignacionAtributoId: '' }),
+      evaluationIssue({ unknownIssueKey: true }),
+    ])
+      expect(() =>
+        parseResourceCreationEvaluation(evaluation({ issues: [malformed] })),
+      ).toThrow('Invalid resources master response')
   })
 })

@@ -11,6 +11,7 @@ import type {
   ResourceAttributeDefinitionInput,
   ResourceAttributeOption,
   ResourceAttributeOptionListInput,
+  ResourceCreationEvaluation,
   ResourceChangeResult,
   ResourceClassificationStatus,
   ResourceContextClassItem,
@@ -571,6 +572,76 @@ export function parseAllowedAttributeValuesPage(
   value: unknown,
 ): ResourceContextListPage<ResourceAllowedAttributeValueItem> {
   const result = allowedAttributeValuesPageSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data
+}
+
+const resolvedAssignmentSchema = z
+  .object({
+    asignacionAtributoId: attributeContractIdSchema,
+    definicionAtributoId: attributeContractIdSchema,
+    aplicabilidadResuelta: z.enum([
+      'REQUIRED',
+      'OPTIONAL',
+      'FORBIDDEN',
+      'NOT_APPLICABLE',
+    ]),
+    participaIdentidad: z.boolean(),
+    orden: z.number(),
+    effectiveReasons: z.array(z.string()),
+    selectedValueId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+const normalizedCreationValueSchema = z
+  .object({
+    atributoRecursoId: attributeContractIdSchema,
+    valor: z.union([z.string(), z.number(), z.boolean()]),
+    opcionAtributoId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+const evaluationIssueSchema = z
+  .object({
+    code: z.enum([
+      'HIERARCHY_INVALID',
+      'UNIT_INVALID',
+      'OWNERSHIP_INVALID',
+      'ASSIGNMENT_UNKNOWN',
+      'ASSIGNMENT_DUPLICATE',
+      'ALLOWED_VALUE_UNKNOWN',
+      'ALLOWED_VALUE_FOREIGN',
+      'ALLOWED_VALUE_INACTIVE',
+      'SELECTION_NON_EFFECTIVE',
+      'SELECTION_FORBIDDEN',
+      'SELECTION_NOT_APPLICABLE',
+      'UNSUPPORTED_FREE_CAPTURE',
+      'IDENTITY_CONFLICT',
+    ]),
+    message: z.string(),
+    asignacionAtributoId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+const resourceCreationEvaluationSchema = z
+  .object({
+    status: z.enum(['INCOMPLETE', 'VALID', 'INVALID']),
+    valid: z.boolean(),
+    catalogFingerprint: z.string(),
+    nombre: z.string().nullable(),
+    identificadorTecnico: z.string().nullable(),
+    asignaciones: z.array(resolvedAssignmentSchema),
+    faltantesRequeridos: z.array(attributeContractIdSchema),
+    seleccionesInvalidas: z.array(attributeContractIdSchema),
+    valoresNormalizados: z.array(normalizedCreationValueSchema),
+    issues: z.array(evaluationIssueSchema),
+  })
+  .strict()
+  .refine((value) => value.valid === (value.status === 'VALID'), {
+    path: ['valid'],
+  })
+
+export function parseResourceCreationEvaluation(
+  value: unknown,
+): ResourceCreationEvaluation {
+  const result = resourceCreationEvaluationSchema.safeParse(value)
   if (!result.success) return bad()
   return result.data
 }
