@@ -120,23 +120,27 @@ export function useResourceCreationEvaluation({
   useEffect(() => {
     if (activeLease === null || query.data === undefined) return
     setState((current) => {
-      if (current.draft.authoritativeEvaluation === query.data) return current
-      const adopted = adoptResourceCreationEvaluation(
-        current,
-        activeLease,
-        query.data,
+      const adopted =
+        current.draft.authoritativeEvaluation === query.data
+          ? current
+          : adoptResourceCreationEvaluation(current, activeLease, query.data)
+      if (
+        adopted === current &&
+        current.draft.authoritativeEvaluation !== query.data
       )
-      if (adopted === current) return current
+        return current
       const reconciliation = reconcileAttributeSequence(
         query.data,
         adopted.draft.selectionBuckets,
         allowedValuesByDefinition,
         null,
       )
-      return resourceCreationReducer(adopted, {
-        type: 'RECONCILE_ALLOWED_VALUE_SELECTIONS',
-        selectionBuckets: reconciliation.selectionBuckets,
-      })
+      return reconciliation.selectionBuckets === adopted.draft.selectionBuckets
+        ? adopted
+        : resourceCreationReducer(adopted, {
+            type: 'RECONCILE_ALLOWED_VALUE_SELECTIONS',
+            selectionBuckets: reconciliation.selectionBuckets,
+          })
     })
   }, [activeLease, allowedValuesByDefinition, query.data, setState])
 

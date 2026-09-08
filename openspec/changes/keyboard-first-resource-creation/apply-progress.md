@@ -1210,3 +1210,12 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Complete:** composed current-step definition and selection-only allowed-value drivers; null/unavailable/complete stay idle, LIBRE blocks values, and same-definition assignment changes rekey child knowledge.
 - **TDD:** missing-hook RED; GREEN focused orchestration suite passed 4/4; full suite passed 530/530 and typecheck passed.
 - **Plan:** D5c is ready; four slices remain, forecast D5c 180–300 + D5d 300–395 + 14 320–395 + 15 260–370 = 1,060–1,460 A+D.
+
+---
+
+## PR 13D5c — flow attribute authority
+
+- **Complete:** flow composes current queries, feeds allowed knowledge into evaluation, exposes exact select/omit actions, and completes only through the reducer guard.
+- **TDD:** flow RED failed 3/4; GREEN evaluation/flow/model/surface/architecture proof passed 79/79 and full suite 535/535.
+- **Restoration:** new matching knowledge reconciles already-adopted data, restores once, invalidates authority, and triggers one active-only reevaluation; nonmatching knowledge does not loop.
+- **Boundary:** surface remains D5d; three slices remain, forecast 880–1,160 A+D.

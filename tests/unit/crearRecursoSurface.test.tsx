@@ -38,6 +38,17 @@ vi.mock(
     useResourceCreationEvaluation: useResourceCreationEvaluationSpy,
   }),
 )
+vi.mock(
+  '../../src/features/resources-master/useResourceCreationAttributeQueries',
+  () => ({
+    useResourceCreationAttributeQueries: () => ({
+      step: { kind: 'unavailable' },
+      definition: { status: 'idle' },
+      allowedValues: {},
+      allowedValuesKnowledge: {},
+    }),
+  }),
+)
 
 beforeEach(() => {
   useResourceCreationEvaluationSpy.mockClear()

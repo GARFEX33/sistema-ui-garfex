@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,060–1,460 A+D remaining after PR 13D5b; 35 implementation child slices total (4 remaining: PR 13D5c, PR 13D5d, PR 14, PR 15) plus planning-doc slicing. Conservative sum: PR 13D5c 180–300 + PR 13D5d 300–395 + PR 14 320–395 + PR 15 260–370. |
+| Estimated changed lines | 880–1,160 A+D remaining after PR 13D5c; 35 implementation child slices total (3 remaining: PR 13D5d, PR 14, PR 15) plus planning-doc slicing. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d surface integration → PR 14 review/create → PR 15 backend closure |
@@ -66,8 +66,8 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13D4b | Complete | `… → PR 13D3 → PR 13D4a → 📍 PR 13D4b` / PR 13D4a | Current-assignment presenter, unconnected from surface/query knowledge; 260–390 A+D |
 | 13D5a | Complete | `… → PR 13D3 → PR 13D4a → PR 13D4b → 📍 PR 13D5a` / PR 13D4b | Pure current-attribute derivation from authoritative evaluation and buckets; under 399 A+D |
 | 13D5b | Complete | `… → PR 13D4b → PR 13D5a → 📍 PR 13D5b` / PR 13D5a | Attribute orchestration hook; 260–390 A+D |
-| 13D5c | Ready | `… → PR 13D5a → PR 13D5b → 📍 PR 13D5c` / PR 13D5b | Flow actions and authoritative completion; 180–300 A+D |
-| 13D5d | Ready after PR 13D5c | `… → PR 13D5b → PR 13D5c → 📍 PR 13D5d` / PR 13D5c | Surface authority/render integration; 300–395 A+D |
+| 13D5c | Complete | `… → PR 13D5a → PR 13D5b → 📍 PR 13D5c` / PR 13D5b | Flow actions and authoritative completion; 180–300 A+D |
+| 13D5d | Ready | `… → PR 13D5b → PR 13D5c → 📍 PR 13D5d` / PR 13D5c | Surface authority/render integration; 300–395 A+D |
 | 14 | Ready after PR 13D5d / unstarted | `… → PR 13D5c → PR 13D5d → 📍 PR 14` / PR 13D5d | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
 | 15 | Ready after PR 14 / unstarted | `… → PR 13D5d → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
@@ -329,9 +329,9 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 13D5b. **Dependency diagram:** `… → PR 13D5a → PR 13D5b → 📍 PR 13D5c`. **Start → finish:** composed attribute authority without flow actions → flow projects the current result, reducer-owned select/omit actions, and terminal completion without surface rendering changes. **Budget:** 180–300 A+D. **Verify:** focused flow/model/attribute-step Vitest command plus `pnpm typecheck`. **Rollback:** remove only flow action/completion adoption and its proof; retain PRs 13A–13D5b.
 
-- [ ] **RED:** Add failing flow tests for active selection, optional omission, `INVALID | INCOMPLETE` correction, suspended values absent from requests, and `VALID` completion. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Expose reducer-owned selection actions and permit completion only from the `complete` derivation result; do not add a reducer cursor, create behavior, or surface rendering. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove reordered sequences retain the first unresolved assignment where possible and non-VALID all-resolved evaluations do not complete; run the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing flow tests for active selection, optional omission, `INVALID | INCOMPLETE` correction, suspended values absent from requests, and `VALID` completion. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Expose reducer-owned selection actions and permit completion only from the `complete` derivation result; do not add a reducer cursor, create behavior, or surface rendering. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove reordered sequences retain the first unresolved assignment where possible and non-VALID all-resolved evaluations do not complete; run the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 13D5d — Surface authority and render integration
 

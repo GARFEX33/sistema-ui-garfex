@@ -1,6 +1,9 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createParentGatedListController } from '../../shared/hierarchy/parentGatedListController'
+import { asAllowedValueId } from './resourceCreation.attributeSequence'
+import type { NormalizedResourceHierarchyPrefix } from './resourceCreation.model'
 import type { ResourcesMasterApi } from './resourcesMaster.api'
+import { useResourceCreationAttributeQueries } from './useResourceCreationAttributeQueries'
 import { useResourceCreationEvaluation } from './useResourceCreationEvaluation'
 import {
   createUnitCandidateHydrator,
@@ -17,7 +20,6 @@ import {
   createInitialCreationState,
   resourceCreationReducer,
   resourceIdKey,
-  type NormalizedResourceHierarchyPrefix,
 } from './resourceCreation.model'
 import type {
   ResourceContextClassItem,
@@ -38,12 +40,29 @@ export function useResourceCreationFlow(
 ) {
   const [state, dispatch] = useState(createInitialCreationState)
   const setState = dispatch
+  const attributes = useResourceCreationAttributeQueries({
+    api,
+    evaluation: state.draft.authoritativeEvaluation,
+    selectionBuckets: state.draft.selectionBuckets,
+  })
   const evaluation = useResourceCreationEvaluation({
     api,
     ownership,
     state,
     setState,
+    allowedValuesByDefinition: attributes.allowedValuesKnowledge,
   })
+
+  useEffect(() => {
+    if (
+      state.stage.kind !== 'attributes' ||
+      attributes.step.kind !== 'complete'
+    )
+      return
+    dispatch((current) =>
+      resourceCreationReducer(current, { type: 'COMPLETE_ATTRIBUTES' }),
+    )
+  }, [attributes.step.kind, state])
   const [classes] = useState(() =>
     createParentGatedListController<
       ResourceContextClassItem,
@@ -342,6 +361,27 @@ export function useResourceCreationFlow(
     },
     [unitHydrator],
   )
+  const confirmAllowedValue = useCallback(
+    (assignmentId: string, allowedValueId: string) =>
+      dispatch((current) =>
+        resourceCreationReducer(current, {
+          type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+          assignmentId,
+          allowedValueId: asAllowedValueId(allowedValueId),
+        }),
+      ),
+    [],
+  )
+  const omitAllowedValue = useCallback(
+    (assignmentId: string) =>
+      dispatch((current) =>
+        resourceCreationReducer(current, {
+          type: 'OMIT_ALLOWED_VALUE_ASSIGNMENT',
+          assignmentId,
+        }),
+      ),
+    [],
+  )
   const unitPolicyState = unitPolicies.getState()
   const unitHydrationState = unitHydrator.getState()
 
@@ -351,6 +391,7 @@ export function useResourceCreationFlow(
       status: evaluation.status,
       retry: evaluation.retry,
     },
+    attributes,
     begin,
     enterClass,
     enterFamily,
@@ -375,6 +416,8 @@ export function useResourceCreationFlow(
     continueUnits,
     retryUnits,
     confirmUnit,
+    confirmAllowedValue,
+    omitAllowedValue,
     classKey: resourceIdKey,
   }
 }

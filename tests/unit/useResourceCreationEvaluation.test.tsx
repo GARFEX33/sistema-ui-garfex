@@ -78,17 +78,21 @@ const renderDriver = (
   return renderHook(
     () => {
       const [state, setState] = useState(initial)
+      const [allowedValuesByDefinition, setAllowedValuesByDefinition] =
+        useState({})
       const driver = useResourceCreationEvaluation({
         api: { evaluateResourceCreation },
         ownership,
         state,
         setState,
+        allowedValuesByDefinition,
       })
       return {
         state,
         driver,
         dispatch: (event: CreationEvent) =>
           setState((current) => resourceCreationReducer(current, event)),
+        setAllowedValuesByDefinition,
       }
     },
     {
@@ -269,6 +273,100 @@ describe('useResourceCreationEvaluation', () => {
       expect(evaluateResourceCreation).toHaveBeenCalledTimes(2)
     },
   )
+
+  it('reconciles adopted authority when allowed-value knowledge changes', async () => {
+    const forbidden = deferred<ResourceCreationEvaluation>()
+    const applicable = deferred<ResourceCreationEvaluation>()
+    const restored = deferred<ResourceCreationEvaluation>()
+    const evaluateResourceCreation = vi
+      .fn()
+      .mockReturnValueOnce(forbidden.promise)
+      .mockReturnValueOnce(applicable.promise)
+      .mockReturnValueOnce(restored.promise)
+    const initial = resourceCreationReducer(stateWithUnit(), {
+      type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+      assignmentId: 'assignment',
+      allowedValueId: 'value',
+    })
+    const mounted = renderDriver(initial, evaluateResourceCreation)
+    const assignment = (aplicabilidadResuelta: 'FORBIDDEN' | 'OPTIONAL') =>
+      evaluation([
+        {
+          asignacionAtributoId: 'assignment',
+          definicionAtributoId: 'definition',
+          aplicabilidadResuelta,
+          participaIdentidad: false,
+          orden: 1,
+          effectiveReasons: [],
+          selectedValueId: 'value',
+        },
+      ])
+    const allowedValue = {
+      id: 'value',
+      definicionAtributoId: 'definition',
+      clave: 'value',
+      valor: { kind: 'TEXTO' as const, value: 'value' },
+      nombre: 'Value',
+      orden: 1,
+      activo: true,
+      revision: 1,
+      effective: true,
+      effectiveReasons: [],
+    }
+
+    await waitFor(() =>
+      expect(evaluateResourceCreation).toHaveBeenCalledTimes(1),
+    )
+    await act(async () => forbidden.resolve(assignment('FORBIDDEN')))
+    await waitFor(() =>
+      expect(evaluateResourceCreation).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => applicable.resolve(assignment('OPTIONAL')))
+    await waitFor(() =>
+      expect(
+        mounted.result.current.state.draft.authoritativeEvaluation,
+      ).toBeTruthy(),
+    )
+    const revision = mounted.result.current.state.draft.revision
+
+    act(() =>
+      mounted.result.current.setAllowedValuesByDefinition({
+        definition: { status: 'PARTIAL', values: [] },
+      }),
+    )
+    await act(async () => {})
+    expect(mounted.result.current.state.draft.revision).toBe(revision)
+    expect(evaluateResourceCreation).toHaveBeenCalledTimes(2)
+
+    act(() =>
+      mounted.result.current.setAllowedValuesByDefinition({
+        definition: { status: 'EXHAUSTED', values: [] },
+      }),
+    )
+    await act(async () => {})
+    expect(
+      mounted.result.current.state.draft.selectionBuckets.suspended,
+    ).toEqual({
+      assignment: 'value',
+    })
+    expect(evaluateResourceCreation).toHaveBeenCalledTimes(2)
+
+    act(() =>
+      mounted.result.current.setAllowedValuesByDefinition({
+        definition: { status: 'PARTIAL', values: [allowedValue] },
+      }),
+    )
+    await waitFor(() =>
+      expect(evaluateResourceCreation).toHaveBeenCalledTimes(3),
+    )
+    expect(mounted.result.current.state.draft.revision).toBe(revision + 1)
+    expect(
+      mounted.result.current.state.draft.authoritativeEvaluation,
+    ).toBeNull()
+    expect(evaluateResourceCreation.mock.calls[2][0].selecciones).toEqual([
+      { asignacionAtributoId: 'assignment', valorPermitidoId: 'value' },
+    ])
+  })
 
   it('exposes transport rejection and retries one current request before adoption', async () => {
     const accepted = evaluation()

@@ -81,6 +81,10 @@ describe('resource creation safety wall', () => {
     expect(flowSource.match(/useResourceCreationEvaluation\(\{/g)).toHaveLength(
       1,
     )
+    expect(flowSource).toContain('useResourceCreationAttributeQueries({')
+    expect(flowSource).toContain(
+      'allowedValuesByDefinition: attributes.allowedValuesKnowledge',
+    )
     expect(flowSource).toContain('evaluation: {')
     expect(flowSource).toContain('status: evaluation.status')
     expect(flowSource).toContain('retry: evaluation.retry')
