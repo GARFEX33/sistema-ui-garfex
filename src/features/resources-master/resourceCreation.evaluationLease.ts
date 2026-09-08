@@ -1,5 +1,8 @@
 import type { CreationState } from './resourceCreation.model'
-import type { ResourceCreationEvaluation } from './resourcesMaster.types'
+import type {
+  ResourceCreationEvaluation,
+  ResourceCreationEvaluationOwnership,
+} from './resourcesMaster.types'
 
 declare const requestTokenBrand: unique symbol
 
@@ -7,8 +10,13 @@ export type ResourceCreationEvaluationRequestToken = string & {
   readonly [requestTokenBrand]: 'ResourceCreationEvaluationRequestToken'
 }
 
+export type ResourceCreationEvaluationOwnershipIdentity =
+  | Readonly<{ kind: 'GLOBAL' }>
+  | Readonly<{ kind: 'ORGANIZATION'; organizacionId: string }>
+
 export type ResourceCreationEvaluationLease = Readonly<{
   requestToken: ResourceCreationEvaluationRequestToken
+  ownershipIdentity: ResourceCreationEvaluationOwnershipIdentity
   openGeneration: number
   revision: number
   classKey: string
@@ -19,6 +27,32 @@ export type ResourceCreationEvaluationLease = Readonly<{
 
 export const asResourceCreationEvaluationRequestToken = (value: string) =>
   value as ResourceCreationEvaluationRequestToken
+
+export const normalizeResourceCreationEvaluationOwnership = (
+  ownership: ResourceCreationEvaluationOwnership | null,
+): ResourceCreationEvaluationOwnershipIdentity | null => {
+  if (!ownership || typeof ownership !== 'object') return null
+  if (ownership.kind === 'GLOBAL') return Object.freeze({ kind: 'GLOBAL' })
+  if (
+    ownership.kind === 'ORGANIZATION' &&
+    typeof ownership.organizacionId === 'string' &&
+    ownership.organizacionId.length > 0
+  )
+    return Object.freeze({
+      kind: 'ORGANIZATION',
+      organizacionId: ownership.organizacionId,
+    })
+  return null
+}
+
+const sameOwnership = (
+  left: ResourceCreationEvaluationOwnershipIdentity | null,
+  right: ResourceCreationEvaluationOwnershipIdentity | null,
+) =>
+  left?.kind === right?.kind &&
+  (left?.kind !== 'ORGANIZATION' ||
+    right?.kind !== 'ORGANIZATION' ||
+    left.organizacionId === right.organizacionId)
 
 const identityKey = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null
@@ -40,21 +74,40 @@ const currentIdentity = (state: CreationState) => {
 export const captureResourceCreationEvaluationLease = (
   state: CreationState,
   requestToken: ResourceCreationEvaluationRequestToken,
+  ownership: ResourceCreationEvaluationOwnership | null,
 ): Readonly<{
   state: CreationState
   lease: ResourceCreationEvaluationLease | null
 }> => {
   const identity = currentIdentity(state)
-  if (!identity) return { state, lease: null }
+  const ownershipIdentity =
+    normalizeResourceCreationEvaluationOwnership(ownership)
+  if (!identity || !ownershipIdentity) return { state, lease: null }
 
+  const ownershipChanged = !sameOwnership(
+    state.evaluationOwnershipIdentity,
+    ownershipIdentity,
+  )
   const currentState =
-    state.evaluationRequestToken === requestToken
+    state.evaluationRequestToken === requestToken && !ownershipChanged
       ? state
-      : { ...state, evaluationRequestToken: requestToken }
+      : {
+          ...state,
+          draft: ownershipChanged
+            ? {
+                ...state.draft,
+                authoritativeEvaluation: null,
+                catalogFingerprint: null,
+              }
+            : state.draft,
+          evaluationRequestToken: requestToken,
+          evaluationOwnershipIdentity: ownershipIdentity,
+        }
   return {
     state: currentState,
     lease: Object.freeze({
       requestToken,
+      ownershipIdentity,
       openGeneration: state.openGeneration,
       revision: state.draft.revision,
       ...identity,
@@ -71,6 +124,10 @@ export const adoptResourceCreationEvaluation = (
   if (
     !lease ||
     !identity ||
+    !sameOwnership(
+      state.evaluationOwnershipIdentity,
+      lease.ownershipIdentity,
+    ) ||
     state.evaluationRequestToken !== lease.requestToken ||
     state.openGeneration !== lease.openGeneration ||
     state.draft.revision !== lease.revision ||

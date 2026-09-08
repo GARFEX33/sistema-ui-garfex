@@ -5,7 +5,10 @@ import type {
   ResourceCreationEvaluation,
   ResourceId,
 } from './resourcesMaster.types'
-import type { ResourceCreationEvaluationRequestToken } from './resourceCreation.evaluationLease'
+import type {
+  ResourceCreationEvaluationOwnershipIdentity,
+  ResourceCreationEvaluationRequestToken,
+} from './resourceCreation.evaluationLease'
 import type { AllowedValueId } from './resourceCreation.attributeSequence'
 import {
   confirmSelection,
@@ -151,6 +154,7 @@ export type CreationState = Readonly<{
   stage: CreationStage
   openGeneration: number
   evaluationRequestToken: ResourceCreationEvaluationRequestToken | null
+  evaluationOwnershipIdentity: ResourceCreationEvaluationOwnershipIdentity | null
 }>
 
 export type CreationEvent =
@@ -191,6 +195,7 @@ export const createInitialCreationState = (): CreationState => ({
   stage: { kind: 'class' },
   openGeneration: 0,
   evaluationRequestToken: null,
+  evaluationOwnershipIdentity: null,
 })
 
 const firstMissingStage = (
@@ -210,6 +215,25 @@ const hierarchyFromPrefix = (
   typeItem: prefix.typeItem,
 })
 
+export const clearResourceCreationEvaluationAuthority = (
+  state: CreationState,
+): CreationState =>
+  state.evaluationRequestToken === null &&
+  state.evaluationOwnershipIdentity === null &&
+  state.draft.authoritativeEvaluation === null &&
+  state.draft.catalogFingerprint === null
+    ? state
+    : {
+        ...state,
+        draft: {
+          ...state.draft,
+          authoritativeEvaluation: null,
+          catalogFingerprint: null,
+        },
+        evaluationRequestToken: null,
+        evaluationOwnershipIdentity: null,
+      }
+
 const invalidateDraft = (
   state: CreationState,
   draft: CreationDraft,
@@ -225,6 +249,7 @@ const invalidateDraft = (
           revision: state.draft.revision + 1,
         },
         evaluationRequestToken: null,
+        evaluationOwnershipIdentity: null,
       }
 
 export const replaceSelectionBuckets = (
@@ -275,6 +300,7 @@ export const resourceCreationReducer = (
       stage: firstMissingStage(event.prefix),
       openGeneration: state.openGeneration + 1,
       evaluationRequestToken: null,
+      evaluationOwnershipIdentity: null,
     }
 
   if (event.type === 'NAVIGATE_TO_STAGE')

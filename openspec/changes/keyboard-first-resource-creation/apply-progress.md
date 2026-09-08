@@ -1112,3 +1112,14 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Tasks:** split PR 13C into completed 13C0 and ready 13C1; the driver is implementable with explicit fixtures but remains runtime-gated while Entry passes null. The forecast is 22 child slices total with 4 remaining. Only the three 13C0 rows and the parent ownership-seam row were checked.
 - **Files:** `ResourcesMasterEntry.tsx`, `ResourcesMasterScreen.tsx`, `CrearRecursoSurface.tsx`, `ResourceCreationContractPending.tsx`, focused surface/screen/refetch tests, `tasks.md`, and this progress record.
 - **Rollback:** remove only the ownership prop seam, pending-copy distinction, focused tests, and these PR 13C0 documentation updates; retain PRs 13A–13B.
+
+---
+
+## PR 13C1a — ownership-aware evaluation authority and request
+
+- **State:** completed pure work unit; no API call, hook, React, UI, or create path changed.
+- **TDD:** RED focused request/lease/model/architecture suite failed on the missing request module and ownership authority assertions; GREEN passed 47/47.
+- **Behavior:** exact active-only request projection accepts only complete string context and valid GLOBAL/ORGANIZATION ownership. Leases and state bind normalized ownership identity; a different capture clears evaluation/fingerprint immediately, while a same-ownership retry retains them. Null authority clearing is stable and stale leases cannot adopt.
+- **Tasks:** split former PR 13C1 into completed 13C1a and ready 13C1b; PR 13D depends on 13C1b. Forecast is 23 child slices total with 4 remaining; only the three 13C1a rows were checked.
+- **Files:** `resourceCreation.evaluationRequest.ts`, lease/model authority seams, focused request/lease tests, runtime inventory, `tasks.md`, and this record.
+- **Rollback:** remove the request module and ownership-authority additions only; retain PRs 13A–13C0.

@@ -25,6 +25,7 @@ const creationRuntimeFiles = [
   'resourceCreation.attributeSequence.ts',
   'resourceCreation.dependentLoader.ts',
   'resourceCreation.evaluationLease.ts',
+  'resourceCreation.evaluationRequest.ts',
   'resourceCreation.loaders.ts',
   'resourceCreation.model.ts',
   'resourceCreation.selectionDraft.ts',

@@ -5,6 +5,7 @@ import {
   asResourceCreationEvaluationRequestToken,
 } from '../../src/features/resources-master/resourceCreation.evaluationLease'
 import {
+  clearResourceCreationEvaluationAuthority,
   createInitialCreationState,
   normalizeInitialHierarchySnapshot,
   resourceCreationReducer,
@@ -18,6 +19,11 @@ import {
   suspendSelection,
 } from '../../src/features/resources-master/resourceCreation.selectionDraft'
 
+const global = { kind: 'GLOBAL' } as const
+const organization = {
+  kind: 'ORGANIZATION',
+  organizacionId: 'organization-1',
+} as const
 const classId = 'class-1'
 const classItem = {
   id: classId,
@@ -75,10 +81,11 @@ const open = () =>
   })
 const withUnit = () =>
   resourceCreationReducer(open(), { type: 'CONFIRM_UNIT', unitId: 'unit-1' })
-const capture = (state = withUnit(), value = 'request-1') =>
+const capture = (state = withUnit(), value = 'request-1', ownership = global) =>
   captureResourceCreationEvaluationLease(
     state,
     asResourceCreationEvaluationRequestToken(value),
+    ownership,
   )
 const adoptedState = (selectionBuckets = createSelectionBuckets()) => {
   const state = withUnit()
@@ -101,6 +108,7 @@ const expectInvalidated = (
   expect(next.draft.authoritativeEvaluation).toBeNull()
   expect(next.draft.catalogFingerprint).toBeNull()
   expect(next.evaluationRequestToken).toBeNull()
+  expect(next.evaluationOwnershipIdentity).toBeNull()
 }
 
 describe('resource creation evaluation lease', () => {
@@ -121,6 +129,7 @@ describe('resource creation evaluation lease', () => {
       familyKey: 'family-1',
       typeKey: 'type-1',
       unitKey: 'unit-1',
+      ownershipIdentity: global,
     })
     expect(adopted).toMatchObject({
       stage: state.stage,
@@ -154,6 +163,8 @@ describe('resource creation evaluation lease', () => {
     expect(
       adoptResourceCreationEvaluation(second.state, first.lease, evaluation()),
     ).toBe(second.state)
+    expect(reopened.evaluationRequestToken).toBeNull()
+    expect(reopened.evaluationOwnershipIdentity).toBeNull()
     expect(
       adoptResourceCreationEvaluation(reopened, second.lease, evaluation()),
     ).toBe(reopened)
@@ -343,6 +354,49 @@ describe('resource creation evaluation lease', () => {
     ).toBe(changed)
   })
 
+  it('invalidates an adopted GLOBAL authority when ORGANIZATION capture replaces it', () => {
+    const globalCapture = capture()
+    const adopted = adoptResourceCreationEvaluation(
+      globalCapture.state,
+      globalCapture.lease,
+      evaluation(),
+    )
+    const organizationCapture = capture(adopted, 'organization', organization)
+
+    expect(organizationCapture.state.draft.authoritativeEvaluation).toBeNull()
+    expect(organizationCapture.state.draft.catalogFingerprint).toBeNull()
+    expect(organizationCapture.state.evaluationOwnershipIdentity).toEqual(
+      organization,
+    )
+    expect(
+      adoptResourceCreationEvaluation(
+        organizationCapture.state,
+        globalCapture.lease,
+        evaluation(),
+      ),
+    ).toBe(organizationCapture.state)
+  })
+
+  it('retains authority for a same-ownership retry and clears it stably on null context', () => {
+    const first = capture()
+    const adopted = adoptResourceCreationEvaluation(
+      first.state,
+      first.lease,
+      evaluation(),
+    )
+    const retry = capture(adopted, 'retry')
+    const cleared = clearResourceCreationEvaluationAuthority(retry.state)
+
+    expect(retry.state.draft.authoritativeEvaluation).toEqual(evaluation())
+    expect(cleared.evaluationRequestToken).toBeNull()
+    expect(cleared.evaluationOwnershipIdentity).toBeNull()
+    expect(cleared.draft.authoritativeEvaluation).toBeNull()
+    expect(clearResourceCreationEvaluationAuthority(cleared)).toBe(cleared)
+    expect(
+      adoptResourceCreationEvaluation(cleared, retry.lease, evaluation()),
+    ).toBe(cleared)
+  })
+
   it('does not capture incomplete or opaque-ID context and adopts parsed INVALID and INCOMPLETE evaluations', () => {
     const incomplete = createInitialCreationState()
     const opaqueContext = resourceCreationReducer(open(), {
@@ -352,14 +406,17 @@ describe('resource creation evaluation lease', () => {
     const unusable = captureResourceCreationEvaluationLease(
       incomplete,
       asResourceCreationEvaluationRequestToken('missing-context'),
+      global,
     )
     const opaque = capture(opaqueContext, 'opaque-context')
+    const missingOwnership = capture(withUnit(), 'missing-ownership', null)
     const invalid = capture(withUnit(), 'invalid')
     const incompleteResult = capture(withUnit(), 'incomplete')
 
     expect(unusable).toEqual({ state: incomplete, lease: null })
     expect(opaque).toEqual({ state: opaqueContext, lease: null })
     expect(opaque.state.evaluationRequestToken).toBeNull()
+    expect(missingOwnership).toEqual({ state: withUnit(), lease: null })
     expect(
       adoptResourceCreationEvaluation(
         invalid.state,
