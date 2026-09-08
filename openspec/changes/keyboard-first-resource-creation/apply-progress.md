@@ -868,3 +868,50 @@ Parent lifecycle should settle the supplied native attempt and maintain the PR 2
 - **Workload / boundary:** documentation-only readiness reconciliation for PR 12–15; no implementation, test, backend, proposal, spec, design, commit, PR, review, or receipt action. Next implementation action: PR 12 RED only.
 - **Verification:** `git diff --check`, ownership/checkbox reconciliation, and targeted readiness-token grep passed. `pnpm exec prettier --check` exits 1 for both current and HEAD versions of these two files, so existing format debt was not broadly rewritten; no runtime test applies to this documentation-only slice.
 - **Parent authorization:** after independently confirming clean backend authority `23e9440c2b832edb8e557134018ea812979c6452`, the reconciled artifacts, PR 11 closure, and the user-directed local-only continuation, the parent authorized only the PR 12 RED work unit. Push, PR, merge, release, and backend edits remain unauthorized.
+
+
+---
+
+## PR 12 split — documentation-only replanning
+
+- **State / structured status:** consumed authoritative native `gentle-ai.sdd-status@2`: `artifactStore: openspec`, proposal/spec/design/tasks/apply-progress present, `applyState: ready`, `nextRecommended: apply`, and no blocked reasons.
+- **Action context:** `repo-local` workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`; both edits are within the parent-provided allowed surfaces. No unsafe-root warning occurred.
+- **Workload / PR boundary:** authorized `auto-chain` / `feature-branch-chain`; PR 12 is honestly split into `PR 12A → PR 12B → PR 12C`, each independently GREEN at 200–390 projected A+D. This documentation-only slice measures 93 A+D, below 399. PR 13 depends on PR 12C; PR 14 exclusively retains create input/result parsing, mutation, and UI; PR 15 remains after PR 14. The existing parent authorization now starts strict PR 12A RED only and explicitly does not authorize a failing branch or commit.
+- **Completed tasks / checkbox updates:** none. No source or test changed, no TDD cycle ran, and all new implementation rows remain visibly unchecked; `tasks.md` preserves completed history and parent-owned rows.
+- **Files changed:** `openspec/changes/keyboard-first-resource-creation/tasks.md`; `openspec/changes/keyboard-first-resource-creation/apply-progress.md`.
+- **Verification:** native status, ownership/count reconciliation, dependency-chain review, and `git diff --check` passed. No runtime test applies to this documentation-only slice. Targeted Prettier check reports existing debt in both current and `HEAD` versions of these two files; no broad formatting rewrite was made.
+### TDD Cycle Evidence
+
+| Work unit | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- |
+| Documentation-only PR 12 split | N/A — no implementation task started | N/A — no production code | N/A — no test behavior changed | N/A — no code refactor |
+- **Deviation / rollback:** no design deviation. Revert only this planning split and progress entry to restore the prior PR 12 plan.
+
+## Remaining implementation tasks
+
+All 18 implementation-owned rows remain unchecked; the exact persisted lines are:
+
+```text
+- [ ] **RED:** Add failing exact-fixture tests for nullable definition, optional fields omitted rather than nulled, `modoCaptura: SELECCION | LIBRE`, paginated typed allowed values, and malformed/unknown definition or page rejection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only definition and allowed-values Zod schemas/parsers plus their `ResourceOperation`, `ResourceTransport`, and `ResourcesMasterApi` query-adapter mappings; do not add evaluator or create behavior. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove optional-field absence, each typed allowed value, pagination continuation, and malformed transport rejection through the focused command; retain no evaluator/create test or production path. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add failing exact-fixture tests for `INCOMPLETE | VALID | INVALID`, `valid` consistency, nullable generated identity, resolved assignments, 13 issue codes, fingerprint, and malformed/unknown evaluation rejection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only the exact evaluation Zod schema/parser and its `ResourceOperation`, `ResourceTransport`, and `ResourcesMasterApi` query-adapter mapping; do not adopt evaluation into the model or add create behavior. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove each status, absent selected value, unknown disposition/issue rejection, and transport rejection fail closed through the focused command; retain no lease/create/UI path. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add failing lease/model/architecture tests for current-token adoption, stale or out-of-order token rejection, hierarchy/Unidad context mismatch, draft-revision mismatch, and no create path before PR 14. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement the pure feature-local `evaluationLease` and minimum model seam so only a current validated PR 12B evaluation can be adopted and every hierarchy, Unidad, or draft mutation clears the lease/fingerprint. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove replacement Unidad, same revision with old context, malformed-adapter absence, and transport rejection cannot retain a lease or enable review/create; run the focused command and preserve the no-create architecture guard. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Write failing tests using only exact DTO fixtures for ordering by assignment ID, `modoCaptura: SELECCION` typed-value confirmation, authorized **Omitir** for `OPTIONAL`, `LIBRE` unsupported, `REQUIRED | OPTIONAL | FORBIDDEN | NOT_APPLICABLE`, active→suspended, valid restore, and invalid retained selection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Render one selection-only assignment at a time from validated `aplicabilidadResuelta`/`selectedValueId` facts, label the rail `Atributos · n de total`, and reconcile buckets without parsing or simplifying `CONDITIONAL`. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove a changed authoritative sequence preserves the current pending assignment when possible and never sends suspended values, then run and record the focused command. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Write failing exact-fixture tests for `INCOMPLETE | VALID | INVALID` rendering, evaluation invalidation on every selection mutation, required `expectedCatalogFingerprint`, active selection IDs only, `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`, stale/unknown disposition handling, and confirmed-success-only behavior. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Render generated `nombre`, `identificadorTecnico`, assignments, and issues exclusively from validated evaluation output; call `crearRecursoDesdeSelecciones` only with a current `expectedCatalogFingerprint` and represent only published dispositions. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove a concurrent, stale, unknown, or transport-rejected response never presents success or calls `onCreated`; run the focused command and record its exact result. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add failing keyboard-only and axe cases for `modoCaptura: SELECCION` allowed-value selection, `OPTIONAL` omission, authoritative `INCOMPLETE | INVALID | VALID` review, fingerprinted create, and non-confirming stale/unknown/transport rejection. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->
+```
+
+## Deferred parent-owned lifecycle actions
+
+- Tracker, chain targeting, bounded review, verification, sync, and archive remain parent-owned; their task rows were preserved byte-for-byte.
