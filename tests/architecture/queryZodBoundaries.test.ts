@@ -15,11 +15,14 @@ const providerPath = 'src/app/providers/AppProviders.tsx'
 const hookPath = 'src/features/resources-master/useResourcesMasterListQuery.ts'
 const evaluationHookPath =
   'src/features/resources-master/useResourceCreationEvaluation.ts'
+const attributeDefinitionHookPath =
+  'src/features/resources-master/useResourceCreationAttributeDefinition.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [hookPath, ['useInfiniteQuery', 'useQueryClient']],
   [evaluationHookPath, ['useQuery']],
+  [attributeDefinitionHookPath, ['useQuery']],
 ])
 const convexFiles = new Set([
   apiPath,

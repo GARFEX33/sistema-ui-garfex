@@ -52,6 +52,7 @@ const creationRuntimeFiles = [
   'resourceCreation.model.ts',
   'resourceCreation.selectionDraft.ts',
   'resourceCreation.selectorState.ts',
+  'useResourceCreationAttributeDefinition.ts',
   'useResourceCreationEvaluation.ts',
   'useResourceCreationFlow.ts',
 ]
@@ -80,6 +81,19 @@ describe('resource creation safety wall', () => {
     expect(flowSource).toContain('evaluation: {')
     expect(flowSource).toContain('status: evaluation.status')
     expect(flowSource).toContain('retry: evaluation.retry')
+  })
+
+  it('keeps the definition driver bounded to current definitions', () => {
+    const definitionDriverSource = readFileSync(
+      resolve(
+        process.cwd(),
+        'src/features/resources-master/useResourceCreationAttributeDefinition.ts',
+      ),
+      'utf8',
+    )
+
+    expect(definitionDriverSource).toContain('getAttributeDefinition')
+    expect(definitionDriverSource).not.toContain('listAllowedAttributeValues')
   })
 
   it('keeps selector-state mapping and controller subscription behind the local flow boundary', () => {

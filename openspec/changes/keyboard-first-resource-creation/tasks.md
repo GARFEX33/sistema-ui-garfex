@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,717–2,492 A+D remaining; 30 implementation child slices total (6 remaining) plus planning-doc slicing. Conservative range: prior 1,960–2,735 less PR 13D1's 243 A+D actual (260–390 A+D range). |
+| Estimated changed lines | 1,660–2,300 A+D remaining; 31 implementation child slices total (6 remaining) plus planning-doc slicing. Conservative sum: PR 13D2b 220–350 + PR 13D3 280–395 + PR 13D4 280–395 + PR 13D5 300–395 + PR 14 320–395 + PR 15 260–370. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2 definition/value driver → PR 13D3 reducer attribute/review stages → PR 13D4 attribute UI/rail/commands → PR 13D5 one-at-a-time integration → PR 14 review/create → PR 15 backend closure |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4 attribute UI/rail/commands → PR 13D5 one-at-a-time integration → PR 14 review/create → PR 15 backend closure |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
 
@@ -59,9 +59,10 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13C1b2 | Complete | `… → PR 13C1b1b → 📍 PR 13C1b2` / PR 13C1b1b | Flow integration; null ownership remains request-blocked; 100–180 A+D |
 | 13D0 | Complete | `… → PR 13C1b2 → 📍 PR 13D0` / PR 13C1b2 | Flow selector-state/helper extraction only; no user behavior; 322 A+D actual |
 | 13D1 | Complete | `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1` / PR 13D0 | Context-stage extraction from surface; 260–390 A+D |
-| 13D2 | Ready | `… → PR 13D0 → PR 13D1 → 📍 PR 13D2` / PR 13D1 | Attribute definition/allowed-values query driver; 260–390 A+D |
-| 13D3 | Ready after PR 13D2 | `… → PR 13D1 → PR 13D2 → 📍 PR 13D3` / PR 13D2 | Reducer-owned attributes/review-pending stages and complete BACK chain; 280–395 A+D |
-| 13D4 | Ready after PR 13D3 | `… → PR 13D2 → PR 13D3 → 📍 PR 13D4` / PR 13D3 | Attribute stage component, rail, and commands; 280–395 A+D |
+| 13D2a | Complete | `… → PR 13D0 → PR 13D1 → 📍 PR 13D2a` / PR 13D1 | Current assignment definition query only; 220–350 A+D |
+| 13D2b | Ready after PR 13D2a | `… → PR 13D1 → PR 13D2a → 📍 PR 13D2b` / PR 13D2a | Allowed-values paging only; 220–350 A+D |
+| 13D3 | Ready after PR 13D2b | `… → PR 13D2a → PR 13D2b → 📍 PR 13D3` / PR 13D2b | Reducer-owned attributes/review-pending stages and complete BACK chain; 280–395 A+D |
+| 13D4 | Ready after PR 13D3 | `… → PR 13D2b → PR 13D3 → 📍 PR 13D4` / PR 13D3 | Attribute stage component, rail, and commands; 280–395 A+D |
 | 13D5 | Ready after PR 13D4 | `… → PR 13D3 → PR 13D4 → 📍 PR 13D5` / PR 13D4 | Surface/flow/allowed-knowledge integration, one-at-a-time behavior; 300–395 A+D |
 | 14 | Ready after PR 13D5 / unstarted | `… → PR 13D4 → PR 13D5 → 📍 PR 14` / PR 13D5 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
 | 15 | Ready after PR 14 / unstarted | `… → PR 13D5 → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
@@ -264,17 +265,25 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 - [x] **GREEN:** Extract only the existing context-stage surface composition; do not render an attribute assignment, free-value editor, review, or create control. <!-- sdd-owner: implementation -->
 - [x] **TRIANGULATE/REFACTOR:** Cover Class/Family/Type/Unit return and pending-wall behavior through the extracted component; run and record the focused command. <!-- sdd-owner: implementation -->
 
-### PR 13D2 — Attribute definition and allowed-values query driver
+### PR 13D2a — Attribute definition query driver
 
-**Depends on:** PR 13D1. **Dependency diagram:** `… → PR 13D0 → PR 13D1 → 📍 PR 13D2`. **Start → finish:** parsed PR 12A query adapters unused by the flow → stale-safe feature-local definition and allowed-value paging driver, without rendering or reducer-stage adoption. **Budget:** 260–390 A+D. **Verify:** focused driver/unit Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only the driver and its focused proof.
+**Depends on:** PR 13D1. **Dependency diagram:** `… → PR 13D0 → PR 13D1 → 📍 PR 13D2a`. **Start → finish:** parsed definition adapter unused by the flow → stale-safe feature-local current-assignment definition query without rendering, reducer adoption, or allowed-value knowledge. **Budget:** 220–350 A+D. **Verify:** `pnpm exec vitest run tests/unit/useResourceCreationAttributeDefinition.test.tsx tests/architecture/resourceCreationBoundaries.test.ts && pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only the driver and its focused proof.
 
-- [ ] **RED:** Add failing unit proof for current assignment definition loading and allowed-value continuation/retry paging. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Drive only published definition and allowed-values queries with current-assignment guards; do not issue a create request or add a free-value path. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove stale assignment rejection, definition failure, allowed-value paging, and transport retry; run and record the focused command. <!-- sdd-owner: implementation -->
+- [x] **RED:** Added failing unit proof for null blocking, exact current loading, unavailable definition data, LIBRE, retry, and stale assignment isolation. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Drive only published `getAttributeDefinition` queries with current-assignment guards; no allowed-values, create, or free-value path. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Proved null/mismatch/inactive/ineffective rejection, LIBRE unsupported presentation, transport retry, and deferred stale rejection; run the focused command. <!-- sdd-owner: implementation -->
+
+### PR 13D2b — Allowed-values paging driver
+
+**Depends on:** PR 13D2a. **Dependency diagram:** `… → PR 13D1 → PR 13D2a → 📍 PR 13D2b`. **Start → finish:** current definition query → stale-safe allowed-values continuation and retry paging, without rendering or reducer-stage adoption. **Budget:** 220–350 A+D. **Verify:** focused driver/unit Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only allowed-values paging and its focused proof.
+
+- [ ] **RED:** Add failing unit proof for current definition allowed-value continuation and retry paging. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Drive only published allowed-values queries with current-definition guards; do not issue a create request or add a free-value path. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove stale definition rejection, paging, and transport retry; run and record the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 13D3 — Reducer-owned attribute and review-pending stages
 
-**Depends on:** PR 13D2. **Dependency diagram:** `… → PR 13D1 → PR 13D2 → 📍 PR 13D3`. **Start → finish:** selection buckets without attribute-stage navigation → reducer-owned attribute/review-pending stages with the complete Back chain. **Budget:** 280–395 A+D. **Verify:** focused model/selection Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only the stage events/navigation and their proof.
+**Depends on:** PR 13D2b. **Dependency diagram:** `… → PR 13D2a → PR 13D2b → 📍 PR 13D3`. **Start → finish:** selection buckets without attribute-stage navigation → reducer-owned attribute/review-pending stages with the complete Back chain. **Budget:** 280–395 A+D. **Verify:** focused model/selection Vitest command plus `pnpm typecheck`. **Runtime:** N/A — consumed by PR 13D5. **Rollback:** remove only the stage events/navigation and their proof.
 
 - [ ] **RED:** Add failing reducer cases for required and optional pending transitions, omission, sequence reconciliation, and Back from review pending through attributes to Unidad. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Add only reducer-owned stage transitions and the complete Back chain; preserve suspended selections outside evaluation requests and do not add create behavior. <!-- sdd-owner: implementation -->
@@ -282,7 +291,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 ### PR 13D4 — Attribute stage component, rail, and commands
 
-**Depends on:** PR 13D3. **Dependency diagram:** `… → PR 13D2 → PR 13D3 → 📍 PR 13D4`. **Start → finish:** reducer stages without an attribute presenter → feature-local keyboard-first current-assignment stage, rail, and commands, unconnected from query knowledge. **Budget:** 280–395 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this presenter/rail/command composition and tests.
+**Depends on:** PR 13D3. **Dependency diagram:** `… → PR 13D2b → PR 13D3 → 📍 PR 13D4`. **Start → finish:** reducer stages without an attribute presenter → feature-local keyboard-first current-assignment stage, rail, and commands, unconnected from query knowledge. **Budget:** 280–395 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this presenter/rail/command composition and tests.
 
 - [ ] **RED:** With an explicit non-null ownership fixture, add failing RTL tests for one assignment at a time, `modoCaptura: SELECCION` confirmation, `LIBRE` unsupported presentation, optional **Omitir**, and `Atributos · n de total`. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Render only the current authoritative assignment, visible `Atributos · n de total`, and no free-value editor or simultaneous assignment controls. **Product decisions:** `OPTIONAL` `LIBRE` may be omitted; the counter is the current pending position. <!-- sdd-owner: implementation -->

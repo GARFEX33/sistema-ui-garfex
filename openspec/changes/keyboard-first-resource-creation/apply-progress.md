@@ -1164,3 +1164,12 @@ All 18 implementation-owned rows remain unchecked; the exact persisted lines are
 - **Verification:** `pnpm typecheck` passed; no attribute, review, or create UI was added.
 - **Workload/replan:** 243 A+D actual (260–390 planned); forecast is 1,717–2,492 A+D with six slices remaining. Product decisions remain: `INVALID` permits correction but blocks completion; optional `LIBRE` may be omitted; counter is current pending position.
 - **Next:** PR 13D2 is ready; rollback removes only the context component, surface wiring, and boundary proof.
+
+---
+
+## PR 13D2a — definition query budget remediation
+
+- **State:** completed after the formatted 520 A+D PR 13D2 candidate failed budget and was auditably reset; allowed-values paging remains PR 13D2b.
+- **TDD/evidence:** RED failed on the missing definition hook; GREEN/TRIANGULATE covers null blocking, exact active/effective definitions, LIBRE unsupported status, retry, and stale deferred-response isolation.
+- **Behavior:** one TanStack definition query is keyed by assignment and definition IDs, fails closed, and knows neither allowed-values nor paging.
+- **Workload:** 31 child slices total, six remaining, forecast 1,660–2,300 A+D; rollback removes only this hook, focused proof, guards, and record.
