@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1,590–2,230 A+D remaining; 17 implementation child slices total (6 remaining) plus planning-doc slicing |
+| Estimated changed lines | 1,580–2,235 A+D remaining; 20 implementation child slices total (6 remaining) plus planning-doc slicing |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13 attributes/reconciliation → PR 14 review/create → PR 15 backend closure |
+| Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → ownership-source gate → PR 13C evaluation driver → PR 13D one-at-a-time attributes UI → PR 14 review/create → PR 15 backend closure |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
 
@@ -46,13 +46,16 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 9 | Now | `… → PR 8 → 📍 PR 9` / PR 8 | Remove legacy review/payload/create regions; 260–390 A+D |
 | 10 | Now | `… → PR 9 → 📍 PR 10` / PR 9 | Pure active/suspended buckets by assignment ID; 230–330 A+D |
 | 11 | Now | `… → PR 10 → 📍 PR 11` / PR 10 | Browser, axe, isolation, and architecture closure; 300–395 A+D |
-| 12A | Ready / unstarted | `… → PR 11 → 📍 PR 12A` / PR 11 | Exact definition/allowed-values Zod schemas, parsers, and query adapters; 240–360 A+D |
-| 12B1 | Ready after PR 12A / unstarted | `… → PR 11 → PR 12A → 📍 PR 12B1` / PR 12A | Exact evaluation response types and Zod parser; 250–390 A+D |
-| 12B2 | Ready after PR 12B1 / unstarted | `… → PR 12A → PR 12B1 → 📍 PR 12B2` / PR 12B1 | Evaluation query-adapter mapping only; 120–220 A+D |
-| 12C | Ready after PR 12B2 / unstarted | `… → PR 12A → PR 12B1 → PR 12B2 → 📍 PR 12C` / PR 12B2 | Pure stale-safe evaluation lease and model/architecture proof; 200–320 A+D |
-| 13 | Ready after PR 12C / unstarted | `… → PR 12A → PR 12B → PR 12C → 📍 PR 13` / PR 12C | `modoCaptura: SELECCION` attributes and authoritative reconciliation; 320–395 A+D |
-| 14 | Ready after PR 13 / unstarted | `… → PR 13 → 📍 PR 14` / PR 13 | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
-| 15 | Ready after PR 14 / unstarted | `… → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
+| 12A | Complete | `… → PR 11 → 📍 PR 12A` / PR 11 | Exact definition/allowed-values Zod schemas, parsers, and query adapters; 240–360 A+D |
+| 12B1 | Complete | `… → PR 11 → PR 12A → 📍 PR 12B1` / PR 12A | Exact evaluation response types and Zod parser; 250–390 A+D |
+| 12B2 | Complete | `… → PR 12A → PR 12B1 → 📍 PR 12B2` / PR 12B1 | Evaluation query-adapter mapping only; 120–220 A+D |
+| 12C | Complete | `… → PR 12A → PR 12B1 → PR 12B2 → 📍 PR 12C` / PR 12B2 | Pure stale-safe evaluation lease and model/architecture proof; 200–320 A+D |
+| 13A | Ready after PR 12C / unstarted | `… → PR 12C → 📍 PR 13A` / PR 12C | Pure authoritative sequence/bucket reconciliation; 220–330 A+D |
+| 13B | Ready after PR 13A / unstarted | `… → PR 13A → 📍 PR 13B` / PR 13A | Reducer-owned selection mutations and one invalidation seam; 240–360 A+D |
+| 13C | Blocked: ownership source | `… → PR 13A → PR 13B → ownership source → 📍 PR 13C` / PR 13B | Lease-safe evaluation driver; unavailable until a product-owned source is identified; 260–390 A+D |
+| 13D | Blocked: ownership source | `… → PR 13B → ownership source → PR 13C → 📍 PR 13D` / PR 13C | One-at-a-time selection UI; unavailable until a product-owned source is identified; 280–390 A+D |
+| 14 | Ready after PR 13D / unstarted | `… → PR 13C → PR 13D → 📍 PR 14` / PR 13D | Authoritative review plus create input/result parser, mutation, and UI; 320–395 A+D |
+| 15 | Ready after PR 14 / unstarted | `… → PR 13D → PR 14 → 📍 PR 15` / PR 14 | Backend-enabled browser/axe/regression closure; 260–370 A+D |
 
 ## Executable now — backend-independent implementation
 
@@ -180,17 +183,41 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 - [x] **GREEN:** Implement the pure feature-local `evaluationLease` and minimum model seam so only a current validated PR 12B evaluation can be adopted and every hierarchy, Unidad, or draft mutation clears the lease/fingerprint. <!-- sdd-owner: implementation -->
 - [x] **TRIANGULATE/REFACTOR:** Prove replacement Unidad, same revision with old context, malformed-adapter absence, and transport rejection cannot retain a lease or enable review/create; run the focused command and preserve the no-create architecture guard. <!-- sdd-owner: implementation -->
 
-### PR 13 — `modoCaptura: SELECCION` attributes and authoritative reconciliation
+### PR 13A — Pure authoritative sequence and bucket reconciliation
 
-**Depends on:** PR 12C. **Dependency diagram:** `… → PR 12A → PR 12B → PR 12C → 📍 PR 13`. **Start → finish:** exact evaluation facts and stale-safe lease available → one assignment-ID-keyed `Atributos · n de total` sequence offers only allowed typed selections and reconciles buckets from backend facts. **Concrete targets:** feature-local attribute stage, the PR 12A allowed-value adapter, `resourceCreation.selectionDraft.ts`, `ResourceCreationShell.tsx`, and corresponding unit/RTL tests. **Budget:** 320–395 A+D. **Verify:** focused attribute/reconciliation Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove this stage and return to pending/evaluation boundary; preserve pure buckets.
+**Depends on:** PR 12C. **Dependency diagram:** `… → PR 12C → 📍 PR 13A`. **Start → finish:** current validated evaluation facts and pure buckets → a transport-free reconciliation result preserves backend assignment order without local sorting and keys every bucket/sequence entry by assignment ID. **Concrete targets:** `resourceCreation.selectionDraft.ts`, a feature-local reconciliation module, and unit tests only. **Budget:** 220–330 A+D. **Verify:** focused reconciliation Vitest command plus `pnpm typecheck`. **Runtime:** N/A — PR 13C consumes this pure contract. **Rollback:** remove only the reconciliation module, bucket changes, and tests.
 
-- [ ] **RED:** Write failing tests using only exact DTO fixtures for ordering by assignment ID, `modoCaptura: SELECCION` typed-value confirmation, authorized **Omitir** for `OPTIONAL`, `LIBRE` unsupported, `REQUIRED | OPTIONAL | FORBIDDEN | NOT_APPLICABLE`, active→suspended, valid restore, and invalid retained selection. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Render one selection-only assignment at a time from validated `aplicabilidadResuelta`/`selectedValueId` facts, label the rail `Atributos · n de total`, and reconcile buckets without parsing or simplifying `CONDITIONAL`. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Prove a changed authoritative sequence preserves the current pending assignment when possible and never sends suspended values, then run and record the focused command. <!-- sdd-owner: implementation -->
+- [ ] **RED:** Add exact-fixture reconciliation tests proving backend assignment order is retained without a local sort; assignment-ID keys prevent definition/index collisions; `FORBIDDEN | NOT_APPLICABLE` moves active → suspended; and active retention requires matching `selectedValueId`. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement pure authoritative sequence/bucket reconciliation: restore suspended only with an active-and-effective allowed-value fact, retain absent/not-yet-exhausted validity as unknown and suspended, preserve `OPTIONAL` omission, and make omitted → `REQUIRED` pending. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover reordered authoritative sequences, exhausted versus non-exhausted allowed-value absence, invalid retained values, and current-pending-assignment retention; run and record the focused command without sending suspended values. <!-- sdd-owner: implementation -->
+
+### PR 13B — Reducer-owned selection mutations and invalidation
+
+**Depends on:** PR 13A. **Dependency diagram:** `… → PR 12C → PR 13A → 📍 PR 13B`. **Start → finish:** pure reconciliation result → the creation reducer owns confirm, omit, reconcile, and restore mutations through one invalidation seam. **Concrete targets:** `resourceCreation.model.ts`, `resourceCreation.selectionDraft.ts`, and unit tests. **Budget:** 240–360 A+D. **Verify:** focused model/selection Vitest command plus `pnpm typecheck`. **Runtime:** N/A — PR 13C consumes the reducer state. **Rollback:** remove only these reducer events, seam, and tests; retain PR 13A's pure contract.
+
+- [ ] **RED:** Add failing reducer tests for confirm, omit, reconcile, and restore events; effective changes increment revision and clear evaluation, fingerprint, and request token through one seam, while no-ops remain stable. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Implement reducer-owned confirm/omit/reconcile/restore events using the single invalidation seam; preserve existing hierarchy and Unidad mutation semantics and do not issue evaluation requests from the reducer. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove duplicate confirmations, repeated omissions, unchanged reconciliation, valid restoration, hierarchy replacement, and Unidad replacement have the prescribed stable or invalidating result; run and record the focused command. <!-- sdd-owner: implementation -->
+
+### PR 13C — Lease-safe evaluation driver (blocked by ownership source)
+
+**Depends on:** PR 13B and the parent-owned ownership-source gate. **Dependency diagram:** `… → PR 13A → PR 13B → ownership source → 📍 PR 13C`. **Stop gate:** no ownership source is currently passed to Creador. Do not default `GLOBAL` or invent an organization ID. This slice is unavailable until the parent records an explicit product-owned source. **Start → finish after the gate:** reducer state with a supplied product-owned ownership source → a new feature-local evaluation hook invokes evaluation after Unit and effective mutations. **Concrete targets:** a new hook separate from the 425-line `useResourceCreationFlow.ts`, its focused tests, and no review/create UI. **Budget:** 260–390 A+D. **Verify:** focused driver Vitest command plus `pnpm typecheck`. **Rollback:** remove only the driver hook and tests; retain PRs 13A–13B.
+
+- [ ] **RED:** After the ownership source is explicitly supplied, add failing driver tests for no request before Unit/source, evaluation after Unit or an effective selection mutation, lease-token stale rejection, and transport failure without adopting facts. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Add the separate lease-safe evaluation driver hook; capture ownership, context, revision, and token; request only after Unit/mutations; and route validated facts through PR 13A reconciliation without loops. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Prove out-of-order responses, stale context/revision, transport retry, and reconciliation-caused state changes neither re-adopt stale facts nor create evaluation loops; run and record the focused command. <!-- sdd-owner: implementation -->
+
+### PR 13D — One-at-a-time selection attributes UI (blocked by ownership source)
+
+**Depends on:** PR 13C and the parent-owned ownership-source gate. **Dependency diagram:** `… → PR 13B → ownership source → PR 13C → 📍 PR 13D`. **Stop gate:** no ownership source is currently passed to Creador, so this slice is unavailable until the parent records the explicit product-owned source; never default `GLOBAL` or invent an organization ID. **Start → finish after the gate:** current authoritative sequence → one keyboard-first assignment decision with definition and allowed-value paging. **Concrete targets:** feature-local attribute stage, `ResourceCreationShell.tsx`, and focused RTL/unit tests. **Budget:** 280–390 A+D. **Verify:** focused attribute RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only this UI composition and tests; retain PRs 13A–13C.
+
+- [ ] **RED:** After the ownership source is explicitly supplied, add failing RTL tests for one assignment at a time, definition and allowed-value paging, `modoCaptura: SELECCION` confirmation, `LIBRE` unsupported presentation, and `Atributos · n de total`. <!-- sdd-owner: implementation -->
+- [ ] **GREEN:** Render only the current authoritative assignment with selection-only allowed values, optional **Omitir**, visible `Atributos · n de total`, and no free-value editor or simultaneous assignment controls. <!-- sdd-owner: implementation -->
+- [ ] **TRIANGULATE/REFACTOR:** Cover required/optional pending transitions, suspended values remaining absent from requests, sequence changes retaining the pending assignment when possible, and terminal pending review before PR 14; run and record the focused command. <!-- sdd-owner: implementation -->
 
 ### PR 14 — Authoritative review and fingerprinted creation
 
-**Depends on:** PR 13. **Dependency diagram:** `… → PR 13 → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
+**Depends on:** PR 13D. **Dependency diagram:** `… → PR 13C → PR 13D → 📍 PR 14`. **Start → finish:** evaluated selection sequence → review and create are driven only by a current `VALID` evaluation and the published `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID` disposition union. **Concrete targets:** `resourcesMaster.types.ts` and `resourcesMaster.api.ts` for the exact create input/result parser and mutation adapter; feature-local review/result components, `ResourceCreationShell.tsx`, `CrearRecursoSurface.tsx`, and exact-contract unit/RTL tests. PR 14 exclusively owns the create parser, mutation, and UI. **Budget:** 320–395 A+D. **Verify:** focused review/create Vitest/RTL command plus `pnpm typecheck`. **Rollback:** remove review/create integration and return to the evaluated selection boundary without touching legacy `crearRecurso`.
 
 - [ ] **RED:** Write failing exact-fixture tests for `INCOMPLETE | VALID | INVALID` rendering, evaluation invalidation on every selection mutation, required `expectedCatalogFingerprint`, active selection IDs only, `CREATED | CATALOG_CHANGED | INCOMPLETE | INVALID`, stale/unknown disposition handling, and confirmed-success-only behavior. <!-- sdd-owner: implementation -->
 - [ ] **GREEN:** Render generated `nombre`, `identificadorTecnico`, assignments, and issues exclusively from validated evaluation output; call `crearRecursoDesdeSelecciones` only with a current `expectedCatalogFingerprint` and represent only published dispositions. <!-- sdd-owner: implementation -->
@@ -208,6 +235,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 - [ ] Create or reuse the authorized draft/no-merge tracker for `openspec/changes/keyboard-first-resource-creation/tasks.md` and the local feature-branch chain; verify every child targets its immediate predecessor and contains its `📍` dependency diagram, with no push, PR publication, or release. <!-- sdd-owner: parent -->
 - [ ] Before committing the rewritten `openspec/changes/keyboard-first-resource-creation/tasks.md`, split its over-budget documentation diff into reviewable <400 A+D commits or stop for an explicit maintainer decision; do not hide it in an implementation child. <!-- sdd-owner: parent -->
+- [ ] Identify and record the explicit product-owned ownership source passed to Creador for evaluation/create; PR 13C and PR 13D remain unavailable until it is identified, and neither may default `GLOBAL` or invent an organization ID. <!-- sdd-owner: parent -->
 - [ ] Start or reuse bounded review for each source/test work unit named in `openspec/changes/keyboard-first-resource-creation/tasks.md`, using its clean diff, exact RED/GREEN/TRIANGULATE evidence, focused command result, runtime result, dependency, and rollback boundary. <!-- sdd-owner: parent -->
 - [x] Authorize starting the strict PR 12A RED work unit against the accepted backend-v1 authority in `openspec/changes/keyboard-first-resource-creation/{proposal.md,specs/keyboard-first-resource-creation/spec.md,design.md,design-details.md}` after confirming backend `23e9440c2b832edb8e557134018ea812979c6452`, the reconciled artifacts, and the local-only delivery boundary; this does not authorize a failing branch or any commit. <!-- sdd-owner: parent -->
 - [ ] After accepted implementation, run the complete applicable quality suite from `openspec/config.yaml`, record unavailable checks or deviations in this change, then follow the repository OpenSpec canonical-sync and archive workflow without changing `openspec/config.yaml`. <!-- sdd-owner: parent -->
