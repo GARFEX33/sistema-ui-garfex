@@ -30,6 +30,13 @@ const flowSource = readFileSync(
   ),
   'utf8',
 )
+const attributeViewSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/resourceCreation.attributeView.ts',
+  ),
+  'utf8',
+)
 const selectorStateSource = readFileSync(
   resolve(
     process.cwd(),
@@ -46,6 +53,7 @@ const creationRuntimeFiles = [
   'StagedSearchSelector.tsx',
   'resourceCreation.attributeSequence.ts',
   'resourceCreation.attributeStep.ts',
+  'resourceCreation.attributeView.ts',
   'resourceCreation.dependentLoader.ts',
   'resourceCreation.evaluationLease.ts',
   'resourceCreation.evaluationRequest.ts',
@@ -134,6 +142,12 @@ describe('resource creation safety wall', () => {
     expect(modelSource).not.toContain("kind: 'contract-pending'")
     expect(modelSource).toContain("kind: 'attributes'")
     expect(modelSource).toContain("kind: 'review-pending'")
+  })
+
+  it('keeps attribute view projection transport-free and independent of query hooks', () => {
+    expect(attributeViewSource).not.toMatch(
+      /api\.|useQuery|useResourceCreation|issues|valoresNormalizados/,
+    )
   })
 
   it('keeps current-attribute derivation transport-free and sequence-owned', () => {

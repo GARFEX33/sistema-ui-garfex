@@ -1219,3 +1219,12 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **TDD:** flow RED failed 3/4; GREEN evaluation/flow/model/surface/architecture proof passed 79/79 and full suite 535/535.
 - **Restoration:** new matching knowledge reconciles already-adopted data, restores once, invalidates authority, and triggers one active-only reevaluation; nonmatching knowledge does not loop.
 - **Boundary:** surface remains D5d; three slices remain, forecast 880–1,160 A+D.
+
+---
+
+## PR 13D5d1a — base presenter projection
+
+- **Complete:** pure projection maps terminal completion first; evaluation/definition presenter states, exact retry identity, and optional-only LIBRE omission are isolated from allowed-value, bucket, and callback mapping.
+- **TDD:** RED missing-module import; GREEN focused projection suite passed 6/6.
+- **Replan:** D5d1a complete; D5d1b selection projection and D5d2 surface remain before PR14/15. 37 children total; 4 remain. Forecast: D5d1b 180–300 + D5d2 280–395 + PR14 320–395 + PR15 260–370 = 1,040–1,460 A+D.
+- **Budget remediation:** recorded prior 416 A+D overbudget attempt before documentation reset; this base slice remains independently bounded.
