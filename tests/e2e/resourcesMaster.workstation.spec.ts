@@ -6,6 +6,12 @@ type ResourceResponse =
   | { status: number; body?: string; contentType?: string }
   | undefined
 
+type CreationFixture = Readonly<{
+  createResponse?: (
+    attempt: number,
+  ) => ResourceResponse | Promise<ResourceResponse>
+}>
+
 const response = (value: unknown) => ({
   status: 200,
   contentType: 'application/json',
@@ -37,9 +43,11 @@ const hierarchyItem = (id: string, nombre: string) => ({
 async function mockResources(
   page: Page,
   resourceResponse: (call: RequestCall) => ResourceResponse,
-  creationFixture = false,
+  creationFixture?: CreationFixture,
 ) {
   const calls: RequestCall[] = []
+  const hasCreationFixture = creationFixture !== undefined
+  let createAttempts = 0
   await page.route('http://127.0.0.1:3210/**', async (route) => {
     if (route.request().method() !== 'POST') {
       await route.fulfill({ status: 204 })
@@ -52,15 +60,16 @@ async function mockResources(
     const call = { path: body.path, args: body.args?.[0] ?? {} }
     calls.push(call)
     if (call.path.endsWith(':listarClases')) {
-      const firstPage = !creationFixture || call.args.cursor !== 'class-page-2'
+      const firstPage =
+        !hasCreationFixture || call.args.cursor !== 'class-page-2'
       await route.fulfill(
         response({
-          continuationCursor: creationFixture
+          continuationCursor: hasCreationFixture
             ? firstPage
               ? 'class-page-2'
               : 'class-page-3'
             : null,
-          isExhausted: !creationFixture,
+          isExhausted: !hasCreationFixture,
           items: firstPage
             ? [hierarchyItem('class-1', 'Materiales')]
             : [hierarchyItem('class-2', 'Equipos')],
@@ -100,7 +109,7 @@ async function mockResources(
       )
       return
     }
-    if (creationFixture && call.path.endsWith(':listarPoliticasUnidad')) {
+    if (hasCreationFixture && call.path.endsWith(':listarPoliticasUnidad')) {
       expect(call.args).toEqual({
         familiaRecursoId: 'family-1',
         paraTipoRecursoId: 'type-1',
@@ -130,7 +139,7 @@ async function mockResources(
       )
       return
     }
-    if (creationFixture && call.path.endsWith(':obtenerUnidad')) {
+    if (hasCreationFixture && call.path.endsWith(':obtenerUnidad')) {
       expect(call.args).toEqual({ unidadId: 'unit-1' })
       await route.fulfill(
         response({
@@ -142,6 +151,129 @@ async function mockResources(
           revision: 1,
           effective: true,
         }),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':obtenerDefinicionAtributo')
+    ) {
+      const color = call.args.definicionAtributoId === 'definition-color'
+      expect(call.args).toEqual({
+        definicionAtributoId: color ? 'definition-color' : 'definition-finish',
+      })
+      await route.fulfill(
+        response({
+          id: color ? 'definition-color' : 'definition-finish',
+          clave: color ? 'COLOR' : 'ACABADO',
+          nombre: color ? 'Color' : 'Acabado',
+          tipoDato: 'TEXTO',
+          modoCaptura: 'SELECCION',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        }),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':listarValoresPermitidosAtributo')
+    ) {
+      const color = call.args.definicionAtributoId === 'definition-color'
+      expect(call.args).toEqual({
+        definicionAtributoId: color ? 'definition-color' : 'definition-finish',
+        cursor: null,
+        pageSize: 20,
+        modo: 'ACTIVE',
+      })
+      await route.fulfill(
+        response({
+          items: [
+            {
+              id: color ? 'value-red' : 'value-matte',
+              definicionAtributoId: color
+                ? 'definition-color'
+                : 'definition-finish',
+              clave: color ? 'ROJO' : 'MATE',
+              valor: { kind: 'TEXTO', value: color ? 'Rojo' : 'Mate' },
+              nombre: color ? 'Rojo' : 'Mate',
+              orden: 1,
+              activo: true,
+              revision: 1,
+              effective: true,
+              effectiveReasons: [],
+            },
+          ],
+          continuationCursor: null,
+          isExhausted: true,
+        }),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':evaluarCreacionDesdeSelecciones')
+    ) {
+      const selections = call.args.selecciones as Array<{
+        asignacionAtributoId: string
+        valorPermitidoId: string
+      }>
+      const colorSelected = selections.some(
+        ({ asignacionAtributoId, valorPermitidoId }) =>
+          asignacionAtributoId === 'assignment-color' &&
+          valorPermitidoId === 'value-red',
+      )
+      expect(call.args).toEqual({
+        claseRecursoId: 'class-1',
+        familiaRecursoId: 'family-1',
+        tipoRecursoId: 'type-1',
+        unidadId: 'unit-1',
+        selecciones: colorSelected
+          ? [
+              {
+                asignacionAtributoId: 'assignment-color',
+                valorPermitidoId: 'value-red',
+              },
+            ]
+          : [],
+        ownership: { kind: 'GLOBAL' },
+      })
+      await route.fulfill(
+        response(
+          creationEvaluation(
+            colorSelected ? 'VALID' : 'INCOMPLETE',
+            colorSelected,
+          ),
+        ),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':crearRecursoDesdeSelecciones')
+    ) {
+      expect(call.args).toEqual({
+        claseRecursoId: 'class-1',
+        familiaRecursoId: 'family-1',
+        tipoRecursoId: 'type-1',
+        unidadId: 'unit-1',
+        expectedCatalogFingerprint: 'catalog-v1',
+        selecciones: [
+          {
+            asignacionAtributoId: 'assignment-color',
+            valorPermitidoId: 'value-red',
+          },
+        ],
+        ownership: { kind: 'GLOBAL' },
+      })
+      await route.fulfill(
+        (await creationFixture?.createResponse?.(createAttempts++)) ??
+          response({
+            disposition: 'CREATED',
+            item: summary('resource-created', 'Tubería roja'),
+          }),
       )
       return
     }
@@ -179,6 +311,101 @@ const resourceSearchCall = (args: Record<string, unknown>) => ({
 
 const listCalls = (calls: readonly RequestCall[]) =>
   calls.filter(({ path }) => path.endsWith(':listarRecursosResumen'))
+
+const creationEvaluation = (
+  status: 'INCOMPLETE' | 'VALID' | 'INVALID',
+  colorSelected: boolean,
+  invalidSelection = false,
+) => ({
+  status,
+  valid: status === 'VALID',
+  catalogFingerprint: 'catalog-v1',
+  nombre: colorSelected ? 'Tubería roja' : null,
+  identificadorTecnico: colorSelected ? 'TUB-ROJA' : null,
+  asignaciones: [
+    {
+      asignacionAtributoId: 'assignment-color',
+      definicionAtributoId: 'definition-color',
+      aplicabilidadResuelta: 'REQUIRED',
+      participaIdentidad: true,
+      orden: 1,
+      effectiveReasons: [],
+      ...(colorSelected ? { selectedValueId: 'value-red' } : {}),
+    },
+    {
+      asignacionAtributoId: 'assignment-finish',
+      definicionAtributoId: 'definition-finish',
+      aplicabilidadResuelta: 'OPTIONAL',
+      participaIdentidad: false,
+      orden: 2,
+      effectiveReasons: [],
+    },
+  ],
+  faltantesRequeridos: colorSelected ? [] : ['assignment-color'],
+  seleccionesInvalidas: invalidSelection ? ['assignment-color'] : [],
+  valoresNormalizados: colorSelected
+    ? [{ atributoRecursoId: 'color', valor: 'Rojo' }]
+    : [],
+  issues:
+    status === 'VALID'
+      ? []
+      : [
+          {
+            code: 'HIERARCHY_INVALID',
+            message: 'Selecciona un color permitido.',
+            asignacionAtributoId: 'assignment-color',
+          },
+        ],
+})
+
+const completeCreationContext = async (page: Page) => {
+  await page.keyboard.press('n')
+
+  for (const [label, option] of [
+    ['Clase', 'Materiales'],
+    ['Familia', 'Canalizaciones'],
+    ['Tipo', 'Tuberías'],
+    ['Unidad natural', 'Unidad (u)'],
+  ] as const) {
+    const search = page.getByRole('searchbox', { name: label })
+    await expect(search).toBeFocused()
+    await expect(page.getByRole('option', { name: option })).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+  }
+
+  return page.getByRole('searchbox', { name: 'Color' })
+}
+
+const reachReadyReview = async (
+  page: Page,
+  beforeColorConfirmation?: () => Promise<void>,
+) => {
+  const colorSearch = await completeCreationContext(page)
+  await expect(colorSearch).toBeFocused()
+  await beforeColorConfirmation?.()
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+
+  const finishSearch = page.getByRole('searchbox', { name: 'Acabado' })
+  const finishOption = page.getByRole('option', { name: 'Mate' })
+  const omit = page.getByRole('button', { name: 'Omitir' })
+  await expect(finishSearch).toBeFocused()
+  await expect(finishOption).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(finishOption).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(omit).toBeFocused()
+  await page.keyboard.press('Enter')
+
+  await expect(
+    page.getByRole('heading', { name: 'Revisión de creación' }),
+  ).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(
+    page.getByRole('button', { name: 'Crear recurso' }),
+  ).toBeFocused()
+}
 
 test.describe('Recursos maestros workstation 1440×980', () => {
   test('lists all resources, scopes hierarchy filters and search, and keeps the spatial paths connected', async ({
@@ -349,96 +576,47 @@ test.describe('Recursos maestros workstation 1440×980', () => {
     ).toBeVisible()
   })
 
-  test('reaches the contract wall with only keyboard stages, local continuation, and Escape restoration', async ({
+  test('completes the selection-only creation journey against exact published DTO fixtures', async ({
     page,
   }) => {
-    const calls = await mockResources(page, () => undefined, true)
+    const calls = await mockResources(page, () => undefined, {})
     await page.goto('/recursos')
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
-    const trigger = page.getByRole('button', { name: 'Nuevo recurso' })
-    const masterListCallCount = listCalls(calls).length
-
-    await page.keyboard.press('n')
-    const classSearch = page.getByRole('searchbox', { name: 'Clase' })
-    await expect(classSearch).toBeFocused()
-    await page.keyboard.type('Mat')
+    await reachReadyReview(page, async () => {
+      await expect(
+        page.getByRole('heading', { name: 'Atributos · 1 de 2', exact: true }),
+      ).toBeVisible()
+      await expect(page.getByText('Obligatorio')).toBeVisible()
+      await expect(page.getByRole('option', { name: 'Rojo' })).toBeVisible()
+      expect(
+        (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
+          .violations,
+      ).toEqual([])
+    })
     await expect(
-      page.getByText('1 coincidencia entre 1 opciones cargadas.'),
+      page.getByText('La evaluación está lista para crear el recurso.'),
     ).toBeVisible()
-    await page.keyboard.press('Tab')
-    await expect(page.getByRole('option', { name: 'Materiales' })).toBeFocused()
-    await page.keyboard.press('Tab')
-    const loadMore = page.getByRole('button', { name: 'Cargar más…' })
-    await expect(loadMore).toBeFocused()
-    await page.keyboard.press('Enter')
-    await expect(classSearch).toHaveValue('Mat')
-    await expect(
-      page.getByText('1 coincidencia entre 2 opciones cargadas.'),
-    ).toBeVisible()
-    await expect(classSearch).toBeFocused()
-    await page.keyboard.press('ArrowDown')
-    await expect(page.getByRole('option', { name: 'Materiales' })).toBeFocused()
-    await page.keyboard.press('Enter')
-
-    const familySearch = page.getByRole('searchbox', { name: 'Familia' })
-    await expect(familySearch).toBeFocused()
-    await expect(
-      page.getByRole('option', { name: 'Canalizaciones' }),
-    ).toBeVisible()
-    await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('Enter')
-    const typeSearch = page.getByRole('searchbox', { name: 'Tipo' })
-    await expect(typeSearch).toBeFocused()
-    await expect(page.getByRole('option', { name: 'Tuberías' })).toBeVisible()
-    await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('Enter')
-    const unitSearch = page.getByRole('searchbox', { name: 'Unidad natural' })
-    await expect(unitSearch).toBeFocused()
-    await expect(page.getByRole('option', { name: 'Unidad (u)' })).toBeVisible()
-
+    await expect(page.getByText('Tubería roja')).toBeVisible()
+    await expect(page.getByText('TUB-ROJA')).toBeVisible()
     expect(
       (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
         .violations,
     ).toEqual([])
-    await page.keyboard.press('ArrowDown')
+
     await page.keyboard.press('Enter')
     await expect(
-      page.getByRole('heading', { name: 'Contrato pendiente' }),
+      page.getByRole('heading', { name: 'Recurso creado' }),
     ).toBeFocused()
-    expect(
-      (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
-        .violations,
-    ).toEqual([])
-
-    await page.keyboard.press('Escape')
-    await expect(unitSearch).toBeFocused()
-    await page.keyboard.press('Escape')
-    await expect(typeSearch).toBeFocused()
-    await page.keyboard.press('Escape')
-    await expect(familySearch).toBeFocused()
-    await page.keyboard.press('Escape')
-    await expect(classSearch).toBeFocused()
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog')).toBeHidden()
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-    )
-    await expect(trigger).toBeFocused()
-
     await expect(
-      page.getByRole('button', { name: 'Materiales' }),
-    ).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.getByRole('searchbox', { name: 'Buscar' })).toHaveValue(
-      '',
+      page.getByText('El recurso Tubería roja fue creado.'),
+    ).toBeVisible()
+    expect(calls.map(({ path }) => path)).toContain(
+      'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
     )
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
-    expect(listCalls(calls)).toHaveLength(masterListCallCount)
+    expect(calls.map(({ path }) => path)).toContain(
+      'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+    )
     expect(calls.map(({ path }) => path)).not.toContain(
       'catalogoAdmin/recursos:crearRecurso',
-    )
-    expect(calls.map(({ path }) => path).join('\n')).not.toMatch(
-      /catalogoAdmin\/atributos|evaluarCreacionDesdeSelecciones|crearRecursoDesdeSelecciones/,
     )
   })
 
