@@ -30,6 +30,13 @@ const flowSource = readFileSync(
   ),
   'utf8',
 )
+const entrySource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/ResourcesMasterEntry.tsx',
+  ),
+  'utf8',
+)
 const attributeViewSource = readFileSync(
   resolve(
     process.cwd(),
@@ -101,6 +108,16 @@ describe('resource creation safety wall', () => {
     expect(createDriverSource).not.toMatch(
       /createResource(?!FromSelections)|ResourceCreateInput|onCreated/,
     )
+  })
+
+  it('supplies explicit GLOBAL ownership only at the Entry composition host', () => {
+    expect(entrySource).toMatch(
+      /const creationOwnership: ResourceCreationEvaluationOwnership\s*=\s*\{\s*kind: 'GLOBAL',?\s*\}/,
+    )
+    expect(entrySource).toContain(
+      '<ResourcesMasterScreen creationOwnership={creationOwnership} />',
+    )
+    expect(surfaceSource).toContain('useResourceCreationFlow(api, ownership)')
   })
 
   it('integrates one ownership-aware evaluation driver through the flow', () => {

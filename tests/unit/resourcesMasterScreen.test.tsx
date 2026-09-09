@@ -198,10 +198,11 @@ vi.mock('../../src/features/resources-master/CrearRecursoSurface', () => ({
 }))
 
 describe('ResourcesMasterScreen connected read wiring', () => {
-  it('makes the entry composition host explicitly block missing creation ownership', () => {
+  it('forwards the explicitly authorized GLOBAL creation ownership from the entry host', () => {
     expect(entrySource).toContain(
-      'const creationOwnership: ResourceCreationEvaluationOwnership | null = null',
+      'const creationOwnership: ResourceCreationEvaluationOwnership = {',
     )
+    expect(entrySource).toContain("kind: 'GLOBAL'")
     expect(entrySource).toContain(
       '<ResourcesMasterScreen creationOwnership={creationOwnership} />',
     )
