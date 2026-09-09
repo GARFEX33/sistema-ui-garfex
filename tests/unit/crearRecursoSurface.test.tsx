@@ -18,6 +18,7 @@ import type { ResourcesMasterApi } from '../../src/features/resources-master/res
 import type {
   ResourceCreationEvaluation,
   ResourceCreationEvaluationOwnership,
+  ResourceCreationResult,
 } from '../../src/features/resources-master/resourcesMaster.types'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
@@ -31,6 +32,7 @@ type IdleEvaluationDriver = (
 const {
   useResourceCreationEvaluationSpy,
   useResourceCreationAttributeQueriesSpy,
+  useResourceCreationCreateSpy,
 } = vi.hoisted(() => ({
   useResourceCreationEvaluationSpy: vi.fn<IdleEvaluationDriver>(() => ({
     status: 'idle',
@@ -41,6 +43,10 @@ const {
     definition: { status: 'idle' },
     allowedValues: {},
     allowedValuesKnowledge: {},
+  })),
+  useResourceCreationCreateSpy: vi.fn(() => ({
+    status: 'idle' as const,
+    create: vi.fn(),
   })),
 }))
 
@@ -53,7 +59,7 @@ vi.mock(
 vi.mock(
   '../../src/features/resources-master/useResourceCreationCreate',
   () => ({
-    useResourceCreationCreate: () => ({ status: 'idle', create: vi.fn() }),
+    useResourceCreationCreate: useResourceCreationCreateSpy,
   }),
 )
 vi.mock(
@@ -65,6 +71,11 @@ vi.mock(
 
 beforeEach(() => {
   useResourceCreationEvaluationSpy.mockClear()
+  useResourceCreationCreateSpy.mockReset()
+  useResourceCreationCreateSpy.mockReturnValue({
+    status: 'idle',
+    create: vi.fn(),
+  })
   // react-aria-components' Popover positioning reads layout APIs jsdom does
   // not implement; a no-op is enough since we never assert real geometry.
   global.ResizeObserver ??= class {
@@ -127,6 +138,39 @@ const unitNames: Record<string, { nombre: string; simbolo: string }> = {
   M3: { nombre: 'Metro cúbico', simbolo: 'm³' },
   KG: { nombre: 'Kilogramo', simbolo: 'kg' },
 }
+
+const creationResult = (
+  disposition: ResourceCreationResult['disposition'],
+): ResourceCreationResult =>
+  disposition === 'CREATED'
+    ? {
+        disposition,
+        item: {
+          id: 'resource-1',
+          tipoRecursoId: 'type-1',
+          unidadId: 'M3',
+          identificadorTecnico: 'BOM-CTR-001',
+          nombre: 'Bomba centrífuga',
+          activo: true,
+          revision: 1,
+          classificationStatus: { state: 'EFFECTIVE', reasons: [] },
+        },
+      }
+    : ({
+        disposition,
+        evaluation: {
+          status: disposition === 'CATALOG_CHANGED' ? 'VALID' : disposition,
+          valid: disposition === 'CATALOG_CHANGED',
+          catalogFingerprint: 'current-fingerprint',
+          nombre: null,
+          identificadorTecnico: null,
+          asignaciones: [],
+          faltantesRequeridos: [],
+          seleccionesInvalidas: [],
+          valoresNormalizados: [],
+          issues: [],
+        },
+      } as ResourceCreationResult)
 
 function fakeApi(
   overrides: Partial<ResourcesMasterApi> = {},
@@ -1243,7 +1287,14 @@ describe('CrearRecursoSurface — Clase staged', () => {
     const evaluation = {
       status: 'VALID',
       valid: true,
+      catalogFingerprint: 'current-fingerprint',
+      nombre: 'Arena lavada',
+      identificadorTecnico: 'ARE-LAV-001',
       asignaciones: [assignment],
+      faltantesRequeridos: [],
+      seleccionesInvalidas: [],
+      valoresNormalizados: [],
+      issues: [],
     }
     useResourceCreationAttributeQueriesSpy.mockImplementation(
       ({ selectionBuckets }) => ({
@@ -1299,7 +1350,7 @@ describe('CrearRecursoSurface — Clase staged', () => {
     ).toHaveAttribute('aria-current', 'step')
     await user.click(screen.getByRole('option', { name: 'Rojo' }))
     const reviewHeading = await screen.findByRole('heading', {
-      name: 'Revisión pendiente',
+      name: 'Revisión de creación',
     })
     expect(reviewHeading).toBeVisible()
     expect(reviewHeading).toHaveFocus()
@@ -1407,9 +1458,43 @@ describe('CrearRecursoSurface — Clase staged', () => {
       ),
     ).toBe(true)
     expect(
-      await screen.findByRole('heading', { name: 'Revisión pendiente' }),
+      await screen.findByRole('heading', { name: 'Revisión de creación' }),
     ).toBeVisible()
   })
+
+  it.each([
+    ['CREATED', 1],
+    ['CATALOG_CHANGED', 0],
+    ['INCOMPLETE', 0],
+    ['INVALID', 0],
+  ] as const)(
+    'invokes onCreated only once for a current %s result',
+    (disposition, calls) => {
+      const api = fakeApi()
+      const onCreated = vi.fn()
+      useResourceCreationCreateSpy.mockReturnValue({
+        status: 'result',
+        result: creationResult(disposition),
+        create: vi.fn(),
+      })
+      const rendered = renderSurface(api, {
+        ownership: { kind: 'GLOBAL' },
+        onCreated,
+      })
+
+      expect(onCreated).toHaveBeenCalledTimes(calls)
+      rendered.rerender(
+        <KeyboardControllerProvider activeSurface="recursos">
+          <CrearRecursoSurface
+            api={api}
+            ownership={{ kind: 'GLOBAL' }}
+            onCreated={onCreated}
+          />
+        </KeyboardControllerProvider>,
+      )
+      expect(onCreated).toHaveBeenCalledTimes(calls)
+    },
+  )
 
   it('keeps INVALID selections correctable until a later VALID evaluation and backs locally', async () => {
     const assignment = {
@@ -1515,14 +1600,14 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await waitFor(() => expect(releaseValid).toBeTypeOf('function'))
     expect(screen.getByRole('option', { name: 'Azul' })).toBeVisible()
     expect(
-      screen.queryByRole('heading', { name: 'Revisión pendiente' }),
+      screen.queryByRole('heading', { name: 'Revisión de creación' }),
     ).not.toBeInTheDocument()
 
     await act(async () => releaseValid?.())
-    await screen.findByRole('heading', { name: 'Revisión pendiente' })
+    await screen.findByRole('heading', { name: 'Revisión de creación' })
     await user.keyboard('{Escape}')
     expect(
-      screen.queryByRole('heading', { name: 'Revisión pendiente' }),
+      screen.queryByRole('heading', { name: 'Revisión de creación' }),
     ).not.toBeInTheDocument()
     const rail = screen.getByRole('list', { name: 'Etapas de creación' })
     expect(within(rail).getByText('Atributos · pendiente')).toHaveAttribute(

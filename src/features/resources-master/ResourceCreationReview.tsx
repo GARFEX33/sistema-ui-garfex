@@ -1,12 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { Button } from '../../shared/ui/Button'
-import type { ResourceCreationEvaluation } from './resourcesMaster.types'
+import type {
+  ResourceCreationEvaluation,
+  ResourceCreationResult,
+} from './resourcesMaster.types'
 
 export interface ResourceCreationReviewProps {
   evaluation: ResourceCreationEvaluation | null
   onCreate: () => void
   disabled?: boolean
   isCreating?: boolean
+  result?: ResourceCreationResult
 }
 
 const statusCopy = {
@@ -18,17 +22,63 @@ const statusCopy = {
 const hasAuthorityText = (value: string | null) =>
   typeof value === 'string' && value.trim().length > 0
 
+const resultOutcome = (result: ResourceCreationResult) => {
+  switch (result.disposition) {
+    case 'CREATED':
+      return {
+        heading: 'Recurso creado',
+        message: `El recurso ${result.item.nombre} fue creado.`,
+      }
+    case 'CATALOG_CHANGED':
+      return {
+        heading: 'Catálogo actualizado',
+        message: 'El catálogo cambió antes de crear el recurso.',
+      }
+    case 'INCOMPLETE':
+      return {
+        heading: 'Creación incompleta',
+        message: 'La creación requiere correcciones antes de continuar.',
+      }
+    case 'INVALID':
+      return {
+        heading: 'Creación inválida',
+        message: 'La creación requiere correcciones antes de continuar.',
+      }
+  }
+}
+
 export function ResourceCreationReview({
   evaluation,
   onCreate,
   disabled = false,
   isCreating = false,
+  result,
 }: ResourceCreationReviewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
     headingRef.current?.focus()
-  }, [])
+  }, [result])
+
+  if (result) {
+    const outcome = resultOutcome(result)
+
+    return (
+      <section aria-labelledby="resource-creation-review-heading">
+        <h2
+          className="m-0 text-lg"
+          id="resource-creation-review-heading"
+          ref={headingRef}
+          tabIndex={-1}
+        >
+          {outcome.heading}
+        </h2>
+        <p className="mt-2 text-text-secondary" role="status">
+          {outcome.message}
+        </p>
+      </section>
+    )
+  }
 
   if (!evaluation) {
     return (

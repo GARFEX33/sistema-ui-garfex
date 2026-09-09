@@ -1333,3 +1333,25 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 
 - Updated only the Review Workload Forecast and PR 14A–E chain-map summary to record PR 14D2b as complete, three remaining implementation slices (PR 14D3, PR 14E, PR 15), and PR 14D3 targeting PR 14D2b.
 - No production, test, scope, checkbox, lifecycle, or surface-outcome behavior changed; prior focused-test/typecheck evidence remains authoritative.
+
+---
+
+## PR 14D3 — published disposition surface outcome
+
+- **State / structured status:** completed only under parent attempt `proceed` token `sha256:a998425c8cd2ca8ca6c9fb0ed54d2d51ed00441c5783a824b5e29b8ff8b2fcf1`; authoritative OpenSpec change `keyboard-first-resource-creation` was apply-ready in the repo-local workspace with no action-context warnings. No attempt settlement, commit, branch, review, push, PR, or PR 14E/15 work was performed.
+- **Completed / persisted:** the implementation-owned PR 14D3 checkbox is visibly `[x]` in `tasks.md`; parent-owned lifecycle rows are unchanged.
+- **Implementation:** `ResourceCreationReview` presents only the four published create dispositions. `CrearRecursoSurface` composes the existing review/create seam and de-duplicates `onCreated` by current result identity; only `CREATED` invokes it, while `CATALOG_CHANGED`, `INCOMPLETE`, and `INVALID` remain owned by the existing flow/reducer correction adoption.
+- **Design-system checklist:** reused feature-local review and shared `Button`/Light semantic tokens; no new component, CSS, arbitrary value, Dark mode, free-value field, global listener, or alternate state authority was added.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 14D3 surface outcome | `tests/unit/crearRecursoSurface.test.tsx`, `tests/unit/resourceCreationReview.test.tsx` | RTL | 42/42 passed | 5 failures: missing result presentation and absent `CREATED` success seam | 50/50 passed | Four published dispositions prove `CREATED` once and all other dispositions zero calls | Extracted pure `resultOutcome`; focused tests remained 50/50 |
+
+- **Verification:** `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreationReview.test.tsx` — 50/50 passed; `pnpm typecheck` — passed; targeted ESLint and Prettier checks — passed; `git diff --check` — passed.
+- **Files:** `CrearRecursoSurface.tsx`, `ResourceCreationReview.tsx`, the two focused RTL tests, `tasks.md`, and this cumulative record.
+- **Deviation / rollback:** none. Roll back only review-result presentation, surface seam composition, focused tests, and this evidence; the flow/reducer adoption contract remains intact.
+- **Workload / PR boundary:** feature-branch-chain `PR 14D2b → 📍 PR 14D3 → PR 14E`; the forecast, chain marker, and PR 14 dependency diagram now advance to PR 14E / PR 14D3, and `git diff --numstat` is 242 additions + 31 deletions = 273 A+D, below the 399 A+D cap.
+- **Remaining implementation task:** `- [ ] **PR 14E:** Stale, unknown, and transport-rejection integration proof plus focused review/create closure. <!-- sdd-owner: implementation -->`
+- **Next:** `parent-lifecycle`; PR 14E and PR 15 remain explicitly out of scope.

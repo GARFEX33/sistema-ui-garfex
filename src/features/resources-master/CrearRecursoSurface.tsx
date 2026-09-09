@@ -11,6 +11,7 @@ import { CreationCommandBar } from './CreationCommandBar'
 import { ResourceCreationAttributesStage } from './ResourceCreationAttributesStage'
 import { ResourceCreationContextStage } from './ResourceCreationContextStage'
 import { ResourceCreationContractPending } from './ResourceCreationContractPending'
+import { ResourceCreationReview } from './ResourceCreationReview'
 import { ResourceCreationShell } from './ResourceCreationShell'
 import {
   projectResourceCreationAttributeSelectionView,
@@ -23,7 +24,10 @@ import {
   type InitialResourceHierarchySnapshot,
 } from './resourceCreation.model'
 import { useResourceCreationFlow } from './useResourceCreationFlow'
-import type { ResourceCreationEvaluationOwnership } from './resourcesMaster.types'
+import type {
+  ResourceCreationEvaluationOwnership,
+  ResourceCreationResult,
+} from './resourcesMaster.types'
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterApi
@@ -44,6 +48,7 @@ export function CrearRecursoSurface({
   api,
   ownership,
   initialHierarchySnapshot,
+  onCreated,
 }: CrearRecursoSurfaceProps) {
   const [isOpen, setIsOpen] = useState(false)
   const initialHierarchySnapshotCaptureRef = useRef(
@@ -52,7 +57,6 @@ export function CrearRecursoSurface({
   initialHierarchySnapshotCaptureRef.current.receive(initialHierarchySnapshot)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
-  const reviewHeadingRef = useRef<HTMLHeadingElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
   const wasOpen = useRef(false)
   const isOpenRef = useRef(isOpen)
@@ -60,6 +64,9 @@ export function CrearRecursoSurface({
   const { registerAction, registerOverlay } = useKeyboardController()
 
   const flow = useResourceCreationFlow(api, ownership)
+  const creationResult =
+    flow.creation.status === 'result' ? flow.creation.result : null
+  const reportedCreatedResult = useRef<ResourceCreationResult | null>(null)
   const stageKind = flow.state.stage.kind
   const isContextStage =
     stageKind === 'class' ||
@@ -141,9 +148,14 @@ export function CrearRecursoSurface({
   }, [isContextStage, isOpen, stageKind])
 
   useEffect(() => {
-    if (isOpen && stageKind === 'review-pending')
-      reviewHeadingRef.current?.focus()
-  }, [isOpen, stageKind])
+    if (
+      creationResult?.disposition !== 'CREATED' ||
+      reportedCreatedResult.current === creationResult
+    )
+      return
+    reportedCreatedResult.current = creationResult
+    onCreated?.()
+  }, [creationResult, onCreated])
 
   useEffect(() => {
     let delayedRestore: number | null = null
@@ -294,19 +306,12 @@ export function CrearRecursoSurface({
                 <ResourceCreationAttributesStage view={attributeStageView} />
               )}
             {stageKind === 'review-pending' && !isContractPending && (
-              <section aria-labelledby="resource-review-pending-heading">
-                <h2
-                  ref={reviewHeadingRef}
-                  className="m-0 text-lg"
-                  id="resource-review-pending-heading"
-                  tabIndex={-1}
-                >
-                  Revisión pendiente
-                </h2>
-                <p className="mt-2 text-text-secondary" role="status">
-                  La revisión de creación estará disponible próximamente.
-                </p>
-              </section>
+              <ResourceCreationReview
+                evaluation={flow.state.draft.authoritativeEvaluation}
+                isCreating={flow.creation.status === 'loading'}
+                onCreate={flow.creation.create}
+                result={creationResult ?? undefined}
+              />
             )}
           </div>
           <CreationCommandBar stage={commandStage}>

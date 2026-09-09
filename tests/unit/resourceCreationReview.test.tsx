@@ -2,7 +2,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ResourceCreationReview } from '../../src/features/resources-master/ResourceCreationReview'
-import type { ResourceCreationEvaluation } from '../../src/features/resources-master/resourcesMaster.types'
+import type {
+  ResourceCreationEvaluation,
+  ResourceCreationResult,
+} from '../../src/features/resources-master/resourcesMaster.types'
 
 const evaluation = (
   overrides: Partial<ResourceCreationEvaluation> = {},
@@ -104,4 +107,50 @@ describe('ResourceCreationReview', () => {
     )
     expect(screen.getByRole('button', { name: 'Creando…' })).toBeDisabled()
   })
+
+  it.each([
+    [
+      { disposition: 'CREATED', item: { nombre: 'Bomba centrífuga' } },
+      'Recurso creado',
+      'El recurso Bomba centrífuga fue creado.',
+    ],
+    [
+      { disposition: 'CATALOG_CHANGED', evaluation: evaluation() },
+      'Catálogo actualizado',
+      'El catálogo cambió antes de crear el recurso.',
+    ],
+    [
+      {
+        disposition: 'INCOMPLETE',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      },
+      'Creación incompleta',
+      'La creación requiere correcciones antes de continuar.',
+    ],
+    [
+      {
+        disposition: 'INVALID',
+        evaluation: evaluation({ status: 'INVALID', valid: false }),
+      },
+      'Creación inválida',
+      'La creación requiere correcciones antes de continuar.',
+    ],
+  ] as const)(
+    'presents the published %s disposition without a create action',
+    (result, heading, message) => {
+      render(
+        <ResourceCreationReview
+          evaluation={evaluation()}
+          onCreate={vi.fn()}
+          result={result as ResourceCreationResult}
+        />,
+      )
+
+      expect(screen.getByRole('heading', { name: heading })).toHaveFocus()
+      expect(screen.getByRole('status')).toHaveTextContent(message)
+      expect(
+        screen.queryByRole('button', { name: /crear recurso/i }),
+      ).toBeNull()
+    },
+  )
 })
