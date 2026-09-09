@@ -201,6 +201,60 @@ describe('useResourceCreationCreate', () => {
     },
   )
 
+  it('suppresses a stale CREATED settlement before it can become a success result', async () => {
+    const response = deferred<ResourceCreationResult>()
+    const createResourceFromSelections = vi.fn(() => response.promise)
+    const mounted = renderDriver(state(), createResourceFromSelections)
+
+    act(() => expect(mounted.result.current.create()).toBe(true))
+    mounted.rerender({
+      current: { ...state(), draft: { ...state().draft, revision: 2 } },
+    })
+    await act(async () => response.resolve(result('CREATED')))
+
+    await waitFor(() => expect(mounted.result.current.status).toBe('idle'))
+    expect(mounted.result.current).not.toHaveProperty('result')
+    expect(createResourceFromSelections).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [
+      'an unknown adapter result',
+      new Error('Invalid resources master response'),
+    ],
+    [
+      'a malformed adapter result',
+      new Error('Invalid resources master response'),
+    ],
+    ['a transport rejection', new Error('transport down')],
+  ])(
+    'fails closed for %s and permits one explicit current retry',
+    async (_, failure) => {
+      const createResourceFromSelections = vi
+        .fn()
+        .mockRejectedValueOnce(failure)
+        .mockResolvedValueOnce(result('CREATED'))
+      const mounted = renderDriver(state(), createResourceFromSelections)
+
+      act(() => expect(mounted.result.current.create()).toBe(true))
+      await waitFor(() => expect(mounted.result.current.status).toBe('error'))
+      expect(mounted.result.current).not.toHaveProperty('result')
+      expect(createResourceFromSelections).toHaveBeenCalledTimes(1)
+      expect(mounted.client.getMutationCache().getAll()[0].options.retry).toBe(
+        false,
+      )
+
+      act(() => expect(mounted.result.current.create()).toBe(true))
+      await waitFor(() =>
+        expect(mounted.result.current).toMatchObject({
+          status: 'result',
+          result: result('CREATED'),
+        }),
+      )
+      expect(createResourceFromSelections).toHaveBeenCalledTimes(2)
+    },
+  )
+
   it('exposes generic current errors and retries only after an explicit invocation', async () => {
     const createResourceFromSelections = vi
       .fn()

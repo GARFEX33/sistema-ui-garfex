@@ -1355,3 +1355,32 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Workload / PR boundary:** feature-branch-chain `PR 14D2b → 📍 PR 14D3 → PR 14E`; the forecast, chain marker, and PR 14 dependency diagram now advance to PR 14E / PR 14D3, and `git diff --numstat` is 242 additions + 31 deletions = 273 A+D, below the 399 A+D cap.
 - **Remaining implementation task:** `- [ ] **PR 14E:** Stale, unknown, and transport-rejection integration proof plus focused review/create closure. <!-- sdd-owner: implementation -->`
 - **Next:** `parent-lifecycle`; PR 14E and PR 15 remain explicitly out of scope.
+
+---
+
+## PR 14E — stale, rejection, and focused create closure
+
+- **State / structured status:** completed only under parent attempt `proceed` token `sha256:d5863c0697a56e6287bcfb3d318fe7ce4390b4198f396ea3fc225d6e64e988d1`; native `gentle-ai.sdd-status@2` was apply-ready for `keyboard-first-resource-creation`, `artifactStore: openspec`, and the repo-local allowed root without warnings or blockers. No attempt settlement, commit, branch, review, push, PR, or PR 15 browser/axe work was performed.
+- **Completed / persisted:** the implementation-owned PR 14E checkbox is visibly `[x]` in `tasks.md`. Parent-owned lifecycle rows are unchanged.
+- **Proof:** a stale `CREATED` settlement remains invisible as a success result; rejected unknown/malformed adapter results and transport failures enter the existing generic mutation error boundary without an application disposition; an explicit, current retry alone can later expose a valid `CREATED` result. Existing single-flight coverage remains green, so duplicate submissions and result replays remain suppressed.
+- **Implementation:** added focused hook-integration proof only in `tests/unit/useResourceCreationCreate.test.tsx`; no production behavior, adapter/parser shape, surface presentation, TanStack ownership, or review correction was needed.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PR 14E proof closure | `tests/unit/useResourceCreationCreate.test.tsx` | Hook integration | 79/79 focused review/create/flow/architecture tests passed | The new stale-created and three rejection assertions passed on their first run because PR 14C2/D3 already fail closed; no production change was manufactured | Focused hook suite passed 13/13 | Covers stale `CREATED`, unknown adapter rejection, malformed adapter rejection, transport rejection, and one explicit current retry | Targeted Prettier formatting reran the hook suite green (13/13) |
+
+- **Verification:** `pnpm exec vitest run tests/unit/useResourceCreationCreate.test.tsx` — 13/13 passed after proof and formatting; `pnpm exec vitest run tests/unit/useResourceCreationCreate.test.tsx tests/unit/useResourceCreationFlow.create.test.tsx tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreationReview.test.tsx tests/architecture/resourceCreationBoundaries.test.ts` — 83/83 passed; `pnpm typecheck`, targeted ESLint, targeted Prettier check, and `git diff --check` passed.
+- **Files:** `tests/unit/useResourceCreationCreate.test.tsx`, `tasks.md`, and this cumulative record.
+- **Deviation / rollback:** none. Roll back only the PR 14E proof additions and OpenSpec evidence; retain PR 14C2 mutation protection and PR 14D3 presentation.
+- **Workload / PR boundary:** feature-branch-chain `PR 14D3 → 📍 PR 14E → PR 15`; final `git diff --numstat` is 77 additions + 1 deletion = 78 A+D, below the 399 A+D cap.
+- **Remaining implementation task:** none in PR 14; PR 15 remains unchecked and is explicitly deferred to its browser/axe closure.
+- **Next:** `parent-lifecycle`; return this evidence to the parent for its owned lifecycle and attempt settlement.
+
+### PR 14E metadata reconciliation
+
+- **State / status:** parent reacquired the existing PR 14E attempt with `proceed`; this metadata-only update consumed the apply-ready OpenSpec change in the repo-local allowed root. No production, test, task-checkbox, lifecycle, or PR 15 work was performed.
+- **Reconciled metadata:** the forecast now records PR 14A–E complete and one remaining implementation slice (PR 15); the chain map records PR 14A–E complete and advances the current marker/target to `📍 PR 15` / PR 14E; the PR 14 dependency diagram now ends at PR 14E and points to PR 15.
+- **Evidence preservation:** prior PR 14E implementation and TDD evidence remain unchanged. This documentation-only reconciliation needs no test rerun.
+- **Workload:** final `git diff --numstat` is 88 additions + 5 deletions = 93 A+D, and `git diff --check` passes; the combined work remains below 399 A+D.
