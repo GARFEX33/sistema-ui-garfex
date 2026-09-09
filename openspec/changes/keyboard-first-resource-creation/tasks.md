@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 260–370 A+D remaining after PR 14E; 47 implementation child slices total (1 remaining: PR 15) plus planning-doc slicing. |
+| Estimated changed lines | Implementation complete: 47 implementation child slices total, 0 remaining; historical planning-doc slicing remains audit-only. |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | Historical base → PR 1 safety → PR 2 shell → PR 3 rail/bar → PR 4 selector → PR 5 Familia/Tipo → PR 6 Unit resolver → PR 7 Unit stage → PR 8 legacy attributes removal → PR 9 legacy create removal → PR 10 buckets → PR 11 closure → backend gate → PR 12A definition/allowed-values adapter → PR 12B1 evaluation parser → PR 12B2 evaluation query adapter → PR 12C stale-safe evaluation lease → PR 13A authoritative sequence/buckets → PR 13B reducer invalidation → PR 13C0 required ownership seam → PR 13C1a authority/request → PR 13C1b1a hook core → PR 13C1b1b reconciliation/retry → PR 13C1b2 flow integration → PR 13D0 flow helper boundary → PR 13D1 context stage → PR 13D2a definition query → PR 13D2b allowed-values paging → PR 13D3 reducer attribute/review stages → PR 13D4a rail/command chrome → PR 13D4b current-assignment presenter → PR 13D5a current derivation → PR 13D5b orchestration → PR 13D5c flow completion → PR 13D5d1a base projection → PR 13D5d1b selection projection → PR 13D5d2a back navigation → PR 13D5d2b surface integration → PR 13D5d2c surface proof → PR 14A–C2 adapter/review/mutation → PR 14D1 transition → PR 14D2 flow/catalog adoption → PR 14D3 surface outcome → PR 14E closure → PR 15 backend closure |
@@ -73,7 +73,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 | 13D5d2b | Complete | `… → PR 13D5d2a → 📍 PR 13D5d2b` / PR 13D5d2a | Primary surface authority/render adoption; under 399 A+D |
 | 13D5d2c | Complete | `… → PR 13D5d2b → 📍 PR 13D5d2c` / PR 13D5d2b | Surface keyboard and transition triangulation; 100–220 A+D |
 | 14A–E | Complete | `… → PR 14C2 → PR 14D1 → PR 14D2a → PR 14D2b → PR 14D3 → PR 14E` / PR 14D3 | Split exact adapter, review, mutation, transition, flow/catalog adoption, surface outcome, and closure work into <399 A+D children |
-| 15 | Ready / current | `… → PR 13D5d2c → PR 14A → PR 14B → PR 14C → PR 14D1 → PR 14D2 → PR 14D3 → PR 14E → 📍 PR 15` / PR 14E | Backend-enabled browser/axe/regression closure; 260–370 A+D |
+| 15 | Complete | `… → PR 13D5d2c → PR 14A → PR 14B → PR 14C → PR 14D1 → PR 14D2 → PR 14D3 → PR 14E → PR 15` / PR 14E | Exact browser/axe/regression closure, including bounded invalid-selection reconfirmation and keyboard-fixture-stability successors |
 
 ## Executable now — backend-independent implementation
 
@@ -219,11 +219,11 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 ### PR 13C0 — Required creation-ownership seam
 
-**Depends on:** PR 13B. **Dependency diagram:** `… → PR 13A → PR 13B → 📍 PR 13C0`. **Start → finish:** Creador has no product-owned ownership input → the Entry composition host explicitly supplies `creationOwnership: ResourceCreationEvaluationOwnership | null`, Screen forwards it, and Creador requires `ownership`. `null` blocks with ownership-specific copy; a present value reports pending evaluation integration. **Out of scope:** no evaluation request, driver, reconciliation, review, or create behavior. Never default `GLOBAL` or invent an organization ID. **Concrete targets:** Entry, Screen, Creador, pending copy, focused surface/screen/architecture tests. **Budget:** 150–240 A+D. **Verify:** focused ownership-seam Vitest command plus `pnpm typecheck`. **Rollback:** remove only the prop seam, pending copy, tests, and this documentation update.
+**Depends on:** PR 13B. **Dependency diagram:** `… → PR 13A → PR 13B → 📍 PR 13C0`. **Start → finish:** Creador has no product-owned ownership input → the Entry composition host explicitly supplies authorized `creationOwnership: ResourceCreationEvaluationOwnership` with `{ kind: 'GLOBAL' }`, Screen forwards it, and Creador requires `ownership`. An explicit `null` remains a blocked test fixture, while the authorized value enables evaluation integration. **Out of scope:** no evaluation request, driver, reconciliation, review, or create behavior. Do not invent an organization ID. **Concrete targets:** Entry, Screen, Creador, pending copy, focused surface/screen/architecture tests. **Budget:** 150–240 A+D. **Verify:** focused ownership-seam Vitest command plus `pnpm typecheck`. **Rollback:** remove only the prop seam, pending copy, tests, and this documentation update.
 
-- [x] **RED:** Add failing focused tests for explicit null ownership at Entry, required Screen/Creador propagation, and distinct null-versus-present pending copy without backend-missing language. <!-- sdd-owner: implementation -->
-- [x] **GREEN:** Require `creationOwnership` through Entry → Screen and `ownership` at Creador; pass explicit null only at the composition host and add no evaluation behavior. <!-- sdd-owner: implementation -->
-- [x] **TRIANGULATE/REFACTOR:** Prove null blocks while an explicit present ownership remains integration-pending, retain no `GLOBAL` default, and run the focused suite. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing focused tests for explicit GLOBAL ownership at Entry, required Screen/Creador propagation, and distinct null-fixture-versus-authorized pending copy without backend-missing language. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Require `creationOwnership` through Entry → Screen and `ownership` at Creador; pass explicit product-owned `{ kind: 'GLOBAL' }` at the composition host and add no evaluation behavior. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Prove the explicit GLOBAL value enables integration while an explicit null fixture blocks, and run the focused suite. <!-- sdd-owner: implementation -->
 
 ### PR 13C1a — Ownership-aware evaluation authority and request
 
@@ -267,7 +267,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 ### PR 13D1 — Context-stage extraction from surface
 
-**Depends on:** PR 13D0. **Dependency diagram:** `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** monolithic surface context branches → feature-local context-stage composition with no attribute behavior enabled. **Budget:** 260–390 A+D. **Verify:** focused surface RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only the extracted context-stage composition and tests.
+**Depends on:** PR 13D0. **Dependency diagram:** `… → PR 13C1b2 → PR 13D0 → 📍 PR 13D1`. **Historical at that slice — runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** monolithic surface context branches → feature-local context-stage composition with no attribute behavior enabled. **Budget:** 260–390 A+D. **Verify:** focused surface RTL/Vitest command plus `pnpm typecheck`. **Rollback:** remove only the extracted context-stage composition and tests.
 
 - [x] **RED:** Add failing architecture proof that hierarchy/Unidad context retains its current keyboard behavior through the extracted boundary. <!-- sdd-owner: implementation -->
 - [x] **GREEN:** Extract only the existing context-stage surface composition; do not render an attribute assignment, free-value editor, review, or create control. <!-- sdd-owner: implementation -->
@@ -323,7 +323,7 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 ### PR 13D5b — Attribute orchestration hook
 
-**Depends on:** PR 13D5a. **Dependency diagram:** `… → PR 13D4b → PR 13D5a → 📍 PR 13D5b`. **Runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** isolated definition/allowed-value drivers and current derivation → one stale-safe hook composes them for the current authoritative assignment without surface rendering or reducer dispatch. **Budget:** 260–390 A+D. **Verify:** focused hook/attribute-step Vitest command plus `pnpm typecheck`. **Rollback:** remove only hook composition and its proof; retain PRs 13A–13D5a.
+**Depends on:** PR 13D5a. **Dependency diagram:** `… → PR 13D4b → PR 13D5a → 📍 PR 13D5b`. **Historical at that slice — runtime gate:** Entry still supplies null ownership, so production remains on the ownership-specific pending state until product integration supplies it. **Start → finish:** isolated definition/allowed-value drivers and current derivation → one stale-safe hook composes them for the current authoritative assignment without surface rendering or reducer dispatch. **Budget:** 260–390 A+D. **Verify:** focused hook/attribute-step Vitest command plus `pnpm typecheck`. **Rollback:** remove only hook composition and its proof; retain PRs 13A–13D5a.
 
 - [x] **RED:** Add failing hook tests for null/unavailable/current/complete derivation, current-definition isolation, allowed-value continuation, and stale assignment rejection. <!-- sdd-owner: implementation -->
 - [x] **GREEN:** Compose only the current authoritative assignment's definition and selection-only allowed-value paging behind a feature-local hook; do not dispatch, render, evaluate conditions, or create. <!-- sdd-owner: implementation -->
@@ -363,15 +363,15 @@ The compatible work through Class stage commit `e52b9b2` is historical baseline,
 
 **Depends on:** PR 14. **Start → finish:** exact-contract unit coverage → browser/axe and boundary regressions prove `modoCaptura: SELECCION`, `OPTIONAL` omission, authoritative `INCOMPLETE | VALID | INVALID` review, and `expectedCatalogFingerprint` creation with only `CREATED` success. **Concrete targets:** `tests/e2e/resourcesMaster.workstation.spec.ts`, feature architecture guards, and exact DTO fixture helpers limited to tests. **Budget:** 260–370 A+D. **Verify:** focused Vitest architecture suite, `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm build`. **Rollback:** revert closure evidence only; if runtime failures expose a behavior bug, revert its owning PR rather than weakening the test.
 
-- [ ] **RED:** Add failing keyboard-only and axe cases for `modoCaptura: SELECCION` allowed-value selection, `OPTIONAL` omission, authoritative `INCOMPLETE | INVALID | VALID` review, fingerprinted create, and non-confirming stale/unknown/transport rejection. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->
+- [x] **RED (historical; no retained browser test):** Native review removed the prior known-failing Playwright case; this record is not evidence of retained broad RED coverage. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->
 
 ## Parent-owned review and lifecycle gates
 
 - [ ] Create or reuse the authorized draft/no-merge tracker for `openspec/changes/keyboard-first-resource-creation/tasks.md` and the local feature-branch chain; verify every child targets its immediate predecessor and contains its `📍` dependency diagram, with no push, PR publication, or release. <!-- sdd-owner: parent -->
 - [ ] Before committing the rewritten `openspec/changes/keyboard-first-resource-creation/tasks.md`, split its over-budget documentation diff into reviewable <400 A+D commits or stop for an explicit maintainer decision; do not hide it in an implementation child. <!-- sdd-owner: parent -->
-- [x] Identify and record the explicit product-owned ownership seam passed to Creador for evaluation/create: `ResourcesMasterEntry` explicitly supplies `null`, so runtime requests remain blocked until product integration supplies a non-null value; PR 13C1b and PR 13D may be implemented with explicit fixtures, but neither may default `GLOBAL` or invent an organization ID. <!-- sdd-owner: parent -->
+- [x] Identify and record the explicit product-owned ownership seam passed to Creador for evaluation/create: `ResourcesMasterEntry` explicitly supplies authorized typed `creationOwnership: ResourceCreationEvaluationOwnership` as `{ kind: 'GLOBAL' }`; explicit `null` is retained only as a blocked fixture, and no organization/session fallback or other authority was invented. <!-- sdd-owner: parent -->
 - [ ] Start or reuse bounded review for each source/test work unit named in `openspec/changes/keyboard-first-resource-creation/tasks.md`, using its clean diff, exact RED/GREEN/TRIANGULATE evidence, focused command result, runtime result, dependency, and rollback boundary. <!-- sdd-owner: parent -->
 - [x] Authorize starting the strict PR 12A RED work unit against the accepted backend-v1 authority in `openspec/changes/keyboard-first-resource-creation/{proposal.md,specs/keyboard-first-resource-creation/spec.md,design.md,design-details.md}` after confirming backend `23e9440c2b832edb8e557134018ea812979c6452`, the reconciled artifacts, and the local-only delivery boundary; this does not authorize a failing branch or any commit. <!-- sdd-owner: parent -->
 - [ ] After accepted implementation, run the complete applicable quality suite from `openspec/config.yaml`, record unavailable checks or deviations in this change, then follow the repository OpenSpec canonical-sync and archive workflow without changing `openspec/config.yaml`. <!-- sdd-owner: parent -->

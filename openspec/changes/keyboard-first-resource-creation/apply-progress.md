@@ -91,7 +91,7 @@ The following persisted implementation-owned `- [ ]` lines remain unchanged:
 - `- [ ] **RED:** Add failing surface tests for required trimmed Nombre, optional trimmed Descripción omission, field-focused error, guarded Enter/IME behavior, and preservation when returning from Resource data. <!-- sdd-owner: implementation -->`
 - `- [ ] **GREEN:** Add the Resource data presentation to `ResourceCreationDetails.tsx` and compose it in `CrearRecursoSurface.tsx` through the reducer’s data-confirmation stage without adding fields or normalizations. <!-- sdd-owner: implementation -->`
 - `- [ ] **TRIANGULATE/REFACTOR:** Cover blank-versus-whitespace values and return navigation from data to attributes, run the stated command, and commit the data-stage behavior and tests together. <!-- sdd-owner: implementation -->`
-- `- [ ] **RED:** Add failing `tests/unit/resourceCreation.payload.test.ts` cases for all attribute mappings, exact hierarchy/Unit IDs, trim semantics, optional description, GLOBAL ownership, and absence of omitted or empty optional values. <!-- sdd-owner: implementation -->`
+- Historical legacy payload-builder work is superseded; no payload test path is current.
 - `- [ ] **GREEN:** Implement `buildResourceCreateInput(draft)` and the typed review projection in `resourceCreation.model.ts` so both derive from the same object and no second payload mapping exists. <!-- sdd-owner: implementation -->`
 - `- [ ] **TRIANGULATE/REFACTOR:** Compare each review projection field against the outgoing contract for text, number, boolean, and option values; run the stated command and commit the tested pure contract. <!-- sdd-owner: implementation -->`
 - `- [ ] **RED:** Add failing surface tests for review/payload parity, disabled incomplete/submitting creation, duplicate-submit prevention, known administrative error with manual retry, and `CREATED` invoking `onCreated` exactly once. <!-- sdd-owner: implementation -->`
@@ -103,7 +103,7 @@ The following persisted implementation-owned `- [ ]` lines remain unchanged:
 - `- [ ] **RED:** Add failing browser/refetch/architecture expectations for keyboard-only staged creation, local-filter continuation/dedupe, Escape opener/fallback, axe dialog states, active-query-only refresh, no global listener, feature-local imports, and runtime files below 500 lines. <!-- sdd-owner: implementation -->`
 - `- [ ] **GREEN:** Update only the named tests and guards to exercise the completed behavior, including `onCreated → refetchActive()` solely after `CREATED`, without broad invalidation, optimistic insertion, or production edits. <!-- sdd-owner: implementation -->`
 - `- [ ] **TRIANGULATE/REFACTOR:** Run the stated browser/architecture command, remove duplicated assertions while retaining distinct end-to-end coverage, and commit the closure evidence with exact results. <!-- sdd-owner: implementation -->`
-- `- [ ] Run the complete final gate after PR 15: `pnpm exec vitest run tests/unit/resourceCreation.model.test.ts tests/unit/resourceCreation.payload.test.ts tests/unit/resourceCreation.loaders.test.ts tests/unit/StagedSearchSelector.test.tsx tests/unit/crearRecursoSurface.test.tsx tests/unit/resourcesMasterScreen.test.tsx tests/unit/resourcesMasterScreenRefetch.test.tsx tests/architecture/keyboardBoundaries.test.ts tests/architecture/queryZodBoundaries.test.ts tests/architecture/catalogHierarchyBoundaries.test.ts tests/architecture/runtimeFixtureIsolation.test.ts tests/architecture/resourceCreationBoundaries.test.ts && pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts && pnpm typecheck && pnpm lint && pnpm format:check && pnpm build`; record exact results and do not report unavailable gates as passed. <!-- sdd-owner: implementation -->`
+- Historical final-gate command superseded; this record lists only existing focused commands actually run.
 
 ## Deferred parent-owned lifecycle actions
 
@@ -1384,3 +1384,194 @@ PR 13D4b complete: isolated current-assignment presenter, selector autofocus, an
 - **Reconciled metadata:** the forecast now records PR 14A–E complete and one remaining implementation slice (PR 15); the chain map records PR 14A–E complete and advances the current marker/target to `📍 PR 15` / PR 14E; the PR 14 dependency diagram now ends at PR 14E and points to PR 15.
 - **Evidence preservation:** prior PR 14E implementation and TDD evidence remain unchanged. This documentation-only reconciliation needs no test rerun.
 - **Workload:** final `git diff --numstat` is 88 additions + 5 deletions = 93 A+D, and `git diff --check` passes; the combined work remains below 399 A+D.
+
+---
+
+## PR 15 — backend-enabled browser closure (blocked after RED)
+
+- **State / structured status:** consumed parent authority `gentle-ai.sdd-status@2` for `keyboard-first-resource-creation`: OpenSpec artifacts present, apply ready, repo-local workspace `/home/garfex/PROGRAMACION/sistema-ui-garfex`, allowed test/OpenSpec surfaces only, and no action-context warnings. Parent supplied attempt `proceed` token `sha256:d17bda8edd585cb487ad8bbd040f851218eb464a26532b28a83816ee7c4b1d78`; no attempt settlement or lifecycle action was performed.
+- **Workload / boundary:** feature-branch-chain PR 15 only. The implementation-complete forecast cannot be reconciled because the browser RED exposes a non-PR15 production ownership gate. No production, fixture, API, query, shared UI, global listener, lifecycle, commit, branch, PR, review, push, sync, or archive edit was made.
+- **Completed persisted checkbox:** PR 15 **RED** is visibly `[x]` in `tasks.md`. The RED test exercises keyboard-only Clase → Familia → Tipo → Unidad against the browser backend intercept and then requires the `SELECCION` `Color` searchbox.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- |
+| PR 15 browser closure | `tests/e2e/resourcesMaster.workstation.spec.ts` | Playwright browser | Failed as required: `getByRole('searchbox', { name: 'Color' })` was not found after explicit Unidad confirmation. | Blocked: no production edits are authorized. | Not run: the `OPTIONAL` omission, `INCOMPLETE | INVALID | VALID` review, fingerprinted create, stale/unknown/transport, and axe states are unreachable. | Not run: GREEN is blocked. |
+
+### Blocking evidence
+
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --grep 'RED: reaches the backend-enabled selection stage'` — failed (1 failed) at the required `Color` searchbox after 5 seconds.
+- The runtime composition in `src/features/resources-master/ResourcesMasterEntry.tsx` supplies `creationOwnership = null`; this deliberately retains the ownership-specific pending wall, so evaluation, attribute definitions/allowed values, review, and create cannot be reached in the browser.
+- This is the explicit product-owned ownership integration seam documented by the completed parent task, not a PR 15 test weakness. Completing browser closure requires an authorized production slice that supplies real non-null `ResourceCreationEvaluationOwnership` to `ResourcesMasterScreen`/`CrearRecursoSurface`.
+
+### Files changed
+
+- `tests/e2e/resourcesMaster.workstation.spec.ts`
+- `openspec/changes/keyboard-first-resource-creation/tasks.md`
+- `openspec/changes/keyboard-first-resource-creation/apply-progress.md`
+
+### Remaining implementation-owned task lines
+
+- `- [ ] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->`
+- `- [ ] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->`
+- Historical final-gate command superseded; this record lists only existing focused commands actually run.
+
+### Verification not run
+
+The focused Vitest architecture/unit suite, full Playwright journey/axe closure, typecheck, lint, format check, build, and final gate have not been run because strict TDD forbids progressing past this failing RED without an authorized production GREEN fix. They are not reported as passed. `git diff --check` passed; `git diff --numstat` is 63 additions + 1 deletion = 64 A+D, below 399.
+
+### Next action
+
+Return the RED evidence to the parent. An authorized ownership-integration production slice must resolve the runtime `null` ownership wall before PR 15 can honestly continue; PR 15 must then add exact published DTO intercept fixtures and finish GREEN/TRIANGULATE within its 399 A+D boundary.
+
+---
+
+## PR15 global ownership remediation — narrower successor
+
+- **State / structured status:** parent-selected `keyboard-first-resource-creation`, native apply-ready OpenSpec/repo-local context, allowed surfaces only, no action-context warnings; `proceed` token `sha256:2e204e404cb2b8284ced697d937a6003d2809f7616fc1fbce0dfd51f22e508f0`. This remediates the ownership seam exposed by failed revision `sha256:76ea2e1f869c9eef04fdd159e023f979e893f6f67f8a2c509f7ca09ca80b56c0`; no settlement, receipt, commit, branch, review, push, or PR action was performed.
+- **Workload / PR boundary:** feature-branch-chain successor `pr15-global-ownership-remediation` only. The retained PR15 RED/evidence remains unchanged; this adds only Entry composition plus architecture proof and stays below the cumulative 399 A+D ceiling.
+- **Implementation:** `ResourcesMasterEntry` now explicitly supplies typed `ResourceCreationEvaluationOwnership` `{ kind: 'GLOBAL' }` and forwards it unchanged through the existing `ResourcesMasterScreen` prop seam. No organization/session/config authority or deeper Screen/Creador default was added.
+- **Persisted task checkboxes:** unchanged by direction. PR15 RED remains visibly `[x]`; PR15 GREEN, TRIANGULATE/REFACTOR, and the final gate remain visibly `[ ]`.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| GLOBAL Entry composition | `tests/architecture/resourceCreationBoundaries.test.ts` | Architecture | 14/14 passed | New Entry proof failed because the source typed `creationOwnership` as `null` | 15/15 passed after the minimum typed GLOBAL composition | Skipped: this is a single structural constant with one authorized output | No refactor needed; scoped Prettier check stayed green |
+| Preserved PR15 browser RED | `tests/e2e/resourcesMaster.workstation.spec.ts` | Playwright | Existing RED failed at absent `Color` searchbox | Still blocked: runtime now reaches `Atributos · pendiente`, but the retained intercept returns no evaluation/definition/allowed-value DTOs and shows the evaluation transport alert instead of Color | Not run | Not run |
+
+### Verification
+
+- `pnpm exec vitest run tests/architecture/resourceCreationBoundaries.test.ts` — RED: 1 failed / 14 passed; GREEN: 15/15 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --grep "backend-enabled selection stage"` — still failed at `Color`; its page snapshot proves the GLOBAL-owned path reaches the attributes stage before the missing, intentionally deferred exact DTO fixtures.
+- `pnpm typecheck` — passed.
+- Targeted ESLint and Prettier checks for Entry, architecture proof, and retained browser RED — passed. A wider Prettier check including retained OpenSpec artifacts failed on pre-existing formatting in `tasks.md` and `apply-progress.md`; it was not rewritten because that would exceed this successor's narrow evidence scope.
+- `git diff --check` — passed; `git diff --numstat` is 113 additions + 2 deletions = 115 A+D, below 399.
+
+### Blocking boundary and remaining tasks
+
+- The requested `Color` `SELECCION` GREEN result cannot be produced without adding exact evaluation, definition, and allowed-value browser intercept fixtures, which this narrower successor explicitly forbids. The next fixture-owning PR15 scope must supply those published DTOs; this successor must not fabricate them.
+- Remaining persisted lines are unchanged: `- [ ] **GREEN:** Add only exact-contract test fixtures and regression assertions; keep browser intercepts conformant to published DTOs and never make them a production API substitute. <!-- sdd-owner: implementation -->`; `- [ ] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->`; and the final-gate line above.
+- **Rollback:** revert only the Entry GLOBAL constant and its architecture proof; retain the original PR15 RED/evidence untouched.
+
+---
+
+## PR15 exact browser fixtures — partial closure, blocked on INVALID correction
+
+- **Status / context:** consumed parent `gentle-ai.sdd-status/v2`: `keyboard-first-resource-creation`, OpenSpec apply-ready, repo-local allowed root, no warnings; PR15 after PR14E under `feature-branch-chain`.
+- **Completed / persisted:** PR15 GREEN is visibly `[x]`; the historical RED row now states that no broad failing browser test is retained.
+- **Files:** `tests/e2e/resourcesMaster.workstation.spec.ts`, `tasks.md`, and this cumulative record only; inherited Entry/architecture edits are untouched.
+- **Green evidence:** exact test-only intercept DTOs drive keyboard Clase→Familia→Tipo→Unidad→`modoCaptura: SELECCION` Color, optional **Omitir**, `INCOMPLETE→VALID` review, exact `expectedCatalogFingerprint`, and only `CREATED` success; axe passes for attribute and review dialogs.
+
+### TDD Cycle Evidence
+
+| Task | RED | GREEN | TRIANGULATE/REFACTOR |
+| --- | --- | --- | --- |
+| PR15 fixtures/journey | Historical RED is not retained | Playwright journey 1/1, full file 7/7 | Blocked: an exact `INVALID` selection fixture causes repeated evaluation-loading instead of correction. |
+
+- **Commands:** initial full Playwright safety net 6 passed/1 obsolete-wall failed; focused journey 1/1 passed; full Playwright 7/7 passed; architecture 15/15, typecheck, targeted ESLint, Prettier check, and `git diff --check` passed.
+- **Blocker:** an allowed selected value returned as `INVALID` with `seleccionesInvalidas` is suspended then immediately restored from loaded allowed-values knowledge, rearming evaluation indefinitely. No production edit is authorized; no failing browser test is retained.
+- **Remaining:** `- [ ] **TRIANGULATE/REFACTOR:** Run the closure commands, confirm no obsolete manual/free-value/legacy-create path returns, and record exact results. <!-- sdd-owner: implementation -->`
+- **Boundary:** no commit, branch, PR, review, receipt, verify/sync/archive, or production edit; rollback removes only the test fixtures/journey and this record.
+
+---
+## PR15 invalid-selection-reconfirmation
+- **Status:** explicit `keyboard-first-resource-creation`; OpenSpec apply-ready, strict TDD, repo-local allowed root, no warnings.
+- **Implementation:** backend-invalid assignment IDs persist in buckets, block automatic allowed-value restoration, and clear only on explicit confirm/omit.
+- **Files:** `resourceCreation.selectionDraft.ts`, `resourceCreation.attributeSequence.ts`, focused unit tests, `tasks.md`, and this record.
+- **Completed:** PR15 TRIANGULATE/REFACTOR is visibly `[x]`; parent lifecycle rows remain deferred unchanged.
+- **Workload:** feature-branch-chain PR15 successor; 88 source/test A+D + 2 checkbox A+D + 14 record A+D = 104 additional A+D (≤110).
+| Task | RED | GREEN | TRIANGULATE/REFACTOR |
+| --- | --- | --- | --- |
+| Invalid selection | hook failure: allowed knowledge restored invalid value and made a third request | minimal provenance suspended it | ordinary suspension still restores; confirm/omit clear provenance |
+- **Verification:** focused Vitest 20/20 and typecheck passed; Playwright workstation journey passed 7/7.
+- **Deviation:** none; no UI, fixture, or lifecycle edit.
+- Historical final-gate command superseded; this record lists only existing focused commands actually run.
+
+---
+
+## PR15 final regression reconciliation
+
+- **Status / action context:** parent explicitly selected `keyboard-first-resource-creation`; strict TDD, OpenSpec artifacts, `repo-local`, and the four allowed edit surfaces were consumed. The prior native ambiguity was superseded only by that selection. No action-context warning, production edit, lifecycle action, commit, branch, review, receipt, verify, sync, or archive action occurred.
+- **Boundary / files:** `auto-chain` / `feature-branch-chain`, PR15 remediation after invalid-selection successor; changed only `tests/unit/resourcesMasterScreen.test.tsx`, `tests/e2e/resourcesMaster.workstation.spec.ts`, `tasks.md`, and this record.
+- **Completed / persisted:** corrected the Entry expectation to typed `{ kind: 'GLOBAL' }`; reconciled implementation-owned task wording; and re-read the PR15 TRIANGULATE/REFACTOR row as visibly `[x]` only after the browser evidence below passed. Parent-owned rows remain byte-for-byte unchanged.
+- **Browser contracts:** a parameterized exact DTO fixture now proves `INVALID` correction/reconfirmation; stale `CREATED`, unknown disposition, and transport rejection cannot render **Recurso creado** or refetch the active list. The positive journey uses real Tab traversal (search → option → **Omitir**, review → **Crear recurso**) rather than programmatic focus.
+
+### TDD Cycle Evidence
+
+| Task | Safety net / RED | GREEN / TRIANGULATE / REFACTOR |
+| --- | --- | --- |
+| GLOBAL ownership expectation | Unit baseline failed 1/15 at obsolete null ownership | Test-only correction passed 15/15; existing forwarding guard stays coherent |
+| Browser correction/outcomes | Browser safety net 7/7; first new case exposed one-Tab traversal and an incomplete invalid fixture | Exact `seleccionesInvalidas` plus two Tabs passed correction 1/1; stale/unknown/transport passed 3/3; Prettier refactor kept full browser file green 11/11 |
+
+### Verification
+
+- `pnpm exec vitest run tests/unit/resourcesMasterScreen.test.tsx` — initial RED 1 failed / 14 passed; final 15/15 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts` — safety net 7/7; final 11/11 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --grep 'requires keyboard correction'` — RED twice, then GREEN 1/1 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --grep 'stale CREATED|unknown disposition|transport rejection'` — TRIANGULATE 3/3 passed.
+- `pnpm exec prettier --write tests/e2e/resourcesMaster.workstation.spec.ts tests/unit/resourcesMasterScreen.test.tsx`, `pnpm exec prettier --check tests/e2e/resourcesMaster.workstation.spec.ts tests/unit/resourcesMasterScreen.test.tsx`, and final `git diff --check` — passed.
+- The nonexistent payload test and stale final-gate command were removed from this record; they were not run. Parent owns typecheck, lint, format-check, build, and full-gate execution.
+
+- **Deviation / rollback:** no production behavior changed; exact published test DTOs were reused. Roll back only the two test files and this artifact reconciliation.
+- **Remaining implementation-owned tasks:** none; deferred parent lifecycle actions remain unchanged.
+
+---
+
+## PR15 keyboard fixture stability
+
+- **State / structured status:** parent explicitly selected `keyboard-first-resource-creation` and bounded `pr15-keyboard-fixture-stability`; strict TDD, OpenSpec artifacts, repo-local workspace, and the two supplied edit surfaces were consumed. The earlier native status was selection-ambiguous, but the parent selection supersedes only that ambiguity. No unsafe action-context warning occurred.
+- **Root cause:** `reachReadyReview` emitted two consecutive real `Tab` presses after only the `Acabado` searchbox-focus assertion. It did not prove that the asynchronously rendered `Mate` option was ready or that the first Tab had reached it, so a delayed focus transition could make the second event be observed before the expected intermediate traversal.
+- **Fix:** retained genuine keyboard-only interaction and added readiness/transition assertions: `Mate` must be visible, the first real Tab must focus it, and the second real Tab must focus **Omitir**. No `.focus()`, timer, retry loop, or product-code change was introduced, so a broken tab order still fails visibly.
+- **Task checkboxes:** no task artifact was edited because all implementation-owned PR15 rows are already visibly `[x]` and `tasks.md` is outside this bounded work unit's allowed surfaces; parent-owned rows remain untouched.
+- **Files changed:** `tests/e2e/resourcesMaster.workstation.spec.ts`; this cumulative progress record.
+- **Workload / PR boundary:** `pr15-keyboard-fixture-stability` only; 4 test-line additions plus this evidence, below the parent-authorized 120 A+D cap. No production, commit, review, settle, delivery, or lifecycle action was performed.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Keyboard fixture stability | `tests/e2e/resourcesMaster.workstation.spec.ts` | Playwright E2E | Full file: 11/11; focused transport rejection: 12/12 repeats pre-change | Parent's second full-gate failure identified the unobserved intermediate Tab transition; it did not reproduce locally across 12 serial repeats | Focused transport rejection: 20/20 serial repeats passed after the explicit first-Tab focus assertion | Full Playwright file: 11/11; both unknown-disposition and transport-rejection outcomes use the shared traversal | No production refactor needed; scoped Prettier and `git diff --check` passed |
+
+### Verification
+
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --grep 'transport rejection' --repeat-each=12 --workers=1` — pre-change safety net: 12/12 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --workers=1` — pre-change safety net: 11/11 passed; post-change full file: 11/11 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --grep 'transport rejection' --repeat-each=20 --workers=1` — post-change focused stability: 20/20 passed.
+- `pnpm exec prettier --check tests/e2e/resourcesMaster.workstation.spec.ts` and `git diff --check` — passed.
+
+- **Deviation / risks:** local reproduction did not fail, so the diagnosis is limited to the missing observable readiness boundary rather than a confirmed product accessibility defect. The strengthened helper now exposes any true search → option → omit tab-order regression; parent still owns broader gates and lifecycle actions.
+
+---
+
+## Final independent verification — current state
+
+- **Current state:** PR15 implementation is complete. Older blocked, status, and count sections above are historical work-unit records, not current state.
+- **Verification:** `pnpm test` passed 616/616 across 56 files; Playwright passed 11/11; typecheck, lint, format, build, and diff-check passed.
+- **Build annotations:** two Zod/Rollup annotation warnings and the 727.91 kB chunk warning were reported; they did not fail the build. The generated tracked route tree was unchanged.
+- **Delivery workload:** the dirty aggregate at verification time was 729 A+D across multiple bounded work units awaiting parent delivery/review handling; it is not one under-399 A+D candidate.
+
+---
+
+## PR15 deterministic create-loading
+
+- **State / status:** completed parent-authorized `pr15-deterministic-create-loading`; explicit `keyboard-first-resource-creation` selection superseded only the prior native change-selection ambiguity. Strict TDD and repo-local allowed surfaces were consumed; no action-context warning occurred.
+- **Fix:** the unknown-disposition and transport-rejection fixtures now defer create settlement, prove **Creando…** while pending, release the exact non-success response, wait for loading to clear, then retain the stable no-success/no-refetch assertions. No production code or timeout changed.
+- **Tasks / boundary:** PR15 corrective test-only slice; all implementation-owned PR15 rows were re-read as `[x]`, so no task checkbox changed. Parent-owned lifecycle rows remain untouched.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net / RED | GREEN / TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- | --- |
+| Deterministic non-success loading | `tests/e2e/resourcesMaster.workstation.spec.ts` | Playwright E2E | Pre-change immediate fixture settlement made `Creando…` observationally racy; 10 repeats per outcome passed but did not establish a pending boundary. | Deferred responses passed 20 repeats per outcome; a 5-repeat post-format rerun and the full file passed. |
+
+### Verification
+
+- Pre-change focused cases: 10 repeats each, 20/20 passed; source inspection established the immediate-settlement race.
+- Post-change focused cases: 20 repeats each, 40/40 passed; post-format rerun: 5 repeats each, 10/10 passed.
+- `pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts --workers=1` — 11/11 passed.
+- Scoped Prettier and `git diff --check` passed.
+
+- **Files / workload:** `tests/e2e/resourcesMaster.workstation.spec.ts` and this record only; this corrective patch is 45 A+D, below the 120 A+D cap.
+- **Residual risk:** this controls mocked-route settlement only; it does not change or prove live backend latency behavior. Rollback removes the deferred test helper and this evidence.

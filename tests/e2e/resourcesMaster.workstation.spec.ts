@@ -12,6 +12,19 @@ type CreationFixture = Readonly<{
   ) => ResourceResponse | Promise<ResourceResponse>
 }>
 
+type Deferred<T> = Readonly<{
+  promise: Promise<T>
+  resolve: (value: T) => void
+}>
+
+const deferred = <T>(): Deferred<T> => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 const response = (value: unknown) => ({
   status: 200,
   contentType: 'application/json',
@@ -619,6 +632,117 @@ test.describe('Recursos maestros workstation 1440×980', () => {
       'catalogoAdmin/recursos:crearRecurso',
     )
   })
+
+  test('requires keyboard correction and reconfirmation after an INVALID create response', async ({
+    page,
+  }) => {
+    const calls = await mockResources(page, () => undefined, {
+      createResponse: (attempt) =>
+        attempt === 0
+          ? response({
+              disposition: 'INVALID',
+              evaluation: creationEvaluation('INVALID', true, true),
+            })
+          : undefined,
+    })
+    await page.goto('/recursos')
+    await reachReadyReview(page)
+
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('searchbox', { name: 'Color' })).toBeFocused()
+    expect(listCalls(calls)).toHaveLength(1)
+
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: 'Revisión de creación' }),
+    ).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('button', { name: 'Crear recurso' }),
+    ).toBeFocused()
+    await page.keyboard.press('Enter')
+
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toBeFocused()
+    await expect.poll(() => listCalls(calls)).toHaveLength(2)
+  })
+
+  test('suppresses a stale CREATED settlement after keyboard back navigation', async ({
+    page,
+  }) => {
+    let releaseCreate: (() => void) | undefined
+    let settleRoute: (() => void) | undefined
+    const createReleased = new Promise<void>((resolve) => {
+      releaseCreate = resolve
+    })
+    const routeSettled = new Promise<void>((resolve) => {
+      settleRoute = resolve
+    })
+    const calls = await mockResources(page, () => undefined, {
+      createResponse: async () => {
+        await createReleased
+        settleRoute?.()
+        return response({
+          disposition: 'CREATED',
+          item: summary('resource-created', 'Tubería roja'),
+        })
+      },
+    })
+    await page.goto('/recursos')
+    await reachReadyReview(page)
+
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'Creando…' })).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Volver' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Atributos · pendiente')).toBeVisible()
+
+    releaseCreate?.()
+    await routeSettled
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toHaveCount(0)
+    expect(listCalls(calls)).toHaveLength(1)
+  })
+
+  for (const [outcome, settledResponse] of [
+    ['unknown disposition', () => response({ disposition: 'UNRECOGNIZED' })],
+    [
+      'transport rejection',
+      () => ({
+        status: 500,
+        body: 'transport failed',
+        contentType: 'text/plain',
+      }),
+    ],
+  ] as const) {
+    test(`does not confirm success for a ${outcome}`, async ({ page }) => {
+      const pendingCreateResponse = deferred<ResourceResponse>()
+      const calls = await mockResources(page, () => undefined, {
+        createResponse: () => pendingCreateResponse.promise,
+      })
+      await page.goto('/recursos')
+      await reachReadyReview(page)
+
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('button', { name: 'Creando…' })).toBeVisible()
+
+      pendingCreateResponse.resolve(settledResponse())
+      await expect(page.getByRole('button', { name: 'Creando…' })).toHaveCount(
+        0,
+      )
+      await expect(
+        page.getByRole('button', { name: 'Crear recurso' }),
+      ).toBeVisible()
+      await expect(
+        page.getByRole('heading', { name: 'Recurso creado' }),
+      ).toHaveCount(0)
+      expect(listCalls(calls)).toHaveLength(1)
+    })
+  }
 
   test('keeps loaded rows through continuation failure and retry', async ({
     page,
