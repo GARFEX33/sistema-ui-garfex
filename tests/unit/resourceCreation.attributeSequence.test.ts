@@ -91,6 +91,17 @@ describe('resource creation authoritative attribute sequence', () => {
       invalid: asAllowedValueId('invalid'),
       absent: asAllowedValueId('absent'),
     })
+    expect(result.selectionBuckets.backendInvalid).toEqual(new Set(['invalid']))
+    expect(
+      confirmSelection(
+        result.selectionBuckets,
+        'invalid',
+        asAllowedValueId('invalid'),
+      ).backendInvalid,
+    ).toBeUndefined()
+    expect(
+      omitSelection(result.selectionBuckets, 'invalid').backendInvalid,
+    ).toBeUndefined()
   })
 
   it('retains only selected active values and restores suspended values with active effective facts', () => {

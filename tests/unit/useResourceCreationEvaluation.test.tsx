@@ -366,6 +366,42 @@ describe('useResourceCreationEvaluation', () => {
     expect(evaluateResourceCreation.mock.calls[2][0].selecciones).toEqual([
       { asignacionAtributoId: 'assignment', valorPermitidoId: 'value' },
     ])
+
+    const backendInvalid = deferred<ResourceCreationEvaluation>()
+    const reevaluated = deferred<ResourceCreationEvaluation>()
+    const invalidEvaluation = vi
+      .fn()
+      .mockReturnValueOnce(backendInvalid.promise)
+      .mockReturnValueOnce(reevaluated.promise)
+    const invalidDriver = renderDriver(initial, invalidEvaluation)
+    await waitFor(() => expect(invalidEvaluation).toHaveBeenCalledTimes(1))
+    await act(async () =>
+      backendInvalid.resolve({
+        ...assignment('OPTIONAL'),
+        status: 'INVALID',
+        seleccionesInvalidas: ['assignment'],
+      }),
+    )
+    await waitFor(() => expect(invalidEvaluation).toHaveBeenCalledTimes(2))
+    await act(async () => reevaluated.resolve(assignment('OPTIONAL')))
+    await waitFor(() =>
+      expect(invalidDriver.result.current.driver.status).toBe('ready'),
+    )
+
+    act(() =>
+      invalidDriver.result.current.setAllowedValuesByDefinition({
+        definition: { status: 'PARTIAL', values: [allowedValue] },
+      }),
+    )
+    await act(async () => {})
+
+    expect(
+      invalidDriver.result.current.state.draft.selectionBuckets,
+    ).toMatchObject({
+      active: {},
+      suspended: { assignment: 'value' },
+    })
+    expect(invalidEvaluation).toHaveBeenCalledTimes(2)
   })
 
   it('exposes transport rejection and retries one current request before adoption', async () => {

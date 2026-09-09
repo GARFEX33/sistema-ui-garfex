@@ -6,6 +6,7 @@ import type {
 import {
   clearSelectionOmission,
   confirmSelection,
+  suspendBackendInvalidSelection,
   suspendSelection,
   type AssignmentKey,
   type SelectionBuckets,
@@ -116,19 +117,22 @@ export const reconcileAttributeSequence = (
         assignment.selectedValueId === selection && !invalidAssignments.has(key)
           ? confirmSelection(selectionBuckets, key, selection)
           : suspendSelection(selectionBuckets, key)
-    } else if (hasKey(selectionBuckets.suspended, key)) {
+    }
+    if (invalidAssignments.has(key))
+      selectionBuckets = suspendBackendInvalidSelection(selectionBuckets, key)
+    else if (hasKey(selectionBuckets.suspended, key)) {
       const status = allowedValueStatus(
         selectionBuckets.suspended[key],
         assignment.definicionAtributoId,
         allowedValuesByDefinition,
       )
-      if (status === true)
+      if (status === true && !selectionBuckets.backendInvalid?.has(key))
         selectionBuckets = confirmSelection(
           selectionBuckets,
           key,
           selectionBuckets.suspended[key],
         )
-      else suspendedAllowedValueStatus[key] = status
+      else if (status !== true) suspendedAllowedValueStatus[key] = status
     }
 
     if (assignment.aplicabilidadResuelta === 'REQUIRED')
