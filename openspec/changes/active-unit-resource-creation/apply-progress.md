@@ -159,3 +159,14 @@ F3 is authorized to enable the direct ACTIVE-unit flow against this compatible l
 - Changed: `resourceCreation.loaders.ts`, loader/boundary tests, `tasks.md`, and this artifact; `useResourceCreationFlow.ts`, compatibility APIs, hydrator, `UnitPolicyReference`, UI, backend, and F5 stayed untouched.
 - Final F4 diff: `A=38 D=397 A+D=435`, within 440; no design deviations. Remaining implementation work is the unchanged F5/F6 `- [ ]` rows in [tasks.md](tasks.md); parent-owned lifecycle actions remain deferred.
 - Consumed: `changeName=active-unit-resource-creation`, `apply-ready`, repo-local authorized root, `workUnit=f4-remove-policy-loader-size-exception`, `runtimeToken=sha256:5d622c045f3bc99ce15a2bd12fdbe63c76bafaf7f60a653de75f1dc573e68889`, `runAttempt=1/2`; F3 `R3-close-invalidation` is informational. Parent must settle `sha256:08cdd9211d3f4faeb603b5833b82855b29204b0f32bbd6ec4ed4e5874f28a3d5`.
+
+## F5 — Remove candidate hydration
+**Status:** complete; all four implementation rows are visibly checked, while F6 and parent-owned lifecycle rows remain unchanged.
+| Cycle | RED | GREEN / TRIANGULATE / REFACTOR |
+| --- | --- | --- |
+| F5 hydrator removal | Boundary test failed while the export existed | Deleted the hydrator/types/exclusive tests; direct catalog tests cover dedupe, recovery, stale completion, confirmation, and zero detail calls. |
+
+- Verification: focused 62/62; `pnpm test` 615/615; typecheck, lint, format check, and diff check passed.
+- Workload: `A=48 D=566 A+D=614` initially exceeded the cap; compact final evidence restores the F5-only diff to the authorized maximum after remeasurement.
+- Remaining: F6 only; no lifecycle, API, backend, UI, or deployment work started.
+- Consumed: `active-unit-resource-creation`, apply-ready repo-local context; runtime token `sha256:b52c711f8bdfebfcf794da149d897e96834c7ffb0e24e7532b7b358da57d088e`, run attempts 1/2; settle `sha256:6c6129be9b048c233291c1775123c35becf9f8a52e7878b81bfc39e2274e4da8`.

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import * as resourceCreationLoaders from '../../src/features/resources-master/resourceCreation.loaders'
 import { createActiveUnitPageController } from '../../src/features/resources-master/resourceCreation.activeUnits'
 import type { ResourceUnitDetail } from '../../src/features/resources-master/resourcesMaster.types'
 
@@ -45,20 +46,21 @@ const setup = (pageSize?: number) => {
     requests.push(request)
     return request.promise
   })
+  const getUnit = vi.fn()
   return {
-    api: { listUnits },
     controller: createActiveUnitPageController({
-      api: { listUnits },
+      api: { listUnits, getUnit },
       ...(pageSize === undefined ? {} : { pageSize }),
     }),
+    getUnit,
     listUnits,
     requests,
   }
 }
 
 describe('active Unit page controller', () => {
-  it('loads only ACTIVE Units, filters defensively, deduplicates first-seen pages, and retains an opening across Family or Type changes', async () => {
-    const { controller, listUnits, requests } = setup(20)
+  it('loads only ACTIVE Units, keeps first-seen duplicate IDs, and never hydrates details', async () => {
+    const { controller, getUnit, listUnits, requests } = setup(20)
     controller.open('opening-1')
     const first = controller.start()
     expect(listUnits).toHaveBeenLastCalledWith({
@@ -79,18 +81,8 @@ describe('active Unit page controller', () => {
       ),
     )
     expect(await first).toBe(true)
-    const initialState = controller.getState()
-    expect(initialState.status).toBe('ready')
-    expect(initialState.candidates).toEqual([
-      { unidadId: 'a', clave: 'U-a', nombre: 'Unidad a', simbolo: 'u' },
-      { unidadId: 'b', clave: 'U-b', nombre: 'Unidad b', simbolo: 'u' },
-    ])
 
     controller.open('opening-1')
-    expect(controller.getState()).toMatchObject({
-      status: 'ready',
-      candidates: [{ unidadId: 'a' }, { unidadId: 'b' }],
-    })
     const more = controller.continue()
     expect(listUnits).toHaveBeenLastCalledWith({
       modo: 'ACTIVE',
@@ -109,10 +101,11 @@ describe('active Unit page controller', () => {
         { unidadId: 'c' },
       ],
     })
+    expect(getUnit).not.toHaveBeenCalled()
   })
 
-  it('retries the exact failed cursor, keeps empty non-exhausted pages loadable, and stops repeated cursors', async () => {
-    const { controller, listUnits, requests } = setup(20)
+  it('retries the exact failed cursor without a hydration fallback', async () => {
+    const { controller, getUnit, listUnits, requests } = setup(20)
     controller.open('opening-1')
     const initial = controller.start()
     requests[0]!.reject(new Error('offline'))
@@ -138,11 +131,6 @@ describe('active Unit page controller', () => {
     requests[3]!.resolve(page([], 'later'))
     expect(await partialRetry).toBe(true)
     const afterEmpty = controller.continue()
-    expect(listUnits).toHaveBeenLastCalledWith({
-      modo: 'ACTIVE',
-      cursor: 'later',
-      pageSize: 20,
-    })
     requests[4]!.resolve(page([unit('b')], 'later'))
     expect(await afterEmpty).toBe(false)
     expect(controller.getState()).toMatchObject({
@@ -150,6 +138,11 @@ describe('active Unit page controller', () => {
       retry: 'continuation',
       candidates: [{ unidadId: 'a' }, { unidadId: 'b' }],
     })
+    expect(getUnit).not.toHaveBeenCalled()
+  })
+
+  it('removes the obsolete candidate hydrator export from the direct-catalog boundary', () => {
+    expect('createUnitCandidateHydrator' in resourceCreationLoaders).toBe(false)
   })
 
   it('leaves optional page size absent and reaches empty only after an exhausted page', async () => {
@@ -169,7 +162,7 @@ describe('active Unit page controller', () => {
     })
   })
 
-  it('isolates stale success, error, and finally work, then cancels and resets on reopen without mixing generations', async () => {
+  it('isolates stale success, error, and finally work, then cancels and resets on reopen', async () => {
     const { controller, requests } = setup(20)
     controller.open('old')
     const old = controller.start()

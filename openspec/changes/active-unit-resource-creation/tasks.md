@@ -102,14 +102,16 @@ The total change crosses both repositories and materially exceeds one review bud
 - [x] **TRIANGULATE:** Run the flow tests through initial, paginated, retry, and stale-generation paths to prove removal did not reactivate policy fallback or change direct-catalog ordering. <!-- sdd-owner: implementation -->
 - [x] **REFACTOR:** Remove now-unused imports/fixtures without deleting reusable coverage; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/useResourceCreationFlow.test.tsx src/features/resources-master/resourceCreation.loaders.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
-## F5 — Remove candidate hydration (240–390 A+D)
+## F5 — Remove candidate hydration (`size:exception`, max 600 A+D)
+
+**Exception authority:** The user explicitly approved this F5-only cap after the hydrator source and exclusive tests established a 516-line deletion floor before replacement coverage. F6 retains its original limit.
 
 **Dependencies:** F4. **Start → finish:** obsolete N+1 hydrator/types remain → Unit candidate source is exclusively paged ACTIVE catalog. **Allowed discovery targets:** `/home/garfex/PROGRAMACION/sistema-ui-garfex/src/features/resources-master/resourceCreation.loaders.ts`, policy-only candidate/hydrator types, imports, fixtures, and exclusive tests. Do not remove feature adapter `getUnit` or any non-creation consumer. **Rollback:** restore only the deleted hydrator slice and exclusive tests; no API or backend rollback.
 
-- [ ] **RED:** Add characterization tests that fail if opening/loading more/retrying the Unit selector requests individual Unit details, and confirm duplicate IDs are resolved by first-seen page order. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Delete `createUnitCandidateHydrator`, policy-only candidate fields/types, and exclusive tests after confirmed references show no production creation-flow consumer. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Exercise multi-page dedupe, recovery from a malformed/failed page, stale completions, and candidate confirmation to prove no hydration fallback remains. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Prune dead imports and fixtures while preserving the direct-controller tests; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/resourceCreation.activeUnits.test.ts src/features/resources-master/useResourceCreationFlow.test.tsx && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add characterization tests that fail if opening/loading more/retrying the Unit selector requests individual Unit details, and confirm duplicate IDs are resolved by first-seen page order. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Delete `createUnitCandidateHydrator`, policy-only candidate fields/types, and exclusive tests after confirmed references show no production creation-flow consumer. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Exercise multi-page dedupe, recovery from a malformed/failed page, stale completions, and candidate confirmation to prove no hydration fallback remains. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Prune dead imports and fixtures while preserving the direct-controller tests; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- tests/unit/resourceCreation.activeUnits.test.ts tests/unit/crearRecursoSurface.test.tsx && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
 ## F6 — Deterministic E2E and real-backend proof harness (180–350 A+D)
 
