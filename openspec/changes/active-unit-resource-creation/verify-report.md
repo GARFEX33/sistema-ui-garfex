@@ -1,3 +1,19 @@
+```yaml
+schema: gentle-ai.verify-result/v1
+evidence_revision: sha256:45d2bf9aa30446d45b7f97827a24a13b2fc685f8304e6a1f8b4aaf8859ce7aea
+verdict: pass
+blockers: 0
+critical_findings: 0
+requirements: 6/6
+scenarios: 11/11
+test_command: pnpm test && pnpm exec playwright test tests/e2e/resourcesMaster.workstation.spec.ts && RUN_CONNECTED_CATALOG_TESTS=true pnpm test:connected && (cd ../sistema-garfex && pnpm exec vitest run && pnpm typecheck && pnpm typecheck:consumer)
+test_exit_code: 0
+test_output_hash: sha256:be01dae099c122444e3945644f796b9d3633c935ad3b3ce2662391bf277dc508
+build_command: pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && git diff --check && git diff --cached --check && (cd ../sistema-garfex && git diff --check && git diff --cached --check)
+build_exit_code: 0
+build_output_hash: sha256:19fb2afbe773e472bb39d22e9f3827b727eea87dfa36473f6b2ea357b13c2f7f
+```
+
 # Verification report — active-unit-resource-creation
 
 ## Verdict
