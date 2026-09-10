@@ -1,0 +1,365 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createParentGatedListController } from '../../shared/hierarchy/parentGatedListController'
+import {
+  asAllowedValueId,
+  reconcileAttributeSequence,
+} from './resourceCreation.attributeSequence'
+import type { NormalizedResourceHierarchyPrefix } from './resourceCreation.model'
+import type { ResourcesMasterApi } from './resourcesMaster.api'
+import { useResourceCreationAttributeQueries } from './useResourceCreationAttributeQueries'
+import { useResourceCreationCreate } from './useResourceCreationCreate'
+import { useResourceCreationEvaluation } from './useResourceCreationEvaluation'
+import {
+  createActiveUnitPageController,
+  type UnitCandidate,
+} from './resourceCreation.activeUnits'
+import {
+  selectorLoadState,
+  unitSelectorLoadState,
+  useControllerState,
+} from './resourceCreation.selectorState'
+import {
+  createInitialCreationState,
+  resourceCreationReducer,
+  resourceIdKey,
+} from './resourceCreation.model'
+import type {
+  ResourceContextClassItem,
+  ResourceContextFamilyItem,
+  ResourceContextTypeItem,
+  ResourceCreationEvaluationOwnership,
+  ResourceId,
+} from './resourcesMaster.types'
+
+const PAGE_SIZE = 20
+
+const sameId = (left: unknown, right: ResourceId) =>
+  left !== undefined && resourceIdKey(left) === resourceIdKey(right)
+
+export function useResourceCreationFlow(
+  api: ResourcesMasterApi,
+  ownership: ResourceCreationEvaluationOwnership | null,
+) {
+  const [state, dispatch] = useState(createInitialCreationState)
+  const completedAttributesRef = useRef<string | null>(null)
+  const setState = dispatch
+  const attributes = useResourceCreationAttributeQueries({
+    api,
+    evaluation: state.draft.authoritativeEvaluation,
+    selectionBuckets: state.draft.selectionBuckets,
+  })
+  const evaluation = useResourceCreationEvaluation({
+    api,
+    ownership,
+    state,
+    setState,
+    allowedValuesByDefinition: attributes.allowedValuesKnowledge,
+  })
+  const creation = useResourceCreationCreate({ api, ownership, state })
+
+  useEffect(() => {
+    if (creation.status !== 'result') return
+    const result = creation.result
+    if (result === undefined || result.disposition === 'CREATED') return
+
+    const expectedCatalogFingerprint = state.draft.catalogFingerprint
+    if (expectedCatalogFingerprint === null) return
+    const reconciliation = reconcileAttributeSequence(
+      result.evaluation,
+      state.draft.selectionBuckets,
+      result.disposition === 'CATALOG_CHANGED'
+        ? {}
+        : attributes.allowedValuesKnowledge,
+      null,
+    )
+    dispatch((current) =>
+      resourceCreationReducer(current, {
+        type: 'ADOPT_CREATE_EVALUATION',
+        expectedCatalogFingerprint,
+        evaluation: result.evaluation,
+        selectionBuckets: reconciliation.selectionBuckets,
+      }),
+    )
+  }, [
+    attributes.allowedValuesKnowledge,
+    creation,
+    state.draft.catalogFingerprint,
+    state.draft.selectionBuckets,
+  ])
+
+  useEffect(() => {
+    if (attributes.step.kind !== 'complete' || evaluation.status !== 'ready') {
+      completedAttributesRef.current = null
+      return
+    }
+    if (state.stage.kind !== 'attributes') return
+    const completionKey = `${state.openGeneration}:${state.draft.revision}`
+    if (completedAttributesRef.current === completionKey) return
+    completedAttributesRef.current = completionKey
+    dispatch((current) =>
+      resourceCreationReducer(current, { type: 'COMPLETE_ATTRIBUTES' }),
+    )
+  }, [
+    attributes.step.kind,
+    evaluation.status,
+    state.draft.revision,
+    state.openGeneration,
+    state.stage.kind,
+  ])
+  const [classes] = useState(() =>
+    createParentGatedListController<
+      ResourceContextClassItem,
+      'classes',
+      string | null
+    >({
+      operation: 'classes',
+      requiresParent: () => false,
+      adapter: {
+        load: ({ cursor }) =>
+          api.listContextClasses({ cursor, pageSize: PAGE_SIZE }),
+      },
+    }),
+  )
+  const [families] = useState(() =>
+    createParentGatedListController<
+      ResourceContextFamilyItem,
+      'families',
+      string | null
+    >({
+      operation: 'families',
+      requiresParent: () => true,
+      adapter: {
+        load: ({ parentId, cursor }) =>
+          api.listContextFamilies({
+            claseRecursoId: parentId,
+            cursor,
+            pageSize: PAGE_SIZE,
+          }),
+      },
+    }),
+  )
+  const [types] = useState(() =>
+    createParentGatedListController<
+      ResourceContextTypeItem,
+      'types',
+      string | null
+    >({
+      operation: 'types',
+      requiresParent: () => true,
+      adapter: {
+        load: ({ parentId, cursor }) =>
+          api.listContextTypes({
+            familiaRecursoId: parentId,
+            cursor,
+            pageSize: PAGE_SIZE,
+          }),
+      },
+    }),
+  )
+  const [units] = useState(() =>
+    createActiveUnitPageController({ api, pageSize: PAGE_SIZE }),
+  )
+  const openingRef = useRef(0)
+  const [, refreshUnits] = useState(0)
+  const classState = useControllerState(classes)
+  const familyState = useControllerState(families)
+  const typeState = useControllerState(types)
+  const refreshUnitState = useCallback(
+    () => refreshUnits((version) => version + 1),
+    [],
+  )
+  const begin = useCallback(
+    (prefix: NormalizedResourceHierarchyPrefix) => {
+      dispatch((current) =>
+        resourceCreationReducer(current, { type: 'OPEN', prefix }),
+      )
+      if (prefix.depth === 0) void classes.start()
+      if (prefix.classItem) {
+        const current = families.getState()
+        if (!sameId(current.parentId, prefix.classItem.id)) {
+          families.setContext({
+            operation: 'families',
+            parentId: prefix.classItem.id,
+          })
+          void families.start()
+        } else if (current.items.length === 0) {
+          void families.start()
+        }
+      }
+      if (prefix.familyItem) {
+        types.setContext({ operation: 'types', parentId: prefix.familyItem.id })
+        void types.start()
+      }
+      units.open(`opening-${++openingRef.current}`)
+      refreshUnitState()
+      if (prefix.familyItem && prefix.typeItem) {
+        const request = units.start()
+        refreshUnitState()
+        void request.finally(refreshUnitState)
+      }
+    },
+    [classes, families, refreshUnitState, types, units],
+  )
+  const enterClass = useCallback(() => {
+    dispatch((current) =>
+      resourceCreationReducer(current, {
+        type: 'NAVIGATE_TO_STAGE',
+        stage: { kind: 'class' },
+      }),
+    )
+    if (classes.getState().items.length === 0) void classes.start()
+  }, [classes])
+  const enterFamily = useCallback(() => {
+    dispatch((current) =>
+      resourceCreationReducer(current, {
+        type: 'NAVIGATE_TO_STAGE',
+        stage: { kind: 'family' },
+      }),
+    )
+    if (families.getState().items.length === 0) void families.start()
+  }, [families])
+  const confirmClass = useCallback(
+    (item: ResourceContextClassItem) => {
+      const changed = !sameId(state.draft.hierarchy.classItem?.id, item.id)
+      dispatch((current) =>
+        resourceCreationReducer(current, { type: 'CONFIRM_CLASS', item }),
+      )
+      if (!changed) return
+      families.setContext({ operation: 'families', parentId: item.id })
+      void families.start()
+    },
+    [families, state.draft.hierarchy.classItem?.id],
+  )
+  const enterType = useCallback(() => {
+    dispatch((current) =>
+      resourceCreationReducer(current, {
+        type: 'NAVIGATE_TO_STAGE',
+        stage: { kind: 'type' },
+      }),
+    )
+    if (types.getState().items.length === 0) void types.start()
+  }, [types])
+  const confirmFamily = useCallback(
+    (item: ResourceContextFamilyItem) => {
+      const changed = !sameId(state.draft.hierarchy.familyItem?.id, item.id)
+      dispatch((current) =>
+        resourceCreationReducer(current, { type: 'CONFIRM_FAMILY', item }),
+      )
+      if (!changed) return
+      types.setContext({ operation: 'types', parentId: item.id })
+      void types.start()
+    },
+    [state.draft.hierarchy.familyItem?.id, types],
+  )
+  const confirmType = useCallback(
+    (item: ResourceContextTypeItem) => {
+      const changed = !sameId(state.draft.hierarchy.typeItem?.id, item.id)
+      dispatch((current) =>
+        resourceCreationReducer(current, { type: 'CONFIRM_TYPE', item }),
+      )
+      if (!changed) return
+      if (units.getState().status !== 'idle') return
+      const request = units.start()
+      refreshUnitState()
+      void request.finally(refreshUnitState)
+    },
+    [refreshUnitState, state.draft.hierarchy.typeItem?.id, units],
+  )
+  const continueUnits = useCallback(async () => {
+    const request = units.continue()
+    refreshUnitState()
+    const loaded = await request
+    refreshUnitState()
+    return loaded
+  }, [refreshUnitState, units])
+  const retryUnits = useCallback(async () => {
+    const request = units.retry()
+    refreshUnitState()
+    const retried = await request
+    refreshUnitState()
+    return retried
+  }, [refreshUnitState, units])
+  const confirmUnit = useCallback(
+    (candidate: UnitCandidate) => {
+      if (
+        !units
+          .getState()
+          .candidates.some((item) => sameId(item.unidadId, candidate.unidadId))
+      )
+        return
+      completedAttributesRef.current = null
+      dispatch((current) =>
+        resourceCreationReducer(current, {
+          type: 'CONFIRM_UNIT',
+          unitId: candidate.unidadId,
+        }),
+      )
+    },
+    [units],
+  )
+  const confirmAllowedValue = useCallback(
+    (assignmentId: string, allowedValueId: string) =>
+      dispatch((current) =>
+        resourceCreationReducer(current, {
+          type: 'CONFIRM_ALLOWED_VALUE_SELECTION',
+          assignmentId,
+          allowedValueId: asAllowedValueId(allowedValueId),
+        }),
+      ),
+    [],
+  )
+  const omitAllowedValue = useCallback(
+    (assignmentId: string) =>
+      dispatch((current) =>
+        resourceCreationReducer(current, {
+          type: 'OMIT_ALLOWED_VALUE_ASSIGNMENT',
+          assignmentId,
+        }),
+      ),
+    [],
+  )
+  const unitState = units.getState()
+
+  return {
+    state,
+    evaluation: {
+      status: evaluation.status,
+      retry: evaluation.retry,
+    },
+    creation: {
+      status: creation.status,
+      ...(creation.status === 'result' ? { result: creation.result } : {}),
+      create: creation.create,
+    },
+    attributes,
+    begin,
+    back: () =>
+      dispatch((current) => resourceCreationReducer(current, { type: 'BACK' })),
+    enterClass,
+    enterFamily,
+    enterType,
+    confirmClass,
+    confirmFamily,
+    confirmType,
+    classes: classState.items,
+    classLoadState: selectorLoadState(classState),
+    continueClasses: () => classes.continue(),
+    retryClasses: () => classes.retry(),
+    families: familyState.items,
+    familyLoadState: selectorLoadState(familyState),
+    continueFamilies: () => families.continue(),
+    retryFamilies: () => families.retry(),
+    types: typeState.items,
+    typeLoadState: selectorLoadState(typeState),
+    continueTypes: () => types.continue(),
+    retryTypes: () => types.retry(),
+    units: unitState.candidates,
+    unitLoadState: unitSelectorLoadState(unitState),
+    continueUnits,
+    retryUnits,
+    confirmUnit,
+    confirmAllowedValue,
+    omitAllowedValue,
+    classKey: resourceIdKey,
+  }
+}

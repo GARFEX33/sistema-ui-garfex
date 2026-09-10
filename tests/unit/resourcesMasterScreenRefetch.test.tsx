@@ -71,7 +71,9 @@ describe('ResourcesMasterScreen post-create refresh', () => {
   it('refetches only the active observed query after confirmed creation', async () => {
     const resourceApi = api()
     factory.mockReturnValue(resourceApi)
-    const { client } = renderScreen(<ResourcesMasterScreen />)
+    const { client } = renderScreen(
+      <ResourcesMasterScreen creationOwnership={null} />,
+    )
     const differentKey = [
       'resources-master',
       'list',

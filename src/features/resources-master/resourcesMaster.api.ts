@@ -3,13 +3,18 @@ import { makeFunctionReference } from 'convex/server'
 import type { FunctionReference } from 'convex/server'
 import { z } from 'zod'
 import type {
+  ResourceAllowedAttributeValueItem,
+  ResourceAllowedAttributeValueListInput,
   ResourceAttributeAssignment,
   ResourceAttributeAssignmentListInput,
-  ResourceAttributeDataType,
   ResourceAttributeDefinition,
   ResourceAttributeDefinitionInput,
   ResourceAttributeOption,
   ResourceAttributeOptionListInput,
+  ResourceCreationEvaluation,
+  ResourceCreationEvaluationInput,
+  ResourceCreationResult,
+  ResourceCreateFromSelectionsInput,
   ResourceChangeResult,
   ResourceClassificationStatus,
   ResourceContextClassItem,
@@ -33,6 +38,7 @@ import type {
   ResourceSummary,
   ResourceUnitDetail,
   ResourceUnitDetailInput,
+  ResourceUnitListInput,
   ResourceUnitPolicy,
   ResourceUnitPolicyListInput,
   ResourceUnitRef,
@@ -47,6 +53,9 @@ export type ResourceDetailOperation =
   'catalogoAdmin/recursos:obtenerDetalleRecurso'
 
 export type ResourceCreateOperation = 'catalogoAdmin/recursos:crearRecurso'
+
+export type ResourceCreateFromSelectionsOperation =
+  'catalogoAdmin/recursos:crearRecursoDesdeSelecciones'
 
 export type ResourceUpdateOperation = 'catalogoAdmin/recursos:actualizarRecurso'
 
@@ -64,27 +73,39 @@ export type ResourceUnitPolicyListOperation =
 
 export type ResourceUnitDetailOperation = 'catalogoAdmin/unidades:obtenerUnidad'
 
+export type ResourceUnitListOperation = 'catalogoAdmin/unidades:listarUnidades'
+
 export type ResourceAttributeAssignmentListOperation =
   'catalogoAdmin/atributos:listarAsignacionesAtributo'
 
 export type ResourceAttributeDefinitionOperation =
   'catalogoAdmin/atributos:obtenerDefinicionAtributo'
 
+export type ResourceAllowedAttributeValueListOperation =
+  'catalogoAdmin/atributos:listarValoresPermitidosAtributo'
+
 export type ResourceAttributeOptionListOperation =
   'catalogoAdmin/atributos:listarOpcionesAtributo'
+
+export type ResourceCreationEvaluationOperation =
+  'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones'
 
 export type ResourceOperation =
   | ResourceListOperation
   | ResourceDetailOperation
   | ResourceCreateOperation
+  | ResourceCreateFromSelectionsOperation
   | ResourceUpdateOperation
   | ResourceLifecycleOperation
   | ResourceContextListOperation
   | ResourceUnitPolicyListOperation
   | ResourceUnitDetailOperation
+  | ResourceUnitListOperation
   | ResourceAttributeAssignmentListOperation
   | ResourceAttributeDefinitionOperation
+  | ResourceAllowedAttributeValueListOperation
   | ResourceAttributeOptionListOperation
+  | ResourceCreationEvaluationOperation
 
 export interface ResourceTransport {
   invoke: (
@@ -108,6 +129,9 @@ export interface ResourcesMasterApi {
     input: ResourceDetailInput,
   ) => Promise<ResourceDetail | null>
   createResource: (input: ResourceCreateInput) => Promise<ResourceCreated>
+  createResourceFromSelections: (
+    input: ResourceCreateFromSelectionsInput,
+  ) => Promise<ResourceCreationResult>
   updateResource: (input: ResourceUpdateInput) => Promise<ResourceChangeResult>
   activateResource: (
     input: ResourceLifecycleInput,
@@ -130,15 +154,24 @@ export interface ResourcesMasterApi {
   getUnit: (
     input: ResourceUnitDetailInput,
   ) => Promise<ResourceUnitDetail | null>
+  listUnits: (
+    input: ResourceUnitListInput,
+  ) => Promise<ResourceContextListPage<ResourceUnitDetail>>
   listAttributeAssignments: (
     input: ResourceAttributeAssignmentListInput,
   ) => Promise<ResourceContextListPage<ResourceAttributeAssignment>>
   getAttributeDefinition: (
     input: ResourceAttributeDefinitionInput,
   ) => Promise<ResourceAttributeDefinition | null>
+  listAllowedAttributeValues: (
+    input: ResourceAllowedAttributeValueListInput,
+  ) => Promise<ResourceContextListPage<ResourceAllowedAttributeValueItem>>
   listAttributeOptions: (
     input: ResourceAttributeOptionListInput,
   ) => Promise<ResourceContextListPage<ResourceAttributeOption>>
+  evaluateResourceCreation: (
+    input: ResourceCreationEvaluationInput,
+  ) => Promise<ResourceCreationEvaluation>
 }
 
 type ResourceRecord = Record<string, unknown>
@@ -440,6 +473,13 @@ export function parseUnitDetail(value: unknown): ResourceUnitDetail | null {
   return unitDetail(value)
 }
 
+export function parseUnitsPage(
+  value: unknown,
+): ResourceContextListPage<ResourceUnitDetail> {
+  const result = contextPage(value)
+  return { ...result, items: result.items.map(unitDetail) }
+}
+
 const attributeApplicabilities = [
   'REQUIRED',
   'OPTIONAL',
@@ -449,8 +489,6 @@ const attributeApplicabilities = [
 ]
 
 const attributeSelections = ['SELECTED', 'SHADOWED', 'SUPPRESSED', 'NONE']
-
-const attributeDataTypes = ['TEXTO', 'NUMERO', 'BOOLEANO', 'OPCION']
 
 const attributeAssignmentItem = (
   value: unknown,
@@ -502,52 +540,245 @@ export function parseAttributeAssignmentsPage(
   return { ...result, items: result.items.map(attributeAssignmentItem) }
 }
 
-const attributeDefinitionItem = (
-  value: unknown,
-): ResourceAttributeDefinition => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    typeof value.clave !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    (has(value, 'descripcion') &&
-      value.descripcion !== undefined &&
-      typeof value.descripcion !== 'string') ||
-    !attributeDataTypes.includes(value.tipoDato as string) ||
-    (has(value, 'unidadId') &&
-      value.unidadId !== undefined &&
-      !definedId(value.unidadId)) ||
-    typeof value.activo !== 'boolean' ||
-    value.revision === undefined ||
-    value.revision === null ||
-    typeof value.effective !== 'boolean' ||
-    !Array.isArray(value.effectiveReasons) ||
-    !value.effectiveReasons.every((reason) => typeof reason === 'string')
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    clave: value.clave,
-    nombre: value.nombre,
-    ...(value.descripcion === undefined
-      ? {}
-      : { descripcion: value.descripcion as string }),
-    tipoDato: value.tipoDato as ResourceAttributeDataType,
-    ...(value.unidadId === undefined ? {} : { unidadId: value.unidadId }),
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-    effectiveReasons: [...value.effectiveReasons],
-  }
-}
+const attributeContractIdSchema = z
+  .string()
+  .refine((value) => value.trim().length > 0)
+const attributeDefinitionSchema = z
+  .object({
+    id: attributeContractIdSchema,
+    clave: z.string(),
+    nombre: z.string(),
+    descripcion: z.string().optional(),
+    tipoDato: z.enum(['TEXTO', 'NUMERO', 'BOOLEANO', 'OPCION']),
+    modoCaptura: z.enum(['SELECCION', 'LIBRE']),
+    unidadId: attributeContractIdSchema.optional(),
+    activo: z.boolean(),
+    revision: z.number(),
+    effective: z.boolean(),
+    effectiveReasons: z.array(z.string()),
+  })
+  .strict()
+const allowedAttributeValueSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('TEXTO'), value: z.string() }).strict(),
+  z.object({ kind: z.literal('NUMERO'), value: z.number() }).strict(),
+  z.object({ kind: z.literal('BOOLEANO'), value: z.boolean() }).strict(),
+  z
+    .object({
+      kind: z.literal('OPCION'),
+      opcionAtributoId: attributeContractIdSchema,
+    })
+    .strict(),
+])
+const allowedAttributeValueItemSchema = z
+  .object({
+    id: attributeContractIdSchema,
+    definicionAtributoId: attributeContractIdSchema,
+    clave: z.string(),
+    valor: allowedAttributeValueSchema,
+    nombre: z.string(),
+    descripcion: z.string().optional(),
+    orden: z.number(),
+    activo: z.boolean(),
+    revision: z.number(),
+    effective: z.boolean(),
+    effectiveReasons: z.array(z.string()),
+  })
+  .strict()
+const allowedAttributeValuesPageSchema = z
+  .object({
+    items: z.array(allowedAttributeValueItemSchema),
+    continuationCursor: z.string().nullable(),
+    isExhausted: z.boolean(),
+  })
+  .strict()
 
 export function parseAttributeDefinition(
   value: unknown,
 ): ResourceAttributeDefinition | null {
   if (value === null) return null
-  return attributeDefinitionItem(value)
+  const result = attributeDefinitionSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data
 }
+
+export function parseAllowedAttributeValuesPage(
+  value: unknown,
+): ResourceContextListPage<ResourceAllowedAttributeValueItem> {
+  const result = allowedAttributeValuesPageSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data
+}
+
+const resolvedAssignmentSchema = z
+  .object({
+    asignacionAtributoId: attributeContractIdSchema,
+    definicionAtributoId: attributeContractIdSchema,
+    aplicabilidadResuelta: z.enum([
+      'REQUIRED',
+      'OPTIONAL',
+      'FORBIDDEN',
+      'NOT_APPLICABLE',
+    ]),
+    participaIdentidad: z.boolean(),
+    orden: z.number(),
+    effectiveReasons: z.array(z.string()),
+    selectedValueId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+const normalizedCreationValueSchema = z
+  .object({
+    atributoRecursoId: attributeContractIdSchema,
+    valor: z.union([z.string(), z.number(), z.boolean()]),
+    opcionAtributoId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+const evaluationIssueSchema = z
+  .object({
+    code: z.enum([
+      'HIERARCHY_INVALID',
+      'UNIT_INVALID',
+      'OWNERSHIP_INVALID',
+      'ASSIGNMENT_UNKNOWN',
+      'ASSIGNMENT_DUPLICATE',
+      'ALLOWED_VALUE_UNKNOWN',
+      'ALLOWED_VALUE_FOREIGN',
+      'ALLOWED_VALUE_INACTIVE',
+      'SELECTION_NON_EFFECTIVE',
+      'SELECTION_FORBIDDEN',
+      'SELECTION_NOT_APPLICABLE',
+      'UNSUPPORTED_FREE_CAPTURE',
+      'IDENTITY_CONFLICT',
+    ]),
+    message: z.string(),
+    asignacionAtributoId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+const resourceCreationEvaluationSchema = z
+  .object({
+    status: z.enum(['INCOMPLETE', 'VALID', 'INVALID']),
+    valid: z.boolean(),
+    catalogFingerprint: z.string(),
+    nombre: z.string().nullable(),
+    identificadorTecnico: z.string().nullable(),
+    asignaciones: z.array(resolvedAssignmentSchema),
+    faltantesRequeridos: z.array(attributeContractIdSchema),
+    seleccionesInvalidas: z.array(attributeContractIdSchema),
+    valoresNormalizados: z.array(normalizedCreationValueSchema),
+    issues: z.array(evaluationIssueSchema),
+  })
+  .strict()
+  .refine((value) => value.valid === (value.status === 'VALID'), {
+    path: ['valid'],
+  })
+
+export function parseResourceCreationEvaluation(
+  value: unknown,
+): ResourceCreationEvaluation {
+  const result = resourceCreationEvaluationSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data
+}
+
+const resourceCreatedItemSchema = z
+  .object({
+    id: attributeContractIdSchema,
+    tipoRecursoId: attributeContractIdSchema,
+    unidadId: attributeContractIdSchema,
+    identificadorTecnico: z.string(),
+    nombre: z.string(),
+    activo: z.boolean(),
+    revision: z.number(),
+    classificationStatus: z
+      .object({
+        state: z.enum(['EFFECTIVE', 'INERT', 'BROKEN_REFERENCE']),
+        reasons: z.array(z.string()),
+      })
+      .strict(),
+    organizacionId: attributeContractIdSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ('organizacionId' in value && value.organizacionId === undefined)
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['organizacionId'],
+      })
+  })
+
+const resourceCreationResultEvaluationSchema =
+  resourceCreationEvaluationSchema.refine(
+    (value) => value.catalogFingerprint.trim().length > 0,
+  )
+
+const resourceCreationResultSchema = z.discriminatedUnion('disposition', [
+  z
+    .object({
+      disposition: z.literal('CREATED'),
+      item: resourceCreatedItemSchema,
+    })
+    .strict(),
+  z
+    .object({
+      disposition: z.literal('CATALOG_CHANGED'),
+      evaluation: resourceCreationResultEvaluationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      disposition: z.literal('INCOMPLETE'),
+      evaluation: resourceCreationResultEvaluationSchema.refine(
+        (value) => value.status === 'INCOMPLETE',
+      ),
+    })
+    .strict(),
+  z
+    .object({
+      disposition: z.literal('INVALID'),
+      evaluation: resourceCreationResultEvaluationSchema.refine(
+        (value) => value.status === 'INVALID',
+      ),
+    })
+    .strict(),
+])
+
+export function parseResourceCreationResult(
+  value: unknown,
+): ResourceCreationResult {
+  const result = resourceCreationResultSchema.safeParse(value)
+  if (!result.success) return bad()
+  return result.data as ResourceCreationResult
+}
+
+const resourceCreationEvaluationInputSchema = z
+  .object({
+    claseRecursoId: attributeContractIdSchema,
+    familiaRecursoId: attributeContractIdSchema,
+    tipoRecursoId: attributeContractIdSchema,
+    unidadId: attributeContractIdSchema,
+    selecciones: z.array(
+      z
+        .object({
+          asignacionAtributoId: attributeContractIdSchema,
+          valorPermitidoId: attributeContractIdSchema,
+        })
+        .strict(),
+    ),
+    ownership: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('GLOBAL') }).strict(),
+      z
+        .object({
+          kind: z.literal('ORGANIZATION'),
+          organizacionId: attributeContractIdSchema,
+        })
+        .strict(),
+    ]),
+  })
+  .strict()
+
+const resourceCreateFromSelectionsInputSchema =
+  resourceCreationEvaluationInputSchema
+    .extend({ expectedCatalogFingerprint: attributeContractIdSchema })
+    .strict()
 
 const attributeOptionItem = (value: unknown): ResourceAttributeOption => {
   if (
@@ -731,16 +962,35 @@ const contextTypeArgs = (input: ResourceContextTypeListInput) =>
 
 const unitPolicyArgs = (input: ResourceUnitPolicyListInput) =>
   Object.freeze({
-    tipoRecursoId: input.tipoRecursoId,
-    paraTipoRecursoId: input.tipoRecursoId,
+    familiaRecursoId: input.familiaRecursoId,
+    paraTipoRecursoId: input.paraTipoRecursoId,
     ...contextListArgs(input),
   })
+
+const unitListArgs = (input: ResourceUnitListInput) => {
+  const result: Record<string, unknown> = { modo: 'ACTIVE' }
+  if (input.cursor !== undefined) result.cursor = input.cursor
+  if (input.pageSize !== undefined) result.pageSize = input.pageSize
+  return Object.freeze(result)
+}
 
 const attributeAssignmentArgs = (input: ResourceAttributeAssignmentListInput) =>
   Object.freeze({
     tipoRecursoId: input.tipoRecursoId,
     ...contextListArgs(input),
   })
+
+const allowedAttributeValueArgs = (
+  input: ResourceAllowedAttributeValueListInput,
+) => {
+  const result: Record<string, unknown> = {
+    definicionAtributoId: input.definicionAtributoId,
+  }
+  if (input.cursor !== undefined) result.cursor = input.cursor
+  if (input.pageSize !== undefined) result.pageSize = input.pageSize
+  if (input.modo !== undefined) result.modo = input.modo
+  return Object.freeze(result)
+}
 
 const attributeOptionArgs = (input: ResourceAttributeOptionListInput) =>
   Object.freeze({
@@ -768,14 +1018,18 @@ const queryReference = (
     | ResourceContextListOperation
     | ResourceUnitPolicyListOperation
     | ResourceUnitDetailOperation
+    | ResourceUnitListOperation
     | ResourceAttributeAssignmentListOperation
     | ResourceAttributeDefinitionOperation
-    | ResourceAttributeOptionListOperation,
+    | ResourceAllowedAttributeValueListOperation
+    | ResourceAttributeOptionListOperation
+    | ResourceCreationEvaluationOperation,
 ) => makeFunctionReference<'query', Record<string, unknown>, unknown>(name)
 
 const mutationReference = (
   name:
     | ResourceCreateOperation
+    | ResourceCreateFromSelectionsOperation
     | ResourceUpdateOperation
     | ResourceLifecycleOperation,
 ) => makeFunctionReference<'mutation', Record<string, unknown>, unknown>(name)
@@ -792,6 +1046,8 @@ const getDetailReference: ResourceQueryReference = queryReference(
 const createResourceReference: ResourceMutationReference = mutationReference(
   'catalogoAdmin/recursos:crearRecurso',
 )
+const createResourceFromSelectionsReference: ResourceMutationReference =
+  mutationReference('catalogoAdmin/recursos:crearRecursoDesdeSelecciones')
 const updateResourceReference: ResourceMutationReference = mutationReference(
   'catalogoAdmin/recursos:actualizarRecurso',
 )
@@ -815,14 +1071,21 @@ const listUnitPoliciesReference: ResourceQueryReference = queryReference(
 const getUnitReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/unidades:obtenerUnidad',
 )
+const listUnitsReference: ResourceQueryReference = queryReference(
+  'catalogoAdmin/unidades:listarUnidades',
+)
 const listAttributeAssignmentsReference: ResourceQueryReference =
   queryReference('catalogoAdmin/atributos:listarAsignacionesAtributo')
 const getAttributeDefinitionReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/atributos:obtenerDefinicionAtributo',
 )
+const listAllowedAttributeValuesReference: ResourceQueryReference =
+  queryReference('catalogoAdmin/atributos:listarValoresPermitidosAtributo')
 const listAttributeOptionsReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/atributos:listarOpcionesAtributo',
 )
+const evaluateResourceCreationReference: ResourceQueryReference =
+  queryReference('catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones')
 
 const configuredUrl = (options: ResourcesMasterConvexApiOptions) =>
   'url' in options ? options.url : import.meta.env.VITE_CONVEX_URL
@@ -859,6 +1122,10 @@ export function createResourcesMasterConvexApi(
           return client.query(getDetailReference, { ...requestArgs })
         case 'catalogoAdmin/recursos:crearRecurso':
           return client.mutation(createResourceReference, { ...requestArgs })
+        case 'catalogoAdmin/recursos:crearRecursoDesdeSelecciones':
+          return client.mutation(createResourceFromSelectionsReference, {
+            ...requestArgs,
+          })
         case 'catalogoAdmin/recursos:actualizarRecurso':
           return client.mutation(updateResourceReference, { ...requestArgs })
         case 'catalogoAdmin/recursos:activarRecurso':
@@ -877,6 +1144,8 @@ export function createResourcesMasterConvexApi(
           return client.query(listUnitPoliciesReference, { ...requestArgs })
         case 'catalogoAdmin/unidades:obtenerUnidad':
           return client.query(getUnitReference, { ...requestArgs })
+        case 'catalogoAdmin/unidades:listarUnidades':
+          return client.query(listUnitsReference, { ...requestArgs })
         case 'catalogoAdmin/atributos:listarAsignacionesAtributo':
           return client.query(listAttributeAssignmentsReference, {
             ...requestArgs,
@@ -885,8 +1154,16 @@ export function createResourcesMasterConvexApi(
           return client.query(getAttributeDefinitionReference, {
             ...requestArgs,
           })
+        case 'catalogoAdmin/atributos:listarValoresPermitidosAtributo':
+          return client.query(listAllowedAttributeValuesReference, {
+            ...requestArgs,
+          })
         case 'catalogoAdmin/atributos:listarOpcionesAtributo':
           return client.query(listAttributeOptionsReference, { ...requestArgs })
+        case 'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones':
+          return client.query(evaluateResourceCreationReference, {
+            ...requestArgs,
+          })
       }
     },
   }
@@ -939,6 +1216,16 @@ export function createResourcesMasterApi(
         await transport.invoke(
           'catalogoAdmin/recursos:crearRecurso',
           requestArgs,
+        ),
+      )
+    },
+    async createResourceFromSelections(input) {
+      const request = resourceCreateFromSelectionsInputSchema.safeParse(input)
+      if (!request.success) return bad()
+      return parseResourceCreationResult(
+        await transport.invoke(
+          'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+          request.data,
         ),
       )
     },
@@ -1002,7 +1289,11 @@ export function createResourcesMasterApi(
       )
     },
     async listUnitPolicies(input) {
-      if (!definedId(input.tipoRecursoId)) return bad()
+      if (
+        !definedId(input.familiaRecursoId) ||
+        !definedId(input.paraTipoRecursoId)
+      )
+        return bad()
       return parseUnitPoliciesPage(
         await transport.invoke(
           'catalogoAdmin/unidades:listarPoliticasUnidad',
@@ -1016,6 +1307,14 @@ export function createResourcesMasterApi(
         await transport.invoke('catalogoAdmin/unidades:obtenerUnidad', {
           unidadId: input.unidadId,
         }),
+      )
+    },
+    async listUnits(input) {
+      return parseUnitsPage(
+        await transport.invoke(
+          'catalogoAdmin/unidades:listarUnidades',
+          unitListArgs(input),
+        ),
       )
     },
     async listAttributeAssignments(input) {
@@ -1036,12 +1335,31 @@ export function createResourcesMasterApi(
         ),
       )
     },
+    async listAllowedAttributeValues(input) {
+      if (!definedId(input.definicionAtributoId)) return bad()
+      return parseAllowedAttributeValuesPage(
+        await transport.invoke(
+          'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
+          allowedAttributeValueArgs(input),
+        ),
+      )
+    },
     async listAttributeOptions(input) {
       if (!definedId(input.definicionAtributoId)) return bad()
       return parseAttributeOptionsPage(
         await transport.invoke(
           'catalogoAdmin/atributos:listarOpcionesAtributo',
           attributeOptionArgs(input),
+        ),
+      )
+    },
+    async evaluateResourceCreation(input) {
+      const request = resourceCreationEvaluationInputSchema.safeParse(input)
+      if (!request.success) return bad()
+      return parseResourceCreationEvaluation(
+        await transport.invoke(
+          'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+          request.data,
         ),
       )
     },

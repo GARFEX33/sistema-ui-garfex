@@ -182,7 +182,8 @@ export interface ResourceUnitPolicy {
 }
 
 export interface ResourceUnitPolicyListInput extends ResourceContextListInput {
-  tipoRecursoId: ResourceId
+  familiaRecursoId: ResourceId
+  paraTipoRecursoId: ResourceId
 }
 
 export interface ResourceUnitDetail {
@@ -198,6 +199,12 @@ export interface ResourceUnitDetail {
 
 export interface ResourceUnitDetailInput {
   readonly unidadId: ResourceId
+}
+
+export interface ResourceUnitListInput {
+  readonly modo: 'ACTIVE'
+  readonly cursor?: string | null
+  readonly pageSize?: number
 }
 
 // Attribute assignment reads (Paso 2 — Atributos dinámicos) for the "Nuevo
@@ -242,21 +249,51 @@ export type ResourceAttributeDataType =
   | 'BOOLEANO'
   | 'OPCION'
 
+export type ResourceAttributeCaptureMode = 'SELECCION' | 'LIBRE'
+
 export interface ResourceAttributeDefinition {
   id: ResourceId
   clave: string
   nombre: string
   descripcion?: string
   tipoDato: ResourceAttributeDataType
+  modoCaptura: ResourceAttributeCaptureMode
   unidadId?: ResourceId
   activo: boolean
-  revision: unknown
+  revision: number
   effective: boolean
   effectiveReasons: string[]
 }
 
 export interface ResourceAttributeDefinitionInput {
   readonly definicionAtributoId: ResourceId
+}
+
+export type ResourceAllowedAttributeValue =
+  | { kind: 'TEXTO'; value: string }
+  | { kind: 'NUMERO'; value: number }
+  | { kind: 'BOOLEANO'; value: boolean }
+  | { kind: 'OPCION'; opcionAtributoId: ResourceId }
+
+export interface ResourceAllowedAttributeValueItem {
+  id: ResourceId
+  definicionAtributoId: ResourceId
+  clave: string
+  valor: ResourceAllowedAttributeValue
+  nombre: string
+  descripcion?: string
+  orden: number
+  activo: boolean
+  revision: number
+  effective: boolean
+  effectiveReasons: string[]
+}
+
+export interface ResourceAllowedAttributeValueListInput {
+  readonly definicionAtributoId: ResourceId
+  readonly cursor?: string | null
+  readonly pageSize?: number
+  readonly modo?: ResourceLifecycle
 }
 
 export interface ResourceAttributeOption {
@@ -275,3 +312,123 @@ export interface ResourceAttributeOptionListInput
   extends ResourceContextListInput {
   definicionAtributoId: ResourceId
 }
+
+export interface ResourceCreationEvaluationSelection {
+  readonly asignacionAtributoId: string
+  readonly valorPermitidoId: string
+}
+
+export type ResourceCreationEvaluationOwnership =
+  | { readonly kind: 'GLOBAL' }
+  | { readonly kind: 'ORGANIZATION'; readonly organizacionId: string }
+
+export interface ResourceCreationEvaluationInput {
+  readonly claseRecursoId: string
+  readonly familiaRecursoId: string
+  readonly tipoRecursoId: string
+  readonly unidadId: string
+  readonly selecciones: readonly ResourceCreationEvaluationSelection[]
+  readonly ownership: ResourceCreationEvaluationOwnership
+}
+
+export type ResourceCreationEvaluationStatus =
+  | 'INCOMPLETE'
+  | 'VALID'
+  | 'INVALID'
+
+export type ResourceResolvedAssignmentApplicability =
+  | 'REQUIRED'
+  | 'OPTIONAL'
+  | 'FORBIDDEN'
+  | 'NOT_APPLICABLE'
+
+export interface ResourceResolvedCreationAssignment {
+  asignacionAtributoId: string
+  definicionAtributoId: string
+  aplicabilidadResuelta: ResourceResolvedAssignmentApplicability
+  participaIdentidad: boolean
+  orden: number
+  effectiveReasons: string[]
+  selectedValueId?: string
+}
+
+export interface ResourceNormalizedCreationValue {
+  atributoRecursoId: string
+  valor: string | number | boolean
+  opcionAtributoId?: string
+}
+
+export type ResourceCreationEvaluationIssueCode =
+  | 'HIERARCHY_INVALID'
+  | 'UNIT_INVALID'
+  | 'OWNERSHIP_INVALID'
+  | 'ASSIGNMENT_UNKNOWN'
+  | 'ASSIGNMENT_DUPLICATE'
+  | 'ALLOWED_VALUE_UNKNOWN'
+  | 'ALLOWED_VALUE_FOREIGN'
+  | 'ALLOWED_VALUE_INACTIVE'
+  | 'SELECTION_NON_EFFECTIVE'
+  | 'SELECTION_FORBIDDEN'
+  | 'SELECTION_NOT_APPLICABLE'
+  | 'UNSUPPORTED_FREE_CAPTURE'
+  | 'IDENTITY_CONFLICT'
+
+export interface ResourceCreationEvaluationIssue {
+  code: ResourceCreationEvaluationIssueCode
+  message: string
+  asignacionAtributoId?: string
+}
+
+export interface ResourceCreationEvaluation {
+  status: ResourceCreationEvaluationStatus
+  valid: boolean
+  catalogFingerprint: string
+  nombre: string | null
+  identificadorTecnico: string | null
+  asignaciones: ResourceResolvedCreationAssignment[]
+  faltantesRequeridos: string[]
+  seleccionesInvalidas: string[]
+  valoresNormalizados: ResourceNormalizedCreationValue[]
+  issues: ResourceCreationEvaluationIssue[]
+}
+
+export interface ResourceCreateFromSelectionsInput {
+  readonly claseRecursoId: string
+  readonly familiaRecursoId: string
+  readonly tipoRecursoId: string
+  readonly unidadId: string
+  readonly expectedCatalogFingerprint: string
+  readonly selecciones: ResourceCreationEvaluationSelection[]
+  readonly ownership: ResourceCreationEvaluationOwnership
+}
+
+export interface ResourceCreatedItem {
+  readonly id: string
+  readonly tipoRecursoId: string
+  readonly unidadId: string
+  readonly identificadorTecnico: string
+  readonly nombre: string
+  readonly activo: boolean
+  readonly revision: number
+  readonly classificationStatus: ResourceClassificationStatus
+  readonly organizacionId?: string
+}
+
+export type ResourceCreationResult =
+  | { readonly disposition: 'CREATED'; readonly item: ResourceCreatedItem }
+  | {
+      readonly disposition: 'CATALOG_CHANGED'
+      readonly evaluation: ResourceCreationEvaluation
+    }
+  | {
+      readonly disposition: 'INCOMPLETE'
+      readonly evaluation: ResourceCreationEvaluation & {
+        readonly status: 'INCOMPLETE'
+      }
+    }
+  | {
+      readonly disposition: 'INVALID'
+      readonly evaluation: ResourceCreationEvaluation & {
+        readonly status: 'INVALID'
+      }
+    }

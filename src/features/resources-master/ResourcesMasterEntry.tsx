@@ -1,5 +1,10 @@
 import { ResourcesMasterScreen } from './ResourcesMasterScreen'
+import type { ResourceCreationEvaluationOwnership } from './resourcesMaster.types'
 
 export function ResourcesMasterEntry() {
-  return <ResourcesMasterScreen />
+  const creationOwnership: ResourceCreationEvaluationOwnership = {
+    kind: 'GLOBAL',
+  }
+
+  return <ResourcesMasterScreen creationOwnership={creationOwnership} />
 }

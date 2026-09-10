@@ -101,11 +101,16 @@ const fakeApi = (
   }) as ResourcesMasterApi
 
 const factory = vi.hoisted(() => vi.fn())
+const creationSurfaceProps = vi.hoisted(() => vi.fn())
 const screenSource = readFileSync(
   join(
     process.cwd(),
     'src/features/resources-master/ResourcesMasterScreen.tsx',
   ),
+  'utf8',
+)
+const entrySource = readFileSync(
+  join(process.cwd(), 'src/features/resources-master/ResourcesMasterEntry.tsx'),
   'utf8',
 )
 const screenAst = ts.createSourceFile(
@@ -185,7 +190,24 @@ vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
   return { ...actual, createResourcesMasterConvexApi: factory }
 })
 
+vi.mock('../../src/features/resources-master/CrearRecursoSurface', () => ({
+  CrearRecursoSurface: (props: unknown) => {
+    creationSurfaceProps(props)
+    return null
+  },
+}))
+
 describe('ResourcesMasterScreen connected read wiring', () => {
+  it('forwards the explicitly authorized GLOBAL creation ownership from the entry host', () => {
+    expect(entrySource).toContain(
+      'const creationOwnership: ResourceCreationEvaluationOwnership = {',
+    )
+    expect(entrySource).toContain("kind: 'GLOBAL'")
+    expect(entrySource).toContain(
+      '<ResourcesMasterScreen creationOwnership={creationOwnership} />',
+    )
+  })
+
   it('synchronizes latest criteria refs only from committed effects', () => {
     expect(screenAst.parseDiagnostics).toEqual([])
     const effectCallbacks = new Set<ts.FunctionLikeDeclaration>()
@@ -232,10 +254,43 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     }
   })
 
+  it('passes explicit null creation ownership with only the loaded hierarchy selection', async () => {
+    const api = fakeApi()
+    factory.mockReturnValue(api)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
+
+    await screen.findByRole('button', { name: 'Material' })
+    fireEvent.click(screen.getByRole('button', { name: 'Material' }))
+
+    await waitFor(() =>
+      expect(creationSurfaceProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          ownership: null,
+          initialHierarchySnapshot: {
+            classItem: expect.objectContaining({ id: 'class-1' }),
+            familyItem: null,
+            typeItem: null,
+          },
+        }),
+      ),
+    )
+    const [props] = creationSurfaceProps.mock.lastCall as [
+      Record<string, unknown>,
+    ]
+    expect(Object.keys(props).sort()).toEqual([
+      'api',
+      'initialHierarchySnapshot',
+      'onCreated',
+      'ownership',
+    ])
+  })
+
   it('lists resources on mount through an isolated Query client', async () => {
     const api = fakeApi()
     factory.mockReturnValue(api)
-    const { client } = render(<ResourcesMasterScreen />)
+    const { client } = render(
+      <ResourcesMasterScreen creationOwnership={null} />,
+    )
 
     expect(await screen.findByText('Cable UTP')).toBeVisible()
     expect(api.listResources).toHaveBeenCalledWith({
@@ -254,7 +309,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
   it('never offers a status selector — the list is always active-only', async () => {
     const api = fakeApi()
     factory.mockReturnValue(api)
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     await screen.findByText('Cable UTP')
     expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument()
@@ -263,7 +318,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
   it('separates the labeled list work card from the resource controls', async () => {
     const api = fakeApi()
     factory.mockReturnValue(api)
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     const workCard = await screen.findByRole('region', {
       name: 'Listado de recursos',
@@ -289,7 +344,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
         ),
       })
       factory.mockReturnValue(api)
-      render(<ResourcesMasterScreen />)
+      render(<ResourcesMasterScreen creationOwnership={null} />)
       await act(async () => {
         await Promise.resolve()
       })
@@ -317,7 +372,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     try {
       const api = fakeApi()
       factory.mockReturnValue(api)
-      render(<ResourcesMasterScreen />)
+      render(<ResourcesMasterScreen creationOwnership={null} />)
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0)
@@ -358,7 +413,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
   it('restarts once with the deepest hierarchy filter and cancels a pending search', async () => {
     const api = fakeApi()
     factory.mockReturnValue(api)
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     await screen.findByRole('button', { name: 'Material' })
     await waitFor(() => expect(api.listResources).toHaveBeenCalledTimes(1))
@@ -402,7 +457,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
       ),
     })
     factory.mockReturnValue(api)
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     await screen.findByText('Material')
     fireEvent.click(screen.getByRole('button', { name: 'Material' }))
@@ -453,7 +508,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     })
     factory.mockReturnValue(api)
     const user = userEvent.setup()
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     await screen.findByText('Cable UTP')
     await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
@@ -482,7 +537,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     })
     factory.mockReturnValue(api)
     const user = userEvent.setup()
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     await screen.findByText('Cable UTP')
     await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
@@ -516,7 +571,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     })
     factory.mockReturnValue(api)
     const user = userEvent.setup()
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     expect(await screen.findByText('Cable UTP')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
@@ -542,7 +597,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
   it('confirms an exhausted empty result instead of guessing', async () => {
     const api = fakeApi({ listResources: vi.fn(async () => page([])) })
     factory.mockReturnValue(api)
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     expect(
       await screen.findByText('No hay recursos para este filtro.'),
@@ -559,7 +614,7 @@ describe('ResourcesMasterScreen connected read wiring', () => {
     })
     factory.mockReturnValue(api)
     const user = userEvent.setup()
-    render(<ResourcesMasterScreen />)
+    render(<ResourcesMasterScreen creationOwnership={null} />)
 
     expect(
       await screen.findByText('No se pudieron cargar los recursos.'),

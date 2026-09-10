@@ -6,6 +6,31 @@ type ResourceResponse =
   | { status: number; body?: string; contentType?: string }
   | undefined
 
+type CreationFixture = Readonly<{
+  unit?: Readonly<{
+    id: string
+    clave: string
+    nombre: string
+    simbolo: string
+  }>
+  createResponse?: (
+    attempt: number,
+  ) => ResourceResponse | Promise<ResourceResponse>
+}>
+
+type Deferred<T> = Readonly<{
+  promise: Promise<T>
+  resolve: (value: T) => void
+}>
+
+const deferred = <T>(): Deferred<T> => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 const response = (value: unknown) => ({
   status: 200,
   contentType: 'application/json',
@@ -13,12 +38,12 @@ const response = (value: unknown) => ({
   body: JSON.stringify({ status: 'success', value }),
 })
 
-const summary = (id: string, nombre: string) => ({
+const summary = (id: string, nombre: string, unidadId = 'unit-1') => ({
   id,
   identificadorTecnico: `REC-${id}`,
   nombre,
   tipoRecursoId: 'type-1',
-  unidadId: 'unit-1',
+  unidadId,
   activo: true,
   revision: 1,
   classificationStatus: { state: 'EFFECTIVE', reasons: [] },
@@ -37,8 +62,17 @@ const hierarchyItem = (id: string, nombre: string) => ({
 async function mockResources(
   page: Page,
   resourceResponse: (call: RequestCall) => ResourceResponse,
+  creationFixture?: CreationFixture,
 ) {
   const calls: RequestCall[] = []
+  const hasCreationFixture = creationFixture !== undefined
+  const unit = creationFixture?.unit ?? {
+    id: 'unit-1',
+    clave: 'UN',
+    nombre: 'Unidad',
+    simbolo: 'u',
+  }
+  let createAttempts = 0
   await page.route('http://127.0.0.1:3210/**', async (route) => {
     if (route.request().method() !== 'POST') {
       await route.fulfill({ status: 204 })
@@ -51,11 +85,19 @@ async function mockResources(
     const call = { path: body.path, args: body.args?.[0] ?? {} }
     calls.push(call)
     if (call.path.endsWith(':listarClases')) {
+      const firstPage =
+        !hasCreationFixture || call.args.cursor !== 'class-page-2'
       await route.fulfill(
         response({
-          continuationCursor: null,
-          isExhausted: true,
-          items: [hierarchyItem('class-1', 'Materiales')],
+          continuationCursor: hasCreationFixture
+            ? firstPage
+              ? 'class-page-2'
+              : 'class-page-3'
+            : null,
+          isExhausted: !hasCreationFixture,
+          items: firstPage
+            ? [hierarchyItem('class-1', 'Materiales')]
+            : [hierarchyItem('class-2', 'Equipos')],
         }),
       )
       return
@@ -92,6 +134,140 @@ async function mockResources(
       )
       return
     }
+    if (hasCreationFixture && call.path.endsWith(':listarUnidades')) {
+      expect(call.args).toEqual({ cursor: null, pageSize: 20, modo: 'ACTIVE' })
+      await route.fulfill(
+        response({
+          continuationCursor: null,
+          isExhausted: true,
+          items: [{ ...unit, activo: true, revision: 1, effective: true }],
+        }),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':obtenerDefinicionAtributo')
+    ) {
+      const color = call.args.definicionAtributoId === 'definition-color'
+      expect(call.args).toEqual({
+        definicionAtributoId: color ? 'definition-color' : 'definition-finish',
+      })
+      await route.fulfill(
+        response({
+          id: color ? 'definition-color' : 'definition-finish',
+          clave: color ? 'COLOR' : 'ACABADO',
+          nombre: color ? 'Color' : 'Acabado',
+          tipoDato: 'TEXTO',
+          modoCaptura: 'SELECCION',
+          activo: true,
+          revision: 1,
+          effective: true,
+          effectiveReasons: [],
+        }),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':listarValoresPermitidosAtributo')
+    ) {
+      const color = call.args.definicionAtributoId === 'definition-color'
+      expect(call.args).toEqual({
+        definicionAtributoId: color ? 'definition-color' : 'definition-finish',
+        cursor: null,
+        pageSize: 20,
+        modo: 'ACTIVE',
+      })
+      await route.fulfill(
+        response({
+          items: [
+            {
+              id: color ? 'value-red' : 'value-matte',
+              definicionAtributoId: color
+                ? 'definition-color'
+                : 'definition-finish',
+              clave: color ? 'ROJO' : 'MATE',
+              valor: { kind: 'TEXTO', value: color ? 'Rojo' : 'Mate' },
+              nombre: color ? 'Rojo' : 'Mate',
+              orden: 1,
+              activo: true,
+              revision: 1,
+              effective: true,
+              effectiveReasons: [],
+            },
+          ],
+          continuationCursor: null,
+          isExhausted: true,
+        }),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':evaluarCreacionDesdeSelecciones')
+    ) {
+      const selections = call.args.selecciones as Array<{
+        asignacionAtributoId: string
+        valorPermitidoId: string
+      }>
+      const colorSelected = selections.some(
+        ({ asignacionAtributoId, valorPermitidoId }) =>
+          asignacionAtributoId === 'assignment-color' &&
+          valorPermitidoId === 'value-red',
+      )
+      expect(call.args).toEqual({
+        claseRecursoId: 'class-1',
+        familiaRecursoId: 'family-1',
+        tipoRecursoId: 'type-1',
+        unidadId: unit.id,
+        selecciones: colorSelected
+          ? [
+              {
+                asignacionAtributoId: 'assignment-color',
+                valorPermitidoId: 'value-red',
+              },
+            ]
+          : [],
+        ownership: { kind: 'GLOBAL' },
+      })
+      await route.fulfill(
+        response(
+          creationEvaluation(
+            colorSelected ? 'VALID' : 'INCOMPLETE',
+            colorSelected,
+          ),
+        ),
+      )
+      return
+    }
+    if (
+      hasCreationFixture &&
+      call.path.endsWith(':crearRecursoDesdeSelecciones')
+    ) {
+      expect(call.args).toEqual({
+        claseRecursoId: 'class-1',
+        familiaRecursoId: 'family-1',
+        tipoRecursoId: 'type-1',
+        unidadId: unit.id,
+        expectedCatalogFingerprint: 'catalog-v1',
+        selecciones: [
+          {
+            asignacionAtributoId: 'assignment-color',
+            valorPermitidoId: 'value-red',
+          },
+        ],
+        ownership: { kind: 'GLOBAL' },
+      })
+      await route.fulfill(
+        (await creationFixture?.createResponse?.(createAttempts++)) ??
+          response({
+            disposition: 'CREATED',
+            item: summary('resource-created', 'Tubería roja', unit.id),
+          }),
+      )
+      return
+    }
     const result = resourceResponse(call)
     await route.fulfill(
       result ??
@@ -124,23 +300,114 @@ const resourceSearchCall = (args: Record<string, unknown>) => ({
   args: resourceRequestArgs(args),
 })
 
-const matchesResourceCall = (call: RequestCall, expected: RequestCall) =>
-  call.path === expected.path &&
-  Object.keys(call.args).length === Object.keys(expected.args).length &&
-  Object.entries(expected.args).every(
-    ([key, value]) => JSON.stringify(call.args[key]) === JSON.stringify(value),
-  )
-
 const listCalls = (calls: readonly RequestCall[]) =>
   calls.filter(({ path }) => path.endsWith(':listarRecursosResumen'))
 
-async function chooseResourceContext(
+const creationEvaluation = (
+  status: 'INCOMPLETE' | 'VALID' | 'INVALID',
+  colorSelected: boolean,
+  invalidSelection = false,
+) => ({
+  status,
+  valid: status === 'VALID',
+  catalogFingerprint: 'catalog-v1',
+  nombre: colorSelected ? 'Tubería roja' : null,
+  identificadorTecnico: colorSelected ? 'TUB-ROJA' : null,
+  asignaciones: [
+    {
+      asignacionAtributoId: 'assignment-color',
+      definicionAtributoId: 'definition-color',
+      aplicabilidadResuelta: 'REQUIRED',
+      participaIdentidad: true,
+      orden: 1,
+      effectiveReasons: [],
+      ...(colorSelected ? { selectedValueId: 'value-red' } : {}),
+    },
+    {
+      asignacionAtributoId: 'assignment-finish',
+      definicionAtributoId: 'definition-finish',
+      aplicabilidadResuelta: 'OPTIONAL',
+      participaIdentidad: false,
+      orden: 2,
+      effectiveReasons: [],
+    },
+  ],
+  faltantesRequeridos: colorSelected ? [] : ['assignment-color'],
+  seleccionesInvalidas: invalidSelection ? ['assignment-color'] : [],
+  valoresNormalizados: colorSelected
+    ? [{ atributoRecursoId: 'color', valor: 'Rojo' }]
+    : [],
+  issues:
+    status === 'VALID'
+      ? []
+      : [
+          {
+            code: 'HIERARCHY_INVALID',
+            message: 'Selecciona un color permitido.',
+            asignacionAtributoId: 'assignment-color',
+          },
+        ],
+})
+
+const completeCreationContext = async (page: Page) => {
+  const trigger = page.getByRole('button', { name: 'Nuevo recurso' })
+  await trigger.click()
+  await expect(
+    page.getByRole('dialog', { name: 'Creador de recursos' }),
+  ).toBeVisible()
+  await expect(page.getByRole('searchbox', { name: 'Clase' })).toBeFocused()
+  await expect(page.getByRole('option', { name: 'Materiales' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(trigger).toBeFocused()
+  await page.keyboard.press('n')
+  await expect(
+    page.getByRole('dialog', { name: 'Creador de recursos' }),
+  ).toBeVisible()
+
+  for (const [label, option] of [
+    ['Clase', 'Materiales'],
+    ['Familia', 'Canalizaciones'],
+    ['Tipo', 'Tuberías'],
+    ['Unidad', 'Unidad (u)'],
+  ] as const) {
+    const search = page.getByRole('searchbox', { name: label })
+    await expect(search).toBeFocused()
+    await expect(page.getByRole('option', { name: option })).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+  }
+
+  return page.getByRole('searchbox', { name: 'Color' })
+}
+
+const reachReadyReview = async (
   page: Page,
-  label: string,
-  option: string,
-) {
-  await page.getByRole('button', { name: new RegExp(label) }).click()
-  await page.getByRole('option', { name: option, exact: true }).click()
+  beforeColorConfirmation?: () => Promise<void>,
+) => {
+  const colorSearch = await completeCreationContext(page)
+  await expect(colorSearch).toBeFocused()
+  await beforeColorConfirmation?.()
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+
+  const finishSearch = page.getByRole('searchbox', { name: 'Acabado' })
+  const finishOption = page.getByRole('option', { name: 'Mate' })
+  const omit = page.getByRole('button', { name: 'Omitir' })
+  await expect(finishSearch).toBeFocused()
+  await expect(finishOption).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(finishOption).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(omit).toBeFocused()
+  await page.keyboard.press('Enter')
+
+  await expect(
+    page.getByRole('heading', { name: 'Revisión de creación' }),
+  ).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(
+    page.getByRole('button', { name: 'Crear recurso' }),
+  ).toBeFocused()
 }
 
 test.describe('Recursos maestros workstation 1440×980', () => {
@@ -301,16 +568,247 @@ test.describe('Recursos maestros workstation 1440×980', () => {
 
     await trigger.click()
     await expect(
-      page.getByRole('dialog', { name: 'Nuevo recurso' }),
+      page.getByRole('dialog', { name: 'Creador de recursos' }),
     ).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(trigger).toBeFocused()
 
     await page.keyboard.press('n')
     await expect(
-      page.getByRole('dialog', { name: 'Nuevo recurso' }),
+      page.getByRole('dialog', { name: 'Creador de recursos' }),
     ).toBeVisible()
   })
+
+  test('requires explicit Metro Lineal confirmation before evaluating and creating without policy/detail catalog calls', async ({
+    page,
+  }) => {
+    const calls = await mockResources(page, () => undefined, {
+      unit: {
+        id: 'unit-metro',
+        clave: 'ML',
+        nombre: 'Metro Lineal',
+        simbolo: 'm',
+      },
+    })
+    await page.goto('/recursos')
+    const trigger = page.getByRole('button', { name: 'Nuevo recurso' })
+
+    await trigger.click()
+    await page.keyboard.press('Escape')
+    await expect(trigger).toBeFocused()
+    await page.keyboard.press('n')
+    for (const [label, option] of [
+      ['Clase', 'Materiales'],
+      ['Familia', 'Canalizaciones'],
+      ['Tipo', 'Tuberías'],
+    ] as const) {
+      await expect(page.getByRole('searchbox', { name: label })).toBeFocused()
+      await expect(page.getByRole('option', { name: option })).toBeVisible()
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('Enter')
+    }
+
+    const unitSearch = page.getByRole('searchbox', { name: 'Unidad' })
+    await expect(unitSearch).toBeFocused()
+    await unitSearch.fill('Metro')
+    await expect(
+      page.getByRole('option', { name: 'Metro Lineal (m)' }),
+    ).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    expect(
+      calls.filter(({ path }) =>
+        path.endsWith(':evaluarCreacionDesdeSelecciones'),
+      ),
+    ).toHaveLength(0)
+
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: 'Atributos · 1 de 2', exact: true }),
+    ).toBeVisible()
+    expect(
+      (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
+        .violations,
+    ).toEqual([])
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await page.getByRole('button', { name: 'Omitir' }).click()
+    await expect(
+      page.getByRole('heading', { name: 'Revisión de creación' }),
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Crear recurso' }).click()
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toBeFocused()
+    expect(calls).toContainEqual({
+      path: 'catalogoAdmin/unidades:listarUnidades',
+      args: { cursor: null, pageSize: 20, modo: 'ACTIVE' },
+    })
+    expect(calls).toContainEqual({
+      path: 'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+      args: expect.objectContaining({ unidadId: 'unit-metro' }),
+    })
+    expect(calls.map(({ path }) => path)).not.toContain(
+      'catalogoAdmin/unidades:listarPoliticasUnidad',
+    )
+    expect(calls.map(({ path }) => path)).not.toContain(
+      'catalogoAdmin/unidades:obtenerUnidad',
+    )
+  })
+
+  test('completes the selection-only creation journey against exact published DTO fixtures', async ({
+    page,
+  }) => {
+    const calls = await mockResources(page, () => undefined, {})
+    await page.goto('/recursos')
+    await reachReadyReview(page, async () => {
+      await expect(
+        page.getByRole('heading', { name: 'Atributos · 1 de 2', exact: true }),
+      ).toBeVisible()
+      await expect(page.getByText('Obligatorio')).toBeVisible()
+      await expect(page.getByRole('option', { name: 'Rojo' })).toBeVisible()
+      expect(
+        (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
+          .violations,
+      ).toEqual([])
+    })
+    await expect(
+      page.getByText('La evaluación está lista para crear el recurso.'),
+    ).toBeVisible()
+    await expect(page.getByText('Tubería roja')).toBeVisible()
+    await expect(page.getByText('TUB-ROJA')).toBeVisible()
+    expect(
+      (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
+        .violations,
+    ).toEqual([])
+
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toBeFocused()
+    await expect(
+      page.getByText('El recurso Tubería roja fue creado.'),
+    ).toBeVisible()
+    expect(calls.map(({ path }) => path)).toContain(
+      'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+    )
+    expect(calls.map(({ path }) => path)).toContain(
+      'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+    )
+    expect(calls.map(({ path }) => path)).not.toContain(
+      'catalogoAdmin/recursos:crearRecurso',
+    )
+  })
+
+  test('requires keyboard correction and reconfirmation after an INVALID create response', async ({
+    page,
+  }) => {
+    const calls = await mockResources(page, () => undefined, {
+      createResponse: (attempt) =>
+        attempt === 0
+          ? response({
+              disposition: 'INVALID',
+              evaluation: creationEvaluation('INVALID', true, true),
+            })
+          : undefined,
+    })
+    await page.goto('/recursos')
+    await reachReadyReview(page)
+
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('searchbox', { name: 'Color' })).toBeFocused()
+    expect(listCalls(calls)).toHaveLength(1)
+
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: 'Revisión de creación' }),
+    ).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('button', { name: 'Crear recurso' }),
+    ).toBeFocused()
+    await page.keyboard.press('Enter')
+
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toBeFocused()
+    await expect.poll(() => listCalls(calls)).toHaveLength(2)
+  })
+
+  test('suppresses a stale CREATED settlement after keyboard back navigation', async ({
+    page,
+  }) => {
+    let releaseCreate: (() => void) | undefined
+    let settleRoute: (() => void) | undefined
+    const createReleased = new Promise<void>((resolve) => {
+      releaseCreate = resolve
+    })
+    const routeSettled = new Promise<void>((resolve) => {
+      settleRoute = resolve
+    })
+    const calls = await mockResources(page, () => undefined, {
+      createResponse: async () => {
+        await createReleased
+        settleRoute?.()
+        return response({
+          disposition: 'CREATED',
+          item: summary('resource-created', 'Tubería roja'),
+        })
+      },
+    })
+    await page.goto('/recursos')
+    await reachReadyReview(page)
+
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'Creando…' })).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Volver' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Atributos · pendiente')).toBeVisible()
+
+    releaseCreate?.()
+    await routeSettled
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toHaveCount(0)
+    expect(listCalls(calls)).toHaveLength(1)
+  })
+
+  for (const [outcome, settledResponse] of [
+    ['unknown disposition', () => response({ disposition: 'UNRECOGNIZED' })],
+    [
+      'transport rejection',
+      () => ({
+        status: 500,
+        body: 'transport failed',
+        contentType: 'text/plain',
+      }),
+    ],
+  ] as const) {
+    test(`does not confirm success for a ${outcome}`, async ({ page }) => {
+      const pendingCreateResponse = deferred<ResourceResponse>()
+      const calls = await mockResources(page, () => undefined, {
+        createResponse: () => pendingCreateResponse.promise,
+      })
+      await page.goto('/recursos')
+      await reachReadyReview(page)
+
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('button', { name: 'Creando…' })).toBeVisible()
+
+      pendingCreateResponse.resolve(settledResponse())
+      await expect(page.getByRole('button', { name: 'Creando…' })).toHaveCount(
+        0,
+      )
+      await expect(
+        page.getByRole('button', { name: 'Crear recurso' }),
+      ).toBeVisible()
+      await expect(
+        page.getByRole('heading', { name: 'Recurso creado' }),
+      ).toHaveCount(0)
+      expect(listCalls(calls)).toHaveLength(1)
+    })
+  }
 
   test('keeps loaded rows through continuation failure and retry', async ({
     page,
@@ -340,7 +838,12 @@ test.describe('Recursos maestros workstation 1440×980', () => {
     })
 
     await page.goto('/recursos')
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
+    await expect(page.locator('[data-resource-row]')).toContainText(
+      'Cable UTP',
+      {
+        timeout: 15_000,
+      },
+    )
     await page.getByRole('button', { name: 'Cargar más…' }).click()
     await expect(page.getByRole('alert')).toContainText(
       'No se pudo cargar la página siguiente.',
@@ -357,123 +860,6 @@ test.describe('Recursos maestros workstation 1440×980', () => {
           'cursor-2',
       ),
     ).toHaveLength(2)
-  })
-
-  test('refetches only the active list key after a confirmed resource creation', async ({
-    page,
-  }) => {
-    const activeListRequest = resourceListCall({
-      lifecycle: 'ACTIVE',
-      cursor: undefined,
-      pageSize: 20,
-    })
-    const inactiveSearchRequest = resourceSearchCall({
-      lifecycle: 'ACTIVE',
-      searchText: 'inactiva',
-      cursor: undefined,
-      pageSize: 20,
-    })
-    const activeListRequests: RequestCall[] = []
-    const inactiveSearchRequests: RequestCall[] = []
-    let creationConfirmed = false
-    const calls = await mockResources(page, (call) => {
-      if (matchesResourceCall(call, activeListRequest)) {
-        activeListRequests.push(call)
-        return response({
-          page: [
-            creationConfirmed
-              ? summary('r-created', 'Motor creado')
-              : summary('r1', 'Cable UTP'),
-          ],
-          isDone: true,
-          continueCursor: '',
-        })
-      }
-      if (matchesResourceCall(call, inactiveSearchRequest)) {
-        inactiveSearchRequests.push(call)
-        return response({
-          page: [summary('r-inactive', 'Resultado inactivo')],
-          isDone: true,
-          continueCursor: '',
-        })
-      }
-      if (call.path.endsWith(':listarPoliticasUnidad'))
-        return response({
-          continuationCursor: null,
-          isExhausted: true,
-          items: [
-            {
-              id: 'policy-1',
-              familiaRecursoId: 'family-1',
-              tipoRecursoId: 'type-1',
-              unidadId: 'unit-1',
-              principal: true,
-              activo: true,
-              revision: 1,
-              effective: true,
-              selected: true,
-              shadowed: false,
-              selection: 'SELECTED',
-            },
-          ],
-        })
-      if (call.path.endsWith(':obtenerUnidad'))
-        return response({
-          id: 'unit-1',
-          clave: 'UN',
-          nombre: 'Unidad',
-          simbolo: 'u',
-          activo: true,
-          revision: 1,
-          effective: true,
-        })
-      if (call.path.endsWith(':listarAsignacionesAtributo'))
-        return response({
-          continuationCursor: null,
-          isExhausted: true,
-          items: [],
-        })
-      if (call.path.endsWith(':crearRecurso')) {
-        creationConfirmed = true
-        return response({
-          disposition: 'CREATED',
-          item: summary('r-created', 'Motor creado'),
-        })
-      }
-      return undefined
-    })
-
-    await page.goto('/recursos')
-    const search = page.getByRole('searchbox', { name: 'Buscar' })
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
-    await search.fill('inactiva')
-    await expect.poll(() => inactiveSearchRequests).toHaveLength(1)
-    await expect(page.locator('[data-resource-row]')).toContainText(
-      'Resultado inactivo',
-    )
-    await search.fill('')
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
-    await page.getByRole('button', { name: 'Nuevo recurso' }).click()
-    await chooseResourceContext(page, 'Clase', 'Materiales')
-    await chooseResourceContext(page, 'Familia', 'Canalizaciones')
-    await chooseResourceContext(page, 'Tipo', 'Tuberías')
-    await page.getByRole('button', { name: 'Siguiente' }).click()
-    await page.getByRole('button', { name: 'Siguiente' }).click()
-    await page.getByLabel('Nombre').fill('Motor creado')
-    const activeCountBeforeCreate = activeListRequests.length
-    const inactiveCountBeforeCreate = inactiveSearchRequests.length
-    await page.getByRole('button', { name: 'Crear recurso' }).click()
-
-    await expect(page.getByText('✓ Recurso creado')).toBeVisible()
-    await expect
-      .poll(() => activeListRequests.length)
-      .toBe(activeCountBeforeCreate + 1)
-    await expect(page.locator('[data-resource-row]')).toContainText(
-      'Motor creado',
-    )
-    expect(inactiveSearchRequests).toHaveLength(inactiveCountBeforeCreate)
-    expect(listCalls(calls)).toContainEqual(activeListRequest)
-    expect(calls).toContainEqual(inactiveSearchRequest)
   })
 
   test('confirms an empty resource filter without guessing', async ({

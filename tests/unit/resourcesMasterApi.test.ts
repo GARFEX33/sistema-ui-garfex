@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createResourcesMasterApi,
+  parseAllowedAttributeValuesPage,
+  parseAttributeDefinition,
   parseAttributeAssignmentsPage,
   parseAttributeOptionsPage,
   parseContextClassesPage,
@@ -8,9 +10,12 @@ import {
   parseContextTypesPage,
   parseResourceChangeResult,
   parseResourceCreated,
+  parseResourceCreationEvaluation,
+  parseResourceCreationResult,
   parseResourceDetail,
   parseResourceListPage,
   parseUnitPoliciesPage,
+  parseUnitsPage,
 } from '../../src/features/resources-master/resourcesMaster.api'
 
 const summary = (extra: Record<string, unknown> = {}) => ({
@@ -562,20 +567,28 @@ describe('resources master API boundary', () => {
     ...extra,
   })
 
-  it('lists unit policies for a type, resolving through paraTipoRecursoId', async () => {
+  it('lists effective unit policies with the Family and para-Type context only', async () => {
     const invoke = vi.fn().mockResolvedValue(contextPage([policyItem()]))
     const api = createResourcesMasterApi({ invoke })
 
-    const result = await api.listUnitPolicies({ tipoRecursoId: 'type-1' })
+    const result = await api.listUnitPolicies({
+      familiaRecursoId: 'family-1',
+      paraTipoRecursoId: 'type-1',
+      cursor: 'next-policies',
+      pageSize: 20,
+    })
 
     expect(invoke).toHaveBeenCalledWith(
       'catalogoAdmin/unidades:listarPoliticasUnidad',
       {
-        tipoRecursoId: 'type-1',
+        familiaRecursoId: 'family-1',
         paraTipoRecursoId: 'type-1',
+        cursor: 'next-policies',
+        pageSize: 20,
         modo: 'ACTIVE',
       },
     )
+    expect(invoke.mock.calls[0]?.[1]).not.toHaveProperty('tipoRecursoId')
     expect(result.items[0]).toMatchObject({
       unidadId: 'unit-1',
       principal: true,
@@ -584,7 +597,10 @@ describe('resources master API boundary', () => {
       parseUnitPoliciesPage(contextPage([policyItem({ selection: 'WRONG' })])),
     ).toThrow()
     await expect(
-      api.listUnitPolicies({ tipoRecursoId: undefined as never }),
+      api.listUnitPolicies({
+        familiaRecursoId: undefined as never,
+        paraTipoRecursoId: 'type-1',
+      }),
     ).rejects.toThrow()
   })
 
@@ -597,6 +613,81 @@ describe('resources master API boundary', () => {
     revision: 1,
     effective: true,
     ...extra,
+  })
+
+  const unitsPage = (
+    items: unknown[] = [unitDetail()],
+    overrides: Record<string, unknown> = {},
+  ) => ({
+    items,
+    continuationCursor: null,
+    isExhausted: true,
+    ...overrides,
+  })
+
+  it('lists active Units through the exact paginated query', async () => {
+    const invoke = vi.fn().mockResolvedValue(unitsPage())
+    const api = createResourcesMasterApi({ invoke })
+
+    await expect(
+      api.listUnits({ modo: 'ACTIVE', cursor: null, pageSize: 20 }),
+    ).resolves.toEqual(unitsPage())
+
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/unidades:listarUnidades',
+      { modo: 'ACTIVE', cursor: null, pageSize: 20 },
+    )
+    expect(parseUnitsPage(unitsPage()).items[0]).toMatchObject({
+      id: 'unit-1',
+      nombre: 'Metro cúbico',
+    })
+  })
+
+  it('forwards opaque cursors and omits undefined fields without context or pagination leaks', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce(
+        unitsPage([unitDetail()], {
+          continuationCursor: 'opaque-next',
+          isExhausted: false,
+        }),
+      )
+      .mockResolvedValueOnce(unitsPage([unitDetail({ id: 'unit-2' })]))
+    const api = createResourcesMasterApi({ invoke })
+
+    await api.listUnits({ modo: 'ACTIVE' })
+    await api.listUnits({
+      modo: 'ACTIVE',
+      cursor: 'opaque-next',
+      pageSize: 10,
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      paginationOpts: { cursor: 'wrong', numItems: 1 },
+    } as never)
+
+    expect(invoke.mock.calls).toEqual([
+      ['catalogoAdmin/unidades:listarUnidades', { modo: 'ACTIVE' }],
+      [
+        'catalogoAdmin/unidades:listarUnidades',
+        { modo: 'ACTIVE', cursor: 'opaque-next', pageSize: 10 },
+      ],
+    ])
+  })
+
+  it('rejects malformed Unit pages atomically for loader retry', async () => {
+    const malformed = unitsPage([unitDetail(), null])
+    const invoke = vi.fn().mockResolvedValue(malformed)
+    const api = createResourcesMasterApi({ invoke })
+
+    expect(() => parseUnitsPage(malformed)).toThrow(
+      'Invalid resources master response',
+    )
+    expect(() =>
+      parseUnitsPage(unitsPage([], { continuationCursor: undefined })),
+    ).toThrow('Invalid resources master response')
+    await expect(api.listUnits({ modo: 'ACTIVE' })).rejects.toThrow(
+      'Invalid resources master response',
+    )
   })
 
   it('resolves a unit by id for display, rejecting malformed responses', async () => {
@@ -672,6 +763,7 @@ describe('resources master API boundary', () => {
     clave: 'GRANULOMETRIA',
     nombre: 'Granulometría',
     tipoDato: 'OPCION',
+    modoCaptura: 'SELECCION',
     activo: true,
     revision: 1,
     effective: true,
@@ -707,6 +799,10 @@ describe('resources master API boundary', () => {
     await expect(
       api.getAttributeDefinition({ definicionAtributoId: 'definicion-1' }),
     ).rejects.toThrow()
+    invoke.mockResolvedValueOnce(attributeDefinition({ id: false }))
+    await expect(
+      api.getAttributeDefinition({ definicionAtributoId: 'definicion-1' }),
+    ).rejects.toThrow('Invalid resources master response')
     await expect(
       api.getAttributeDefinition({ definicionAtributoId: undefined as never }),
     ).rejects.toThrow()
@@ -745,5 +841,635 @@ describe('resources master API boundary', () => {
     await expect(
       api.listAttributeOptions({ definicionAtributoId: undefined as never }),
     ).rejects.toThrow()
+  })
+
+  const attributeDefinitionV1 = (extra: Record<string, unknown> = {}) => ({
+    id: 'definition-1',
+    clave: 'COLOR',
+    nombre: 'Color',
+    tipoDato: 'OPCION',
+    modoCaptura: 'SELECCION',
+    activo: true,
+    revision: 7,
+    effective: true,
+    effectiveReasons: ['ACTIVE'],
+    ...extra,
+  })
+
+  const allowedValue = (extra: Record<string, unknown> = {}) => ({
+    id: 'allowed-1',
+    definicionAtributoId: 'definition-1',
+    clave: 'ROJO',
+    nombre: 'Rojo',
+    orden: 4,
+    activo: true,
+    revision: 8,
+    effective: true,
+    effectiveReasons: ['ACTIVE'],
+    valor: { kind: 'TEXTO', value: 'rojo' },
+    ...extra,
+  })
+
+  const allowedValuesPage = (
+    items: unknown[] = [allowedValue()],
+    extra: Record<string, unknown> = {},
+  ) => ({
+    items,
+    continuationCursor: 'next-page',
+    isExhausted: false,
+    ...extra,
+  })
+
+  it('parses only the published nullable attribute definition contract', () => {
+    expect(parseAttributeDefinition(null)).toBeNull()
+    expect(parseAttributeDefinition(attributeDefinitionV1())).toEqual(
+      attributeDefinitionV1(),
+    )
+    expect(
+      parseAttributeDefinition(
+        attributeDefinitionV1({
+          modoCaptura: 'LIBRE',
+          descripcion: 'Sólo catálogo',
+          unidadId: 'unit-1',
+        }),
+      ),
+    ).toEqual(
+      attributeDefinitionV1({
+        modoCaptura: 'LIBRE',
+        descripcion: 'Sólo catálogo',
+        unidadId: 'unit-1',
+      }),
+    )
+
+    for (const malformed of [
+      attributeDefinitionV1({ modoCaptura: 'UNKNOWN' }),
+      attributeDefinitionV1({ descripcion: null }),
+      attributeDefinitionV1({ unidadId: null }),
+      attributeDefinitionV1({ revision: '7' }),
+      attributeDefinitionV1({ effectiveReasons: [false] }),
+    ])
+      expect(() => parseAttributeDefinition(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('rejects non-string IDs and unknown keys at every v1 boundary', () => {
+    for (const malformed of [
+      attributeDefinitionV1({ id: 7 }),
+      attributeDefinitionV1({ unknownDefinitionKey: true }),
+    ])
+      expect(() => parseAttributeDefinition(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+
+    for (const malformed of [
+      allowedValuesPage([], { unknownPageKey: true }),
+      allowedValuesPage([allowedValue({ id: false })]),
+      allowedValuesPage([allowedValue({ definicionAtributoId: {} })]),
+      allowedValuesPage([
+        allowedValue({
+          valor: { kind: 'OPCION', opcionAtributoId: true },
+        }),
+      ]),
+      allowedValuesPage([
+        allowedValue({
+          valor: { kind: 'TEXTO', value: 'rojo', opcionAtributoId: 'option-1' },
+        }),
+      ]),
+      allowedValuesPage([allowedValue({ unknownItemKey: true })]),
+    ])
+      expect(() => parseAllowedAttributeValuesPage(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('parses exact typed allowed-value pages and rejects malformed variants', () => {
+    const variants = [
+      allowedValue({ valor: { kind: 'TEXTO', value: 'rojo' } }),
+      allowedValue({ id: 'allowed-2', valor: { kind: 'NUMERO', value: 2.5 } }),
+      allowedValue({
+        id: 'allowed-3',
+        valor: { kind: 'BOOLEANO', value: false },
+      }),
+      allowedValue({
+        id: 'allowed-4',
+        valor: { kind: 'OPCION', opcionAtributoId: 'option-1' },
+      }),
+    ]
+    expect(
+      parseAllowedAttributeValuesPage(allowedValuesPage(variants)),
+    ).toEqual(allowedValuesPage(variants))
+
+    for (const malformed of [
+      allowedValuesPage([], { continuationCursor: 1 }),
+      allowedValuesPage([], { isExhausted: 'false' }),
+      allowedValuesPage([allowedValue({ descripcion: null })]),
+      allowedValuesPage([
+        allowedValue({ valor: { kind: 'UNKNOWN', value: 'x' } }),
+      ]),
+      allowedValuesPage([allowedValue({ valor: { kind: 'TEXTO' } })]),
+      allowedValuesPage([
+        allowedValue({ valor: { kind: 'NUMERO', value: '2' } }),
+      ]),
+      allowedValuesPage([
+        allowedValue({ valor: { kind: 'BOOLEANO', value: null } }),
+      ]),
+      allowedValuesPage([
+        allowedValue({
+          valor: { kind: 'OPCION', value: 'red', opcionAtributoId: 'option-1' },
+        }),
+      ]),
+      allowedValuesPage([allowedValue({ orden: '4' })]),
+      allowedValuesPage([allowedValue({ effectiveReasons: 'ACTIVE' })]),
+    ])
+      expect(() => parseAllowedAttributeValuesPage(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('lists allowed attribute values with only supplied published arguments', async () => {
+    const invoke = vi.fn().mockResolvedValue(allowedValuesPage())
+    const api = createResourcesMasterApi({ invoke })
+
+    await expect(
+      api.listAllowedAttributeValues({ definicionAtributoId: 'definition-1' }),
+    ).resolves.toEqual(allowedValuesPage())
+    await api.listAllowedAttributeValues({
+      definicionAtributoId: 'definition-1',
+      cursor: null,
+      pageSize: 25,
+      modo: 'INACTIVE',
+    })
+
+    expect(invoke.mock.calls).toEqual([
+      [
+        'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
+        { definicionAtributoId: 'definition-1' },
+      ],
+      [
+        'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
+        {
+          definicionAtributoId: 'definition-1',
+          cursor: null,
+          pageSize: 25,
+          modo: 'INACTIVE',
+        },
+      ],
+    ])
+
+    invoke.mockRejectedValueOnce(new Error('transport down'))
+    await expect(
+      api.listAllowedAttributeValues({ definicionAtributoId: 'definition-1' }),
+    ).rejects.toThrow('transport down')
+    await expect(
+      api.listAllowedAttributeValues({
+        definicionAtributoId: undefined as never,
+      }),
+    ).rejects.toThrow('Invalid resources master response')
+  })
+
+  const evaluationAssignment = (extra: Record<string, unknown> = {}) => ({
+    asignacionAtributoId: 'assignment-1',
+    definicionAtributoId: 'definition-1',
+    aplicabilidadResuelta: 'REQUIRED',
+    participaIdentidad: true,
+    orden: 1,
+    effectiveReasons: ['TYPE_OVERRIDE'],
+    ...extra,
+  })
+  const normalizedValue = (extra: Record<string, unknown> = {}) => ({
+    atributoRecursoId: 'assignment-1',
+    valor: 'rojo',
+    ...extra,
+  })
+  const evaluationIssue = (extra: Record<string, unknown> = {}) => ({
+    code: 'HIERARCHY_INVALID',
+    message: 'La jerarquía no es válida.',
+    asignacionAtributoId: 'assignment-1',
+    ...extra,
+  })
+  const evaluation = (extra: Record<string, unknown> = {}) => ({
+    status: 'VALID',
+    valid: true,
+    catalogFingerprint: 'catalog-v1',
+    nombre: 'Cable rojo',
+    identificadorTecnico: 'CABLE-ROJO',
+    asignaciones: [evaluationAssignment({ selectedValueId: 'allowed-1' })],
+    faltantesRequeridos: [],
+    seleccionesInvalidas: [],
+    valoresNormalizados: [normalizedValue()],
+    issues: [evaluationIssue()],
+    ...extra,
+  })
+
+  it('parses exact evaluation fixtures for each published status', () => {
+    expect(parseResourceCreationEvaluation(evaluation())).toEqual(evaluation())
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          status: 'INCOMPLETE',
+          valid: false,
+          nombre: null,
+          identificadorTecnico: null,
+          asignaciones: [
+            evaluationAssignment({ aplicabilidadResuelta: 'OPTIONAL' }),
+          ],
+        }),
+      ),
+    ).toMatchObject({ status: 'INCOMPLETE', valid: false, nombre: null })
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          status: 'INVALID',
+          valid: false,
+          asignaciones: [
+            evaluationAssignment({ aplicabilidadResuelta: 'NOT_APPLICABLE' }),
+          ],
+        }),
+      ),
+    ).toMatchObject({ status: 'INVALID', valid: false })
+  })
+
+  it('fails closed for inconsistent status validity and malformed top-level fields', () => {
+    for (const malformed of [
+      evaluation({ valid: false }),
+      evaluation({ status: 'INCOMPLETE', valid: true }),
+      evaluation({ catalogFingerprint: 1 }),
+      evaluation({ nombre: undefined }),
+      evaluation({ identificadorTecnico: undefined }),
+      evaluation({ unknownTopLevelKey: true }),
+    ])
+      expect(() => parseResourceCreationEvaluation(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('requires strict resolved assignments with only published applicability', () => {
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          asignaciones: [
+            evaluationAssignment({ aplicabilidadResuelta: 'FORBIDDEN' }),
+          ],
+        }),
+      ).asignaciones[0],
+    ).toEqual(evaluationAssignment({ aplicabilidadResuelta: 'FORBIDDEN' }))
+    for (const malformed of [
+      evaluationAssignment({ asignacionAtributoId: '' }),
+      evaluationAssignment({ definicionAtributoId: 1 }),
+      evaluationAssignment({ aplicabilidadResuelta: 'CONDITIONAL' }),
+      evaluationAssignment({ participaIdentidad: 'true' }),
+      evaluationAssignment({ orden: '1' }),
+      evaluationAssignment({ effectiveReasons: [false] }),
+      evaluationAssignment({ selectedValueId: '' }),
+      evaluationAssignment({ unknownAssignmentKey: true }),
+    ])
+      expect(() =>
+        parseResourceCreationEvaluation(
+          evaluation({ asignaciones: [malformed] }),
+        ),
+      ).toThrow('Invalid resources master response')
+  })
+
+  it('requires string identifier arrays and normalized primitive values only', () => {
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          faltantesRequeridos: ['assignment-2'],
+          seleccionesInvalidas: ['assignment-3'],
+          valoresNormalizados: [
+            normalizedValue({ valor: 2 }),
+            normalizedValue({
+              atributoRecursoId: 'assignment-2',
+              valor: false,
+            }),
+            normalizedValue({
+              atributoRecursoId: 'assignment-3',
+              valor: 'azul',
+              opcionAtributoId: 'option-1',
+            }),
+          ],
+        }),
+      ).valoresNormalizados,
+    ).toHaveLength(3)
+    for (const malformed of [
+      evaluation({ faltantesRequeridos: [1] }),
+      evaluation({ seleccionesInvalidas: [''] }),
+      evaluation({ valoresNormalizados: [normalizedValue({ valor: null })] }),
+      evaluation({ valoresNormalizados: [normalizedValue({ valor: {} })] }),
+      evaluation({
+        valoresNormalizados: [
+          normalizedValue({ valorPermitidoId: 'allowed-1' }),
+        ],
+      }),
+      evaluation({
+        valoresNormalizados: [normalizedValue({ opcionAtributoId: null })],
+      }),
+    ])
+      expect(() => parseResourceCreationEvaluation(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('accepts exactly the published issue codes and strict issue fields', () => {
+    const codes = [
+      'HIERARCHY_INVALID',
+      'UNIT_INVALID',
+      'OWNERSHIP_INVALID',
+      'ASSIGNMENT_UNKNOWN',
+      'ASSIGNMENT_DUPLICATE',
+      'ALLOWED_VALUE_UNKNOWN',
+      'ALLOWED_VALUE_FOREIGN',
+      'ALLOWED_VALUE_INACTIVE',
+      'SELECTION_NON_EFFECTIVE',
+      'SELECTION_FORBIDDEN',
+      'SELECTION_NOT_APPLICABLE',
+      'UNSUPPORTED_FREE_CAPTURE',
+      'IDENTITY_CONFLICT',
+    ]
+    expect(
+      parseResourceCreationEvaluation(
+        evaluation({
+          issues: codes.map((code) => evaluationIssue({ code })),
+        }),
+      ).issues.map((issue) => issue.code),
+    ).toEqual(codes)
+    for (const malformed of [
+      evaluationIssue({ code: 'UNKNOWN' }),
+      evaluationIssue({ message: 1 }),
+      evaluationIssue({ asignacionAtributoId: '' }),
+      evaluationIssue({ unknownIssueKey: true }),
+    ])
+      expect(() =>
+        parseResourceCreationEvaluation(evaluation({ issues: [malformed] })),
+      ).toThrow('Invalid resources master response')
+  })
+
+  it('evaluates creation through the exact published query and adopts its parsed response', async () => {
+    const invoke = vi.fn().mockResolvedValue(evaluation())
+    const api = createResourcesMasterApi({ invoke })
+    const input = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [
+        { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+        { asignacionAtributoId: 'assignment-1', valorPermitidoId: 'allowed-1' },
+        { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+      ],
+      ownership: { kind: 'GLOBAL' as const },
+    }
+
+    await expect(api.evaluateResourceCreation(input)).resolves.toEqual(
+      evaluation(),
+    )
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+      input,
+    )
+  })
+
+  it('serializes ORGANIZATION ownership exactly while preserving selection order and duplicates', async () => {
+    const invoke = vi.fn().mockResolvedValue(evaluation())
+    const api = createResourcesMasterApi({ invoke })
+    const input = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [
+        { asignacionAtributoId: 'assignment-3', valorPermitidoId: 'allowed-3' },
+        { asignacionAtributoId: 'assignment-3', valorPermitidoId: 'allowed-3' },
+      ],
+      ownership: {
+        kind: 'ORGANIZATION' as const,
+        organizacionId: 'organization-1',
+      },
+    }
+
+    await api.evaluateResourceCreation(input)
+
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
+      input,
+    )
+  })
+
+  it('fails closed before transport for malformed evaluation requests', async () => {
+    const invoke = vi.fn()
+    const api = createResourcesMasterApi({ invoke })
+    const base = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [
+        { asignacionAtributoId: 'assignment-1', valorPermitidoId: 'allowed-1' },
+      ],
+      ownership: { kind: 'GLOBAL' },
+    }
+
+    for (const invalid of [
+      { ...base, claseRecursoId: '' },
+      { ...base, familiaRecursoId: 1 },
+      {
+        ...base,
+        selecciones: [
+          { asignacionAtributoId: '', valorPermitidoId: 'allowed-1' },
+        ],
+      },
+      {
+        ...base,
+        selecciones: [
+          {
+            asignacionAtributoId: 'assignment-1',
+            valorPermitidoId: 'allowed-1',
+            manual: true,
+          },
+        ],
+      },
+      {
+        ...base,
+        ownership: { kind: 'GLOBAL', organizacionId: 'organization-1' },
+      },
+      { ...base, ownership: { kind: 'ORGANIZATION' } },
+      {
+        ...base,
+        nombre: 'manual',
+        descripcion: 'manual',
+        omision: 'assignment-1',
+      },
+    ])
+      await expect(
+        api.evaluateResourceCreation(invalid as never),
+      ).rejects.toThrow('Invalid resources master response')
+
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
+  const selectionCreateInput = (extra: Record<string, unknown> = {}) => ({
+    claseRecursoId: 'class-1',
+    familiaRecursoId: 'family-1',
+    tipoRecursoId: 'type-1',
+    unidadId: 'unit-1',
+    expectedCatalogFingerprint: 'catalog-v1',
+    selecciones: [
+      { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+      { asignacionAtributoId: 'assignment-1', valorPermitidoId: 'allowed-1' },
+      { asignacionAtributoId: 'assignment-2', valorPermitidoId: 'allowed-2' },
+    ],
+    ownership: { kind: 'GLOBAL' as const },
+    ...extra,
+  })
+  const createdItem = (extra: Record<string, unknown> = {}) => ({
+    id: 'resource-1',
+    tipoRecursoId: 'type-1',
+    unidadId: 'unit-1',
+    identificadorTecnico: 'CABLE-ROJO',
+    nombre: 'Cable rojo',
+    activo: true,
+    revision: 1,
+    classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
+    ...extra,
+  })
+
+  it('parses only the exact published selection-creation result union', () => {
+    expect(
+      parseResourceCreationResult({
+        disposition: 'CREATED',
+        item: createdItem(),
+      }),
+    ).toEqual({ disposition: 'CREATED', item: createdItem() })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'CREATED',
+        item: createdItem({ organizacionId: 'organization-1' }),
+      }),
+    ).toEqual({
+      disposition: 'CREATED',
+      item: createdItem({ organizacionId: 'organization-1' }),
+    })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      }),
+    ).toMatchObject({
+      disposition: 'CATALOG_CHANGED',
+      evaluation: { status: 'INCOMPLETE' },
+    })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'INCOMPLETE',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      }),
+    ).toMatchObject({
+      disposition: 'INCOMPLETE',
+      evaluation: { status: 'INCOMPLETE' },
+    })
+    expect(
+      parseResourceCreationResult({
+        disposition: 'INVALID',
+        evaluation: evaluation({ status: 'INVALID', valid: false }),
+      }),
+    ).toMatchObject({
+      disposition: 'INVALID',
+      evaluation: { status: 'INVALID' },
+    })
+  })
+
+  it('fails closed for extra, incomplete, or inconsistent selection-creation results', () => {
+    for (const malformed of [
+      { disposition: 'CREATED', item: createdItem({ id: '' }) },
+      { disposition: 'CREATED', item: createdItem({ id: '   ' }) },
+      { disposition: 'CREATED', item: createdItem({ tipoRecursoId: '' }) },
+      { disposition: 'CREATED', item: createdItem({ unidadId: '' }) },
+      { disposition: 'CREATED', item: createdItem({ organizacionId: '' }) },
+      { disposition: 'CREATED', item: createdItem({ unknownKey: true }) },
+      {
+        disposition: 'CREATED',
+        item: createdItem({ organizacionId: undefined }),
+      },
+      {
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ status: 'VALID', valid: true }),
+        item: createdItem(),
+      },
+      {
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ catalogFingerprint: '' }),
+      },
+      {
+        disposition: 'CATALOG_CHANGED',
+        evaluation: evaluation({ catalogFingerprint: '   ' }),
+      },
+      {
+        disposition: 'INCOMPLETE',
+        evaluation: evaluation({ status: 'INVALID', valid: false }),
+      },
+      {
+        disposition: 'INVALID',
+        evaluation: evaluation({ status: 'INCOMPLETE', valid: false }),
+      },
+      { disposition: 'UNKNOWN', evaluation: evaluation() },
+    ])
+      expect(() => parseResourceCreationResult(malformed)).toThrow(
+        'Invalid resources master response',
+      )
+  })
+
+  it('maps the v1 selection-create mutation exactly and rejects malformed input before transport', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'CREATED', item: createdItem() })
+    const api = createResourcesMasterApi({ invoke })
+    const input = selectionCreateInput()
+
+    await expect(api.createResourceFromSelections(input)).resolves.toEqual({
+      disposition: 'CREATED',
+      item: createdItem(),
+    })
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+      input,
+    )
+
+    for (const invalid of [
+      selectionCreateInput({ claseRecursoId: '' }),
+      selectionCreateInput({ expectedCatalogFingerprint: '' }),
+      selectionCreateInput({ expectedCatalogFingerprint: '   ' }),
+      selectionCreateInput({ unknownKey: true }),
+      selectionCreateInput({
+        selecciones: [
+          { asignacionAtributoId: '', valorPermitidoId: 'allowed-1' },
+        ],
+      }),
+    ])
+      await expect(
+        api.createResourceFromSelections(invalid as never),
+      ).rejects.toThrow('Invalid resources master response')
+    expect(invoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects malformed evaluation responses and propagates transport failures', async () => {
+    const invoke = vi.fn().mockResolvedValue(evaluation({ unknownKey: true }))
+    const api = createResourcesMasterApi({ invoke })
+    const input = {
+      claseRecursoId: 'class-1',
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      unidadId: 'unit-1',
+      selecciones: [],
+      ownership: { kind: 'GLOBAL' as const },
+    }
+
+    await expect(api.evaluateResourceCreation(input)).rejects.toThrow(
+      'Invalid resources master response',
+    )
+    invoke.mockRejectedValueOnce(new Error('transport down'))
+    await expect(api.evaluateResourceCreation(input)).rejects.toThrow(
+      'transport down',
+    )
   })
 })

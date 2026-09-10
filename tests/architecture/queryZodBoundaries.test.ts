@@ -13,10 +13,22 @@ const sourceFiles = readdirSync(join(root, 'src'), { recursive: true })
 const read = (file: string) => readFileSync(join(root, file), 'utf8')
 const providerPath = 'src/app/providers/AppProviders.tsx'
 const hookPath = 'src/features/resources-master/useResourcesMasterListQuery.ts'
+const evaluationHookPath =
+  'src/features/resources-master/useResourceCreationEvaluation.ts'
+const attributeDefinitionHookPath =
+  'src/features/resources-master/useResourceCreationAttributeDefinition.ts'
+const allowedValuesHookPath =
+  'src/features/resources-master/useResourceCreationAllowedValues.ts'
+const createHookPath =
+  'src/features/resources-master/useResourceCreationCreate.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [hookPath, ['useInfiniteQuery', 'useQueryClient']],
+  [evaluationHookPath, ['useQuery']],
+  [attributeDefinitionHookPath, ['useQuery']],
+  [allowedValuesHookPath, ['useInfiniteQuery']],
+  [createHookPath, ['useMutation', 'useQueryClient']],
 ])
 const convexFiles = new Set([
   apiPath,
@@ -219,8 +231,12 @@ const analyze = (file: string, input: string) => {
           issues.push(`Query integration is forbidden: ${module}`)
       }
       if (
-        file === hookPath &&
-        forbiddenHookMembers.has(property(node.expression) ?? '')
+        queryBindings.has(file) &&
+        forbiddenHookMembers.has(property(node.expression) ?? '') &&
+        !(
+          file === createHookPath &&
+          property(node.expression) === 'removeQueries'
+        )
       )
         issues.push(
           `Forbidden Query cache/action member in hook: ${property(node.expression)}`,
