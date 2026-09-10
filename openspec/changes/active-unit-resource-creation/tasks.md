@@ -75,10 +75,10 @@ The total change crosses both repositories and materially exceeds one review bud
 
 **Dependencies:** F1. **Start → finish:** policy/hydrator dependent loaders → one feature-local direct-page controller with generation safety. **Allowed paths:** `/home/garfex/PROGRAMACION/sistema-ui-garfex/src/features/resources-master/resourceCreation.activeUnits.ts`, existing `resourceCreation.dependentLoader.ts`, its focused unit tests, and resource-master fixtures. **Rollback:** remove the new wrapper/tests only; existing policy loaders remain connected until F3.
 
-- [ ] **RED:** Add failing controller tests for initial load, continuation, first-seen deduplication by `resourceIdKey`, active/effective defensive filtering, initial/partial retry, empty non-exhausted pages, repeated cursors, pending no-op, and stale response/error/finally isolation. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Implement `createActiveUnitPageController` over `createDependentLoader`, call only `listUnits(ACTIVE)`, expose Unit candidates without policy fields, and use opening/generation—not Family or Type—as its context key. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Prove close/unmount cancellation, reopen reset, retained pages across upstream selection changes, retry of the failed cursor, and no cross-generation item mixing. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Preserve the dependent-loader stale guards rather than duplicating them; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/resourceCreation.activeUnits.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing controller tests for initial load, continuation, first-seen deduplication by `resourceIdKey`, active/effective defensive filtering, initial/partial retry, empty non-exhausted pages, repeated cursors, pending no-op, and stale response/error/finally isolation. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Implement `createActiveUnitPageController` over `createDependentLoader`, call only `listUnits(ACTIVE)`, expose Unit candidates without policy fields, and use opening/generation—not Family or Type—as its context key. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Prove close/unmount cancellation, reopen reset, retained pages across upstream selection changes, retry of the failed cursor, and no cross-generation item mixing. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Preserve the dependent-loader stale guards rather than duplicating them; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- tests/unit/resourceCreation.activeUnits.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
 ## F3 — Flow and selector integration (270–390 A+D)
 

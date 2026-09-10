@@ -75,3 +75,24 @@ F3–F6 remain untouched. F3 remains blocked until the parent records compatible
   }
 }
 ```
+
+## F2 — Active-Unit page controller
+**Status:** complete; unused controller only, with no F3 wiring, backend, policy, or lifecycle edits.
+**Completed:** RED → GREEN → TRIANGULATE → REFACTOR; it uses F1's typed `listUnits({ modo: 'ACTIVE', cursor, pageSize? })` contract only.
+**Files:** `resourceCreation.activeUnits.ts`, `resourceCreation.activeUnits.test.ts`, `tasks.md`, and this progress artifact.
+
+### TDD Cycle Evidence
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| F2 controller | `tests/unit/resourceCreation.activeUnits.test.ts` | Unit | 16/16 loader tests | missing-module failure | 3 passing | 4 passing | formatted; 4 passing |
+
+### Verification
+- Safety net: `pnpm exec vitest run tests/unit/resourceCreation.loaders.test.ts` — 16/16 passed; RED: temporary focused config failed on the missing controller module.
+- Focused: `pnpm exec vitest run tests/unit/resourceCreation.activeUnits.test.ts` — 4/4 passed under the repository's normal test discovery.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` — passed.
+
+### Workload and boundary
+- `feature-branch-chain`; F2 controller/tests/evidence only, no F3; incremental `A=314 D=4 A+D=318`, within the 320 limit.
+### Deviations, remaining, and status
+- No design deviation. F3–F6 and parent-owned lifecycle rows remain unchecked and unchanged; F3 remains blocked pending parent-recorded backend deployment.
+- Consumed explicit selected-change status: apply-ready, repo-local root allowed, `f2-active-unit-controller`; action-context warning: F3 deployment gate only.
