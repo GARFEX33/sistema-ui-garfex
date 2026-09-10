@@ -193,3 +193,11 @@ F3 is authorized to enable the direct ACTIVE-unit flow against this compatible l
 - Three consecutive normal two-worker Playwright runs passed 12/12; connected proof passed 4/4; unit passed 615/615; typecheck, lint, format check, build, and diff check passed.
 - Final correction is 159 A+D within the 240-line bound. Runtime objective `f6b-browser-and-cleanup-reliability` settled passed with token `sha256:63d9054c9d7006da742b503938879a83a41f335fa6d8e21340aff7e452aaa204`.
 - The earlier `R3-cleanup-registration` advisory is remediated. `R3-connected-gate` remains informational because the suite is opt-in and hard-bound to the authorized local `http://127.0.0.1:3210`; deployment stays unauthorized.
+
+## Local frontend deployment gate — complete
+
+- The user authorized a local-only frontend deployment and accepted ownership of rollback.
+- Compatible backend revision `cf67dbfe89b73256bfaa44459975a48c25b8d05d` was clean and served at `http://127.0.0.1:3210`; the connected suite passed 4/4 immediately before deployment.
+- Frontend revision `6ec3d43761edfe3e54ad6638e502f2aa962f7964` built successfully and is served locally at `http://127.0.0.1:4173/recursos`.
+- Rollback owner: requesting user. Rollback order: stop/restore the frontend first; retain the compatible backend revision until frontend rollback is confirmed.
+- No staging or production deployment was authorized or performed.
