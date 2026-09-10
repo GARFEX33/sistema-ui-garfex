@@ -142,3 +142,20 @@ F3 is authorized to enable the direct ACTIVE-unit flow against this compatible l
 ### Structured status consumed
 
 `changeName=active-unit-resource-creation`; `artifactStore=openspec`; `applyState=apply-ready`; `workUnit=f3-flow-integration-size-exception`; `deliveryPath=feature-branch-chain`; `runtimeToken=sha256:43ae1398c0ca2b42ea9d1b7bcc6f3e83e1e59d09a53061ee4fd0bcd7baf769d0`; `runAttempt=1/2`; repo-local root and `/home/garfex/PROGRAMACION/sistema-ui-garfex` edit root were authorized. Backend receipt `588a4f3b6be1cc1164181c47aa5cf6dd7abd309eadf8481a2da74bccda9e8162` was consumed; parent must settle `sha256:97e5dcfcad0ac7176e36f1dd7fdbde85b40e8c09dd898d267932fb91c15a3c5d`.
+
+## F4 — Remove policy page controller
+
+**Status:** complete under the user-authorized F4-only `size:exception` of 440 A+D; F5 was not started.
+
+### Completed tasks
+- [x] RED prior export-boundary assertion failed while the controller remained exported; [x] GREEN removed it and its exclusive tests; [x] TRIANGULATE retained direct initial/pagination/retry/stale behavior; [x] REFACTOR pruned exclusive imports/fixtures.
+### TDD Cycle Evidence
+| Task | Test file/layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+| F4 removal | Boundary + unit/RTL | 68/68 | prior expected failure | 13/13 loader | 81/81 focused | clean |
+
+### Evidence, scope, and workload
+- `resourceCreationBoundaries` proves the flow and loader omit `createUnitPolicyPageController`; surface tests prove zero `listUnitPolicies`/`getUnit` requests across open, continue, retry, and close.
+- Focused command passed 81/81; `pnpm test` 57 files/622 tests, `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed; `pnpm format:check` passed after formatting.
+- Changed: `resourceCreation.loaders.ts`, loader/boundary tests, `tasks.md`, and this artifact; `useResourceCreationFlow.ts`, compatibility APIs, hydrator, `UnitPolicyReference`, UI, backend, and F5 stayed untouched.
+- Final F4 diff: `A=38 D=397 A+D=435`, within 440; no design deviations. Remaining implementation work is the unchanged F5/F6 `- [ ]` rows in [tasks.md](tasks.md); parent-owned lifecycle actions remain deferred.
+- Consumed: `changeName=active-unit-resource-creation`, `apply-ready`, repo-local authorized root, `workUnit=f4-remove-policy-loader-size-exception`, `runtimeToken=sha256:5d622c045f3bc99ce15a2bd12fdbe63c76bafaf7f60a653de75f1dc573e68889`, `runAttempt=1/2`; F3 `R3-close-invalidation` is informational. Parent must settle `sha256:08cdd9211d3f4faeb603b5833b82855b29204b0f32bbd6ec4ed4e5874f28a3d5`.

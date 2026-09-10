@@ -30,6 +30,13 @@ const flowSource = readFileSync(
   ),
   'utf8',
 )
+const loaderSource = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/resources-master/resourceCreation.loaders.ts',
+  ),
+  'utf8',
+)
 const entrySource = readFileSync(
   resolve(
     process.cwd(),
@@ -148,6 +155,11 @@ describe('resource creation safety wall', () => {
 
     expect(definitionDriverSource).toContain('getAttributeDefinition')
     expect(definitionDriverSource).not.toContain('listAllowedAttributeValues')
+  })
+
+  it('keeps the direct Unit flow independent of the removed policy controller', () => {
+    expect(flowSource).not.toContain('createUnitPolicyPageController')
+    expect(loaderSource).not.toContain('createUnitPolicyPageController')
   })
 
   it('keeps selector-state mapping and controller subscription behind the local flow boundary', () => {

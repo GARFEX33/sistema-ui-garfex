@@ -91,14 +91,16 @@ The total change crosses both repositories and materially exceeds one review bud
 - [x] **TRIANGULATE:** Cover keyboard arrows/type search without implicit confirmation, valid retained selection during loading-more/partial-error, empty/loading/error confirmation guards, Type changes retaining pages but clearing selection/evaluation, and Escape focus restoration. <!-- sdd-owner: implementation -->
 - [x] **REFACTOR:** Remove this instance’s preferred-policy prop/key while retaining generic selector capability and existing accessibility states; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/useResourceCreationFlow.test.tsx src/features/resources-master/ResourceCreationContextStage.test.tsx src/features/resources-master/resourceCreation.selectorState.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
-## F4 — Remove the policy page controller (250–390 A+D)
+## F4 — Remove the policy page controller (`size:exception`, max 440 A+D)
+
+**Exception authority:** The user explicitly approved this F4-only cap after the cohesive deletion plus required tests measured 401 A+D before evidence. F5/F6 retain their original limits.
 
 **Dependencies:** F3. **Start → finish:** direct catalog is live but policy page controller is dead → its isolated production/test surface is removed without altering compatibility APIs. **Allowed discovery targets:** `/home/garfex/PROGRAMACION/sistema-ui-garfex/src/features/resources-master/resourceCreation.loaders.ts`, `useResourceCreationFlow.ts`, and tests importing the policy page controller. Do not remove `ResourcesMasterApi.listUnitPolicies` or `getUnit`. **Rollback:** restore only the deleted policy-controller exports and their exclusive tests; F3 direct flow remains the intended path.
 
-- [ ] **RED:** Add/import-boundary tests proving the creation flow has no production dependency on the policy page controller and no policy request is made during open, continue, retry, or close. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Delete `createUnitPolicyPageController` and its exclusive types/tests after all callers are disconnected, keeping shared loader primitives and adapter compatibility APIs. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Run the flow tests through initial, paginated, retry, and stale-generation paths to prove removal did not reactivate policy fallback or change direct-catalog ordering. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Remove now-unused imports/fixtures without deleting reusable coverage; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/useResourceCreationFlow.test.tsx src/features/resources-master/resourceCreation.loaders.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add/import-boundary tests proving the creation flow has no production dependency on the policy page controller and no policy request is made during open, continue, retry, or close. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Delete `createUnitPolicyPageController` and its exclusive types/tests after all callers are disconnected, keeping shared loader primitives and adapter compatibility APIs. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Run the flow tests through initial, paginated, retry, and stale-generation paths to prove removal did not reactivate policy fallback or change direct-catalog ordering. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Remove now-unused imports/fixtures without deleting reusable coverage; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/useResourceCreationFlow.test.tsx src/features/resources-master/resourceCreation.loaders.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
 ## F5 — Remove candidate hydration (240–390 A+D)
 

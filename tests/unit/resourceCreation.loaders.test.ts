@@ -2,12 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createDependentLoader,
   createUnitCandidateHydrator,
-  createUnitPolicyPageController,
 } from '../../src/features/resources-master/resourceCreation.loaders'
-import type {
-  ResourceUnitDetail,
-  ResourceUnitPolicy,
-} from '../../src/features/resources-master/resourcesMaster.types'
+import type { ResourceUnitDetail } from '../../src/features/resources-master/resourcesMaster.types'
 
 type Item = { id: string; name: string }
 type Deferred<T> = {
@@ -26,31 +22,6 @@ const deferred = <T>(): Deferred<T> => {
   return { promise, resolve, reject }
 }
 
-const policy = (
-  id: string,
-  unidadId: string,
-  overrides: Partial<ResourceUnitPolicy> = {},
-): ResourceUnitPolicy => ({
-  id,
-  familiaRecursoId: 'family-a',
-  tipoRecursoId: 'type-a',
-  unidadId,
-  principal: false,
-  activo: true,
-  revision: 1,
-  effective: true,
-  selected: false,
-  shadowed: false,
-  selection: 'NONE',
-  ...overrides,
-})
-
-const policyPage = (
-  items: ResourceUnitPolicy[],
-  continuationCursor: string | null,
-  isExhausted = false,
-) => ({ items, continuationCursor, isExhausted })
-
 const unitDetail = (
   id: string,
   overrides: Partial<ResourceUnitDetail> = {},
@@ -64,23 +35,6 @@ const unitDetail = (
   effective: true,
   ...overrides,
 })
-
-const policySetup = () => {
-  const requests: Deferred<ReturnType<typeof policyPage>>[] = []
-  const loadPolicies = vi.fn(() => {
-    const request = deferred<ReturnType<typeof policyPage>>()
-    requests.push(request)
-    return request.promise
-  })
-  return {
-    loadPolicies,
-    requests,
-    controller: createUnitPolicyPageController({
-      identity: (value) => String(value),
-      loadPolicies,
-    }),
-  }
-}
 
 const page = (
   items: Item[],
@@ -232,119 +186,6 @@ describe('dependent loader', () => {
       status: 'idle',
       contextKey: null,
       items: [],
-    })
-  })
-})
-
-describe('Unit policy page controller', () => {
-  it('requests effective Family and para-Type policy pages with their exact cursor', async () => {
-    const { controller, loadPolicies, requests } = policySetup()
-    controller.setContext({
-      familiaRecursoId: 'family-a',
-      paraTipoRecursoId: 'type-a',
-    })
-
-    const first = controller.start()
-    expect(loadPolicies).toHaveBeenLastCalledWith({
-      familiaRecursoId: 'family-a',
-      paraTipoRecursoId: 'type-a',
-      cursor: null,
-    })
-    requests[0]!.resolve(
-      policyPage(
-        [
-          policy('p-inactive', 'u-ignored', { activo: false }),
-          policy('p-shadowed', 'u-ignored', { shadowed: true }),
-          policy('p-ineffective', 'u-ignored', { effective: false }),
-          policy('p-first', 'u-a'),
-          policy('p-second', 'u-b', { selected: true }),
-        ],
-        'next',
-      ),
-    )
-    expect(await first).toBe(true)
-
-    const more = controller.continue()
-    expect(loadPolicies).toHaveBeenLastCalledWith({
-      familiaRecursoId: 'family-a',
-      paraTipoRecursoId: 'type-a',
-      cursor: 'next',
-    })
-    requests[1]!.resolve(
-      policyPage(
-        [
-          policy('p-first', 'u-later', { principal: true, selected: true }),
-          policy('p-third', 'u-a'),
-          policy('p-suppressed', 'u-c', { selection: 'SUPPRESSED' }),
-        ],
-        null,
-        true,
-      ),
-    )
-    expect(await more).toBe(true)
-    expect(controller.getState()).toMatchObject({
-      status: 'ready',
-      exhausted: true,
-      references: [
-        {
-          policyId: 'p-first',
-          unidadId: 'u-a',
-          principal: true,
-          selected: true,
-        },
-        {
-          policyId: 'p-second',
-          unidadId: 'u-b',
-          principal: false,
-          selected: true,
-        },
-      ],
-    })
-  })
-
-  it('rejects stale policies after replacing the Family context for the same Tipo', async () => {
-    const { controller, requests } = policySetup()
-    controller.setContext({
-      familiaRecursoId: 'family-a',
-      paraTipoRecursoId: 'type-a',
-    })
-    const stale = controller.start()
-    controller.setContext({
-      familiaRecursoId: 'family-b',
-      paraTipoRecursoId: 'type-a',
-    })
-    const current = controller.start()
-    requests[1]!.resolve(policyPage([policy('p-b', 'u-b')], null, true))
-    await current
-    requests[0]!.resolve(policyPage([policy('p-a', 'u-a')], null, true))
-
-    expect(await stale).toBe(false)
-    expect(controller.getState()).toMatchObject({
-      status: 'ready',
-      references: [{ policyId: 'p-b', unidadId: 'u-b' }],
-    })
-  })
-
-  it('keeps collected references when a non-exhausted cursor repeats', async () => {
-    const { controller, requests } = policySetup()
-    controller.setContext({
-      familiaRecursoId: 'family-a',
-      paraTipoRecursoId: 'type-a',
-    })
-    const first = controller.start()
-    requests[0]!.resolve(policyPage([policy('p-a', 'u-a')], 'loop'))
-    await first
-
-    const more = controller.continue()
-    requests[1]!.resolve(policyPage([policy('p-b', 'u-b')], 'loop'))
-    expect(await more).toBe(false)
-    expect(controller.getState()).toMatchObject({
-      status: 'partial-error',
-      retry: 'continuation',
-      references: [
-        { policyId: 'p-a', unidadId: 'u-a' },
-        { policyId: 'p-b', unidadId: 'u-b' },
-      ],
     })
   })
 })
