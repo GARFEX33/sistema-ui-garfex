@@ -96,3 +96,16 @@ F3–F6 remain untouched. F3 remains blocked until the parent records compatible
 ### Deviations, remaining, and status
 - No design deviation. F3–F6 and parent-owned lifecycle rows remain unchecked and unchanged; F3 remains blocked pending parent-recorded backend deployment.
 - Consumed explicit selected-change status: apply-ready, repo-local root allowed, `f2-active-unit-controller`; action-context warning: F3 deployment gate only.
+
+## Parent gate — compatible backend before F3
+
+**Status:** complete for the authorized isolated local environment only.
+
+- Backend reviewed and committed feature chain: B1 `4a48731`, B2 `c7cc8fa`, B3 `a042722`, compatible B4 HEAD `cf67dbfe89b73256bfaa44459975a48c25b8d05d`.
+- Backend committed tree `d03cd0601944e468299db408ccf505a53e4b70c5` exactly matched native-reviewed target `sha256:454e9cc18271b8118237b419669b26288522b83d7fceb5687073c92b163670e5`; gates passed 422/422 plus both typechecks.
+- Authorized local endpoint: `http://127.0.0.1:3210`; no production or staging deployment occurred.
+- Connected proof passed: active no-policy Metro Lineal evaluated `VALID`, creation returned `CREATED`, persistence contained the exact `unidadId`, policies remained unchanged with zero fixture-family policies, inactive/deleted Units returned `UNIT_INVALID`, and ACTIVE catalog pagination returned unique active/effective rows over three pages.
+- Independent read-only verification passed. Receipt: `/tmp/active-unit-connected-proof.json`, SHA-256 `588a4f3b6be1cc1164181c47aa5cf6dd7abd309eadf8481a2da74bccda9e8162`.
+- Residual fixture rows are inactive because the public API has no full-delete route; identifiers are intentionally omitted from the persisted artifact.
+
+F3 is authorized to enable the direct ACTIVE-unit flow against this compatible local backend contract. This does not authorize frontend deployment, push, or PR creation.

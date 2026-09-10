@@ -118,7 +118,7 @@ The total change crosses both repositories and materially exceeds one review bud
 
 ## Parent-owned lifecycle gates
 
-- [ ] Before apply, measure the proposed B1–B4/F1–F6 slices including tests/evidence, select `stacked-to-main` or `feature-branch-chain` if each remains within 400 A+D, or obtain explicit `size:exception` only if one honest cohesive slice cannot fit. <!-- sdd-owner: parent -->
-- [ ] After B4 implementation evidence, conduct bounded backend review and authorize/record deployment of the compatible backend revision before permitting F3’s direct ACTIVE-catalog wiring. <!-- sdd-owner: parent -->
+- [x] Before apply, measure the proposed B1–B4/F1–F6 slices including tests/evidence, select `stacked-to-main` or `feature-branch-chain` if each remains within 400 A+D, or obtain explicit `size:exception` only if one honest cohesive slice cannot fit. <!-- sdd-owner: parent -->
+- [x] After B4 implementation evidence, conduct bounded backend review and authorize/record deployment of the compatible backend revision before permitting F3’s direct ACTIVE-catalog wiring. <!-- sdd-owner: parent -->
 - [ ] After F6, review the bounded evidence: real backend accepted active no-policy Metro Lineal, policy rows were unchanged, no policy/detail catalog calls occurred, and keyboard/focus/axe evidence passed; block frontend enablement if any proof is pending or failing. <!-- sdd-owner: parent -->
 - [ ] Before any frontend deployment, confirm the deployed backend revision is compatible, record both revision identifiers and the rollback owner, and preserve the rollback order FE first while retaining backend compatibility. <!-- sdd-owner: parent -->
