@@ -170,3 +170,18 @@ F3 is authorized to enable the direct ACTIVE-unit flow against this compatible l
 - Workload: `A=48 D=566 A+D=614` initially exceeded the cap; compact final evidence restores the F5-only diff to the authorized maximum after remeasurement.
 - Remaining: F6 only; no lifecycle, API, backend, UI, or deployment work started.
 - Consumed: `active-unit-resource-creation`, apply-ready repo-local context; runtime token `sha256:b52c711f8bdfebfcf794da149d897e96834c7ffb0e24e7532b7b358da57d088e`, run attempts 1/2; settle `sha256:6c6129be9b048c233291c1775123c35becf9f8a52e7878b81bfc39e2274e4da8`.
+
+## F6 — Deterministic E2E and connected proof — complete
+
+### TDD Cycle Evidence
+| Task | Test file/layer | Safety net / RED | GREEN / TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- |
+| F6 | `tests/e2e/resourcesMaster.workstation.spec.ts` E2E; `tests/integration/activeUnitResourceCreation.connected.test.ts` integration | 6/11 baseline; RED failed locating Metro Lineal through removed policy/detail mocks | 12/12 E2E; semantic connected proof passed; fixture/refactor kept separate |
+
+- GREEN migrates only mocked catalog transport to exact ACTIVE `listarUnidades`; Metro requires Enter after type search, restores trigger focus, passes axe, creates with `unit-metro`, and observes zero policy/detail calls.
+- TRIANGULATE provisions active disposable hierarchy, optional text attribute, presentation, and no-policy Metro Lineal against `http://127.0.0.1:3210`; real evaluate/create was not intercepted, persisted `unidadId` matched, and pre/post policy snapshots matched.
+- Commands passed: focused and full Playwright (12/12), gated `RUN_CONNECTED_CATALOG_TESTS=true pnpm test:connected` (4/4), `pnpm test` (57 files/615), typecheck, lint, format check, build, and diff check; without the env the new connected test skips.
+- Changed: `tests/e2e/resourcesMaster.workstation.spec.ts`, `tests/integration/activeUnitResourceCreation.connected.test.ts`, F6 task rows, and this artifact; no production/config/backend change.
+- Cleanup deactivated created resource, attribute assignment/definition, Unit, Type, presentation, Family, and Class; residual rows are inactive and identifiers/cursors are omitted.
+- Workload: `feature-branch-chain`, `f6-e2e-connected-proof`, `A+D <=350`; FE base `8a25857`, backend `cf67dbfe89b73256bfaa44459975a48c25b8d05d` at `127.0.0.1:3210`, apply-ready token `sha256:8abe1c775221c868eadc29bfb37433cbde4b12b9029817c6cc1d1183dff227f0`, attempt `1/2`, settling `sha256:7d5918ef15a94b951b14b4fb75096243eb15a191d47d89e0d760c65488a9e471`; no deployment/lifecycle action.
+- Remaining implementation tasks: none; four F6 checkboxes are checked and parent-owned lifecycle rows remain unchanged.

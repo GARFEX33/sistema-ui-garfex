@@ -7,6 +7,12 @@ type ResourceResponse =
   | undefined
 
 type CreationFixture = Readonly<{
+  unit?: Readonly<{
+    id: string
+    clave: string
+    nombre: string
+    simbolo: string
+  }>
   createResponse?: (
     attempt: number,
   ) => ResourceResponse | Promise<ResourceResponse>
@@ -32,12 +38,12 @@ const response = (value: unknown) => ({
   body: JSON.stringify({ status: 'success', value }),
 })
 
-const summary = (id: string, nombre: string) => ({
+const summary = (id: string, nombre: string, unidadId = 'unit-1') => ({
   id,
   identificadorTecnico: `REC-${id}`,
   nombre,
   tipoRecursoId: 'type-1',
-  unidadId: 'unit-1',
+  unidadId,
   activo: true,
   revision: 1,
   classificationStatus: { state: 'EFFECTIVE', reasons: [] },
@@ -60,6 +66,12 @@ async function mockResources(
 ) {
   const calls: RequestCall[] = []
   const hasCreationFixture = creationFixture !== undefined
+  const unit = creationFixture?.unit ?? {
+    id: 'unit-1',
+    clave: 'UN',
+    nombre: 'Unidad',
+    simbolo: 'u',
+  }
   let createAttempts = 0
   await page.route('http://127.0.0.1:3210/**', async (route) => {
     if (route.request().method() !== 'POST') {
@@ -122,47 +134,13 @@ async function mockResources(
       )
       return
     }
-    if (hasCreationFixture && call.path.endsWith(':listarPoliticasUnidad')) {
-      expect(call.args).toEqual({
-        familiaRecursoId: 'family-1',
-        paraTipoRecursoId: 'type-1',
-        cursor: null,
-        pageSize: 20,
-        modo: 'ACTIVE',
-      })
+    if (hasCreationFixture && call.path.endsWith(':listarUnidades')) {
+      expect(call.args).toEqual({ cursor: null, pageSize: 20, modo: 'ACTIVE' })
       await route.fulfill(
         response({
           continuationCursor: null,
           isExhausted: true,
-          items: [
-            {
-              id: 'inherited-unit-policy',
-              familiaRecursoId: 'family-1',
-              unidadId: 'unit-1',
-              principal: true,
-              activo: true,
-              revision: 1,
-              effective: true,
-              selected: true,
-              shadowed: false,
-              selection: 'SELECTED',
-            },
-          ],
-        }),
-      )
-      return
-    }
-    if (hasCreationFixture && call.path.endsWith(':obtenerUnidad')) {
-      expect(call.args).toEqual({ unidadId: 'unit-1' })
-      await route.fulfill(
-        response({
-          id: 'unit-1',
-          clave: 'UN',
-          nombre: 'Unidad',
-          simbolo: 'u',
-          activo: true,
-          revision: 1,
-          effective: true,
+          items: [{ ...unit, activo: true, revision: 1, effective: true }],
         }),
       )
       return
@@ -242,7 +220,7 @@ async function mockResources(
         claseRecursoId: 'class-1',
         familiaRecursoId: 'family-1',
         tipoRecursoId: 'type-1',
-        unidadId: 'unit-1',
+        unidadId: unit.id,
         selecciones: colorSelected
           ? [
               {
@@ -271,7 +249,7 @@ async function mockResources(
         claseRecursoId: 'class-1',
         familiaRecursoId: 'family-1',
         tipoRecursoId: 'type-1',
-        unidadId: 'unit-1',
+        unidadId: unit.id,
         expectedCatalogFingerprint: 'catalog-v1',
         selecciones: [
           {
@@ -285,7 +263,7 @@ async function mockResources(
         (await creationFixture?.createResponse?.(createAttempts++)) ??
           response({
             disposition: 'CREATED',
-            item: summary('resource-created', 'Tubería roja'),
+            item: summary('resource-created', 'Tubería roja', unit.id),
           }),
       )
       return
@@ -378,7 +356,7 @@ const completeCreationContext = async (page: Page) => {
     ['Clase', 'Materiales'],
     ['Familia', 'Canalizaciones'],
     ['Tipo', 'Tuberías'],
-    ['Unidad natural', 'Unidad (u)'],
+    ['Unidad', 'Unidad (u)'],
   ] as const) {
     const search = page.getByRole('searchbox', { name: label })
     await expect(search).toBeFocused()
@@ -587,6 +565,82 @@ test.describe('Recursos maestros workstation 1440×980', () => {
     await expect(
       page.getByRole('dialog', { name: 'Creador de recursos' }),
     ).toBeVisible()
+  })
+
+  test('requires explicit Metro Lineal confirmation before evaluating and creating without policy/detail catalog calls', async ({
+    page,
+  }) => {
+    const calls = await mockResources(page, () => undefined, {
+      unit: {
+        id: 'unit-metro',
+        clave: 'ML',
+        nombre: 'Metro Lineal',
+        simbolo: 'm',
+      },
+    })
+    await page.goto('/recursos')
+    const trigger = page.getByRole('button', { name: 'Nuevo recurso' })
+
+    await trigger.click()
+    await page.keyboard.press('Escape')
+    await expect(trigger).toBeFocused()
+    await page.keyboard.press('n')
+    for (const [label, option] of [
+      ['Clase', 'Materiales'],
+      ['Familia', 'Canalizaciones'],
+      ['Tipo', 'Tuberías'],
+    ] as const) {
+      await expect(page.getByRole('searchbox', { name: label })).toBeFocused()
+      await expect(page.getByRole('option', { name: option })).toBeVisible()
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('Enter')
+    }
+
+    const unitSearch = page.getByRole('searchbox', { name: 'Unidad' })
+    await expect(unitSearch).toBeFocused()
+    await unitSearch.fill('Metro')
+    await expect(
+      page.getByRole('option', { name: 'Metro Lineal (m)' }),
+    ).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    expect(
+      calls.filter(({ path }) =>
+        path.endsWith(':evaluarCreacionDesdeSelecciones'),
+      ),
+    ).toHaveLength(0)
+
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: 'Atributos · 1 de 2', exact: true }),
+    ).toBeVisible()
+    expect(
+      (await new AxeBuilder({ page }).include('[role="dialog"]').analyze())
+        .violations,
+    ).toEqual([])
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await page.getByRole('button', { name: 'Omitir' }).click()
+    await expect(
+      page.getByRole('heading', { name: 'Revisión de creación' }),
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Crear recurso' }).click()
+    await expect(
+      page.getByRole('heading', { name: 'Recurso creado' }),
+    ).toBeFocused()
+    expect(calls).toContainEqual({
+      path: 'catalogoAdmin/unidades:listarUnidades',
+      args: { cursor: null, pageSize: 20, modo: 'ACTIVE' },
+    })
+    expect(calls).toContainEqual({
+      path: 'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
+      args: expect.objectContaining({ unidadId: 'unit-metro' }),
+    })
+    expect(calls.map(({ path }) => path)).not.toContain(
+      'catalogoAdmin/unidades:listarPoliticasUnidad',
+    )
+    expect(calls.map(({ path }) => path)).not.toContain(
+      'catalogoAdmin/unidades:obtenerUnidad',
+    )
   })
 
   test('completes the selection-only creation journey against exact published DTO fixtures', async ({
