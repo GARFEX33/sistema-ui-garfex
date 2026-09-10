@@ -20,30 +20,62 @@ connectedTest(
       client.query(reference<'query'>(name), args)
     const mutation = (name: string, args: Record<string, unknown>) =>
       client.mutation(reference<'mutation'>(name), args)
-    const create = async (name: string, args: Record<string, unknown>) =>
-      ((await mutation(name, args)) as { item: Item }).item
     const suffix = token()
     const cleanup: Array<readonly [string, string, Item]> = []
-    let resource: Item | undefined
+    const create = async (
+      name: string,
+      args: Record<string, unknown>,
+      cleanupOperation: string,
+      cleanupIdName: string,
+    ) => {
+      const item = ((await mutation(name, args)) as { item: Item }).item
+      cleanup.push([cleanupOperation, cleanupIdName, item])
+      return item
+    }
+    const cleanupOrder = [
+      'catalogoAdmin/recursos:desactivarRecurso',
+      'catalogoAdmin/atributos:desactivarAsignacionAtributo',
+      'catalogoAdmin/atributos:desactivarDefinicionAtributo',
+      'catalogoAdmin/unidades:desactivarUnidad',
+      'catalogoAdmin/jerarquia:desactivarTipo',
+      'catalogoAdmin/presentacion:desactivarPoliticaPresentacion',
+      'catalogoAdmin/jerarquia:desactivarFamilia',
+      'catalogoAdmin/jerarquia:desactivarClase',
+    ]
 
     try {
-      const clase = await create('catalogoAdmin/jerarquia:crearClase', {
-        clave: `F6C${suffix}`,
-        nombre: 'F6 Clase',
-        activo: true,
-      })
-      const familia = await create('catalogoAdmin/jerarquia:crearFamilia', {
-        claseRecursoId: clase.id,
-        clave: `F6F${suffix}`,
-        nombre: 'F6 Familia',
-        activo: true,
-      })
-      const tipo = await create('catalogoAdmin/jerarquia:crearTipo', {
-        familiaRecursoId: familia.id,
-        clave: `F6T${suffix}`,
-        nombre: 'F6 Tipo',
-        activo: true,
-      })
+      const clase = await create(
+        'catalogoAdmin/jerarquia:crearClase',
+        {
+          clave: `F6C${suffix}`,
+          nombre: 'F6 Clase',
+          activo: true,
+        },
+        'catalogoAdmin/jerarquia:desactivarClase',
+        'claseRecursoId',
+      )
+      const familia = await create(
+        'catalogoAdmin/jerarquia:crearFamilia',
+        {
+          claseRecursoId: clase.id,
+          clave: `F6F${suffix}`,
+          nombre: 'F6 Familia',
+          activo: true,
+        },
+        'catalogoAdmin/jerarquia:desactivarFamilia',
+        'familiaRecursoId',
+      )
+      const tipo = await create(
+        'catalogoAdmin/jerarquia:crearTipo',
+        {
+          familiaRecursoId: familia.id,
+          clave: `F6T${suffix}`,
+          nombre: 'F6 Tipo',
+          activo: true,
+        },
+        'catalogoAdmin/jerarquia:desactivarTipo',
+        'tipoRecursoId',
+      )
       const definicion = await create(
         'catalogoAdmin/atributos:crearDefinicionAtributo',
         {
@@ -53,8 +85,10 @@ connectedTest(
           modoCaptura: 'LIBRE',
           activo: true,
         },
+        'catalogoAdmin/atributos:desactivarDefinicionAtributo',
+        'definicionAtributoId',
       )
-      const asignacion = await create(
+      await create(
         'catalogoAdmin/atributos:crearAsignacionAtributo',
         {
           familiaRecursoId: familia.id,
@@ -65,8 +99,10 @@ connectedTest(
           orden: 1,
           activo: true,
         },
+        'catalogoAdmin/atributos:desactivarAsignacionAtributo',
+        'atributoRecursoId',
       )
-      const presentacion = await create(
+      await create(
         'catalogoAdmin/presentacion:crearPoliticaPresentacion',
         {
           tipoRecursoId: tipo.id,
@@ -74,37 +110,19 @@ connectedTest(
           separador: '-',
           activo: true,
         },
+        'catalogoAdmin/presentacion:desactivarPoliticaPresentacion',
+        'politicaPresentacionId',
       )
-      const unidad = await create('catalogoAdmin/unidades:crearUnidad', {
-        clave: `F6U${suffix}`,
-        nombre: 'Metro Lineal',
-        simbolo: 'm',
-        activo: true,
-      })
-      cleanup.push(
-        [
-          'catalogoAdmin/atributos:desactivarAsignacionAtributo',
-          'atributoRecursoId',
-          asignacion,
-        ],
-        [
-          'catalogoAdmin/atributos:desactivarDefinicionAtributo',
-          'definicionAtributoId',
-          definicion,
-        ],
-        ['catalogoAdmin/unidades:desactivarUnidad', 'unidadId', unidad],
-        ['catalogoAdmin/jerarquia:desactivarTipo', 'tipoRecursoId', tipo],
-        [
-          'catalogoAdmin/presentacion:desactivarPoliticaPresentacion',
-          'politicaPresentacionId',
-          presentacion,
-        ],
-        [
-          'catalogoAdmin/jerarquia:desactivarFamilia',
-          'familiaRecursoId',
-          familia,
-        ],
-        ['catalogoAdmin/jerarquia:desactivarClase', 'claseRecursoId', clase],
+      const unidad = await create(
+        'catalogoAdmin/unidades:crearUnidad',
+        {
+          clave: `F6U${suffix}`,
+          nombre: 'Metro Lineal',
+          simbolo: 'm',
+          activo: true,
+        },
+        'catalogoAdmin/unidades:desactivarUnidad',
+        'unidadId',
       )
 
       const before = (await query(
@@ -144,7 +162,12 @@ connectedTest(
         },
       )) as { disposition: string; item: Item }
       expect(created.disposition).toBe('CREATED')
-      resource = created.item
+      const resource = created.item
+      cleanup.push([
+        'catalogoAdmin/recursos:desactivarRecurso',
+        'recursoId',
+        resource,
+      ])
 
       const persisted = (await query(
         'catalogoAdmin/recursos:obtenerDetalleRecurso',
@@ -164,16 +187,15 @@ connectedTest(
       )
       expect(after).toEqual(before)
     } finally {
-      if (resource)
-        await mutation('catalogoAdmin/recursos:desactivarRecurso', {
-          recursoId: resource.id,
-          expectedRevision: resource.revision,
-        })
-      for (const [operation, idName, item] of cleanup)
+      for (const operation of cleanupOrder) {
+        const entry = cleanup.find(([candidate]) => candidate === operation)
+        if (!entry) continue
+        const [, idName, item] = entry
         await mutation(operation, {
           [idName]: item.id,
           expectedRevision: item.revision,
         })
+      }
     }
   },
 )

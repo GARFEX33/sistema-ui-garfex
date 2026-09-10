@@ -350,7 +350,19 @@ const creationEvaluation = (
 })
 
 const completeCreationContext = async (page: Page) => {
+  const trigger = page.getByRole('button', { name: 'Nuevo recurso' })
+  await trigger.click()
+  await expect(
+    page.getByRole('dialog', { name: 'Creador de recursos' }),
+  ).toBeVisible()
+  await expect(page.getByRole('searchbox', { name: 'Clase' })).toBeFocused()
+  await expect(page.getByRole('option', { name: 'Materiales' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(trigger).toBeFocused()
   await page.keyboard.press('n')
+  await expect(
+    page.getByRole('dialog', { name: 'Creador de recursos' }),
+  ).toBeVisible()
 
   for (const [label, option] of [
     ['Clase', 'Materiales'],
@@ -826,7 +838,12 @@ test.describe('Recursos maestros workstation 1440×980', () => {
     })
 
     await page.goto('/recursos')
-    await expect(page.locator('[data-resource-row]')).toContainText('Cable UTP')
+    await expect(page.locator('[data-resource-row]')).toContainText(
+      'Cable UTP',
+      {
+        timeout: 15_000,
+      },
+    )
     await page.getByRole('button', { name: 'Cargar más…' }).click()
     await expect(page.getByRole('alert')).toContainText(
       'No se pudo cargar la página siguiente.',

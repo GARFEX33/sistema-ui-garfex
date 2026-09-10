@@ -185,3 +185,11 @@ F3 is authorized to enable the direct ACTIVE-unit flow against this compatible l
 - Cleanup deactivated created resource, attribute assignment/definition, Unit, Type, presentation, Family, and Class; residual rows are inactive and identifiers/cursors are omitted.
 - Workload: `feature-branch-chain`, `f6-e2e-connected-proof`, `A+D <=350`; FE base `8a25857`, backend `cf67dbfe89b73256bfaa44459975a48c25b8d05d` at `127.0.0.1:3210`, apply-ready token `sha256:8abe1c775221c868eadc29bfb37433cbde4b12b9029817c6cc1d1183dff227f0`, attempt `1/2`, settling `sha256:7d5918ef15a94b951b14b4fb75096243eb15a191d47d89e0d760c65488a9e471`; no deployment/lifecycle action.
 - Remaining implementation tasks: none; four F6 checkboxes are checked and parent-owned lifecycle rows remain unchanged.
+
+## F6b — Reliability follow-up — complete
+
+- Independent verification reproduced a cold/reopen readiness race once (11/12); the helper now waits for the first Clase stage to be ready before close/reopen and for the reopened dialog before keyboard selection. Cold pagination readiness has a bounded 15-second assertion, not a retry or sleep.
+- Connected fixture creation registers each cleanup operation inside the creation helper before returning, so later setup failures retain cleanup coverage.
+- Three consecutive normal two-worker Playwright runs passed 12/12; connected proof passed 4/4; unit passed 615/615; typecheck, lint, format check, build, and diff check passed.
+- Final correction is 159 A+D within the 240-line bound. Runtime objective `f6b-browser-and-cleanup-reliability` settled passed with token `sha256:63d9054c9d7006da742b503938879a83a41f335fa6d8e21340aff7e452aaa204`.
+- The earlier `R3-cleanup-registration` advisory is remediated. `R3-connected-gate` remains informational because the suite is opt-in and hard-bound to the authorized local `http://127.0.0.1:3210`; deployment stays unauthorized.
