@@ -134,6 +134,17 @@ const unitPolicy = (overrides: Partial<Record<string, unknown>> = {}) => ({
   ...overrides,
 })
 
+const activeUnit = (overrides: Partial<Record<string, unknown>> = {}) => ({
+  id: 'M3',
+  clave: 'M3',
+  nombre: 'Metro cúbico',
+  simbolo: 'm³',
+  activo: true,
+  revision: 1,
+  effective: true,
+  ...overrides,
+})
+
 const unitNames: Record<string, { nombre: string; simbolo: string }> = {
   M3: { nombre: 'Metro cúbico', simbolo: 'm³' },
   KG: { nombre: 'Kilogramo', simbolo: 'kg' },
@@ -203,6 +214,11 @@ function fakeApi(
       continuationCursor: null,
       isExhausted: true,
     })),
+    listUnits: vi.fn(async () => ({
+      items: [activeUnit()],
+      continuationCursor: null,
+      isExhausted: true,
+    })),
     getUnit: vi.fn(async ({ unidadId }: { unidadId: unknown }) => {
       const match = unitNames[String(unidadId)]
       return match
@@ -224,85 +240,55 @@ function fakeApi(
   } as ResourcesMasterApi
 }
 
-it('resolves only the current Tipo policy candidates and confirms Unidad explicitly', async () => {
-  let resolveOldPolicies!: (value: {
-    items: ReturnType<typeof unitPolicy>[]
-    continuationCursor: null
-    isExhausted: boolean
-  }) => void
-  let resolveMorePolicies!: (value: {
-    items: ReturnType<typeof unitPolicy>[]
+it('retains ACTIVE Unit pages across Type changes and confirms only an explicit candidate', async () => {
+  let resolveMore!: (value: {
+    items: ReturnType<typeof activeUnit>[]
     continuationCursor: null
     isExhausted: boolean
   }) => void
   const api = fakeApi({
-    listUnitPolicies: vi.fn(({ paraTipoRecursoId, cursor }) =>
-      paraTipoRecursoId === 'type-1'
-        ? new Promise((resolve) => {
-            resolveOldPolicies = resolve
+    listUnits: vi.fn(({ cursor }) =>
+      cursor === null
+        ? Promise.resolve({
+            items: [
+              activeUnit({
+                id: 'KG',
+                clave: 'KG',
+                nombre: 'Kilogramo',
+                simbolo: 'kg',
+              }),
+            ],
+            continuationCursor: 'more-units',
+            isExhausted: false,
           })
-        : cursor === null
-          ? Promise.resolve({
-              items: [
-                unitPolicy({
-                  id: 'policy-kg',
-                  unidadId: 'KG',
-                  principal: false,
-                  selected: true,
-                }),
-              ],
-              continuationCursor: 'more-units',
-              isExhausted: false,
-            })
-          : new Promise((resolve) => {
-              resolveMorePolicies = resolve
-            }),
+        : new Promise((resolve) => {
+            resolveMore = resolve
+          }),
     ),
   })
   const { result } = renderHook(() => useResourceCreationFlow(api, null))
-
   act(() =>
     result.current.begin({
       classItem: classItem(),
       familyItem: familyItem(),
       typeItem: typeItem(),
       depth: 3,
-    }),
-  )
-  await waitFor(() =>
-    expect(api.listUnitPolicies).toHaveBeenCalledWith({
-      familiaRecursoId: 'family-1',
-      paraTipoRecursoId: 'type-1',
-      cursor: null,
-      pageSize: 20,
-    }),
-  )
-
-  act(() =>
-    result.current.confirmType(
-      typeItem({ id: 'type-2', familiaRecursoId: 'stale-family' }),
-    ),
-  )
-  await waitFor(() =>
-    expect(api.listUnitPolicies).toHaveBeenCalledWith({
-      familiaRecursoId: 'family-1',
-      paraTipoRecursoId: 'type-2',
-      cursor: null,
-      pageSize: 20,
     }),
   )
   await waitFor(() =>
     expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['KG']),
   )
+  act(() => result.current.confirmUnit(result.current.units[0]!))
+  expect(result.current.state.draft.unitId).toBe('KG')
+  act(() => result.current.confirmType(typeItem({ id: 'type-2' })))
   expect(result.current.state.draft.unitId).toBeNull()
-
+  expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['KG'])
   act(() => void result.current.continueUnits())
   await waitFor(() =>
     expect(result.current.unitLoadState).toEqual({ status: 'loading-more' }),
   )
-  expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['KG'])
-  resolveMorePolicies({
-    items: [unitPolicy({ id: 'policy-m3', unidadId: 'M3' })],
+  resolveMore({
+    items: [activeUnit()],
     continuationCursor: null,
     isExhausted: true,
   })
@@ -312,58 +298,34 @@ it('resolves only the current Tipo policy candidates and confirms Unidad explici
       'M3',
     ]),
   )
-
-  resolveOldPolicies({
-    items: [unitPolicy({ unidadId: 'M3' })],
-    continuationCursor: null,
-    isExhausted: true,
-  })
-  await waitFor(() =>
-    expect(result.current.units.map((unit) => unit.unidadId)).toEqual([
-      'KG',
-      'M3',
-    ]),
-  )
-
-  await act(async () => result.current.confirmUnit(result.current.units[0]!))
-  expect(result.current.state.draft.unitId).toBe('KG')
-  expect(result.current.state.stage).toEqual({ kind: 'attributes' })
+  expect(api.listUnitPolicies).not.toHaveBeenCalled()
+  expect(api.getUnit).not.toHaveBeenCalled()
 })
 
-it('keeps resolved Unidad candidates retryable without implicitly confirming one', async () => {
+it('keeps a loaded Unit selectable through a continuation error and retry', async () => {
   const api = fakeApi({
-    listUnitPolicies: vi.fn(async () => ({
-      items: [
-        unitPolicy({ unidadId: 'M3' }),
-        unitPolicy({ id: 'policy-kg', unidadId: 'KG' }),
-      ],
-      continuationCursor: null,
-      isExhausted: true,
-    })),
-    getUnit: vi
+    listUnits: vi
       .fn()
       .mockResolvedValueOnce({
-        id: 'M3',
-        clave: 'M3',
-        nombre: 'Metro cúbico',
-        simbolo: 'm³',
-        activo: true,
-        revision: 1,
-        effective: true,
+        items: [activeUnit()],
+        continuationCursor: 'more-units',
+        isExhausted: false,
       })
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({
-        id: 'KG',
-        clave: 'KG',
-        nombre: 'Kilogramo',
-        simbolo: 'kg',
-        activo: true,
-        revision: 1,
-        effective: true,
+        items: [
+          activeUnit({
+            id: 'KG',
+            clave: 'KG',
+            nombre: 'Kilogramo',
+            simbolo: 'kg',
+          }),
+        ],
+        continuationCursor: null,
+        isExhausted: true,
       }),
   })
   const { result } = renderHook(() => useResourceCreationFlow(api, null))
-
   act(() =>
     result.current.begin({
       classItem: classItem(),
@@ -373,23 +335,20 @@ it('keeps resolved Unidad candidates retryable without implicitly confirming one
     }),
   )
   await waitFor(() =>
-    expect(result.current.unitLoadState).toEqual({ status: 'partial-error' }),
+    expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['M3']),
   )
-  expect(result.current.units.map((unit) => unit.unidadId)).toEqual(['M3'])
-
   act(() => result.current.confirmUnit(result.current.units[0]!))
-  expect(result.current.state.draft.unitId).toBeNull()
-  expect(result.current.state.stage).toEqual({ kind: 'unit' })
-
+  expect(result.current.state.draft.unitId).toBe('M3')
+  await act(async () => result.current.continueUnits())
+  expect(result.current.unitLoadState).toEqual({ status: 'partial-error' })
+  expect(result.current.state.draft.unitId).toBe('M3')
   await act(async () => result.current.retryUnits())
   expect(result.current.units.map((unit) => unit.unidadId)).toEqual([
     'M3',
     'KG',
   ])
-  expect(result.current.unitLoadState).toEqual({
-    status: 'ready',
-    exhausted: true,
-  })
+  expect(api.listUnitPolicies).not.toHaveBeenCalled()
+  expect(api.getUnit).not.toHaveBeenCalled()
 })
 
 const renderSurface = (
@@ -424,6 +383,54 @@ const chooseOption = async (
 }
 
 describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
+  it('loads a no-policy Metro Lineal only from ACTIVE Units and confirms it explicitly', async () => {
+    const api = fakeApi({
+      listUnits: vi.fn(async () => ({
+        items: [
+          activeUnit({
+            id: 'ML',
+            clave: 'ML',
+            nombre: 'Metro Lineal',
+            simbolo: 'm',
+          }),
+        ],
+        continuationCursor: null,
+        isExhausted: true,
+      })),
+    })
+    const user = userEvent.setup()
+    renderSurface(api, {
+      initialHierarchySnapshot: {
+        classItem: classItem(),
+        familyItem: familyItem(),
+        typeItem: typeItem(),
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
+    const unitSearch = await screen.findByRole('searchbox', { name: 'Unidad' })
+    await user.type(unitSearch, 'metro')
+    const metro = await screen.findByRole('option', {
+      name: 'Metro Lineal (m)',
+    })
+    expect(
+      screen.queryByRole('heading', { name: 'Contrato pendiente' }),
+    ).toBeNull()
+    metro.focus()
+    await user.keyboard('{Enter}')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Contrato pendiente' }),
+    ).toBeVisible()
+    expect(api.listUnits).toHaveBeenCalledWith({
+      modo: 'ACTIVE',
+      cursor: null,
+      pageSize: 20,
+    })
+    expect(api.listUnitPolicies).not.toHaveBeenCalled()
+    expect(api.getUnit).not.toHaveBeenCalled()
+  })
+
   it('distinguishes a missing creation ownership from pending evaluation integration', () => {
     const { rerender } = render(
       <ResourceCreationContractPending ownership={null} />,
@@ -545,7 +552,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.queryByRole('heading', { name: 'Contrato pendiente' }),
     ).not.toBeInTheDocument()
     const unitSearch = screen.getByRole('searchbox', {
-      name: 'Unidad natural',
+      name: 'Unidad',
     })
     expect(unitSearch).toHaveFocus()
     expect(screen.queryByRole('button', { name: 'Siguiente' })).toBeNull()
@@ -577,7 +584,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.getByRole('heading', { name: 'Creador de recursos' }),
     ).toBeVisible()
     expect(
-      screen.getByRole('heading', { name: 'Elegí una Unidad natural' }),
+      screen.getByRole('heading', { name: 'Elegí una Unidad' }),
     ).toBeVisible()
     expect(
       screen.queryByRole('searchbox', { name: 'Clase' }),
@@ -650,14 +657,14 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       within(rail).getByRole('button', { name: 'Unidad: Metro cúbico' }),
     )
     const unitSearch = await screen.findByRole('searchbox', {
-      name: 'Unidad natural',
+      name: 'Unidad',
     })
     expect(unitSearch).toHaveFocus()
     expect(screen.queryByRole('searchbox', { name: 'Tipo' })).toBeNull()
     expect(screen.getAllByRole('searchbox')).toHaveLength(1)
   })
 
-  it('cascades Clase -> Familia -> Tipo -> Unidad natural, preselecting the principal unit', async () => {
+  it('cascades Clase -> Familia -> Tipo -> Unidad from the active catalog', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
     renderSurface(api)
@@ -684,23 +691,22 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
 
     await chooseOption(user, 'Tipo', 'Arena')
     await waitFor(() =>
-      expect(api.listUnitPolicies).toHaveBeenCalledWith({
-        familiaRecursoId: 'family-1',
-        paraTipoRecursoId: 'type-1',
+      expect(api.listUnits).toHaveBeenCalledWith({
+        modo: 'ACTIVE',
         cursor: null,
         pageSize: 20,
       }),
     )
 
     expect(
-      await screen.findByRole('searchbox', { name: 'Unidad natural' }),
+      await screen.findByRole('searchbox', { name: 'Unidad' }),
     ).toBeVisible()
     expect(
       screen.queryByRole('button', { name: 'Siguiente' }),
     ).not.toBeInTheDocument()
   })
 
-  it('renders Unidad natural as an unconfirmed staged decision until Enter explicitly confirms it', async () => {
+  it('renders Unidad as an unconfirmed staged decision until Enter explicitly confirms it', async () => {
     const api = fakeApi()
     const user = userEvent.setup()
     renderSurface(api)
@@ -710,7 +716,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Tipo', 'Arena')
 
     const unitSearch = await screen.findByRole('searchbox', {
-      name: 'Unidad natural',
+      name: 'Unidad',
     })
     const preferredUnit = screen.getByRole('option', {
       name: 'Metro cúbico (m³)',
@@ -730,17 +736,24 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(api.listAttributeAssignments).not.toHaveBeenCalled()
   })
 
-  it('keeps a hydrated Unidad selectable while Cargar más waits for the next policy page', async () => {
+  it('keeps a loaded Unidad selectable while Cargar más waits for the next page', async () => {
     let resolveMore!: (page: {
-      items: ReturnType<typeof unitPolicy>[]
+      items: ReturnType<typeof activeUnit>[]
       continuationCursor: null
       isExhausted: boolean
     }) => void
     const api = fakeApi({
-      listUnitPolicies: vi.fn(({ cursor }) =>
+      listUnits: vi.fn(({ cursor }) =>
         cursor === null
           ? Promise.resolve({
-              items: [unitPolicy({ unidadId: 'KG', principal: false })],
+              items: [
+                activeUnit({
+                  id: 'KG',
+                  clave: 'KG',
+                  nombre: 'Kilogramo',
+                  simbolo: 'kg',
+                }),
+              ],
               continuationCursor: 'more-units',
               isExhausted: false,
             })
@@ -755,7 +768,6 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-
     const kilogramo = await screen.findByRole('option', {
       name: 'Kilogramo (kg)',
     })
@@ -763,19 +775,25 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     expect(screen.getByRole('button', { name: 'Cargar más…' })).toBeDisabled()
     expect(kilogramo).toBeVisible()
     await user.click(kilogramo)
-
     expect(
       await screen.findByRole('heading', { name: 'Contrato pendiente' }),
     ).toBeVisible()
     resolveMore({ items: [], continuationCursor: null, isExhausted: true })
+    expect(api.listUnitPolicies).not.toHaveBeenCalled()
+    expect(api.getUnit).not.toHaveBeenCalled()
   })
 
-  it('requires an explicit non-preferred Unidad choice before showing Contrato pendiente', async () => {
+  it('requires an explicit Unidad choice before showing Contrato pendiente', async () => {
     const api = fakeApi({
-      listUnitPolicies: vi.fn(async () => ({
+      listUnits: vi.fn(async () => ({
         items: [
-          unitPolicy({ unidadId: 'KG', principal: false, selected: false }),
-          unitPolicy({ unidadId: 'TON', effective: false }),
+          activeUnit({
+            id: 'KG',
+            clave: 'KG',
+            nombre: 'Kilogramo',
+            simbolo: 'kg',
+          }),
+          activeUnit({ id: 'TON', nombre: 'Tonelada', activo: false }),
         ],
         continuationCursor: null,
         isExhausted: true,
@@ -784,30 +802,22 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     const user = userEvent.setup()
     renderSurface(api)
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
-    await waitFor(() => expect(api.listContextClasses).toHaveBeenCalled())
     await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-
-    await waitFor(() => expect(api.listUnitPolicies).toHaveBeenCalled())
     const listbox = await screen.findByRole('listbox', {
-      name: 'Opciones de Unidad natural',
+      name: 'Opciones de Unidad',
     })
     expect(
       within(listbox).queryByRole('option', { name: /Tonelada|TON/ }),
     ).not.toBeInTheDocument()
-    const kilogramo = within(listbox).getByRole('option', {
-      name: /Kilogramo/,
-    })
-    expect(kilogramo).toBeVisible()
-    await user.click(kilogramo)
-
+    await user.click(within(listbox).getByRole('option', { name: /Kilogramo/ }))
     expect(await screen.findByText('Contrato pendiente')).toBeVisible()
-    expect(api.listAttributeAssignments).not.toHaveBeenCalled()
-    expect(api.createResource).not.toHaveBeenCalled()
+    expect(api.listUnitPolicies).not.toHaveBeenCalled()
+    expect(api.getUnit).not.toHaveBeenCalled()
   })
 
-  it('resets Familia, Tipo and Unidad natural only after a rail return confirms another Clase', async () => {
+  it('resets Familia, Tipo and Unidad only after a rail return confirms another Clase', async () => {
     const api = fakeApi({
       listContextClasses: vi.fn(async () => ({
         items: [classItem(), classItem({ id: 'class-2', nombre: 'Otro' })],
@@ -840,14 +850,15 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       screen.queryByRole('button', { name: /Tipo/ }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('searchbox', { name: 'Unidad natural' }),
+      screen.queryByRole('searchbox', { name: 'Unidad' }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
   })
 
   it('backs one Escape stage at a time and focuses each current selector before closing', async () => {
+    const api = fakeApi()
     const user = userEvent.setup()
-    renderSurface(fakeApi())
+    renderSurface(api)
     const trigger = screen.getByRole('button', { name: 'Nuevo recurso' })
     await user.click(trigger)
     await chooseOption(user, 'Clase', 'Material')
@@ -858,7 +869,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     )
     await screen.findByRole('heading', { name: 'Contrato pendiente' })
 
-    for (const label of ['Unidad natural', 'Tipo', 'Familia', 'Clase']) {
+    for (const label of ['Unidad', 'Tipo', 'Familia', 'Clase']) {
       await user.keyboard('{Escape}')
       const search = await screen.findByRole('searchbox', { name: label })
       expect(search).toHaveFocus()
@@ -870,6 +881,8 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     )
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     expect(trigger).toHaveFocus()
+    expect(api.listUnitPolicies).not.toHaveBeenCalled()
+    expect(api.getUnit).not.toHaveBeenCalled()
   })
 
   it('uses ArrowLeft only for unmodified, unconsumed, non-editable local back navigation', async () => {
@@ -880,7 +893,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
     const search = await screen.findByRole('searchbox', {
-      name: 'Unidad natural',
+      name: 'Unidad',
     })
     const option = screen.getByRole('option', {
       name: 'Metro cúbico (m³)',
@@ -896,9 +909,7 @@ describe('CrearRecursoSurface — Paso 1 (Contexto)', () => {
       once: true,
     })
     fireEvent.keyDown(option, { key: 'ArrowLeft' })
-    expect(
-      screen.getByRole('searchbox', { name: 'Unidad natural' }),
-    ).toBeVisible()
+    expect(screen.getByRole('searchbox', { name: 'Unidad' })).toBeVisible()
 
     option.focus()
     await user.keyboard('{ArrowLeft}')
@@ -1164,7 +1175,7 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await chooseOption(user, 'Clase', 'Material')
     await chooseOption(user, 'Familia', 'Áridos')
     await chooseOption(user, 'Tipo', 'Arena')
-    await screen.findByRole('searchbox', { name: 'Unidad natural' })
+    await screen.findByRole('searchbox', { name: 'Unidad' })
 
     await user.click(screen.getByRole('button', { name: 'Familia: Áridos' }))
     await chooseOption(user, 'Familia', 'Áridos')
@@ -1172,15 +1183,19 @@ describe('CrearRecursoSurface — Clase staged', () => {
     expect(screen.getByRole('button', { name: 'Tipo: Arena' })).toBeVisible()
     await chooseOption(user, 'Tipo', 'Arena')
     expect(
-      await screen.findByRole('searchbox', { name: 'Unidad natural' }),
+      await screen.findByRole('searchbox', { name: 'Unidad' }),
     ).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: 'Tipo: Arena' }))
     await user.click(screen.getByRole('option', { name: 'Mortero' }))
     expect(
-      await screen.findByRole('searchbox', { name: 'Unidad natural' }),
+      await screen.findByRole('searchbox', { name: 'Unidad' }),
     ).toBeVisible()
-    expect(screen.getByText('No hay opciones disponibles.')).toBeVisible()
+    expect(
+      screen.getByRole('option', { name: 'Metro cúbico (m³)' }),
+    ).toBeVisible()
+    expect(api.listUnitPolicies).not.toHaveBeenCalled()
+    expect(api.getUnit).not.toHaveBeenCalled()
   })
 
   it('opens a valid deep prefix at Unidad and falls back to Tipo for an invalid Tipo', async () => {
@@ -1196,12 +1211,11 @@ describe('CrearRecursoSurface — Clase staged', () => {
 
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
     const unit = await screen.findByRole('searchbox', {
-      name: 'Unidad natural',
+      name: 'Unidad',
     })
     expect(unit).toBeVisible()
-    expect(validApi.listUnitPolicies).toHaveBeenCalledWith({
-      familiaRecursoId: 'family-1',
-      paraTipoRecursoId: 'type-1',
+    expect(validApi.listUnits).toHaveBeenCalledWith({
+      modo: 'ACTIVE',
       cursor: null,
       pageSize: 20,
     })
@@ -1220,7 +1234,7 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await user.click(screen.getByRole('button', { name: 'Nuevo recurso' }))
     expect(await screen.findByRole('searchbox', { name: 'Tipo' })).toBeVisible()
     expect(
-      screen.queryByRole('searchbox', { name: 'Unidad natural' }),
+      screen.queryByRole('searchbox', { name: 'Unidad' }),
     ).not.toBeInTheDocument()
   })
 
@@ -1622,7 +1636,7 @@ describe('CrearRecursoSurface — Clase staged', () => {
     await user.keyboard('{ArrowLeft}')
 
     const unitSearch = await screen.findByRole('searchbox', {
-      name: 'Unidad natural',
+      name: 'Unidad',
     })
     expect(unitSearch).toHaveFocus()
     expect(

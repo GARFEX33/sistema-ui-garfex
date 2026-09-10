@@ -21,10 +21,6 @@ export function ResourceCreationContextStage({
   onConfirmType,
   onConfirmUnit,
 }: ResourceCreationContextStageProps) {
-  const preferredUnitKey =
-    flow.units.find((unit) => unit.principal)?.unidadId ??
-    flow.units.find((unit) => unit.selected)?.unidadId ??
-    null
   const showUnitSelector = flow.state.stage.kind === 'unit'
 
   return (
@@ -79,7 +75,7 @@ export function ResourceCreationContextStage({
 
       {showUnitSelector && (
         <StagedSearchSelector
-          label="Unidad natural"
+          label="Unidad"
           items={flow.units}
           itemKey={(item) => flow.classKey(item.unidadId)}
           itemName={unitLabel}
@@ -88,9 +84,6 @@ export function ResourceCreationContextStage({
             flow.state.draft.unitId === null
               ? null
               : flow.classKey(flow.state.draft.unitId)
-          }
-          preferredActiveKey={
-            preferredUnitKey === null ? null : flow.classKey(preferredUnitKey)
           }
           loadState={flow.unitLoadState}
           onConfirm={onConfirmUnit}

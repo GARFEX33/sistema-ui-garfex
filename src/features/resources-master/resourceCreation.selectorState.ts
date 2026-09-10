@@ -4,10 +4,7 @@ import {
   type ParentGatedListState,
 } from '../../shared/hierarchy/parentGatedListController'
 import type { SelectorLoadState } from './StagedSearchSelector'
-import type {
-  UnitCandidateHydrationState,
-  UnitPolicyPageState,
-} from './resourceCreation.loaders'
+import type { ActiveUnitPageState } from './resourceCreation.activeUnits'
 
 export const selectorLoadState = <T extends { id: unknown }, TOperation>(
   state: ParentGatedListState<T, TOperation>,
@@ -48,21 +45,23 @@ export const useControllerState = <T extends { id: unknown }, TOperation>(
 }
 
 export const unitSelectorLoadState = (
-  policyState: UnitPolicyPageState,
-  hydrationState: UnitCandidateHydrationState,
+  state: ActiveUnitPageState,
 ): SelectorLoadState => {
-  if (hydrationState.status === 'partial-error')
-    return { status: 'partial-error' }
-  if (hydrationState.status === 'loading') return { status: 'loading' }
-  if (policyState.status === 'loading') return { status: 'loading' }
-  if (policyState.status === 'loading-more') return { status: 'loading-more' }
-  if (policyState.status === 'initial-error') return { status: 'initial-error' }
-  if (policyState.status === 'partial-error') return { status: 'partial-error' }
-  if (hydrationState.status === 'empty')
-    return policyState.status === 'ready' && !policyState.exhausted
-      ? { status: 'ready', exhausted: false }
-      : { status: 'empty' }
-  if (policyState.status === 'ready')
-    return { status: 'ready', exhausted: policyState.exhausted }
-  return { status: 'loading' }
+  switch (state.status) {
+    case 'loading-more':
+      return { status: 'loading-more' }
+    case 'empty':
+      return { status: 'empty' }
+    case 'initial-error':
+      return { status: 'initial-error' }
+    case 'partial-error':
+      return { status: 'partial-error' }
+    case 'ready':
+      return {
+        status: 'ready',
+        exhausted: 'exhausted' in state && state.exhausted === true,
+      }
+    default:
+      return { status: 'loading' }
+  }
 }

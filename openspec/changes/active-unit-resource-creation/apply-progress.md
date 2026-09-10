@@ -109,3 +109,36 @@ F3–F6 remain untouched. F3 remains blocked until the parent records compatible
 - Residual fixture rows are inactive because the public API has no full-delete route; identifiers are intentionally omitted from the persisted artifact.
 
 F3 is authorized to enable the direct ACTIVE-unit flow against this compatible local backend contract. This does not authorize frontend deployment, push, or PR creation.
+
+## F3 — Flow and selector integration
+
+**Status:** complete. The four F3 implementation rows are visibly `- [x]` in [tasks.md](tasks.md); F4–F6 and parent-owned rows remain unchanged.
+
+### Completed and files
+
+- Direct ACTIVE-page wiring replaced creator-only policy/hydrator orchestration; pages survive Type changes, selections/evaluations clear on changed Type, and each open uses a new generation.
+- `ResourceCreationContextStage.tsx` removed this instance's preferred-policy key while retaining `StagedSearchSelector` capability; `CrearRecursoSurface.tsx` changed only its two Unit heading/focus literals.
+- Changed: `useResourceCreationFlow.ts`, `resourceCreation.selectorState.ts`, `ResourceCreationContextStage.tsx`, `CrearRecursoSurface.tsx`, the two focused test files, `tasks.md`, and this artifact.
+
+### TDD Cycle Evidence
+
+| Cycle | RED | GREEN | TRIANGULATE / REFACTOR |
+| --- | --- | --- | --- |
+| F3 flow | Metro Lineal/direct ACTIVE test failed with zero `listUnits` calls | Direct controller wiring passed | 54 focused tests pass; policy/hydrator contracts and selector-state mapping migrated |
+
+### Verification
+
+- Focused normal-discovery: `pnpm exec vitest run tests/unit/crearRecursoSurface.test.tsx tests/unit/resourceCreation.selectorState.test.ts tests/unit/resourceCreation.activeUnits.test.ts tests/unit/useResourceCreationFlow.attributes.test.tsx tests/unit/useResourceCreationFlow.create.test.tsx` — 54/54 passed.
+- `pnpm test` — 57 files, 624 tests passed; `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- Surface coverage proves no-policy Metro Lineal, explicit Enter/click confirmation, type-search non-confirmation, retained candidates during continuation/error, retry, Escape focus recovery, and zero `listUnitPolicies`/`getUnit` calls across open, pagination, retry, and close.
+
+### Scope, workload, and remaining
+
+- Design checklist: reused `StagedSearchSelector` and existing local focus/UI states; no new shared component, style, token, Tailwind/CSS, global keyboard, backend, F1/F2, or F4 work.
+- Delivery boundary: user-authorized `f3-flow-integration-size-exception` only; F4–F6 remain unchecked and deferred to their original caps. No deviation from the approved F3 design.
+- Final `688eb3d` diff: `A=308 D=369 A+D=677`, within the F3-only 720 A+D exception.
+- Remaining F3 implementation rows: none. Deferred lifecycle actions: frontend deployment/verification and all F4–F6 rows.
+
+### Structured status consumed
+
+`changeName=active-unit-resource-creation`; `artifactStore=openspec`; `applyState=apply-ready`; `workUnit=f3-flow-integration-size-exception`; `deliveryPath=feature-branch-chain`; `runtimeToken=sha256:43ae1398c0ca2b42ea9d1b7bcc6f3e83e1e59d09a53061ee4fd0bcd7baf769d0`; `runAttempt=1/2`; repo-local root and `/home/garfex/PROGRAMACION/sistema-ui-garfex` edit root were authorized. Backend receipt `588a4f3b6be1cc1164181c47aa5cf6dd7abd309eadf8481a2da74bccda9e8162` was consumed; parent must settle `sha256:97e5dcfcad0ac7176e36f1dd7fdbde85b40e8c09dd898d267932fb91c15a3c5d`.

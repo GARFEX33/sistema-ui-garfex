@@ -10,11 +10,9 @@ import { useResourceCreationAttributeQueries } from './useResourceCreationAttrib
 import { useResourceCreationCreate } from './useResourceCreationCreate'
 import { useResourceCreationEvaluation } from './useResourceCreationEvaluation'
 import {
-  createUnitCandidateHydrator,
-  createUnitPolicyPageController,
+  createActiveUnitPageController,
   type UnitCandidate,
-  type UnitPolicyContext,
-} from './resourceCreation.loaders'
+} from './resourceCreation.activeUnits'
 import {
   selectorLoadState,
   unitSelectorLoadState,
@@ -158,24 +156,10 @@ export function useResourceCreationFlow(
       },
     }),
   )
-  const [unitPolicies] = useState(() =>
-    createUnitPolicyPageController({
-      identity: resourceIdKey,
-      loadPolicies: ({ familiaRecursoId, paraTipoRecursoId, cursor }) =>
-        api.listUnitPolicies({
-          familiaRecursoId,
-          paraTipoRecursoId,
-          cursor,
-          pageSize: PAGE_SIZE,
-        }),
-    }),
+  const [units] = useState(() =>
+    createActiveUnitPageController({ api, pageSize: PAGE_SIZE }),
   )
-  const [unitHydrator] = useState(() =>
-    createUnitCandidateHydrator({
-      identity: resourceIdKey,
-      getUnit: api.getUnit,
-    }),
-  )
+  const openingRef = useRef(0)
   const [, refreshUnits] = useState(0)
   const classState = useControllerState(classes)
   const familyState = useControllerState(families)
@@ -184,45 +168,6 @@ export function useResourceCreationFlow(
     () => refreshUnits((version) => version + 1),
     [],
   )
-  const hydrateUnitPolicies = useCallback(
-    async (tipoId: ResourceId) => {
-      const policyState = unitPolicies.getState()
-      if (
-        !sameId(policyState.tipoId, tipoId) ||
-        (policyState.status !== 'ready' && policyState.status !== 'empty')
-      )
-        return false
-      unitHydrator.setSnapshot({
-        tipoId,
-        cursor: policyState.status === 'ready' ? policyState.cursor : null,
-        references: policyState.references,
-      })
-      refreshUnitState()
-      const hydration = unitHydrator.start()
-      refreshUnitState()
-      const hydrated = await hydration
-      refreshUnitState()
-      return hydrated
-    },
-    [refreshUnitState, unitHydrator, unitPolicies],
-  )
-  const startUnitsForContext = useCallback(
-    async (context: UnitPolicyContext) => {
-      unitPolicies.setContext(context)
-      const request = unitPolicies.start()
-      refreshUnitState()
-      const loaded = await request
-      refreshUnitState()
-      if (
-        !loaded ||
-        !sameId(unitPolicies.getState().tipoId, context.paraTipoRecursoId)
-      )
-        return false
-      return hydrateUnitPolicies(context.paraTipoRecursoId)
-    },
-    [hydrateUnitPolicies, refreshUnitState, unitPolicies],
-  )
-
   const begin = useCallback(
     (prefix: NormalizedResourceHierarchyPrefix) => {
       dispatch((current) =>
@@ -245,24 +190,15 @@ export function useResourceCreationFlow(
         types.setContext({ operation: 'types', parentId: prefix.familyItem.id })
         void types.start()
       }
-      unitPolicies.setContext(null)
-      unitHydrator.setSnapshot(null)
+      units.open(`opening-${++openingRef.current}`)
       refreshUnitState()
-      if (prefix.familyItem && prefix.typeItem)
-        void startUnitsForContext({
-          familiaRecursoId: prefix.familyItem.id,
-          paraTipoRecursoId: prefix.typeItem.id,
-        })
+      if (prefix.familyItem && prefix.typeItem) {
+        const request = units.start()
+        refreshUnitState()
+        void request.finally(refreshUnitState)
+      }
     },
-    [
-      classes,
-      families,
-      refreshUnitState,
-      startUnitsForContext,
-      types,
-      unitHydrator,
-      unitPolicies,
-    ],
+    [classes, families, refreshUnitState, types, units],
   )
   const enterClass = useCallback(() => {
     dispatch((current) =>
@@ -290,18 +226,9 @@ export function useResourceCreationFlow(
       )
       if (!changed) return
       families.setContext({ operation: 'families', parentId: item.id })
-      unitPolicies.setContext(null)
-      unitHydrator.setSnapshot(null)
-      refreshUnitState()
       void families.start()
     },
-    [
-      families,
-      refreshUnitState,
-      state.draft.hierarchy.classItem?.id,
-      unitHydrator,
-      unitPolicies,
-    ],
+    [families, state.draft.hierarchy.classItem?.id],
   )
   const enterType = useCallback(() => {
     dispatch((current) =>
@@ -320,18 +247,9 @@ export function useResourceCreationFlow(
       )
       if (!changed) return
       types.setContext({ operation: 'types', parentId: item.id })
-      unitPolicies.setContext(null)
-      unitHydrator.setSnapshot(null)
-      refreshUnitState()
       void types.start()
     },
-    [
-      refreshUnitState,
-      state.draft.hierarchy.familyItem?.id,
-      types,
-      unitHydrator,
-      unitPolicies,
-    ],
+    [state.draft.hierarchy.familyItem?.id, types],
   )
   const confirmType = useCallback(
     (item: ResourceContextTypeItem) => {
@@ -340,61 +258,33 @@ export function useResourceCreationFlow(
         resourceCreationReducer(current, { type: 'CONFIRM_TYPE', item }),
       )
       if (!changed) return
-      const familyId = state.draft.hierarchy.familyItem?.id
-      if (familyId === undefined || familyId === null) return
-      unitHydrator.setSnapshot(null)
+      if (units.getState().status !== 'idle') return
+      const request = units.start()
       refreshUnitState()
-      void startUnitsForContext({
-        familiaRecursoId: familyId,
-        paraTipoRecursoId: item.id,
-      })
+      void request.finally(refreshUnitState)
     },
-    [
-      refreshUnitState,
-      startUnitsForContext,
-      state.draft.hierarchy.familyItem?.id,
-      state.draft.hierarchy.typeItem?.id,
-      unitHydrator,
-    ],
+    [refreshUnitState, state.draft.hierarchy.typeItem?.id, units],
   )
   const continueUnits = useCallback(async () => {
-    const policyState = unitPolicies.getState()
-    const tipoId = policyState.tipoId
-    if (tipoId === null) return false
-    const request = unitPolicies.continue()
+    const request = units.continue()
     refreshUnitState()
     const loaded = await request
     refreshUnitState()
-    if (!loaded || !sameId(unitPolicies.getState().tipoId, tipoId)) return false
-    return hydrateUnitPolicies(tipoId)
-  }, [hydrateUnitPolicies, refreshUnitState, unitPolicies])
+    return loaded
+  }, [refreshUnitState, units])
   const retryUnits = useCallback(async () => {
-    if (unitHydrator.getState().status === 'partial-error') {
-      const request = unitHydrator.retry()
-      refreshUnitState()
-      const retried = await request
-      refreshUnitState()
-      return retried
-    }
-    const policyState = unitPolicies.getState()
-    const tipoId = policyState.tipoId
-    if (tipoId === null) return false
-    const request = unitPolicies.retry()
+    const request = units.retry()
     refreshUnitState()
     const retried = await request
     refreshUnitState()
-    if (!retried || !sameId(unitPolicies.getState().tipoId, tipoId))
-      return false
-    return hydrateUnitPolicies(tipoId)
-  }, [hydrateUnitPolicies, refreshUnitState, unitHydrator, unitPolicies])
+    return retried
+  }, [refreshUnitState, units])
   const confirmUnit = useCallback(
     (candidate: UnitCandidate) => {
-      const hydrationState = unitHydrator.getState()
       if (
-        hydrationState.status !== 'ready' ||
-        !hydrationState.candidates.some((item) =>
-          sameId(item.unidadId, candidate.unidadId),
-        )
+        !units
+          .getState()
+          .candidates.some((item) => sameId(item.unidadId, candidate.unidadId))
       )
         return
       completedAttributesRef.current = null
@@ -405,7 +295,7 @@ export function useResourceCreationFlow(
         }),
       )
     },
-    [unitHydrator],
+    [units],
   )
   const confirmAllowedValue = useCallback(
     (assignmentId: string, allowedValueId: string) =>
@@ -428,8 +318,7 @@ export function useResourceCreationFlow(
       ),
     [],
   )
-  const unitPolicyState = unitPolicies.getState()
-  const unitHydrationState = unitHydrator.getState()
+  const unitState = units.getState()
 
   return {
     state,
@@ -464,8 +353,8 @@ export function useResourceCreationFlow(
     typeLoadState: selectorLoadState(typeState),
     continueTypes: () => types.continue(),
     retryTypes: () => types.retry(),
-    units: unitHydrationState.candidates,
-    unitLoadState: unitSelectorLoadState(unitPolicyState, unitHydrationState),
+    units: unitState.candidates,
+    unitLoadState: unitSelectorLoadState(unitState),
     continueUnits,
     retryUnits,
     confirmUnit,

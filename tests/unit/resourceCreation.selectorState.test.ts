@@ -3,11 +3,8 @@ import {
   selectorLoadState,
   unitSelectorLoadState,
 } from '../../src/features/resources-master/resourceCreation.selectorState'
+import type { ActiveUnitPageState } from '../../src/features/resources-master/resourceCreation.activeUnits'
 import type { ParentGatedListState } from '../../src/shared/hierarchy/parentGatedListController'
-import type {
-  UnitCandidateHydrationState,
-  UnitPolicyPageState,
-} from '../../src/features/resources-master/resourceCreation.loaders'
 
 const selectorState = (
   status: ParentGatedListState<{ id: string }, 'classes'>['status'],
@@ -20,16 +17,7 @@ const selectorState = (
   isExhausted,
 })
 
-const hydrationState = (
-  status: UnitCandidateHydrationState['status'],
-): UnitCandidateHydrationState => ({
-  status,
-  tipoId: 'type-1',
-  snapshotSignature: 'snapshot',
-  generation: 1,
-  candidates: [],
-  failedUnitIds: [],
-})
+const unitState = (state: ActiveUnitPageState): ActiveUnitPageState => state
 
 describe('resource creation selector state', () => {
   it('maps each parent-gated list loading outcome without changing exhaustion', () => {
@@ -54,31 +42,52 @@ describe('resource creation selector state', () => {
     })
   })
 
-  it('keeps hydration errors dominant and distinguishes a pending page from exhausted empty units', () => {
-    const readyWithMore: UnitPolicyPageState = {
-      status: 'ready',
-      tipoId: 'type-1',
-      references: [],
-      cursor: 'next',
-      exhausted: false,
-    }
-    const readyExhausted: UnitPolicyPageState = {
-      ...readyWithMore,
-      cursor: null,
-      exhausted: true,
-    }
-
+  it('maps one ACTIVE Unit page state through loading, errors, pagination, and empty', () => {
     expect(
-      unitSelectorLoadState(readyWithMore, hydrationState('partial-error')),
+      unitSelectorLoadState(
+        unitState({ status: 'idle', contextKey: null, candidates: [] }),
+      ),
+    ).toEqual({ status: 'loading' })
+    expect(
+      unitSelectorLoadState(
+        unitState({
+          status: 'loading-more',
+          contextKey: 'open',
+          candidates: [],
+        }),
+      ),
+    ).toEqual({ status: 'loading-more' })
+    expect(
+      unitSelectorLoadState(
+        unitState({
+          status: 'partial-error',
+          contextKey: 'open',
+          candidates: [],
+          retry: 'continuation',
+          error: new Error('offline'),
+        }),
+      ),
     ).toEqual({ status: 'partial-error' })
     expect(
-      unitSelectorLoadState(readyWithMore, hydrationState('empty')),
-    ).toEqual({
-      status: 'ready',
-      exhausted: false,
-    })
+      unitSelectorLoadState(
+        unitState({
+          status: 'ready',
+          contextKey: 'open',
+          candidates: [],
+          cursor: null,
+          exhausted: false,
+        }),
+      ),
+    ).toEqual({ status: 'ready', exhausted: false })
     expect(
-      unitSelectorLoadState(readyExhausted, hydrationState('empty')),
+      unitSelectorLoadState(
+        unitState({
+          status: 'empty',
+          contextKey: 'open',
+          candidates: [],
+          exhausted: true,
+        }),
+      ),
     ).toEqual({ status: 'empty' })
   })
 })

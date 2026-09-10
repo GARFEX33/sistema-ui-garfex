@@ -7,7 +7,7 @@
 | Estimated changed lines | 2,180–3,530 A+D total; each proposed work unit is 180–390 A+D |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | B1 → B2 → B3 → B4 → backend deployment gate → F1 → F2 → F3 → F4 → F5 → F6 → frontend deployment gate |
+| Suggested split | B1 → B2 → B3 → B4 → backend deployment gate → F1 → F2 → F3 (`size:exception`, max 720 A+D) → F4 → F5 → F6 → frontend deployment gate |
 | Delivery strategy | ask-on-risk |
 | Chain strategy | feature-branch-chain |
 
@@ -80,14 +80,16 @@ The total change crosses both repositories and materially exceeds one review bud
 - [x] **TRIANGULATE:** Prove close/unmount cancellation, reopen reset, retained pages across upstream selection changes, retry of the failed cursor, and no cross-generation item mixing. <!-- sdd-owner: implementation -->
 - [x] **REFACTOR:** Preserve the dependent-loader stale guards rather than duplicating them; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- tests/unit/resourceCreation.activeUnits.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
-## F3 — Flow and selector integration (270–390 A+D)
+## F3 — Flow and selector integration (`size:exception`, max 720 A+D)
+
+**Exception authority:** The user explicitly approved this F3-only 720 A+D cap after a 361 A+D direct-flow draft showed that seven required legacy policy/hydrator test migrations could not fit the original 390-line bound. F4–F6 retain their original limits.
 
 **Dependencies:** F2 and parent-recorded deployment of compatible B1–B4 backend. **Start → finish:** direct controller is unused → Resource Creator visibly uses its active catalog while legacy modules remain temporarily present. **Allowed paths:** `/home/garfex/PROGRAMACION/sistema-ui-garfex/src/features/resources-master/{useResourceCreationFlow.ts,resourceCreation.selectorState.ts,ResourceCreationContextStage.tsx}`, their RTL/unit tests, and existing selector tests. Reuse `StagedSearchSelector`, shared Button, React Aria controls, and existing focus handlers; do not edit `src/shared/ui/`, tokens, CSS, or `KeyboardController.tsx`. **Rollback:** restore flow/selector-state wiring and label only; leave F1/F2 compatibility code harmlessly unused.
 
-- [ ] **RED:** Add failing flow/surface tests that show Metro Lineal without policy, retain candidate-versus-confirmed separation, require Enter/click to dispatch `CONFIRM_UNIT`, preserve focus/recovery, send only `draft.unitId`, and make zero calls to `listUnitPolicies` or `getUnit`. <!-- sdd-owner: implementation -->
-- [ ] **GREEN:** Replace policy/hydrator orchestration with the active-page controller, map one paginated load state, lazy-load at the Unit stage, invalidate on close/reopen, and change only this label from “Unidad natural” to “Unidad”. <!-- sdd-owner: implementation -->
-- [ ] **TRIANGULATE:** Cover keyboard arrows/type search without implicit confirmation, valid retained selection during loading-more/partial-error, empty/loading/error confirmation guards, Type changes retaining pages but clearing selection/evaluation, and Escape focus restoration. <!-- sdd-owner: implementation -->
-- [ ] **REFACTOR:** Remove this instance’s preferred-policy prop/key while retaining generic selector capability and existing accessibility states; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/useResourceCreationFlow.test.tsx src/features/resources-master/ResourceCreationContextStage.test.tsx src/features/resources-master/resourceCreation.selectorState.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
+- [x] **RED:** Add failing flow/surface tests that show Metro Lineal without policy, retain candidate-versus-confirmed separation, require Enter/click to dispatch `CONFIRM_UNIT`, preserve focus/recovery, send only `draft.unitId`, and make zero calls to `listUnitPolicies` or `getUnit`. <!-- sdd-owner: implementation -->
+- [x] **GREEN:** Replace policy/hydrator orchestration with the active-page controller, map one paginated load state, lazy-load at the Unit stage, invalidate on close/reopen, and change only this label from “Unidad natural” to “Unidad”. <!-- sdd-owner: implementation -->
+- [x] **TRIANGULATE:** Cover keyboard arrows/type search without implicit confirmation, valid retained selection during loading-more/partial-error, empty/loading/error confirmation guards, Type changes retaining pages but clearing selection/evaluation, and Escape focus restoration. <!-- sdd-owner: implementation -->
+- [x] **REFACTOR:** Remove this instance’s preferred-policy prop/key while retaining generic selector capability and existing accessibility states; run `cd /home/garfex/PROGRAMACION/sistema-ui-garfex && pnpm test -- src/features/resources-master/useResourceCreationFlow.test.tsx src/features/resources-master/ResourceCreationContextStage.test.tsx src/features/resources-master/resourceCreation.selectorState.test.ts && pnpm typecheck && pnpm lint && pnpm format:check`. <!-- sdd-owner: implementation -->
 
 ## F4 — Remove the policy page controller (250–390 A+D)
 

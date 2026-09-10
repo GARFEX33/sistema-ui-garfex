@@ -138,7 +138,7 @@ export function CrearRecursoSurface({
       class: 'Clase',
       family: 'Familia',
       type: 'Tipo',
-      unit: 'Unidad natural',
+      unit: 'Unidad',
     }
     dialogRef.current
       ?.querySelector<HTMLInputElement>(
@@ -280,7 +280,7 @@ export function CrearRecursoSurface({
             stageHeading={
               isContextStage
                 ? stageKind === 'unit'
-                  ? 'Elegí una Unidad natural'
+                  ? 'Elegí una Unidad'
                   : stageKind === 'class'
                     ? 'Elegí una Clase'
                     : 'Completá el contexto'
