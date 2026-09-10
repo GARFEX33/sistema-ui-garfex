@@ -201,6 +201,12 @@ export interface ResourceUnitDetailInput {
   readonly unidadId: ResourceId
 }
 
+export interface ResourceUnitListInput {
+  readonly modo: 'ACTIVE'
+  readonly cursor?: string | null
+  readonly pageSize?: number
+}
+
 // Attribute assignment reads (Paso 2 — Atributos dinámicos) for the "Nuevo
 // recurso" wizard. Mirrors catalog-hierarchy's own atributos.ts shapes but is
 // read independently — resources-master never imports that feature.

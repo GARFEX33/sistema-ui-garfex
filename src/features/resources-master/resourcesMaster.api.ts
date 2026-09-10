@@ -38,6 +38,7 @@ import type {
   ResourceSummary,
   ResourceUnitDetail,
   ResourceUnitDetailInput,
+  ResourceUnitListInput,
   ResourceUnitPolicy,
   ResourceUnitPolicyListInput,
   ResourceUnitRef,
@@ -72,6 +73,8 @@ export type ResourceUnitPolicyListOperation =
 
 export type ResourceUnitDetailOperation = 'catalogoAdmin/unidades:obtenerUnidad'
 
+export type ResourceUnitListOperation = 'catalogoAdmin/unidades:listarUnidades'
+
 export type ResourceAttributeAssignmentListOperation =
   'catalogoAdmin/atributos:listarAsignacionesAtributo'
 
@@ -97,6 +100,7 @@ export type ResourceOperation =
   | ResourceContextListOperation
   | ResourceUnitPolicyListOperation
   | ResourceUnitDetailOperation
+  | ResourceUnitListOperation
   | ResourceAttributeAssignmentListOperation
   | ResourceAttributeDefinitionOperation
   | ResourceAllowedAttributeValueListOperation
@@ -150,6 +154,9 @@ export interface ResourcesMasterApi {
   getUnit: (
     input: ResourceUnitDetailInput,
   ) => Promise<ResourceUnitDetail | null>
+  listUnits: (
+    input: ResourceUnitListInput,
+  ) => Promise<ResourceContextListPage<ResourceUnitDetail>>
   listAttributeAssignments: (
     input: ResourceAttributeAssignmentListInput,
   ) => Promise<ResourceContextListPage<ResourceAttributeAssignment>>
@@ -464,6 +471,13 @@ const unitDetail = (value: unknown): ResourceUnitDetail => {
 export function parseUnitDetail(value: unknown): ResourceUnitDetail | null {
   if (value === null) return null
   return unitDetail(value)
+}
+
+export function parseUnitsPage(
+  value: unknown,
+): ResourceContextListPage<ResourceUnitDetail> {
+  const result = contextPage(value)
+  return { ...result, items: result.items.map(unitDetail) }
 }
 
 const attributeApplicabilities = [
@@ -953,6 +967,13 @@ const unitPolicyArgs = (input: ResourceUnitPolicyListInput) =>
     ...contextListArgs(input),
   })
 
+const unitListArgs = (input: ResourceUnitListInput) => {
+  const result: Record<string, unknown> = { modo: 'ACTIVE' }
+  if (input.cursor !== undefined) result.cursor = input.cursor
+  if (input.pageSize !== undefined) result.pageSize = input.pageSize
+  return Object.freeze(result)
+}
+
 const attributeAssignmentArgs = (input: ResourceAttributeAssignmentListInput) =>
   Object.freeze({
     tipoRecursoId: input.tipoRecursoId,
@@ -997,6 +1018,7 @@ const queryReference = (
     | ResourceContextListOperation
     | ResourceUnitPolicyListOperation
     | ResourceUnitDetailOperation
+    | ResourceUnitListOperation
     | ResourceAttributeAssignmentListOperation
     | ResourceAttributeDefinitionOperation
     | ResourceAllowedAttributeValueListOperation
@@ -1048,6 +1070,9 @@ const listUnitPoliciesReference: ResourceQueryReference = queryReference(
 )
 const getUnitReference: ResourceQueryReference = queryReference(
   'catalogoAdmin/unidades:obtenerUnidad',
+)
+const listUnitsReference: ResourceQueryReference = queryReference(
+  'catalogoAdmin/unidades:listarUnidades',
 )
 const listAttributeAssignmentsReference: ResourceQueryReference =
   queryReference('catalogoAdmin/atributos:listarAsignacionesAtributo')
@@ -1119,6 +1144,8 @@ export function createResourcesMasterConvexApi(
           return client.query(listUnitPoliciesReference, { ...requestArgs })
         case 'catalogoAdmin/unidades:obtenerUnidad':
           return client.query(getUnitReference, { ...requestArgs })
+        case 'catalogoAdmin/unidades:listarUnidades':
+          return client.query(listUnitsReference, { ...requestArgs })
         case 'catalogoAdmin/atributos:listarAsignacionesAtributo':
           return client.query(listAttributeAssignmentsReference, {
             ...requestArgs,
@@ -1280,6 +1307,14 @@ export function createResourcesMasterApi(
         await transport.invoke('catalogoAdmin/unidades:obtenerUnidad', {
           unidadId: input.unidadId,
         }),
+      )
+    },
+    async listUnits(input) {
+      return parseUnitsPage(
+        await transport.invoke(
+          'catalogoAdmin/unidades:listarUnidades',
+          unitListArgs(input),
+        ),
       )
     },
     async listAttributeAssignments(input) {

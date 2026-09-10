@@ -15,6 +15,7 @@ import {
   parseResourceDetail,
   parseResourceListPage,
   parseUnitPoliciesPage,
+  parseUnitsPage,
 } from '../../src/features/resources-master/resourcesMaster.api'
 
 const summary = (extra: Record<string, unknown> = {}) => ({
@@ -612,6 +613,81 @@ describe('resources master API boundary', () => {
     revision: 1,
     effective: true,
     ...extra,
+  })
+
+  const unitsPage = (
+    items: unknown[] = [unitDetail()],
+    overrides: Record<string, unknown> = {},
+  ) => ({
+    items,
+    continuationCursor: null,
+    isExhausted: true,
+    ...overrides,
+  })
+
+  it('lists active Units through the exact paginated query', async () => {
+    const invoke = vi.fn().mockResolvedValue(unitsPage())
+    const api = createResourcesMasterApi({ invoke })
+
+    await expect(
+      api.listUnits({ modo: 'ACTIVE', cursor: null, pageSize: 20 }),
+    ).resolves.toEqual(unitsPage())
+
+    expect(invoke).toHaveBeenCalledWith(
+      'catalogoAdmin/unidades:listarUnidades',
+      { modo: 'ACTIVE', cursor: null, pageSize: 20 },
+    )
+    expect(parseUnitsPage(unitsPage()).items[0]).toMatchObject({
+      id: 'unit-1',
+      nombre: 'Metro cúbico',
+    })
+  })
+
+  it('forwards opaque cursors and omits undefined fields without context or pagination leaks', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce(
+        unitsPage([unitDetail()], {
+          continuationCursor: 'opaque-next',
+          isExhausted: false,
+        }),
+      )
+      .mockResolvedValueOnce(unitsPage([unitDetail({ id: 'unit-2' })]))
+    const api = createResourcesMasterApi({ invoke })
+
+    await api.listUnits({ modo: 'ACTIVE' })
+    await api.listUnits({
+      modo: 'ACTIVE',
+      cursor: 'opaque-next',
+      pageSize: 10,
+      familiaRecursoId: 'family-1',
+      tipoRecursoId: 'type-1',
+      paginationOpts: { cursor: 'wrong', numItems: 1 },
+    } as never)
+
+    expect(invoke.mock.calls).toEqual([
+      ['catalogoAdmin/unidades:listarUnidades', { modo: 'ACTIVE' }],
+      [
+        'catalogoAdmin/unidades:listarUnidades',
+        { modo: 'ACTIVE', cursor: 'opaque-next', pageSize: 10 },
+      ],
+    ])
+  })
+
+  it('rejects malformed Unit pages atomically for loader retry', async () => {
+    const malformed = unitsPage([unitDetail(), null])
+    const invoke = vi.fn().mockResolvedValue(malformed)
+    const api = createResourcesMasterApi({ invoke })
+
+    expect(() => parseUnitsPage(malformed)).toThrow(
+      'Invalid resources master response',
+    )
+    expect(() =>
+      parseUnitsPage(unitsPage([], { continuationCursor: undefined })),
+    ).toThrow('Invalid resources master response')
+    await expect(api.listUnits({ modo: 'ACTIVE' })).rejects.toThrow(
+      'Invalid resources master response',
+    )
   })
 
   it('resolves a unit by id for display, rejecting malformed responses', async () => {
