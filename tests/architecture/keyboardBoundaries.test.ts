@@ -86,9 +86,22 @@ describe('Keyboard First architecture boundaries', () => {
       .filter((file) => !approvedConvexTransportAdapters.has(file))
       .map((file) => readFileSync(join(root, 'src', file), 'utf8'))
       .join('\n')
-    expect(runtime).not.toMatch(
-      /(?:localStorage|sessionStorage|\bfetch\s*\(|storybook|runtimeFixture|fixture)/i,
-    )
+        const approvedRestTransportAdapters = new Set([
+          'features/catalog-hierarchy/catalogHierarchy.api.ts',
+          'features/catalog-hierarchy/catalogTypeAttributesRead.api.ts',
+              'features/catalog-hierarchy/catalogTypeEffectiveAttributes.api.ts',
+          'features/resources-master/resourcesMaster.api.ts',
+        ])
+        const runtimeWithoutApprovedRestTransportAdapters = runtimeFiles
+          .filter((file) => !approvedRestTransportAdapters.has(file))
+          .map((file) => readFileSync(join(root, 'src', file), 'utf8'))
+          .join('\n')
+        expect(runtimeWithoutApprovedRestTransportAdapters).not.toMatch(
+          /\bfetch\s*\(/,
+        )
+        expect(runtime).not.toMatch(
+          /(?:localStorage|sessionStorage|storybook|runtimeFixture|fixture)/i,
+        )
     expect(runtimeWithoutApprovedConvexTransportAdapters).not.toMatch(
       /\bconvex\b/i,
     )
@@ -98,6 +111,11 @@ describe('Keyboard First architecture boundaries', () => {
           /ContextualActionId\s*=\s*[\s\S]*'catalog\.new-class'[\s\S]*'catalog\.new-family'[\s\S]*'catalog\.new-type'[\s\S]*'catalog\.edit-attribute'[\s\S]*'catalog\.manage-options'/,
         )
         expect(keyboardContext).not.toMatch(/ContextualActionId\s*=\s*string/)
+        expect(
+          read('src/features/catalog-hierarchy/CatalogHierarchyScreen.tsx'),
+        ).not.toMatch(
+          /registerAction|catalog\.(?:edit-attribute|manage-options)/,
+        )
         expect(runtime).not.toMatch(/(?:createStore|configureStore|zustand|redux)/i)
   })
 })

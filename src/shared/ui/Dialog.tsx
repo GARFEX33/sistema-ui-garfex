@@ -35,18 +35,18 @@ export function Dialog({
 }: DialogProps) {
   return (
     <ModalOverlay
-      className="fixed inset-0 z-20 grid items-start justify-items-center bg-[rgb(31_31_29_/_42%)] pt-[140px]"
+      className="fixed inset-0 z-20 grid items-center justify-items-center bg-[rgb(31_31_29_/_42%)] px-4 py-4 sm:items-start sm:px-0 sm:py-0 sm:pt-[140px]"
       isOpen={isOpen}
       isDismissable={isDismissable}
       onOpenChange={onOpenChange}
     >
-      <Modal style={{ width, marginLeft: 30 }} className="box-border">
+      <Modal style={{ width }} className="box-border w-full max-w-full">
         <AriaDialog
           ref={ref}
           {...dialogProps}
           style={height === undefined ? undefined : { height }}
           className={[
-            'box-border flex max-h-[calc(100vh-32px)] flex-col overflow-y-auto rounded-xl border border-primary bg-surface pt-[26px] pr-[27px] pb-[18px] pl-[27px] text-text-primary shadow-[0_18px_50px_rgb(31_31_29_/_25%)]',
+            'box-border flex max-h-[calc(100vh-32px)] flex-col overflow-y-auto rounded-xl border border-primary bg-surface pt-[26px] pr-[27px] pb-[18px] pl-[27px] text-text-primary shadow-[0_18px_50px_rgb(31_31_29_/_25%)] sm:max-h-[calc(100vh-156px)]',
             className,
           ]
             .filter(Boolean)

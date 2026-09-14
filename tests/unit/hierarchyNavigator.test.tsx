@@ -87,6 +87,96 @@ describe('HierarchyNavigator', () => {
     expect(retry).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps offset-window controls absent when their contract is not supplied', () => {
+    render(<HierarchyNavigator columns={columns()} />)
+
+    expect(
+      screen.queryByRole('button', { name: 'Anterior' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Siguiente' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders supplied offset-window controls accessibly and disables non-actionable navigation', () => {
+    const previous = vi.fn()
+    const next = vi.fn()
+    const windowColumns = (window: {
+      hasPrevious: boolean
+      hasNext: boolean
+      onPrevious: () => void
+      onNext: () => void
+      isNavigationPending: boolean
+    }) => [
+      {
+        id: 'first',
+        label: 'First',
+        items: [{ id: 'one', label: 'One' }],
+        ...window,
+      },
+      { id: 'second', label: 'Second', items: [] },
+      { id: 'third', label: 'Third', items: [] },
+    ]
+    const view = render(
+      <HierarchyNavigator
+        columns={windowColumns({
+          hasPrevious: true,
+          hasNext: true,
+          onPrevious: previous,
+          onNext: next,
+          isNavigationPending: false,
+        })}
+      />,
+    )
+
+    const anterior = screen.getByRole('button', { name: 'Anterior' })
+    const siguiente = screen.getByRole('button', { name: 'Siguiente' })
+    expect(anterior).toBeEnabled()
+    expect(siguiente).toBeEnabled()
+    fireEvent.click(anterior)
+    fireEvent.click(siguiente)
+    expect(previous).toHaveBeenCalledTimes(1)
+    expect(next).toHaveBeenCalledTimes(1)
+
+    view.rerender(
+      <HierarchyNavigator
+        columns={windowColumns({
+          hasPrevious: false,
+          hasNext: true,
+          onPrevious: previous,
+          onNext: next,
+          isNavigationPending: false,
+        })}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(previous).toHaveBeenCalledTimes(1)
+    expect(next).toHaveBeenCalledTimes(2)
+
+    view.rerender(
+      <HierarchyNavigator
+        columns={windowColumns({
+          hasPrevious: true,
+          hasNext: true,
+          onPrevious: previous,
+          onNext: next,
+          isNavigationPending: true,
+        })}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(previous).toHaveBeenCalledTimes(1)
+    expect(next).toHaveBeenCalledTimes(2)
+  })
+
   it('keeps a ready, nonexhausted empty page operable instead of rendering it as loading', () => {
     const continueList = vi.fn()
     render(

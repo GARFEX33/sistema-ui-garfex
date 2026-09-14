@@ -1,105 +1,91 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ResourcesMasterScreen } from '../../src/features/resources-master/ResourcesMasterScreen'
-import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
 
 const factory = vi.hoisted(() => vi.fn())
+const hierarchyHook = vi.hoisted(() => vi.fn())
+const restWindowHook = vi.hoisted(() => vi.fn())
 
 vi.mock('../../src/features/resources-master/resourcesMaster.api', () => ({
-  createResourcesMasterConvexApi: factory,
+  createResourcesMasterRestApi: factory,
 }))
-
+vi.mock('../../src/features/resources-master/useResourcesHierarchy', () => ({
+  useResourcesHierarchy: hierarchyHook,
+}))
+vi.mock(
+  '../../src/features/resources-master/useResourcesMasterRestWindow',
+  () => ({
+    useResourcesMasterRestWindow: restWindowHook,
+  }),
+)
 vi.mock('../../src/features/resources-master/CrearRecursoSurface', () => ({
-  CrearRecursoSurface: ({ onCreated }: { onCreated?: () => void }) => (
-    <button type="button" onClick={onCreated}>
-      Confirmar creación
-    </button>
-  ),
+  CrearRecursoSurface: () => <button type="button">Nuevo recurso</button>,
 }))
 
-const page = (nombre: string) => ({
-  page: [
-    {
-      id: nombre,
-      identificadorTecnico: `REC-${nombre}`,
-      nombre,
-      tipoRecursoId: 'type-1',
-      unidadId: 'unit-1',
-      activo: true,
-      revision: 1,
-      classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
-    },
-  ],
-  isDone: true,
-  continueCursor: '',
-})
-
-const api = (): ResourcesMasterApi =>
-  ({
-    listResources: vi.fn(async () => page('Recurso activo')),
-    searchResources: vi.fn(async () => page('Búsqueda activa')),
-    listContextClasses: vi.fn(async () => ({
-      items: [],
-      continuationCursor: null,
-      isExhausted: true,
-    })),
-    listContextFamilies: vi.fn(),
-    listContextTypes: vi.fn(),
-  }) as ResourcesMasterApi
-
-const clients: QueryClient[] = []
-const renderScreen = (ui: ReactElement) => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { gcTime: Infinity } },
-  })
-  clients.push(client)
-  return {
-    client,
-    ...render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>),
-  }
+const api = { rest: true }
+const hierarchy = {
+  selection: {},
+  classes: { status: 'empty', items: [], hasPrevious: false, hasNext: false },
+  families: {
+    status: 'waiting-for-parent',
+    items: [],
+    hasPrevious: false,
+    hasNext: false,
+  },
+  types: {
+    status: 'waiting-for-parent',
+    items: [],
+    hasPrevious: false,
+    hasNext: false,
+  },
+  selectClass: vi.fn(),
+  selectFamily: vi.fn(),
+  selectType: vi.fn(),
+  retryClasses: vi.fn(),
+  retryFamilies: vi.fn(),
+  retryTypes: vi.fn(),
+  previousClasses: vi.fn(),
+  previousFamilies: vi.fn(),
+  previousTypes: vi.fn(),
+  continueClasses: vi.fn(),
+  continueFamilies: vi.fn(),
+  continueTypes: vi.fn(),
 }
 
 afterEach(() => {
-  clients.splice(0).forEach((client) => client.clear())
   factory.mockReset()
+  hierarchyHook.mockReset()
+  restWindowHook.mockReset()
 })
 
-describe('ResourcesMasterScreen post-create refresh', () => {
-  it('refetches only the active observed query after confirmed creation', async () => {
-    const resourceApi = api()
-    factory.mockReturnValue(resourceApi)
-    const { client } = renderScreen(
-      <ResourcesMasterScreen creationOwnership={null} />,
-    )
-    const differentKey = [
-      'resources-master',
-      'list',
-      'other',
-      'all',
-      null,
-    ] as const
-    const differentData = {
-      pages: [page('Otro recurso')],
-      pageParams: [undefined],
-    }
-    client.setQueryData(differentKey, differentData)
+describe('ResourcesMasterScreen REST refresh boundary', () => {
+  it('retries only the current REST identity and does not refetch for the blocked Creator', async () => {
+    const retry = vi.fn()
+    const refetchActive = vi.fn()
+    factory.mockReturnValue(api)
+    hierarchyHook.mockReturnValue(hierarchy)
+    restWindowHook.mockReturnValue({
+      resources: [],
+      status: 'initial-error',
+      hasPrevious: false,
+      hasNext: false,
+      previous: vi.fn(),
+      next: vi.fn(),
+      retry,
+      refetchActive,
+    })
 
-    expect(await screen.findByText('Recurso activo')).toBeVisible()
+    render(<ResourcesMasterScreen creationOwnership={null} />)
+
     await userEvent
       .setup()
-      .click(screen.getByRole('button', { name: 'Confirmar creación' }))
+      .click(screen.getByRole('button', { name: 'Reintentar' }))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Nuevo recurso' }))
 
-    await waitFor(() =>
-      expect(resourceApi.listResources).toHaveBeenCalledTimes(2),
-    )
-    const differentQuery = client.getQueryCache().find({
-      queryKey: differentKey,
-      exact: true,
-    })
-    expect(differentQuery?.state.data).toBe(differentData)
-    expect(differentQuery?.state.fetchStatus).toBe('idle')
+    expect(retry).toHaveBeenCalledOnce()
+    expect(refetchActive).not.toHaveBeenCalled()
   })
 })

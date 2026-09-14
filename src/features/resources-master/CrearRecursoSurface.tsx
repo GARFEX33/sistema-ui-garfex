@@ -6,55 +6,13 @@ import {
 } from '../../shared/keyboard/focusRestoration'
 import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
-import { CreationStageRail, type CreationRailStage } from './CreationStageRail'
+import { CreationStageRail } from './CreationStageRail'
 import { CreationCommandBar } from './CreationCommandBar'
-import { ResourceCreationAttributesStage } from './ResourceCreationAttributesStage'
-import { ResourceCreationContextStage } from './ResourceCreationContextStage'
 import { ResourceCreationContractPending } from './ResourceCreationContractPending'
-import { ResourceCreationReview } from './ResourceCreationReview'
 import { ResourceCreationShell } from './ResourceCreationShell'
-import {
-  projectResourceCreationAttributeSelectionView,
-  projectResourceCreationAttributeView,
-  type ResourceCreationAttributeSelectionViewInput,
-} from './resourceCreation.attributeView'
-import type { ResourcesMasterApi } from './resourcesMaster.api'
-import {
-  createInitialHierarchySnapshotCapture,
-  type InitialResourceHierarchySnapshot,
-} from './resourceCreation.model'
-import { useResourceCreationFlow } from './useResourceCreationFlow'
-import type {
-  ResourceCreationEvaluationOwnership,
-  ResourceCreationResult,
-} from './resourcesMaster.types'
 
-export interface CrearRecursoSurfaceProps {
-  api: ResourcesMasterApi
-  ownership: ResourceCreationEvaluationOwnership | null
-  initialHierarchySnapshot?: InitialResourceHierarchySnapshot
-  onCreated?: () => void
-}
-
-const isEditableTarget = (target: EventTarget | null) =>
-  target instanceof HTMLElement &&
-  Boolean(
-    target.closest(
-      'input, textarea, select, [contenteditable], [role="textbox"]',
-    ),
-  )
-
-export function CrearRecursoSurface({
-  api,
-  ownership,
-  initialHierarchySnapshot,
-  onCreated,
-}: CrearRecursoSurfaceProps) {
+export function CrearRecursoSurface() {
   const [isOpen, setIsOpen] = useState(false)
-  const initialHierarchySnapshotCaptureRef = useRef(
-    createInitialHierarchySnapshotCapture(initialHierarchySnapshot),
-  )
-  initialHierarchySnapshotCaptureRef.current.receive(initialHierarchySnapshot)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
@@ -63,43 +21,6 @@ export function CrearRecursoSurface({
   isOpenRef.current = isOpen
   const { registerAction, registerOverlay } = useKeyboardController()
 
-  const flow = useResourceCreationFlow(api, ownership)
-  const creationResult =
-    flow.creation.status === 'result' ? flow.creation.result : null
-  const reportedCreatedResult = useRef<ResourceCreationResult | null>(null)
-  const stageKind = flow.state.stage.kind
-  const isContextStage =
-    stageKind === 'class' ||
-    stageKind === 'family' ||
-    stageKind === 'type' ||
-    stageKind === 'unit'
-  const isContractPending =
-    ownership === null &&
-    (stageKind === 'attributes' || stageKind === 'review-pending')
-  const attributeStageView = useMemo(() => {
-    if (stageKind !== 'attributes') return null
-    const projected = projectResourceCreationAttributeView({
-      evaluation: flow.evaluation,
-      step: flow.attributes.step,
-      definition: flow.attributes.definition,
-      onOmit: () => {
-        if (flow.attributes.step.kind === 'current')
-          flow.omitAllowedValue(
-            flow.attributes.step.assignment.asignacionAtributoId,
-          )
-      },
-    })
-    if (projected.kind === 'complete') return null
-    if (projected.kind === 'presenter') return projected.view
-    return projectResourceCreationAttributeSelectionView({
-      selectionContext: projected,
-      allowed: flow.attributes
-        .allowedValues as ResourceCreationAttributeSelectionViewInput['allowed'],
-      selectionBuckets: flow.state.draft.selectionBuckets,
-      onConfirmAllowedValue: flow.confirmAllowedValue,
-      onOmit: flow.omitAllowedValue,
-    })
-  }, [flow, stageKind])
   const close = useCallback(() => setIsOpen(false), [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
@@ -109,10 +30,9 @@ export function CrearRecursoSurface({
         opener !== document.documentElement
           ? opener
           : null
-      flow.begin(initialHierarchySnapshotCaptureRef.current.captureOnOpen())
       setIsOpen(true)
     },
-    [flow],
+    [],
   )
 
   const action = useMemo(
@@ -131,31 +51,6 @@ export function CrearRecursoSurface({
 
   useEffect(() => registerAction(action), [action, registerAction])
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
-
-  useEffect(() => {
-    if (!isOpen || !isContextStage) return
-    const labelByStage = {
-      class: 'Clase',
-      family: 'Familia',
-      type: 'Tipo',
-      unit: 'Unidad',
-    }
-    dialogRef.current
-      ?.querySelector<HTMLInputElement>(
-        `input[aria-label="${labelByStage[stageKind]}"]`,
-      )
-      ?.focus()
-  }, [isContextStage, isOpen, stageKind])
-
-  useEffect(() => {
-    if (
-      creationResult?.disposition !== 'CREATED' ||
-      reportedCreatedResult.current === creationResult
-    )
-      return
-    reportedCreatedResult.current = creationResult
-    onCreated?.()
-  }, [creationResult, onCreated])
 
   useEffect(() => {
     let delayedRestore: number | null = null
@@ -183,43 +78,6 @@ export function CrearRecursoSurface({
     }
   }, [isOpen])
 
-  const returnToUnit = () => {
-    const typeItem = flow.state.draft.hierarchy.typeItem
-    if (typeItem) flow.confirmType(typeItem)
-  }
-
-  const navigateRailStage = (stage: 'class' | 'family' | 'type' | 'unit') => {
-    if (stage === 'class') return flow.enterClass()
-    if (stage === 'family') return flow.enterFamily()
-    if (stage === 'type') return flow.enterType()
-    return returnToUnit()
-  }
-  const moveBack = () => {
-    if (stageKind === 'class') return false
-    flow.back()
-    return true
-  }
-  const selectedUnit = flow.units.find(
-    (unit) =>
-      flow.state.draft.unitId !== null &&
-      String(unit.unidadId) === String(flow.state.draft.unitId),
-  )
-  const attributeProgress =
-    stageKind === 'attributes' && flow.attributes.step.kind === 'current'
-      ? {
-          current: flow.attributes.step.position,
-          total: flow.attributes.step.total,
-        }
-      : undefined
-  const currentRailStage: CreationRailStage = isContractPending
-    ? 'contract-pending'
-    : stageKind
-  const commandStage = isContractPending
-    ? 'contract-pending'
-    : isContextStage
-      ? 'context'
-      : stageKind
-
   return (
     <div className="resources-create-surface">
       <Button
@@ -239,98 +97,48 @@ export function CrearRecursoSurface({
       >
         <div
           className="flex min-h-0 flex-1 flex-col"
-          onKeyDown={(event: React.KeyboardEvent) => {
+          onKeyDown={(event) => {
             if (event.defaultPrevented || event.nativeEvent.isComposing) return
             if (event.key === 'Escape') {
               event.preventDefault()
               event.stopPropagation()
-              if (!moveBack()) close()
+              close()
               return
             }
             if (
-              event.key !== 'ArrowLeft' ||
-              event.ctrlKey ||
-              event.altKey ||
-              event.metaKey ||
-              event.shiftKey ||
-              isEditableTarget(event.target)
-            )
-              return
-            if (moveBack()) {
+              event.key === 'ArrowLeft' &&
+              !event.ctrlKey &&
+              !event.altKey &&
+              !event.metaKey &&
+              !event.shiftKey
+            ) {
               event.preventDefault()
               event.stopPropagation()
+              close()
             }
           }}
         >
           <ResourceCreationShell
             rail={
               <CreationStageRail
-                currentStage={currentRailStage}
-                attributeProgress={attributeProgress}
-                onNavigate={navigateRailStage}
+                currentStage="contract-pending"
+                onNavigate={() => undefined}
                 selections={{
-                  className: flow.state.draft.hierarchy.classItem?.nombre ?? '',
-                  familyName:
-                    flow.state.draft.hierarchy.familyItem?.nombre ?? '',
-                  typeName: flow.state.draft.hierarchy.typeItem?.nombre ?? '',
-                  unitName: selectedUnit?.nombre ?? '',
+                  className: '',
+                  familyName: '',
+                  typeName: '',
+                  unitName: '',
                 }}
               />
             }
-            stageHeading={
-              isContextStage
-                ? stageKind === 'unit'
-                  ? 'Elegí una Unidad'
-                  : stageKind === 'class'
-                    ? 'Elegí una Clase'
-                    : 'Completá el contexto'
-                : undefined
-            }
           />
           <div className="resources-dialog-content">
-            {isContextStage && (
-              <ResourceCreationContextStage
-                flow={flow}
-                onConfirmClass={flow.confirmClass}
-                onConfirmFamily={flow.confirmFamily}
-                onConfirmType={flow.confirmType}
-                onConfirmUnit={flow.confirmUnit}
-              />
-            )}
-            {isContractPending && (
-              <ResourceCreationContractPending ownership={null} />
-            )}
-            {stageKind === 'attributes' &&
-              !isContractPending &&
-              attributeStageView && (
-                <ResourceCreationAttributesStage view={attributeStageView} />
-              )}
-            {stageKind === 'review-pending' && !isContractPending && (
-              <ResourceCreationReview
-                evaluation={flow.state.draft.authoritativeEvaluation}
-                isCreating={flow.creation.status === 'loading'}
-                onCreate={flow.creation.create}
-                result={creationResult ?? undefined}
-              />
-            )}
+            <ResourceCreationContractPending />
           </div>
-          <CreationCommandBar stage={commandStage}>
-            {isContextStage ? (
-              <>
-                <Button variant="outline" onPress={close} type="button">
-                  Cancelar
-                </Button>
-                {stageKind !== 'unit' && (
-                  <Button type="button" isDisabled>
-                    Siguiente
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Button variant="outline" onPress={moveBack} type="button">
-                Volver
-              </Button>
-            )}
+          <CreationCommandBar stage="contract-pending">
+            <Button variant="outline" onPress={close} type="button">
+              Volver
+            </Button>
           </CreationCommandBar>
         </div>
       </Dialog>

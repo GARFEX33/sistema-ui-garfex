@@ -190,4 +190,37 @@ describe('useResourceCreationFlow attribute authority', () => {
       expect(result.current.state.stage).toEqual({ kind: 'review-pending' }),
     )
   })
+
+  it('does not request a natural unit, evaluation, allowed values, or creation after Tipo confirmation', () => {
+    const api = {
+      listUnits: vi.fn(),
+      evaluateResourceCreation: vi.fn(),
+      listAllowedAttributeValues: vi.fn(),
+      createResourceFromSelections: vi.fn(),
+    } as ResourcesMasterApi
+    const { result } = renderHook(() =>
+      useResourceCreationFlow(api, { kind: 'GLOBAL' }),
+    )
+
+    act(() =>
+      result.current.confirmType({
+        id: 'type',
+        clave: 'TIPO',
+        nombre: 'Tipo',
+        activo: true,
+        revision: 1,
+        effective: true,
+        effectiveReasons: [],
+        familiaRecursoId: 'family',
+        aggregateStatus: 'CLEAN',
+        violations: [],
+      }),
+    )
+
+    expect(result.current.state.stage).toEqual({ kind: 'unit' })
+    expect(api.listUnits).not.toHaveBeenCalled()
+    expect(api.evaluateResourceCreation).not.toHaveBeenCalled()
+    expect(api.listAllowedAttributeValues).not.toHaveBeenCalled()
+    expect(api.createResourceFromSelections).not.toHaveBeenCalled()
+  })
 })

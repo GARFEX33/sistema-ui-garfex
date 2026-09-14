@@ -190,15 +190,8 @@ export function useResourceCreationFlow(
         types.setContext({ operation: 'types', parentId: prefix.familyItem.id })
         void types.start()
       }
-      units.open(`opening-${++openingRef.current}`)
-      refreshUnitState()
-      if (prefix.familyItem && prefix.typeItem) {
-        const request = units.start()
-        refreshUnitState()
-        void request.finally(refreshUnitState)
-      }
     },
-    [classes, families, refreshUnitState, types, units],
+    [classes, families, types],
   )
   const enterClass = useCallback(() => {
     dispatch((current) =>
@@ -251,20 +244,11 @@ export function useResourceCreationFlow(
     },
     [state.draft.hierarchy.familyItem?.id, types],
   )
-  const confirmType = useCallback(
-    (item: ResourceContextTypeItem) => {
-      const changed = !sameId(state.draft.hierarchy.typeItem?.id, item.id)
-      dispatch((current) =>
-        resourceCreationReducer(current, { type: 'CONFIRM_TYPE', item }),
-      )
-      if (!changed) return
-      if (units.getState().status !== 'idle') return
-      const request = units.start()
-      refreshUnitState()
-      void request.finally(refreshUnitState)
-    },
-    [refreshUnitState, state.draft.hierarchy.typeItem?.id, units],
-  )
+  const confirmType = useCallback((item: ResourceContextTypeItem) => {
+    dispatch((current) =>
+      resourceCreationReducer(current, { type: 'CONFIRM_TYPE', item }),
+    )
+  }, [])
   const continueUnits = useCallback(async () => {
     const request = units.continue()
     refreshUnitState()

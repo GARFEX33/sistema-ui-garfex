@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ParentGatedListStatus } from '../hierarchy/parentGatedListController'
+import { Button } from './Button'
 
 export interface HierarchyNavigatorItem {
   id: string
@@ -48,6 +49,11 @@ export interface HierarchyNavigatorColumn {
   onSelect?: (id: string) => void
   onContinue?: () => void
   onRetry?: () => void
+  hasPrevious?: boolean
+  hasNext?: boolean
+  onPrevious?: () => void
+  onNext?: () => void
+  isNavigationPending?: boolean
   hasChildren?: boolean
   spatial?: HierarchyNavigatorSpatialMetadata
   labels?: HierarchyNavigatorLabels
@@ -155,6 +161,28 @@ function HierarchyNavigatorRegion({
             </button>
           </>
         )}
+        {column.hasPrevious !== undefined &&
+          column.hasNext !== undefined &&
+          column.onPrevious !== undefined &&
+          column.onNext !== undefined &&
+          column.isNavigationPending !== undefined && (
+            <>
+              <Button
+                variant="outline"
+                isDisabled={column.isNavigationPending || !column.hasPrevious}
+                onPress={column.onPrevious}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                isDisabled={column.isNavigationPending || !column.hasNext}
+                onPress={column.onNext}
+              >
+                Siguiente
+              </Button>
+            </>
+          )}
         {column.state?.status === 'ready' && !column.state.isExhausted && (
           <button type="button" onClick={column.onContinue}>
             {labels.loadMore}

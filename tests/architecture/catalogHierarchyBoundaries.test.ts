@@ -83,7 +83,10 @@ describe('catalog hierarchy boundaries', () => {
     )
     expect(transport).not.toMatch(/\bRecurso\b/)
     expect(transport).not.toMatch(
-      /\bfetch\b|localStorage|sessionStorage|catalogoRecursos|storybook\/catalog-hierarchy|\bfixtures?\b|design(?:-recovered)?\.op\b/i,
+      /localStorage|sessionStorage|catalogoRecursos|storybook\/catalog-hierarchy|\bfixtures?\b|design(?:-recovered)?\.op\b/i,
+    )
+    expect(transport).toMatch(
+      /export function createCatalogHierarchyRestApi\([\s\S]*fetch/,
     )
     expect(source).not.toMatch(/Materiales|Canalizaciones|Tubería/)
   })
@@ -163,5 +166,25 @@ describe('catalog hierarchy boundaries', () => {
         'utf8',
       ),
     ).toContain('05A Configuración · Taller del catálogo')
+  })
+
+  it('mounts only the Core-effective read-only attributes path', () => {
+    const screen = readFileSync(
+      join(root, 'CatalogHierarchyScreen.tsx'),
+      'utf8',
+    )
+    const panel = readFileSync(
+      join(root, 'CatalogTypeEffectiveAttributes.tsx'),
+      'utf8',
+    )
+    expect(screen).toMatch(
+      /createCatalogTypeEffectiveAttributesApi|useCatalogTypeEffectiveAttributes|CatalogTypeEffectiveAttributes/,
+    )
+    expect(screen).not.toMatch(
+      /catalogTypeAttributes|AsignarAtributoSurface|EditarAtributoSurface|GestionarOpcionesSurface|registerAction/,
+    )
+    expect(panel).not.toMatch(
+      /\b(?:fetch|evaluate|characteristicCode|PRESENTACION|OPCION)\b/,
+    )
   })
 })

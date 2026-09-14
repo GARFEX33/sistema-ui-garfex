@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createResourcesMasterApi,
+  createResourcesMasterRestApi,
   parseAllowedAttributeValuesPage,
   parseAttributeDefinition,
   parseAttributeAssignmentsPage,
@@ -40,6 +41,48 @@ const nativePage = (
   ...overrides,
 })
 
+const restResource = (extra: Record<string, unknown> = {}) => ({
+  id: 'resource-1',
+  identityV1: 'CABLE/001',
+  scope: {
+    classCode: 'MATERIAL',
+    familyCode: 'CONDUCTORES',
+    typeCode: 'CABLE',
+  },
+  naturalUnit: 'M',
+  active: true,
+  revision: '7',
+  attributes: [
+    { code: 'COLOR', value: { kind: 'TEXT', value: 'rojo' } },
+    { code: 'PESO', value: { kind: 'QUANTITY', value: '1.5', unitCode: 'KG' } },
+  ],
+  ...extra,
+})
+
+const restPage = (resources: unknown[] = [restResource()]) => ({
+  resources,
+  hasPrevious: false,
+  hasNext: true,
+})
+
+const restResponse = (body: unknown, status = 200) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  json: async () => body,
+})
+
+const catalogRecord = (
+  kind: 'CLASE' | 'FAMILIA' | 'TIPO',
+  values: Record<string, unknown>,
+) => ({
+  kind,
+  id: kind + '-1',
+  revision: '7',
+  active: true,
+  values,
+  rules: [],
+})
+
 const expectGenericListError = (value: unknown) => {
   const payloadMarker = 'private-list-payload-marker'
   let thrown: unknown
@@ -55,6 +98,295 @@ const expectGenericListError = (value: unknown) => {
   expect(thrown).not.toMatchObject({ name: 'ZodError' })
   expect((thrown as Error).message).not.toContain(payloadMarker)
 }
+
+describe('resources master REST read boundary', () => {
+  it('reads a strict ResourcePage with every documented query parameter', async () => {
+    const fetch = vi.fn(async () => restResponse(restPage()))
+    const api = createResourcesMasterRestApi(fetch)
+
+    await expect(
+      api.listResources({
+        scope: 'ACTIVE',
+        text: 'cable & cobre',
+        classCode: 'MATERIAL',
+        familyCode: 'CONDUCTORES',
+        typeCode: 'CABLE',
+        limit: 20,
+        offset: 40,
+      }),
+    ).resolves.toMatchObject({
+      resources: [
+        {
+          id: 'resource-1',
+          identityV1: 'CABLE/001',
+          revision: '7',
+          attributes: [
+            { code: 'COLOR', value: { kind: 'TEXT', value: 'rojo' } },
+            {
+              code: 'PESO',
+              value: { kind: 'QUANTITY', value: '1.5', unitCode: 'KG' },
+            },
+          ],
+        },
+      ],
+      hasPrevious: false,
+      hasNext: true,
+    })
+    expect(fetch).toHaveBeenCalledWith(
+      '/v1/resources?scope=ACTIVE&text=cable+%26+cobre&classCode=MATERIAL&familyCode=CONDUCTORES&typeCode=CABLE&limit=20&offset=40',
+      { signal: undefined },
+    )
+  })
+
+  it('reads TIPO with only its familyCode hierarchy filter', async () => {
+    const fetch = vi.fn(async () =>
+      restResponse({
+        records: [
+          catalogRecord('TIPO', {
+            code: { kind: 'CODE', value: 'UTP' },
+            name: { kind: 'TEXT', value: 'UTP' },
+            family: {
+              kind: 'REFERENCE',
+              reference: { kind: 'FAMILIA', id: '2', code: 'CABLE' },
+            },
+            class: {
+              kind: 'REFERENCE',
+              reference: { kind: 'CLASE', id: '1', code: 'MATERIAL' },
+            },
+          }),
+        ],
+        hasPrevious: false,
+        hasNext: true,
+      }),
+    )
+
+    await expect(
+      createResourcesMasterRestApi(fetch).listHierarchyTypes({
+        classCode: 'MATERIAL',
+        familyCode: 'CABLE',
+        scope: 'ACTIVE',
+        limit: 20,
+        offset: 0,
+      }),
+    ).resolves.toEqual({
+      items: [
+        {
+          id: 'TIPO-1',
+          code: 'UTP',
+          name: 'UTP',
+          active: true,
+          revision: '7',
+          classCode: 'MATERIAL',
+          familyCode: 'CABLE',
+        },
+      ],
+      hasPrevious: false,
+      hasNext: true,
+    })
+    expect(fetch).toHaveBeenCalledWith(
+      '/v1/catalog/TIPO?scope=ACTIVE&limit=20&offset=0&familyCode=CABLE',
+      { signal: undefined },
+    )
+  })
+
+  it('encodes special characters in a hierarchy filter', async () => {
+    const classCode = 'MATERIAL & ACERO'
+    const fetch = vi.fn(async () =>
+      restResponse({
+        records: [
+          catalogRecord('FAMILIA', {
+            code: { kind: 'CODE', value: 'PERFILES' },
+            name: { kind: 'TEXT', value: 'Perfiles' },
+            class: {
+              kind: 'REFERENCE',
+              reference: { kind: 'CLASE', id: '1', code: classCode },
+            },
+          }),
+        ],
+        hasPrevious: false,
+        hasNext: false,
+      }),
+    )
+
+    await expect(
+      createResourcesMasterRestApi(fetch).listHierarchyFamilies({
+        classCode,
+        scope: 'ACTIVE',
+        limit: 20,
+        offset: 0,
+      }),
+    ).resolves.toMatchObject({ items: [{ classCode }] })
+    expect(fetch).toHaveBeenCalledWith(
+      '/v1/catalog/FAMILIA?scope=ACTIVE&limit=20&offset=0&classCode=MATERIAL+%26+ACERO',
+      { signal: undefined },
+    )
+  })
+
+  it('rejects a FAMILIA page with a mismatched class reference', async () => {
+    const api = createResourcesMasterRestApi(async () =>
+      restResponse({
+        records: [
+          catalogRecord('FAMILIA', {
+            code: { kind: 'CODE', value: 'CABLE' },
+            name: { kind: 'TEXT', value: 'Cable' },
+            class: {
+              kind: 'REFERENCE',
+              reference: { kind: 'CLASE', id: '1', code: 'OTHER' }
+            },
+          }),
+        ],
+        hasPrevious: false,
+        hasNext: false,
+      }),
+    )
+
+    await expect(
+      api.listHierarchyFamilies({
+        classCode: 'MATERIAL',
+        scope: 'ACTIVE',
+        limit: 20,
+        offset: 0,
+      }),
+    ).rejects.toThrow('Invalid resources master response')
+  })
+
+  it('uses REST window flags without accepting or returning cursor semantics', async () => {
+    const fetch = vi.fn(async () =>
+      restResponse({
+        records: [],
+        hasPrevious: true,
+        hasNext: false,
+      }),
+    )
+
+    await expect(
+      createResourcesMasterRestApi(fetch).listHierarchyClasses({
+        scope: 'ACTIVE',
+        limit: 20,
+        offset: 20,
+        cursor: 'legacy-cursor',
+      } as never),
+    ).resolves.toEqual({ items: [], hasPrevious: true, hasNext: false })
+    expect(fetch).toHaveBeenCalledWith(
+      '/v1/catalog/CLASE?scope=ACTIVE&limit=20&offset=20',
+      { signal: undefined },
+    )
+  })
+
+      it('accepts every CatalogValue variant and refuses invalid string fields', async () => {
+    const values = [
+      { kind: 'TEXT', value: 'text' },
+      { kind: 'CODE', value: 'CODE' },
+      { kind: 'BOOLEAN', value: false },
+      { kind: 'INTEGER', value: '-2' },
+      { kind: 'DECIMAL', value: '1.5' },
+      { kind: 'QUANTITY', value: '1.5', unitCode: 'KG' },
+      {
+        kind: 'REFERENCE',
+        reference: { kind: 'CLASE', id: '1', code: 'MATERIAL' },
+      },
+      { kind: 'ENUM', value: 'enum' },
+      { kind: 'STRING_LIST', values: ['one'] },
+      { kind: 'CONTROLLED_OPTION', value: 'option' },
+      { kind: 'NOT_APPLICABLE' },
+    ]
+    const api = createResourcesMasterRestApi(async () =>
+      restResponse(
+        restPage([
+          restResource({
+            attributes: values.map((value, index) => ({
+              code: 'ATTRIBUTE_' + index,
+              value,
+            })),
+          }),
+        ]),
+      ),
+    )
+
+    const page = await api.listResources({
+      scope: 'ALL',
+      limit: 20,
+      offset: 0,
+    })
+    expect(page.resources[0]?.attributes.map(({ value }) => value)).toEqual(
+      values,
+    )
+    const invalid = createResourcesMasterRestApi(async () =>
+      restResponse(
+        restPage([
+          restResource({
+            id: 1,
+            attributes: [
+              { code: 'COLOR', value: { kind: 'NOT_APPLICABLE', value: 'x' } },
+            ],
+          }),
+        ]),
+      ),
+    )
+    await expect(
+      invalid.listResources({ scope: 'ALL', limit: 20, offset: 0 }),
+    ).rejects.toThrow('Invalid resources master response')
+  })
+
+  it('encodes detail segments and reads only the confirmed description route', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(restResponse(restResource()))
+      .mockResolvedValueOnce(
+        restResponse({ description: 'Cable para interior' }),
+      )
+    const api = createResourcesMasterRestApi(fetch)
+    const input = { classCode: 'MATERIAL/ES', identityV1: 'CABLE/ 001' }
+
+    await expect(api.getResourceDetail(input)).resolves.toMatchObject({
+      identityV1: 'CABLE/001',
+      revision: '7',
+    })
+    await expect(api.describeResource(input)).resolves.toBe(
+      'Cable para interior',
+    )
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/v1/resources/MATERIAL%2FES/CABLE%2F%20001',
+      '/v1/resources/MATERIAL%2FES/CABLE%2F%20001/describe',
+    ])
+  })
+
+  it('rejects invalid JSON/DTO, documented HTTP failures, network, and aborts without an empty result', async () => {
+    const input = { scope: 'ALL' as const, limit: 20, offset: 0 }
+    const invalidDto = createResourcesMasterRestApi(async () =>
+      restResponse(restPage([restResource({ revision: 7 })])),
+    )
+    await expect(invalidDto.listResources(input)).rejects.toThrow(
+      'Invalid resources master response',
+    )
+
+    for (const status of [400, 404, 409, 422, 500, 503]) {
+      const api = createResourcesMasterRestApi(async () =>
+        restResponse({ error: 'request rejected' }, status),
+      )
+      await expect(api.listResources(input)).rejects.toThrow('request rejected')
+    }
+
+    const invalidJson = createResourcesMasterRestApi(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => Promise.reject(new SyntaxError('invalid JSON')),
+    }))
+    await expect(invalidJson.listResources(input)).rejects.toThrow(
+      'invalid JSON',
+    )
+    const network = createResourcesMasterRestApi(async () => {
+      throw new TypeError('network unavailable')
+    })
+    await expect(network.listResources(input)).rejects.toThrow(
+      'network unavailable',
+    )
+    const aborted = createResourcesMasterRestApi(async () => {
+      throw new DOMException('aborted', 'AbortError')
+    })
+    await expect(aborted.listResources(input)).rejects.toThrow('aborted')
+  })
+})
 
 describe('resources master API boundary', () => {
   it('parses a valid list page and rejects malformed envelopes', () => {

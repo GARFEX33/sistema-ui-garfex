@@ -7,7 +7,7 @@ import { AppProviders } from '../../src/app/providers/AppProviders'
 import { createAppRouter } from '../../src/app/router'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 import { useKeyboardController } from '../../src/shared/keyboard/keyboardControllerContext'
-import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
+import type { ResourcesMasterRestReadApi } from '../../src/features/resources-master/resourcesMaster.api'
 
 const resourcesMasterApiFactory = vi.hoisted(() => vi.fn())
 vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
@@ -16,100 +16,82 @@ vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
   >('../../src/features/resources-master/resourcesMaster.api')
   return {
     ...actual,
-    createResourcesMasterConvexApi: resourcesMasterApiFactory,
+    createResourcesMasterRestApi: resourcesMasterApiFactory,
   }
 })
 
-const resourceSummary = (id: string, nombre: string) => ({
+const resource = (id: string, identityV1: string) => ({
   id,
-  identificadorTecnico: `REC-${id}`,
-  nombre,
-  tipoRecursoId: 'tipo-1',
-  unidadId: 'unidad-1',
-  activo: true,
-  revision: 1,
-  classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
+  identityV1,
+  scope: { classCode: 'MATERIAL', familyCode: 'CABLE', typeCode: 'UTP' },
+  naturalUnit: 'm',
+  active: true,
+  revision: '1',
+  attributes: [],
 })
 
 function stubResourcesMasterApi() {
   const api = {
     listResources: vi.fn(async () => ({
-      page: [
-        resourceSummary('r1', 'Cable UTP'),
-        resourceSummary('r2', 'Motor 1/2 HP'),
+      resources: [
+        resource('r1', 'MATERIAL-CABLE-UTP-001'),
+        resource('r2', 'MATERIAL-CABLE-UTP-002'),
       ],
-      isDone: true,
-      continueCursor: '',
+      hasPrevious: false,
+      hasNext: false,
     })),
-    searchResources: vi.fn(async () => ({
-      page: [],
-      isDone: true,
-      continueCursor: '',
-    })),
-    getResourceDetail: vi.fn(async () => null),
-    createResource: vi.fn(),
-    updateResource: vi.fn(),
-    activateResource: vi.fn(),
-    deactivateResource: vi.fn(),
-    listContextClasses: vi.fn(async () => ({
+    getResourceDetail: vi.fn(),
+    describeResource: vi.fn(),
+    listHierarchyClasses: vi.fn(async () => ({
       items: [
         {
           id: 'class-1',
-          clave: 'MATERIAL',
-          nombre: 'Material',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
+          code: 'MATERIAL',
+          name: 'Material',
+          active: true,
+          revision: '1',
         },
         {
           id: 'class-2',
-          clave: 'SERVICIO',
-          nombre: 'Servicio',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
+          code: 'SERVICIO',
+          name: 'Servicio',
+          active: true,
+          revision: '2',
         },
       ],
-      continuationCursor: null,
-      isExhausted: true,
+      hasPrevious: false,
+      hasNext: false,
     })),
-    listContextFamilies: vi.fn(async () => ({
+    listHierarchyFamilies: vi.fn(async () => ({
       items: [
         {
           id: 'family-1',
-          claseRecursoId: 'class-1',
-          clave: 'CABLE',
-          nombre: 'Cable',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
+          code: 'CABLE',
+          name: 'Cable',
+          classCode: 'MATERIAL',
+          active: true,
+          revision: '3',
         },
       ],
-      continuationCursor: null,
-      isExhausted: true,
+      hasPrevious: false,
+      hasNext: false,
     })),
-    listContextTypes: vi.fn(async () => ({
+    listHierarchyTypes: vi.fn(async () => ({
       items: [
         {
           id: 'type-1',
-          familiaRecursoId: 'family-1',
-          clave: 'UTP',
-          nombre: 'UTP',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
-          aggregateStatus: 'CLEAN',
-          violations: [],
+          code: 'UTP',
+          name: 'UTP',
+          classCode: 'MATERIAL',
+          familyCode: 'CABLE',
+          active: true,
+          revision: '4',
         },
       ],
-      continuationCursor: null,
-      isExhausted: true,
+      hasPrevious: false,
+      hasNext: false,
     })),
-  } as ResourcesMasterApi
+  } as ResourcesMasterRestReadApi
   resourcesMasterApiFactory.mockReturnValue(api)
   return api
 }
@@ -365,7 +347,7 @@ describe('resources maestros keyboard navigation', () => {
     const material = await screen.findByRole('button', { name: 'Material' })
     expect(material).toHaveAttribute('data-spatial-level', 'class')
     const service = screen.getByRole('button', { name: 'Servicio' })
-    const search = screen.getByPlaceholderText('Nombre del recurso')
+    const search = screen.getByPlaceholderText('Buscar recursos')
 
     sidebar.focus()
     fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
@@ -384,7 +366,7 @@ describe('resources maestros keyboard navigation', () => {
     expect(type).toHaveFocus()
     fireEvent.keyDown(type, { key: 'ArrowRight' })
     expect(search).toHaveFocus()
-    await screen.findByText('Cable UTP')
+    await screen.findByText('MATERIAL-CABLE-UTP-001')
     const firstRow = document.querySelector<HTMLElement>('[data-resource-row]')!
 
     fireEvent.keyDown(search, { key: 'ArrowDown' })
@@ -407,8 +389,8 @@ describe('resources maestros keyboard navigation', () => {
   it('does not capture Resources spatial keys while the search input is composing', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('Cable UTP')
-    const search = screen.getByPlaceholderText('Nombre del recurso')
+    await screen.findByText('MATERIAL-CABLE-UTP-001')
+    const search = screen.getByPlaceholderText('Buscar recursos')
     search.focus()
     fireEvent.keyDown(search, { key: 'ArrowDown', isComposing: true })
     expect(search).toHaveFocus()
@@ -417,8 +399,8 @@ describe('resources maestros keyboard navigation', () => {
   it('jumps to the search box with B from anywhere on the screen', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('Cable UTP')
-    const search = screen.getByPlaceholderText('Nombre del recurso')
+    await screen.findByText('MATERIAL-CABLE-UTP-001')
+    const search = screen.getByPlaceholderText('Buscar recursos')
     const firstRow = document.querySelector(
       '[data-resource-row]',
     ) as HTMLElement
@@ -430,7 +412,7 @@ describe('resources maestros keyboard navigation', () => {
   it('does not steal B from an unrelated editing context', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('Cable UTP')
+    await screen.findByText('MATERIAL-CABLE-UTP-001')
     const input = document.createElement('input')
     document.body.append(input)
     input.focus()

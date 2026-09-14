@@ -90,12 +90,15 @@ describe('runtime and presentation fixture boundary', () => {
       ]),
     )
     expect(adapter).toMatch(/\bclient\.mutation\s*\(/)
+    expect(adapter).toMatch(
+      /export function createCatalogHierarchyRestApi\([\s\S]*fetch/,
+    )
     expect(adapter).not.toMatch(
       /`[^`]*catalogoAdmin\/jerarquia|String\.(?:fromCharCode|fromCodePoint)|decodeURIComponent|(?:client|operation)\s*\[\s*['"`]/,
     )
     expect(adapter).not.toMatch(/\\u[0-9a-fA-F]{4}/)
     expect(adapter).not.toMatch(
-      /storybook|fetch|localStorage|sessionStorage|addEventListener|\b(?:update|activate|deactivate|activar|desactivar|actualizar)\b|\bRecurso\b|catalogoRecursos|\bfixtures?\b/i,
+      /storybook|localStorage|sessionStorage|addEventListener|\b(?:update|activate|deactivate|activar|desactivar|actualizar)\b|\bRecurso\b|catalogoRecursos|\bfixtures?\b/i,
     )
   })
 

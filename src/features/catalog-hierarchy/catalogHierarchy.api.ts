@@ -1,17 +1,36 @@
 import { ConvexHttpClient } from 'convex/browser'
+import {
+  withRestActor,
+  type RestActorOptions,
+} from '../../shared/api/restActor'
+import {
+  CatalogPageSchema,
+  ErrorEnvelopeSchema,
+  type CatalogRecord as RestCatalogRecord,
+} from '../../shared/catalog/catalogRest.contract'
 import { makeFunctionReference } from 'convex/server'
 import type { FunctionReference } from 'convex/server'
 import type {
   CatalogClassCreateInput,
   CatalogClassItem,
+  CatalogClassRestCreateInput,
+  CatalogClassRestItem,
+  CatalogClassWindowInput,
+  CatalogClassWindowPage,
   CatalogCreated,
   CatalogFamilyCreateInput,
   CatalogFamilyItem,
+  CatalogFamilyRestItem,
+  CatalogFamilyWindowInput,
+  CatalogFamilyWindowPage,
   CatalogId,
   CatalogListPage,
   CatalogMode,
   CatalogTypeCreateInput,
   CatalogTypeItem,
+  CatalogTypeRestItem,
+  CatalogTypeWindowInput,
+  CatalogTypeWindowPage,
   OpaqueCursor,
 } from './catalogHierarchy.types'
 
@@ -333,6 +352,187 @@ const parseCreatedType = (
   if (!record(value) || value.disposition !== 'CREATED' || !has(value, 'item'))
     return bad()
   return { disposition: 'CREATED', item: parseTypeItem(value.item, parentId) }
+}
+
+export interface CatalogHierarchyRestApi {
+  createClass: (
+    input: CatalogClassRestCreateInput,
+  ) => Promise<CatalogClassRestItem>
+  listClasses: (
+    input: CatalogClassWindowInput,
+  ) => Promise<CatalogClassWindowPage>
+  listFamilies: (
+    input: CatalogFamilyWindowInput,
+  ) => Promise<CatalogFamilyWindowPage>
+  listTypes: (input: CatalogTypeWindowInput) => Promise<CatalogTypeWindowPage>
+}
+
+const restClassItem = (record: RestCatalogRecord): CatalogClassRestItem => {
+  const code = record.values.code
+  const name = record.values.name
+  if (record.kind !== 'CLASE' || code?.kind !== 'CODE' || name?.kind !== 'TEXT')
+    return bad()
+  return {
+    activo: record.active,
+    clave: code.value,
+    id: record.id,
+    nombre: name.value,
+    revision: record.revision,
+  }
+}
+
+const restFamilyItem = (
+  record: RestCatalogRecord,
+  classCode: string,
+): CatalogFamilyRestItem => {
+  const code = record.values.code
+  const name = record.values.name
+  const classReference = record.values.class
+  if (
+    record.kind !== 'FAMILIA' ||
+    code?.kind !== 'CODE' ||
+    name?.kind !== 'TEXT' ||
+    classReference?.kind !== 'REFERENCE' ||
+    classReference.reference.kind !== 'CLASE' ||
+    classReference.reference.code !== classCode
+  )
+    return bad()
+  return {
+    activo: record.active,
+    clave: code.value,
+    classCode,
+    id: record.id,
+    nombre: name.value,
+    revision: record.revision,
+  }
+}
+
+const restTypeItem = (
+  record: RestCatalogRecord,
+  input: Pick<CatalogTypeWindowInput, 'classCode' | 'familyCode'>,
+): CatalogTypeRestItem => {
+  const code = record.values.code
+  const name = record.values.name
+  const classReference = record.values.class
+  const familyReference = record.values.family
+  if (
+    record.kind !== 'TIPO' ||
+    code?.kind !== 'CODE' ||
+    name?.kind !== 'TEXT' ||
+    familyReference?.kind !== 'REFERENCE' ||
+    familyReference.reference.kind !== 'FAMILIA' ||
+    familyReference.reference.code !== input.familyCode ||
+    (input.classCode !== undefined &&
+      (classReference?.kind !== 'REFERENCE' ||
+        classReference.reference.kind !== 'CLASE' ||
+        classReference.reference.code !== input.classCode))
+  )
+    return bad()
+  return {
+    activo: record.active,
+    clave: code.value,
+    ...(input.classCode === undefined ? {} : { classCode: input.classCode }),
+    familyCode: input.familyCode,
+    id: record.id,
+    nombre: name.value,
+    revision: record.revision,
+  }
+}
+
+const catalogParams = (input: CatalogClassWindowInput) =>
+  new URLSearchParams({
+    scope: input.scope,
+    ...(input.text === undefined ? {} : { text: input.text }),
+    limit: String(input.limit),
+    offset: String(input.offset),
+  })
+
+async function readCatalogPage(
+  fetch: typeof globalThis.fetch,
+  kind: 'CLASE' | 'FAMILIA' | 'TIPO',
+  input: CatalogClassWindowInput,
+  filter?: readonly [string, string],
+) {
+  const params = catalogParams(input)
+  if (filter) params.set(...filter)
+  const response = await fetch('/v1/catalog/' + kind + '?' + params, {
+    signal: input.signal,
+  })
+  const body: unknown = await response.json()
+  if (!response.ok) {
+    const error = ErrorEnvelopeSchema.safeParse(body)
+    throw new Error(
+      error.success ? error.data.error : 'HTTP ' + response.status,
+    )
+  }
+  return CatalogPageSchema.parse(body)
+}
+
+export function createCatalogHierarchyRestApi(
+  fetch: typeof globalThis.fetch = globalThis.fetch,
+  actorOptions: RestActorOptions = {},
+): CatalogHierarchyRestApi {
+  return {
+    async createClass(input) {
+      return withRestActor(async (actor) => {
+        const response = await fetch('/v1/catalog/CLASE', {
+          body: JSON.stringify({
+            actor,
+            values: {
+              code: { kind: 'CODE', value: input.code },
+              name: { kind: 'TEXT', value: input.name },
+              plural: { kind: 'TEXT', value: input.plural },
+              slug: { kind: 'TEXT', value: input.slug },
+            },
+          }),
+          headers: { 'content-type': 'application/json' },
+          method: 'POST',
+        })
+        const body: unknown = await response.json()
+        if (response.status !== 201) {
+          const error = ErrorEnvelopeSchema.safeParse(body)
+          throw new Error(
+            error.success ? error.data.error : 'HTTP ' + response.status,
+          )
+        }
+        return restClassItem(
+          CatalogPageSchema.shape.records.element.parse(body),
+        )
+      }, actorOptions)
+    },
+    async listClasses(input) {
+      const page = await readCatalogPage(fetch, 'CLASE', input)
+      return {
+        items: page.records.map(restClassItem),
+        hasPrevious: page.hasPrevious,
+        hasNext: page.hasNext,
+      }
+    },
+    async listFamilies(input) {
+      const page = await readCatalogPage(fetch, 'FAMILIA', input, [
+        'classCode',
+        input.classCode,
+      ])
+      return {
+        items: page.records.map((record) =>
+          restFamilyItem(record, input.classCode),
+        ),
+        hasPrevious: page.hasPrevious,
+        hasNext: page.hasNext,
+      }
+    },
+    async listTypes(input) {
+      const page = await readCatalogPage(fetch, 'TIPO', input, [
+        'familyCode',
+        input.familyCode,
+      ])
+      return {
+        items: page.records.map((record) => restTypeItem(record, input)),
+        hasPrevious: page.hasPrevious,
+        hasNext: page.hasNext,
+      }
+    },
+  }
 }
 
 export function createCatalogHierarchyConvexApi(

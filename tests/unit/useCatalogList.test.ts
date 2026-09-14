@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  createCatalogClassWindow,
+  createCatalogDependentWindow,
   createCatalogListSequence,
   type CatalogListPage,
 } from '../../src/features/catalog-hierarchy/useCatalogList'
@@ -305,6 +307,83 @@ describe('catalog list sequence', () => {
       items: [],
       parentId: 'new',
       status: 'ready',
+    })
+  })
+
+  it('replaces Clase windows by offset without a cursor or accumulated rows', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [
+          { id: 'a', nombre: 'A', clave: 'A', activo: true, revision: '1' },
+        ],
+        hasPrevious: false,
+        hasNext: true,
+      })
+      .mockResolvedValueOnce({
+        items: [
+          { id: 'b', nombre: 'B', clave: 'B', activo: true, revision: '2' },
+        ],
+        hasPrevious: true,
+        hasNext: false,
+      })
+    const window = createCatalogClassWindow({ load, limit: 20 })
+
+    await window.start()
+    await window.next()
+
+    expect(load.mock.calls).toEqual([
+      [{ scope: 'ALL', limit: 20, offset: 0 }],
+      [{ scope: 'ALL', limit: 20, offset: 20 }],
+    ])
+    expect(window.getState()).toMatchObject({
+      items: [{ id: 'b' }],
+      offset: 20,
+      hasPrevious: true,
+      hasNext: false,
+    })
+  })
+
+  it('replaces dependent windows by code and discards an old parent response', async () => {
+    let resolveOld!: (page: {
+      items: Array<{ id: string; nombre: string; clave: string }>
+      hasPrevious: boolean
+      hasNext: boolean
+    }) => void
+    const load = vi.fn(({ parentCode }: { parentCode: string }) =>
+      parentCode === 'OLD'
+        ? new Promise<typeof resolveOld>((resolve) => {
+            resolveOld = resolve as typeof resolveOld
+          })
+        : Promise.resolve({
+            items: [{ id: 'new', nombre: 'Nueva', clave: 'NEW' }],
+            hasPrevious: false,
+            hasNext: true,
+          }),
+    )
+    const window = createCatalogDependentWindow({ load, limit: 20 })
+
+    window.setContext({ parentCode: 'OLD' })
+    const oldRequest = window.start()
+    window.setContext({ parentCode: 'NEW' })
+    await window.start()
+    resolveOld({
+      items: [{ id: 'old', nombre: 'Anterior', clave: 'OLD' }],
+      hasPrevious: false,
+      hasNext: false,
+    })
+    await oldRequest
+
+    expect(load.mock.calls).toEqual([
+      [{ parentCode: 'OLD', scope: 'ALL', limit: 20, offset: 0 }],
+      [{ parentCode: 'NEW', scope: 'ALL', limit: 20, offset: 0 }],
+    ])
+    expect(window.getState()).toMatchObject({
+      items: [{ id: 'new' }],
+      offset: 0,
+      hasPrevious: false,
+      hasNext: true,
+      parentCode: 'NEW',
     })
   })
 

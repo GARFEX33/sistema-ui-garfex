@@ -13,6 +13,8 @@ const sourceFiles = readdirSync(join(root, 'src'), { recursive: true })
 const read = (file: string) => readFileSync(join(root, file), 'utf8')
 const providerPath = 'src/app/providers/AppProviders.tsx'
 const hookPath = 'src/features/resources-master/useResourcesMasterListQuery.ts'
+const restWindowHookPath =
+  'src/features/resources-master/useResourcesMasterRestWindow.ts'
 const evaluationHookPath =
   'src/features/resources-master/useResourceCreationEvaluation.ts'
 const attributeDefinitionHookPath =
@@ -22,9 +24,11 @@ const allowedValuesHookPath =
 const createHookPath =
   'src/features/resources-master/useResourceCreationCreate.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
+const catalogContractPath = 'src/shared/catalog/catalogRest.contract.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [hookPath, ['useInfiniteQuery', 'useQueryClient']],
+  [restWindowHookPath, ['useQuery']],
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
   [allowedValuesHookPath, ['useInfiniteQuery']],
@@ -58,7 +62,8 @@ const protectedPackage = (module: string) =>
   ['zod', 'convex'].some((name) => isPackage(module, name))
 const isApprovedFile = (file: string, module: string) =>
   (isQueryModule(module) && queryBindings.has(file)) ||
-  (isPackage(module, 'zod') && file === apiPath) ||
+  (isPackage(module, 'zod') &&
+    (file === apiPath || file === catalogContractPath)) ||
   (isPackage(module, 'convex') && convexFiles.has(file))
 const property = (node: ts.Node) => {
   if (ts.isPropertyAccessExpression(node)) return node.name.text

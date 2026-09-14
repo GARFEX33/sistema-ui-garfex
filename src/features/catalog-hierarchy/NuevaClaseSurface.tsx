@@ -8,9 +8,10 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
 import { Field, FieldSeparator } from '../../shared/ui/Field'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
+import { RestActorConfigurationError } from '../../shared/api/restActor'
 import type {
-  CatalogClassCreateInput,
-  CatalogClassItem,
+  CatalogClassRestCreateInput,
+  CatalogClassRestItem,
   CatalogCreated,
   CatalogFamilyCreateInput,
   CatalogFamilyItem,
@@ -19,11 +20,17 @@ import type {
 } from './catalogHierarchy.types'
 import { useAutoClosingMessage } from './useAutoClosingMessage'
 
-type NewDraft = { key: string; name: string; description: string }
+type NewDraft = {
+  key: string
+  name: string
+  description: string
+  plural: string
+  slug: string
+}
 type ParentContext = Readonly<{ id: string; label: string }>
 type CreateClass = (
-  input: CatalogClassCreateInput,
-) => Promise<CatalogCreated<CatalogClassItem>>
+  input: CatalogClassRestCreateInput,
+) => Promise<CatalogClassRestItem>
 type CreateFamily = (
   input: CatalogFamilyCreateInput,
 ) => Promise<CatalogCreated<CatalogFamilyItem>>
@@ -32,7 +39,6 @@ type CreateType = (
 ) => Promise<CatalogCreated<CatalogTypeItem>>
 type OnCreated = () => void | Promise<unknown>
 type OnSuccess = (message: string) => void
-type StructuredError = { code?: unknown; data?: unknown }
 type CreateSnapshot = Readonly<NewDraft & { parent: ParentContext | null }>
 
 export type CatalogCreateLevel = 'class' | 'family' | 'type'
@@ -53,12 +59,14 @@ export interface NuevaClaseSurfaceProps {
   onSuccess?: OnSuccess
 }
 
-const emptyDraft = (): NewDraft => ({ key: '', name: '', description: '' })
-const draftIdentity = (draft: NewDraft) =>
-  JSON.stringify([draft.key, draft.name, draft.description])
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
+const emptyDraft = (): NewDraft => ({
+  key: '',
+  name: '',
+  description: '',
+  plural: '',
+  slug: '',
+})
+const draftIdentity = (draft: NewDraft) => JSON.stringify(draft)
 const names = { class: 'Clase', family: 'Familia', type: 'Tipo' } as const
 const copyFor = (level: CatalogCreateLevel) => {
   const noun = names[level]
@@ -73,6 +81,13 @@ const copyFor = (level: CatalogCreateLevel) => {
 }
 
 const payloadFor = (level: CatalogCreateLevel, snapshot: CreateSnapshot) => {
+  if (level === 'class')
+    return {
+      code: snapshot.key,
+      name: snapshot.name,
+      plural: snapshot.plural,
+      slug: snapshot.slug,
+    }
   const fields = {
     clave: snapshot.key,
     nombre: snapshot.name,
@@ -80,7 +95,6 @@ const payloadFor = (level: CatalogCreateLevel, snapshot: CreateSnapshot) => {
       ? {}
       : { descripcion: snapshot.description }),
   }
-  if (level === 'class') return fields
   if (!snapshot.parent) return null
   return level === 'family'
     ? { claseRecursoId: snapshot.parent.id, ...fields }
@@ -97,7 +111,7 @@ const createRequest = (
   const payload = payloadFor(level, snapshot)
   if (!payload) return
   if (level === 'class')
-    return createClass?.(Object.freeze(payload as CatalogClassCreateInput))
+    return createClass?.(Object.freeze(payload as CatalogClassRestCreateInput))
   if (level === 'family')
     return createFamily?.(Object.freeze(payload as CatalogFamilyCreateInput))
   return createType?.(Object.freeze(payload as CatalogTypeCreateInput))
@@ -109,11 +123,9 @@ const creationErrorMessage = (
   level: CatalogCreateLevel,
 ) => {
   if (level !== 'class') return copyFor(level).failure
-  const structured = isRecord(error) ? (error as StructuredError) : undefined
-  const data = isRecord(structured?.data) ? structured.data : structured
-  return data?.code === 'DUPLICATE_CLASS_KEY'
-    ? `Ya existe una Clase con la Clave “${key}”.`
-    : copyFor(level).failure
+  if (error instanceof RestActorConfigurationError)
+    return 'No se puede crear la Clase sin configurar el actor local.'
+  return copyFor(level).failure
 }
 
 export function CatalogCreateSurface({
@@ -137,6 +149,8 @@ export function CatalogCreateSurface({
   const keyRef = useRef<HTMLInputElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
+  const pluralRef = useRef<HTMLInputElement>(null)
+  const slugRef = useRef<HTMLInputElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const submitRef = useRef<HTMLButtonElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
@@ -194,6 +208,7 @@ export function CatalogCreateSurface({
     (level === 'class' || !!parentRef.current) &&
     draft.key.length > 0 &&
     draft.name.length > 0 &&
+    (level !== 'class' || (draft.plural.length > 0 && draft.slug.length > 0)) &&
     !isSubmitting &&
     completedDraftRef.current !== draftIdentity(draft)
 
@@ -203,6 +218,8 @@ export function CatalogCreateSurface({
       key: draft.key,
       name: draft.name,
       description: draft.description,
+      plural: draft.plural,
+      slug: draft.slug,
       parent: parentRef.current,
     })
     const draftKey = draftIdentity(draft)
@@ -218,7 +235,11 @@ export function CatalogCreateSurface({
         createType,
       )
       if (!result) return
-      if (result.disposition !== 'CREATED')
+      if (
+        !result ||
+        (level !== 'class' &&
+          (!('disposition' in result) || result.disposition !== 'CREATED'))
+      )
         throw new Error('Invalid catalog hierarchy response')
       completedDraftRef.current = draftKey
       await onCreated?.()
@@ -251,12 +272,15 @@ export function CatalogCreateSurface({
       return
     const target = event.currentTarget
     if (!(target instanceof HTMLElement)) return
+    const fields =
+      level === 'class'
+        ? [keyRef.current, nameRef.current, pluralRef.current, slugRef.current]
+        : [keyRef.current, nameRef.current, descriptionRef.current]
     if (target === cancelRef.current && event.key === 'ArrowUp') {
       event.preventDefault()
-      descriptionRef.current?.focus()
+      fields.at(-1)?.focus()
       return
     }
-    const fields = [keyRef.current, nameRef.current, descriptionRef.current]
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       const index = fields.indexOf(
         target as HTMLInputElement | HTMLTextAreaElement,
@@ -314,6 +338,8 @@ export function CatalogCreateSurface({
   const keyId = `new-${level}-key`
   const nameId = `new-${level}-name`
   const descriptionId = `new-${level}-description`
+  const pluralId = `new-${level}-plural`
+  const slugId = `new-${level}-slug`
   return (
     <div className="catalog-create-surface">
       <Button
@@ -393,21 +419,56 @@ export function CatalogCreateSurface({
                 />
               </Field>
               <FieldSeparator />
-              <Field label="DESCRIPCIÓN" htmlFor={descriptionId}>
-                <textarea
-                  ref={descriptionRef}
-                  onKeyDown={handleDialogKeyDown}
-                  id={descriptionId}
-                  aria-label="Descripción"
-                  className={`${fieldInputClass} h-[60px] resize-none`}
-                  value={draft.description}
-                  disabled={isSubmitting}
-                  onChange={(event) =>
-                    setField('description', event.target.value)
-                  }
-                />
-              </Field>
-              <FieldSeparator />
+              {level === 'class' ? (
+                <>
+                  <Field label="PLURAL" htmlFor={pluralId}>
+                    <input
+                      ref={pluralRef}
+                      onKeyDown={handleDialogKeyDown}
+                      id={pluralId}
+                      aria-label="Plural"
+                      className={fieldInputClass}
+                      value={draft.plural}
+                      disabled={isSubmitting}
+                      onChange={(event) =>
+                        setField('plural', event.target.value)
+                      }
+                    />
+                  </Field>
+                  <FieldSeparator />
+                  <Field label="SLUG" htmlFor={slugId}>
+                    <input
+                      ref={slugRef}
+                      onKeyDown={handleDialogKeyDown}
+                      id={slugId}
+                      aria-label="Slug"
+                      className={fieldInputClass}
+                      value={draft.slug}
+                      disabled={isSubmitting}
+                      onChange={(event) => setField('slug', event.target.value)}
+                    />
+                  </Field>
+                  <FieldSeparator />
+                </>
+              ) : (
+                <>
+                  <Field label="DESCRIPCIÓN" htmlFor={descriptionId}>
+                    <textarea
+                      ref={descriptionRef}
+                      onKeyDown={handleDialogKeyDown}
+                      id={descriptionId}
+                      aria-label="Descripción"
+                      className={`${fieldInputClass} h-[60px] resize-none`}
+                      value={draft.description}
+                      disabled={isSubmitting}
+                      onChange={(event) =>
+                        setField('description', event.target.value)
+                      }
+                    />
+                  </Field>
+                  <FieldSeparator />
+                </>
+              )}
             </div>
             <div className="catalog-dialog-error-region" role="alert">
               <span aria-hidden="true">{errorMessage ? '⚠' : ''}</span>

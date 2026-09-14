@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { ResourceCreationContractPending } from '../../src/features/resources-master/ResourceCreationContractPending'
 import { ResourceCreationReview } from '../../src/features/resources-master/ResourceCreationReview'
 import type {
   ResourceCreationEvaluation,
@@ -50,6 +51,18 @@ const evaluation = (
 })
 
 describe('ResourceCreationReview', () => {
+  it('announces the contract block with a focused title and no create action', () => {
+    render(<ResourceCreationContractPending />)
+
+    expect(
+      screen.getByRole('heading', { name: 'Contrato pendiente' }),
+    ).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'evaluación, los valores permitidos, la Unidad natural y la creación',
+    )
+    expect(screen.queryByRole('button', { name: /crear recurso/i })).toBeNull()
+  })
+
   it.each([
     ['unavailable', null],
     ['invalid', evaluation({ status: 'INVALID', valid: false })],

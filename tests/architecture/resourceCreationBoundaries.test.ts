@@ -117,30 +117,28 @@ describe('resource creation safety wall', () => {
     )
   })
 
-  it('supplies explicit GLOBAL ownership only at the Entry composition host', () => {
+  it('keeps Entry ownership outside the directly blocked Creator surface', () => {
     expect(entrySource).toMatch(
       /const creationOwnership: ResourceCreationEvaluationOwnership\s*=\s*\{\s*kind: 'GLOBAL',?\s*\}/,
     )
     expect(entrySource).toContain(
       '<ResourcesMasterScreen creationOwnership={creationOwnership} />',
     )
-    expect(surfaceSource).toContain('useResourceCreationFlow(api, ownership)')
+    expect(surfaceSource).toContain('<ResourceCreationContractPending />')
+    expect(surfaceSource).not.toMatch(
+      /ResourcesMasterApi|ownership|useResourceCreationFlow/,
+    )
   })
 
-  it('integrates one ownership-aware evaluation driver through the flow', () => {
-    expect(surfaceSource).toContain('useResourceCreationFlow(api, ownership)')
+  it('keeps the blocked Creator free of flow, evaluation, attribute, and creation transport', () => {
+    expect(surfaceSource).not.toMatch(
+      /useResourceCreation|ResourceCreationContextStage|ResourceCreationAttributesStage|ResourceCreationReview|resourceCreation\.attributeView/,
+    )
     expect(flowSource.match(/useResourceCreationEvaluation\(\{/g)).toHaveLength(
       1,
     )
     expect(flowSource.match(/useResourceCreationCreate\(\{/g)).toHaveLength(1)
     expect(flowSource).toContain('useResourceCreationAttributeQueries({')
-    expect(flowSource).toContain(
-      'allowedValuesByDefinition: attributes.allowedValuesKnowledge',
-    )
-    expect(flowSource).toContain('evaluation: {')
-    expect(flowSource).toContain('status: evaluation.status')
-    expect(flowSource).toContain('retry: evaluation.retry')
-    expect(flowSource).toContain('creation: {')
     expect(flowSource).not.toContain('api.createResourceFromSelections')
   })
 
@@ -172,27 +170,19 @@ describe('resource creation safety wall', () => {
     expect(selectorStateSource).toContain('export const useControllerState')
   })
 
-  it('keeps staged selector wiring inside the context-stage boundary', () => {
-    expect(surfaceSource).toContain(
-      "import { ResourceCreationContextStage } from './ResourceCreationContextStage'",
+  it('keeps staged selector wiring out of the blocked surface and inside its context boundary', () => {
+    expect(surfaceSource).not.toMatch(
+      /ResourceCreationContextStage|StagedSearchSelector/,
     )
-    expect(surfaceSource).toContain('<ResourceCreationContextStage')
-    expect(surfaceSource).not.toContain('<StagedSearchSelector')
     expect(contextStageSource).toContain('<StagedSearchSelector')
     expect(contextStageSource).toContain('hidden={flow.state.stage.kind !==')
   })
 
-  it('keeps flow state authoritative and projects attributes only at the surface boundary', () => {
+  it('keeps blocked-surface state local and leaves flow stages in their model boundary', () => {
     expect(surfaceSource).not.toMatch(
-      /const \[step|railStageOverride|const \[classId|const \[familyId|const \[typeId/,
+      /const \[step|railStageOverride|const \[classId|const \[familyId|const \[typeId|ResourceCreationAttributesStage|resourceCreation\.attributeView/,
     )
-    expect(surfaceSource).toContain("from './ResourceCreationAttributesStage'")
-    expect(surfaceSource).toContain("from './resourceCreation.attributeView'")
-    expect(surfaceSource).toContain('projectResourceCreationAttributeView(')
-    expect(surfaceSource).toContain(
-      'projectResourceCreationAttributeSelectionView(',
-    )
-    expect(surfaceSource).toContain('<ResourceCreationAttributesStage')
+    expect(surfaceSource).toContain('<ResourceCreationContractPending />')
     expect(modelSource).not.toContain("kind: 'contract-pending'")
     expect(modelSource).toContain("kind: 'attributes'")
     expect(modelSource).toContain("kind: 'review-pending'")

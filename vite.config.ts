@@ -6,4 +6,9 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [TanStackRouterVite(), tailwindcss(), react()],
   build: { manifest: true },
+  server: {
+    proxy: {
+      '/v1': { target: 'http://localhost:8090' },
+    },
+  },
 })
