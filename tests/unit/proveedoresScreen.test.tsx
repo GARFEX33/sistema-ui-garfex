@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -195,6 +195,29 @@ describe('ProveedoresScreen REST read wiring', () => {
     expect(screen.getByLabelText('Buscar')).toHaveAttribute(
       'data-spatial-id',
       'proveedores.search',
+    )
+  })
+})
+
+describe('ProveedoresScreen create wiring', () => {
+  it('opens the create dialog from the trigger and refreshes the list after a successful creation', async () => {
+    const state = restWindow()
+    const createSupplier = vi.fn().mockResolvedValue({ id: 'new-1' })
+    factory.mockReturnValue({ ...api, createSupplier })
+    restWindowHook.mockReturnValue(state)
+
+    renderScreen(<ProveedoresScreen />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Nuevo proveedor' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Nombre comercial'), 'Acme')
+    await user.click(screen.getByRole('button', { name: 'Crear' }))
+
+    await waitFor(() => expect(createSupplier).toHaveBeenCalledOnce())
+    await waitFor(() => expect(state.refetchActive).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     )
   })
 })

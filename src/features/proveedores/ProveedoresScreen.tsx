@@ -4,6 +4,7 @@ import {
   type ProveedoresRestApi,
 } from './proveedores.api'
 import { useProveedoresRestWindow } from './useProveedoresRestWindow'
+import { CrearProveedorSurface } from './CrearProveedorSurface'
 import { Button } from '../../shared/ui/Button'
 import { Field } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
@@ -15,8 +16,9 @@ const LIMIT = 20
 // Same header + card + list/table structural pattern as ResourcesMasterScreen
 // (src/features/resources-master/ResourcesMasterScreen.tsx), simplified to
 // Supplier's flat shape: no Clase/Familia/Tipo hierarchy columns, just a
-// single search card. T2 scope is list/search only — creating and editing a
-// supplier are separate tasks (T3/T4), so there is no action button yet.
+// single search card. T3 adds the create trigger as the PageHeader action,
+// mirroring ResourcesMasterScreen's `action={<CrearRecursoSurface .../>}`
+// wiring; editing a supplier is a separate task (T4).
 export function ProveedoresScreen() {
   const [api] = useState<ProveedoresRestApi>(() => createProveedoresRestApi())
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -30,8 +32,16 @@ export function ProveedoresScreen() {
     }),
     [searchText],
   )
-  const { suppliers, status, hasPrevious, hasNext, previous, next, retry } =
-    useProveedoresRestWindow(api, criteria)
+  const {
+    suppliers,
+    status,
+    hasPrevious,
+    hasNext,
+    previous,
+    next,
+    retry,
+    refetchActive,
+  } = useProveedoresRestWindow(api, criteria)
 
   const isLoading = status === 'initial-loading'
   const isInitialError = status === 'initial-error'
@@ -49,6 +59,12 @@ export function ProveedoresScreen() {
           <h1 id="proveedores-title" className="text-lg font-bold">
             Proveedores
           </h1>
+        }
+        action={
+          <CrearProveedorSurface
+            createSupplier={api.createSupplier}
+            onCreated={refetchActive}
+          />
         }
       />
       <div className="mt-3">
