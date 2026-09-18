@@ -68,7 +68,6 @@ const createDriverSource = readFileSync(
 const creationRuntimeFiles = [
   'CrearRecursoSurface.tsx',
   'CreationStageRail.tsx',
-  'ResourceCreationContractPending.tsx',
   'ResourceCreationReview.tsx',
   'ResourceCreationShell.tsx',
   'ResourceCreationContextStage.tsx',
@@ -117,22 +116,32 @@ describe('resource creation safety wall', () => {
     )
   })
 
-  it('keeps Entry ownership outside the directly blocked Creator surface', () => {
+  // Slice C2d (replace-convex-with-rest-backend) intentionally retired the
+  // "Creator stays blocked behind ResourceCreationContractPending" wall for
+  // CrearRecursoSurface.tsx once G5 and G4's evaluation-blocking portion
+  // stopped applying (see tasks.md's 2026-09-16 supersession note): the
+  // surface now wires the real REST wizard. The assertions below were
+  // updated to guard the boundaries that are still real — the legacy
+  // Convex-era modules (`resourceCreation.model.ts`,
+  // `useResourceCreationFlow.ts`, `ResourceCreationAttributesStage.tsx`,
+  // `resourceCreation.attributeView.ts`) stay out of the wizard surface —
+  // rather than assert the surface is still a static stub, which is no
+  // longer true by design.
+  it('keeps Entry ownership construction independent of the wizard surface', () => {
     expect(entrySource).toMatch(
       /const creationOwnership: ResourceCreationEvaluationOwnership\s*=\s*\{\s*kind: 'GLOBAL',?\s*\}/,
     )
     expect(entrySource).toContain(
       '<ResourcesMasterScreen creationOwnership={creationOwnership} />',
     )
-    expect(surfaceSource).toContain('<ResourceCreationContractPending />')
     expect(surfaceSource).not.toMatch(
       /ResourcesMasterApi|ownership|useResourceCreationFlow/,
     )
   })
 
-  it('keeps the blocked Creator free of flow, evaluation, attribute, and creation transport', () => {
+  it('keeps the wizard surface free of the legacy attribute-stage and view-projection modules', () => {
     expect(surfaceSource).not.toMatch(
-      /useResourceCreation|ResourceCreationContextStage|ResourceCreationAttributesStage|ResourceCreationReview|resourceCreation\.attributeView/,
+      /ResourceCreationAttributesStage|resourceCreation\.attributeView/,
     )
     expect(flowSource.match(/useResourceCreationEvaluation\(\{/g)).toHaveLength(
       1,
@@ -170,19 +179,17 @@ describe('resource creation safety wall', () => {
     expect(selectorStateSource).toContain('export const useControllerState')
   })
 
-  it('keeps staged selector wiring out of the blocked surface and inside its context boundary', () => {
-    expect(surfaceSource).not.toMatch(
-      /ResourceCreationContextStage|StagedSearchSelector/,
-    )
+  it('keeps the raw staged selector encapsulated inside its context boundary', () => {
+    expect(surfaceSource).not.toMatch(/StagedSearchSelector/)
+    expect(surfaceSource).toContain('ResourceCreationContextStage')
     expect(contextStageSource).toContain('<StagedSearchSelector')
-    expect(contextStageSource).toContain('hidden={flow.state.stage.kind !==')
+    expect(contextStageSource).toContain('hidden={view.stage !==')
   })
 
-  it('keeps blocked-surface state local and leaves flow stages in their model boundary', () => {
+  it('keeps wizard stage state in the reducer and legacy flow stages in their model boundary', () => {
     expect(surfaceSource).not.toMatch(
       /const \[step|railStageOverride|const \[classId|const \[familyId|const \[typeId|ResourceCreationAttributesStage|resourceCreation\.attributeView/,
     )
-    expect(surfaceSource).toContain('<ResourceCreationContractPending />')
     expect(modelSource).not.toContain("kind: 'contract-pending'")
     expect(modelSource).toContain("kind: 'attributes'")
     expect(modelSource).toContain("kind: 'review-pending'")
@@ -251,8 +258,12 @@ describe('resource creation safety wall', () => {
   })
 
   it('keeps legacy review, payload, and create mechanics out of the production surface', () => {
+    // `attributeValues` is excluded from this guard: it is the wizard's own
+    // (intentional, C2d-authorized) collected-attribute state passed to
+    // ResourceCreationAttributeSequencer/ResourceCreationReview, not the
+    // legacy Convex-era pattern this test otherwise guards against.
     expect(surfaceSource).not.toMatch(
-      /api\.createResource|buildValores|AttributeField|attributeValues|resource-nombre|resource-descripcion|Nombre \*|Descripción|SubmitStatus|submitStatus|submitError|UNCERTAIN_MESSAGE|ADMIN_ERROR_MESSAGES|extractAdminCode|backToAttributes|ownership: \{ kind:|valores: buildValores|Crear recurso|step === 3/,
+      /api\.createResource|buildValores|AttributeField|resource-nombre|resource-descripcion|Nombre \*|Descripción|SubmitStatus|submitStatus|submitError|UNCERTAIN_MESSAGE|ADMIN_ERROR_MESSAGES|extractAdminCode|backToAttributes|ownership: \{ kind:|valores: buildValores|Crear recurso|step === 3/,
     )
   })
 })
