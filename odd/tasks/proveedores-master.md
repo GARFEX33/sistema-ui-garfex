@@ -44,7 +44,7 @@ Strict TDD activo (`openspec/config.yaml` + system config). RED → GREEN → RE
 ## Tareas
 
 - [x] **T1 — Tipos + adapter REST** (`proveedores.types.ts`, `proveedores.api.ts`): parseo/validación de `Supplier`/`SupplierPage`, `listSuppliers`, `createSupplier`, `getSupplier`, `updateSupplier`. Allowlist de arquitectura actualizado. Tests unitarios del adapter.
-- [ ] **T2 — Lista/búsqueda** (`useProveedoresRestWindow.ts`, `ProveedoresScreen.tsx`, `ProveedoresEntry.tsx`): ventana paginada mirror de `useResourcesMasterRestWindow`, búsqueda por texto, `PageHeader`+`WorkCard`, spatial-nav en filas.
+- [x] **T2 — Lista/búsqueda** (`useProveedoresRestWindow.ts`, `ProveedoresScreen.tsx`, `ProveedoresEntry.tsx`): ventana paginada mirror de `useResourcesMasterRestWindow`, búsqueda por texto, `PageHeader`+`WorkCard`, spatial-nav en filas.
 - [ ] **T3 — Crear proveedor** (`CrearProveedorSurface.tsx`): diálogo modal, validación mínima, refresco de lista tras crear (cuidado: bug conocido en Recursos fue que la lista no se refrescaba tras crear — verificar invalidación real).
 - [ ] **T4 — Editar proveedor** (`EditarProveedorSurface.tsx`): diálogo precargado, `PUT` sin `expectedRevision`.
 - [ ] **T5 — Ruteo + navegación + teclado** (`src/app/routes/proveedores.tsx`, `AppShell.tsx`, subsistema de teclado, actualización deliberada de los tests de arquitectura afectados) + smoke e2e.
@@ -60,3 +60,4 @@ Strict TDD activo (`openspec/config.yaml` + system config). RED → GREEN → RE
 (se actualiza tarea por tarea con evidencia de tests, typecheck/lint, y commit)
 
 - **T1** (2026-09-18): `proveedores.types.ts` + `proveedores.api.ts` creados (RED→GREEN); `tests/unit/proveedoresApi.test.ts` — 16/16 passed; `tests/architecture/restTransportBoundaries.test.ts` — 5/5 passed tras agregar el adapter al allowlist; `pnpm typecheck` y `pnpm lint` sin errores.
+- **T2** (2026-09-18): `useProveedoresRestWindow.ts` (mirror de `useResourcesMasterRestWindow`, texto enviado al backend sin bug documentado a diferencia de Recursos) + `ProveedoresScreen.tsx` (header+card+tabla, sin acción de creación, atributos `data-spatial-id="proveedores.search"` / `data-spatial-id="proveedores.<id>"` / `data-supplier-row` para spatial-nav futura) + `ProveedoresEntry.tsx` creados (RED→GREEN, RED confirmado moviendo temporalmente cada archivo nuevo y viendo fallar el import antes de restaurarlo). `tests/unit/useProveedoresRestWindow.test.tsx` — 6/6 passed; `tests/unit/proveedoresScreen.test.tsx` — 10/10 passed; `tests/unit/proveedoresApi.test.ts` — 16/16 passed (sin tocar T1); `tests/architecture/restTransportBoundaries.test.ts` — 5/5 passed; `pnpm typecheck` y `pnpm lint` sin errores. No se creó ruta ni se tocó `AppShell.tsx`/`src/shared/keyboard/` (T5).
