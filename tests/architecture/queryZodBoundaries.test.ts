@@ -23,10 +23,14 @@ const allowedValuesHookPath =
 const createHookPath =
   'src/features/resources-master/useResourceCreationCreate.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
+const proveedoresApiPath = 'src/features/proveedores/proveedores.api.ts'
+const proveedoresRestWindowHookPath =
+  'src/features/proveedores/useProveedoresRestWindow.ts'
 const catalogContractPath = 'src/shared/catalog/catalogRest.contract.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [restWindowHookPath, ['useQuery']],
+  [proveedoresRestWindowHookPath, ['useQuery']],
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
   [allowedValuesHookPath, ['useInfiniteQuery']],
@@ -56,7 +60,9 @@ const protectedPackage = (module: string) =>
 const isApprovedFile = (file: string, module: string) =>
   (isQueryModule(module) && queryBindings.has(file)) ||
   (isPackage(module, 'zod') &&
-    (file === apiPath || file === catalogContractPath))
+    (file === apiPath ||
+      file === proveedoresApiPath ||
+      file === catalogContractPath))
 const property = (node: ts.Node) => {
   if (ts.isPropertyAccessExpression(node)) return node.name.text
   if (ts.isElementAccessExpression(node)) return text(node.argumentExpression)

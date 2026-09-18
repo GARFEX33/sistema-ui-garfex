@@ -87,6 +87,7 @@ describe('Keyboard First architecture boundaries', () => {
           'features/catalog-hierarchy/catalogPresentationAdmin.api.ts',
           'features/resources-master/resourcesMaster.api.ts',
           'features/resources-master/resourceAttributeEvaluation.api.ts',
+          'features/proveedores/proveedores.api.ts',
         ])
         const runtimeWithoutApprovedRestTransportAdapters = runtimeFiles
           .filter((file) => !approvedRestTransportAdapters.has(file))
