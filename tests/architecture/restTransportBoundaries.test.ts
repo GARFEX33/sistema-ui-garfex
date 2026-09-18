@@ -13,6 +13,7 @@ const allowed = new Set([
   'src/features/catalog-hierarchy/catalogPresentationAdmin.api.ts',
   'src/features/resources-master/resourcesMaster.api.ts',
   'src/features/resources-master/resourceAttributeEvaluation.api.ts',
+  'src/features/proveedores/proveedores.api.ts',
 ])
 
 const walk = (node: ts.Node, visit: (node: ts.Node) => void) => {
