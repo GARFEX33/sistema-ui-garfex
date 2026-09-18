@@ -61,8 +61,31 @@ export const CatalogPageSchema = z.object({
   hasNext: z.boolean(),
 })
 
-export const ErrorEnvelopeSchema = z.object({ error: z.string() })
+export const ErrorCodeSchema = z.enum([
+  'INVALID_ARGUMENT',
+  'NOT_FOUND',
+  'DUPLICATE',
+  'INVALID_REFERENCE',
+  'VALIDATION',
+  'INTEGRITY',
+  'IDENTITY_CONFLICT',
+  'INVALID_LIFECYCLE',
+  'REACTIVATION_IMPOSSIBLE',
+  'INVALID_CATALOG',
+  'IN_USE',
+  'IMMUTABLE_CODE',
+  'CONFLICT',
+  'UNAVAILABLE',
+  'INTERNAL',
+])
 
+export const ErrorEnvelopeSchema = z.object({
+  error: z.string(),
+  code: ErrorCodeSchema.optional(),
+  detail: z.string().optional(),
+})
+
+export type CatalogErrorCode = z.infer<typeof ErrorCodeSchema>
 export type CatalogValue = z.infer<typeof CatalogValueSchema>
 export type CatalogRecord = z.infer<typeof CatalogRecordSchema>
 export type CatalogPage = z.infer<typeof CatalogPageSchema>

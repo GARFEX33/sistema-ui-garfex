@@ -150,6 +150,69 @@ describe('useCatalogTypeEffectiveAttributes', () => {
     await waitFor(() => expect(mounted.result.current.status).toBe('empty'))
   })
 
+  it('refreshes the current snapshot without clearing the projection and reports its result', async () => {
+    const first = deferred<EffectiveAttributesResponse>()
+    const second = deferred<EffectiveAttributesResponse>()
+    const get = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const currentApi = api(get)
+    const mounted = renderDriver(context(), currentApi)
+    await calls(get, 1)
+    await act(async () => first.resolve(response()))
+    await waitFor(() => expect(mounted.result.current.status).toBe('empty'))
+
+    const refreshed: Promise<boolean> = mounted.result.current.refresh()
+    await calls(get, 2)
+    expect(get).toHaveBeenLastCalledWith({
+      ...context(),
+      signal: expect.any(AbortSignal),
+    })
+    await act(async () => second.resolve(response()))
+    await expect(refreshed).resolves.toBe(true)
+    await waitFor(() => expect(mounted.result.current.status).toBe('empty'))
+  })
+
+  it('marks retained projections stale until a successful refresh confirms them', async () => {
+    const first = deferred<EffectiveAttributesResponse>()
+    const second = deferred<EffectiveAttributesResponse>()
+    const third = deferred<EffectiveAttributesResponse>()
+    const get = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockReturnValueOnce(third.promise)
+    const mounted = renderDriver(context(), api(get))
+    await calls(get, 1)
+    await act(async () =>
+      first.resolve(response('type-a', [attribute('A', 'A')])),
+    )
+    await waitFor(() => expect(mounted.result.current.isFresh).toBe(true))
+
+    const failedRefresh = mounted.result.current.refresh()
+    await calls(get, 2)
+    expect(mounted.result.current).toMatchObject({
+      status: 'ready',
+      isFresh: false,
+      attributes: [attribute('A', 'A')],
+    })
+    await act(async () => second.reject(new Error('offline')))
+    await expect(failedRefresh).resolves.toBe(false)
+    expect(mounted.result.current).toMatchObject({
+      status: 'ready',
+      isFresh: false,
+    })
+
+    const recovered = mounted.result.current.refresh()
+    await calls(get, 3)
+    await act(async () =>
+      third.resolve(response('type-a', [attribute('A', 'A')])),
+    )
+    await expect(recovered).resolves.toBe(true)
+    expect(mounted.result.current.isFresh).toBe(true)
+  })
+
   it('rejects stale A-B-A work and cannot commit after unmount', async () => {
     const first = deferred<EffectiveAttributesResponse>()
     const second = deferred<EffectiveAttributesResponse>()

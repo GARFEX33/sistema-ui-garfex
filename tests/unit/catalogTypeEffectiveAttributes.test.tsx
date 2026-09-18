@@ -100,21 +100,30 @@ describe('CatalogTypeEffectiveAttributes', () => {
     ).toHaveLength(0)
     const list = screen.getByRole('list', { name: 'Atributos efectivos' })
     expect(list).toHaveClass('space-y-2')
-    const rows = screen.getAllByRole('article')
-    expect(rows).toHaveLength(2)
-    expect(rows[0]).toHaveClass(
+    expect(screen.queryAllByRole('article')).toHaveLength(0)
+    const rowsAsControls = screen.getAllByRole('button', {
+      name: /Ver detalle de/,
+    })
+    expect(rowsAsControls).toHaveLength(2)
+    expect(rowsAsControls[0]).toHaveClass(
       'rounded-lg',
       'border',
       'border-border',
       'bg-surface-subtle',
       'sm:flex-row',
     )
-    expect(rows[0]).toHaveTextContent('Color')
-    expect(rows[0]).toHaveTextContent('COLOR · CONTROLLED_OPTION')
-    expect(rows[1]).toHaveTextContent('Voltage')
-    expect(
-      screen.getAllByRole('button', { name: /Ver detalle de/ }),
-    ).toHaveLength(2)
+    expect(rowsAsControls[0]).toHaveTextContent('Color')
+    expect(rowsAsControls[0]).toHaveTextContent('COLOR · CONTROLLED_OPTION')
+    expect(rowsAsControls[1]).toHaveTextContent('Voltage')
+    expect(rowsAsControls[0]).toHaveAttribute(
+      'data-catalog-level',
+      'attributes',
+    )
+    expect(rowsAsControls[0]).toHaveAttribute(
+      'data-spatial-id',
+      'catalog.row.attributes.effective.0',
+    )
+    expect(rowsAsControls[0].querySelectorAll('button')).toHaveLength(0)
     expect(screen.queryByText('Modo efectivo: CONDITIONAL')).toBeNull()
     expect(screen.queryByText('Origen: FAMILY · CABLE')).toBeNull()
     expect(document.querySelector('pre')).toBeNull()
@@ -123,6 +132,20 @@ describe('CatalogTypeEffectiveAttributes', () => {
       screen.getByRole('button', { name: 'Ver detalle de Color' }),
     )
     const dialog = screen.getByRole('dialog', { name: 'Detalle de Color' })
+    const detailTab = screen.getByRole('tab', { name: 'Detalle' })
+    const optionsTab = screen.getByRole('tab', { name: 'Opciones' })
+    expect(screen.getByRole('tablist')).toHaveAccessibleName(
+      'Información y opciones del atributo',
+    )
+    expect(detailTab).toHaveAttribute('aria-selected', 'true')
+    expect(optionsTab).toHaveAttribute('aria-selected', 'false')
+    expect(dialog).toHaveClass('overflow-hidden', 'border-border')
+    expect(
+      screen.getByRole('button', { name: 'Cerrar modal de detalle' }),
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText('Atajos de teclado').querySelectorAll('kbd'),
+    ).toHaveLength(7)
     expect(dialog).toHaveTextContent('Resumen')
     expect(dialog).toHaveTextContent('Aplicabilidad')
     expect(dialog).toHaveTextContent('Opciones')
@@ -159,6 +182,16 @@ describe('CatalogTypeEffectiveAttributes', () => {
       screen.getByRole('list', { name: 'Valores de lista' }),
     ).toHaveTextContent('UnoDos')
     expect(dialog.querySelector('pre')).toBeNull()
+    detailTab.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(optionsTab).toHaveFocus()
+    expect(detailTab).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('{Enter}')
+    expect(optionsTab).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByText('Resumen')).toBeNull()
+    expect(dialog).toHaveTextContent('COLORS')
+    expect(dialog).toHaveTextContent('COLOR')
+    expect(dialog).toHaveTextContent('Opciones base compartidas')
     await user.click(screen.getByRole('button', { name: 'Cerrar detalle' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     await waitFor(() =>
@@ -172,6 +205,129 @@ describe('CatalogTypeEffectiveAttributes', () => {
     )
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('opens the single native row once with Enter and Space and explains unavailable options', async () => {
+    const user = userEvent.setup()
+    render(
+      <CatalogTypeEffectiveAttributes
+        status="ready"
+        attributes={attributes}
+        retry={vi.fn()}
+        fallbackFocus={fallbackFocus}
+      />,
+    )
+
+    const voltage = screen.getByRole('button', {
+      name: 'Ver detalle de Voltage',
+    })
+    voltage.focus()
+    await user.keyboard('{Enter}')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(voltage).toHaveFocus())
+    await user.keyboard(' ')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    await user.click(screen.getByRole('tab', { name: 'Opciones' }))
+    expect(
+      screen.getByText('Administración de opciones no disponible'),
+    ).toBeVisible()
+    expect(screen.getByText(/no incluye un optionSetCode/i)).toBeVisible()
+  })
+
+  it('keeps the same detail open through a retained refresh and replaces it by characteristic code', async () => {
+    const user = userEvent.setup()
+    const view = render(
+      <CatalogTypeEffectiveAttributes
+        status="ready"
+        attributes={attributes}
+        retry={vi.fn()}
+        fallbackFocus={fallbackFocus}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Ver detalle de Color' }),
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Detalle de Color' })
+    const focusedElement = document.activeElement
+
+    view.rerender(
+      <CatalogTypeEffectiveAttributes
+        status="loading"
+        attributes={attributes}
+        retry={vi.fn()}
+        fallbackFocus={fallbackFocus}
+      />,
+    )
+    expect(screen.getByRole('dialog', { name: 'Detalle de Color' })).toBe(
+      dialog,
+    )
+    expect(document.activeElement).toBe(focusedElement)
+
+    const refreshedAttributes: readonly EffectiveAttribute[] = [
+      attributes[1],
+      {
+        ...attributes[0],
+        options: [{ code: 'GREEN', label: 'Green' }],
+        rules: [rule('UPDATED_RULE', { kind: 'TEXT', value: 'Updated rule' })],
+        source: { level: 'TYPE', code: 'CABLE_UPDATED' },
+      },
+    ]
+    view.rerender(
+      <CatalogTypeEffectiveAttributes
+        status="ready"
+        attributes={refreshedAttributes}
+        retry={vi.fn()}
+        fallbackFocus={fallbackFocus}
+      />,
+    )
+
+    const refreshedDialog = screen.getByRole('dialog', {
+      name: 'Detalle de Color',
+    })
+    expect(refreshedDialog).toBe(dialog)
+    expect(document.activeElement).toBe(focusedElement)
+    expect(refreshedDialog).toHaveTextContent('GREEN · Green')
+    expect(refreshedDialog).toHaveTextContent('TYPE · CABLE_UPDATED')
+    expect(refreshedDialog).toHaveTextContent('UPDATED_RULE')
+    expect(refreshedDialog).toHaveTextContent('Updated rule')
+    expect(refreshedDialog).not.toHaveTextContent('BLUE · Blue')
+    expect(refreshedDialog).not.toHaveTextContent('FAMILY · CABLE')
+    expect(refreshedDialog).not.toHaveTextContent('TEXT_RULE')
+  })
+
+  it('closes a detail only when its characteristic code is absent from a ready response', async () => {
+    const user = userEvent.setup()
+    const view = render(
+      <>
+        <button id="attributes-tab-fallback">Atributos</button>
+        <CatalogTypeEffectiveAttributes
+          status="ready"
+          attributes={attributes}
+          retry={vi.fn()}
+          fallbackFocus={fallbackFocus}
+        />
+      </>,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Ver detalle de Color' }),
+    )
+    view.rerender(
+      <>
+        <button id="attributes-tab-fallback">Atributos</button>
+        <CatalogTypeEffectiveAttributes
+          status="ready"
+          attributes={[attributes[1]]}
+          retry={vi.fn()}
+          fallbackFocus={fallbackFocus}
+        />
+      </>,
+    )
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Atributos' })).toHaveFocus()
   })
 
   it('closes an invalidated detail and focuses the attributes fallback', async () => {
@@ -196,7 +352,7 @@ describe('CatalogTypeEffectiveAttributes', () => {
       <>
         <button id="attributes-tab-fallback">Atributos</button>
         <CatalogTypeEffectiveAttributes
-          status="loading"
+          status="error"
           attributes={[]}
           retry={vi.fn()}
           fallbackFocus={fallbackFocus}
@@ -206,6 +362,52 @@ describe('CatalogTypeEffectiveAttributes', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('button', { name: 'Atributos' })).toHaveFocus()
+  })
+
+  it('gates the creation CTA until the complete selected context is available', () => {
+    const creation = {
+      status: 'idle',
+      steps: [],
+      draft: null,
+      retained: [],
+      submit: vi.fn(),
+      rereadCore: vi.fn(),
+      continuePendingStep: vi.fn(),
+    }
+    const view = render(
+      <CatalogTypeEffectiveAttributes
+        status="waiting-context"
+        attributes={[]}
+        retry={vi.fn()}
+        fallbackFocus={fallbackFocus}
+        actorAvailable
+        context={{ sessionId: 'screen-1' }}
+        creation={creation as never}
+      />,
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Crear atributo' }),
+    ).toBeDisabled()
+
+    view.rerender(
+      <CatalogTypeEffectiveAttributes
+        status="empty"
+        attributes={[]}
+        retry={vi.fn()}
+        fallbackFocus={fallbackFocus}
+        actorAvailable
+        context={{
+          sessionId: 'screen-1',
+          classCode: 'MAT',
+          familyCode: 'FER',
+          typeCode: 'TOR',
+        }}
+        creation={creation as never}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Crear atributo' })).toBeEnabled()
   })
 
   it.each([

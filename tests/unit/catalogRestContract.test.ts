@@ -101,9 +101,21 @@ describe('catalog REST contract', () => {
   })
 
   it('validates the documented error envelope and rejects partial contract data', () => {
-    expect(ErrorEnvelopeSchema.parse({ error: 'Revision conflict' })).toEqual({
+    expect(
+      ErrorEnvelopeSchema.parse({
+        error: 'Revision conflict',
+        code: 'CONFLICT',
+        detail: 'Current revision is 2',
+      }),
+    ).toEqual({
       error: 'Revision conflict',
+      code: 'CONFLICT',
+      detail: 'Current revision is 2',
     })
+    expect(
+      ErrorEnvelopeSchema.safeParse({ error: 'invalid', code: 'STALE' })
+        .success,
+    ).toBe(false)
     expect(ErrorEnvelopeSchema.safeParse({ error: 409 }).success).toBe(false)
     expect(
       CatalogRecordSchema.safeParse(record({ rules: undefined })).success,
