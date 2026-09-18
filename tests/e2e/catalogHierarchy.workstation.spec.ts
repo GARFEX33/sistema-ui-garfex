@@ -1304,4 +1304,627 @@ test.describe('Catálogo workstation 1440×980', () => {
       1440, 980,
     ])
   })
+
+  test('opens one effective-attribute row and keeps manual detail tabs local', async ({
+    page,
+  }) => {
+    const requests: string[] = []
+    const response = (body: unknown) => ({
+      contentType: 'application/json',
+      status: 200,
+      body: JSON.stringify(body),
+    })
+    const record = (kind: string, id: string, code: string, name: string) => ({
+      active: true,
+      id,
+      kind,
+      revision: '1',
+      rules: [],
+      values: {
+        code: { kind: 'CODE', value: code },
+        name: { kind: 'TEXT', value: name },
+      } as Record<string, unknown>,
+    })
+    await page.route('**/v1/**', async (route) => {
+      const url = new URL(route.request().url())
+      requests.push(url.pathname)
+      if (url.pathname === '/v1/catalog/CLASE') {
+        await route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [record('CLASE', '1', 'MAT', 'Materiales')],
+          }),
+        )
+        return
+      }
+      if (url.pathname === '/v1/catalog/FAMILIA') {
+        const family = record('FAMILIA', '2', 'FER', 'Ferretería')
+        family.values.class = {
+          kind: 'REFERENCE',
+          reference: { code: 'MAT', id: '1', kind: 'CLASE' },
+        }
+        await route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [family],
+          }),
+        )
+        return
+      }
+      if (url.pathname === '/v1/catalog/TIPO') {
+        const type = record('TIPO', '3', 'TOR', 'Tornillo')
+        type.values.class = {
+          kind: 'REFERENCE',
+          reference: { code: 'MAT', id: '1', kind: 'CLASE' },
+        }
+        type.values.family = {
+          kind: 'REFERENCE',
+          reference: { code: 'FER', id: '2', kind: 'FAMILIA' },
+        }
+        await route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [type],
+          }),
+        )
+        return
+      }
+      if (url.pathname === '/v1/types/TOR/attributes/effective') {
+        await route.fulfill(
+          response({
+            attributes: [
+              {
+                characteristic: {
+                  code: 'COLOR',
+                  name: 'Color',
+                  valueType: 'CONTROLLED_OPTION',
+                },
+                effectiveMode: 'OPTIONAL',
+                hasPosition: true,
+                identityParticipates: false,
+                notApplicable: false,
+                optionSetCode: 'COLORS',
+                options: [],
+                position: 1,
+                rules: [],
+                source: { code: 'TOR', level: 'TYPE' },
+              },
+            ],
+            typeCode: 'TOR',
+          }),
+        )
+        return
+      }
+      await route.fulfill({ status: 404 })
+    })
+
+    await page.goto('/catalogo')
+    await page.getByRole('button', { name: 'Materiales' }).click()
+    await page.getByRole('button', { name: 'Ferretería' }).click()
+    await page.getByRole('button', { name: 'Tornillo' }).click()
+    await page.getByRole('tab', { name: 'Atributos' }).click()
+    const row = page.getByRole('button', { name: 'Ver detalle de Color' })
+    await expect(row).toHaveAttribute(
+      'data-spatial-id',
+      'catalog.row.attributes.effective.0',
+    )
+    await expect(row.locator('button')).toHaveCount(0)
+    await row.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'Detalle de Color' })
+    await expect(dialog).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(1)
+    const detailTab = dialog.getByRole('tab', { name: 'Detalle' })
+    const optionsTab = dialog.getByRole('tab', { name: 'Opciones' })
+    await detailTab.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(optionsTab).toBeFocused()
+    await expect(detailTab).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('Enter')
+    await expect(optionsTab).toHaveAttribute('aria-selected', 'true')
+    await expect(dialog).toContainText('COLORS')
+    await expect(dialog).toContainText('COLOR')
+    expect(requests).toContain('/v1/catalog/OPCION')
+  })
+
+  test('mocks REST option administration commands and 409 reconciliation', async ({
+    page,
+  }) => {
+    const mutations: Array<{ method: string; path: string; body: unknown }> = []
+    let optionReads = 0
+    let effectiveReads = 0
+    let deactivateAttempts = 0
+    const option = {
+      active: true,
+      id: '9',
+      revision: '1',
+      code: 'RED',
+      label: 'Rojo',
+    }
+    const response = (body: unknown, status = 200) => ({
+      contentType: 'application/json',
+      status,
+      body: JSON.stringify(body),
+    })
+    const record = (kind: string, id: string, code: string, name: string) => ({
+      active: true,
+      id,
+      kind,
+      revision: '1',
+      rules: [],
+      values: {
+        code: { kind: 'CODE', value: code },
+        name: { kind: 'TEXT', value: name },
+      },
+    })
+    const optionRecord = () => ({
+      active: option.active,
+      id: option.id,
+      kind: 'OPCION',
+      revision: option.revision,
+      rules: [],
+      values: {
+        optionSet: {
+          kind: 'REFERENCE',
+          reference: { kind: 'CONJUNTO_OPCIONES', id: '11', code: 'COLORS' },
+        },
+        characteristic: {
+          kind: 'REFERENCE',
+          reference: { kind: 'CARACTERISTICA', id: '12', code: 'COLOR' },
+        },
+        code: { kind: 'CODE', value: option.code },
+        label: { kind: 'TEXT', value: option.label },
+      },
+    })
+    await page.route('**/v1/**', async (route) => {
+      const request = route.request()
+      const url = new URL(request.url())
+      if (url.pathname === '/v1/catalog/CLASE')
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [record('CLASE', '1', 'MAT', 'Materiales')],
+          }),
+        )
+      if (url.pathname === '/v1/catalog/FAMILIA') {
+        const family = record('FAMILIA', '2', 'FER', 'Ferretería')
+        family.values.class = {
+          kind: 'REFERENCE',
+          reference: { kind: 'CLASE', id: '1', code: 'MAT' },
+        }
+        return route.fulfill(
+          response({ hasNext: false, hasPrevious: false, records: [family] }),
+        )
+      }
+      if (url.pathname === '/v1/catalog/TIPO') {
+        const type = record('TIPO', '3', 'TOR', 'Tornillo')
+        type.values.class = {
+          kind: 'REFERENCE',
+          reference: { kind: 'CLASE', id: '1', code: 'MAT' },
+        }
+        type.values.family = {
+          kind: 'REFERENCE',
+          reference: { kind: 'FAMILIA', id: '2', code: 'FER' },
+        }
+        return route.fulfill(
+          response({ hasNext: false, hasPrevious: false, records: [type] }),
+        )
+      }
+      if (url.pathname === '/v1/types/TOR/attributes/effective') {
+        effectiveReads += 1
+        return route.fulfill(
+          response({
+            attributes: [
+              {
+                characteristic: {
+                  code: 'COLOR',
+                  name: 'Color',
+                  valueType: 'CONTROLLED_OPTION',
+                },
+                effectiveMode: 'OPTIONAL',
+                hasPosition: true,
+                identityParticipates: false,
+                notApplicable: false,
+                optionSetCode: 'COLORS',
+                options: [],
+                position: 1,
+                rules: [],
+                source: { code: 'TOR', level: 'TYPE' },
+              },
+            ],
+            typeCode: 'TOR',
+          }),
+        )
+      }
+      if (url.pathname === '/v1/catalog/CONJUNTO_OPCIONES')
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [record('CONJUNTO_OPCIONES', '11', 'COLORS', 'Colors')],
+          }),
+        )
+      if (url.pathname === '/v1/catalog/CARACTERISTICA')
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [record('CARACTERISTICA', '12', 'COLOR', 'Color')],
+          }),
+        )
+      if (url.pathname === '/v1/catalog/OPCION' && request.method() === 'GET') {
+        optionReads += 1
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [optionRecord()],
+          }),
+        )
+      }
+      mutations.push({
+        method: request.method(),
+        path: url.pathname,
+        body: request.postDataJSON(),
+      })
+      if (url.pathname.endsWith('/deactivate') && ++deactivateAttempts === 1)
+        return route.fulfill(response({ error: 'conflict' }, 409))
+      const body = request.postDataJSON() as {
+        values?: { code?: { value?: string }; label?: { value?: string } }
+      }
+      if (body.values?.code?.value) option.code = body.values.code.value
+      if (body.values?.label?.value) option.label = body.values.label.value
+      option.active = url.pathname.endsWith('/deactivate')
+        ? false
+        : url.pathname.endsWith('/reactivate')
+          ? true
+          : option.active
+      option.revision = String(Number(option.revision) + 1)
+      return route.fulfill(
+        response(
+          optionRecord(),
+          request.method() === 'POST' && url.pathname === '/v1/catalog/OPCION'
+            ? 201
+            : 200,
+        ),
+      )
+    })
+
+    await page.goto('/catalogo')
+    await page.getByRole('button', { name: 'Materiales' }).click()
+    await page.getByRole('button', { name: 'Ferretería' }).click()
+    await page.getByRole('button', { name: 'Tornillo' }).click()
+    await page.getByRole('tab', { name: 'Atributos' }).click()
+    const row = page.getByRole('button', { name: 'Ver detalle de Color' })
+    await row.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'Detalle de Color' })
+    await dialog.getByRole('tab', { name: 'Opciones' }).click()
+    await dialog.getByRole('button', { name: 'Crear opción' }).click()
+    await dialog.getByRole('textbox', { name: 'Código' }).fill('BLUE')
+    await dialog.getByRole('textbox', { name: 'Etiqueta' }).fill('Azul')
+    await dialog.getByRole('button', { name: 'Crear opción' }).click()
+    await expect.poll(() => mutations.length).toBe(1)
+    expect(mutations[0]).toEqual({
+      method: 'POST',
+      path: '/v1/catalog/OPCION',
+      body: {
+        actor: 'e2e-actor',
+        values: {
+          optionSet: {
+            kind: 'REFERENCE',
+            reference: { kind: 'CONJUNTO_OPCIONES', id: '11', code: 'COLORS' },
+          },
+          characteristic: {
+            kind: 'REFERENCE',
+            reference: { kind: 'CARACTERISTICA', id: '12', code: 'COLOR' },
+          },
+          code: { kind: 'CODE', value: 'BLUE' },
+          label: { kind: 'TEXT', value: 'Azul' },
+        },
+      },
+    })
+    await dialog.getByRole('button', { name: 'Editar Azul' }).click()
+    await dialog.getByRole('textbox', { name: 'Etiqueta' }).fill('Azul marino')
+    await dialog.getByRole('button', { name: 'Guardar cambios' }).click()
+    await expect.poll(() => mutations.length).toBe(2)
+    expect(mutations[1]).toMatchObject({
+      method: 'PUT',
+      path: '/v1/catalog/OPCION/9',
+      body: { actor: 'e2e-actor', expectedRevision: '2' },
+    })
+    await dialog.getByRole('button', { name: 'Desactivar Azul marino' }).click()
+    const confirmation = dialog.getByRole('region', {
+      name: 'Confirmar desactivación de opción',
+    })
+    const confirm = confirmation.getByRole('button', {
+      name: 'Desactivar opción',
+    })
+    const readsBeforeConflict = [optionReads, effectiveReads]
+    await confirm.click()
+    await expect(confirmation.getByRole('alert')).toContainText(
+      'cambió en otra operación',
+    )
+    await expect(
+      confirmation.getByRole('button', { name: 'Cancelar' }),
+    ).toBeFocused()
+    await expect.poll(() => optionReads).toBeGreaterThan(readsBeforeConflict[0])
+    await expect
+      .poll(() => effectiveReads)
+      .toBeGreaterThan(readsBeforeConflict[1])
+    await confirm.click()
+    await expect.poll(() => mutations.length).toBe(4)
+    expect(mutations.slice(2, 4)).toEqual([
+      {
+        method: 'POST',
+        path: '/v1/catalog/OPCION/9/deactivate',
+        body: { actor: 'e2e-actor', expectedRevision: '3' },
+      },
+      {
+        method: 'POST',
+        path: '/v1/catalog/OPCION/9/deactivate',
+        body: { actor: 'e2e-actor', expectedRevision: '3' },
+      },
+    ])
+    await dialog.getByRole('button', { name: 'Reactivar Azul marino' }).click()
+    await dialog.getByRole('button', { name: 'Reactivar opción' }).click()
+    await expect.poll(() => mutations.length).toBe(5)
+    expect(mutations[4]).toMatchObject({
+      method: 'POST',
+      path: '/v1/catalog/OPCION/9/reactivate',
+      body: { actor: 'e2e-actor', expectedRevision: '4' },
+    })
+  })
+
+  test('creates a simple attribute only through mocked canonical REST and refreshed Core data', async ({
+    page,
+  }) => {
+    const canonicalGets: string[] = []
+    const mutations: Array<{
+      method: string
+      path: string
+      body: unknown
+      status: number
+    }> = []
+    let captureCanonicalGets = false
+    let presentationCreated = false
+    const response = (body: unknown, status = 200) => ({
+      contentType: 'application/json',
+      status,
+      body: JSON.stringify(body),
+    })
+    const record = (
+      kind: string,
+      id: string,
+      values: Record<string, unknown>,
+    ) => ({
+      active: true,
+      id,
+      kind,
+      revision: '1',
+      rules: [],
+      values,
+    })
+    const reference = (kind: string, id: string, code: string) => ({
+      kind: 'REFERENCE',
+      reference: { kind, id, code },
+    })
+    const hierarchy = (
+      kind: string,
+      id: string,
+      code: string,
+      name: string,
+      parents: Record<string, unknown> = {},
+    ) =>
+      record(kind, id, {
+        code: { kind: 'CODE', value: code },
+        name: { kind: 'TEXT', value: name },
+        ...parents,
+      })
+    const effective = () => ({
+      attributes: presentationCreated
+        ? [
+            {
+              characteristic: {
+                code: 'VOLT',
+                name: 'Voltaje nominal',
+                valueType: 'INTEGER',
+              },
+              effectiveMode: 'REQUIRED',
+              hasPosition: true,
+              identityParticipates: false,
+              notApplicable: false,
+              options: [],
+              position: 7,
+              rules: [],
+              source: { code: 'CAB', level: 'TYPE' },
+            },
+          ]
+        : [],
+      typeCode: 'CAB',
+    })
+    await page.route('**/v1/**', async (route) => {
+      const request = route.request()
+      const url = new URL(request.url())
+      if (request.method() === 'GET' && captureCanonicalGets)
+        canonicalGets.push(url.pathname + url.search)
+      if (url.pathname === '/v1/catalog/CLASE')
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [hierarchy('CLASE', '1', 'MAT', 'Materiales')],
+          }),
+        )
+      if (url.pathname === '/v1/catalog/FAMILIA')
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [
+              hierarchy('FAMILIA', '2', 'CON', 'Conductores', {
+                class: reference('CLASE', '1', 'MAT'),
+              }),
+            ],
+          }),
+        )
+      if (url.pathname === '/v1/catalog/TIPO')
+        return route.fulfill(
+          response({
+            hasNext: false,
+            hasPrevious: false,
+            records: [
+              hierarchy('TIPO', '3', 'CAB', 'Cable', {
+                class: reference('CLASE', '1', 'MAT'),
+                family: reference('FAMILIA', '2', 'CON'),
+              }),
+            ],
+          }),
+        )
+      if (url.pathname === '/v1/types/CAB/attributes/effective')
+        return route.fulfill(response(effective()))
+      const status = 201
+      const body = request.postDataJSON()
+      mutations.push({
+        method: request.method(),
+        path: url.pathname,
+        body,
+        status,
+      })
+      if (url.pathname === '/v1/catalog/CARACTERISTICA')
+        return route.fulfill(
+          response(
+            record('CARACTERISTICA', '4', {
+              code: { kind: 'CODE', value: 'VOLT' },
+              name: { kind: 'TEXT', value: 'Voltaje nominal' },
+              valueType: { kind: 'ENUM', value: 'INTEGER' },
+            }),
+            status,
+          ),
+        )
+      if (url.pathname === '/v1/catalog/APLICABILIDAD')
+        return route.fulfill(
+          response(
+            record(
+              'APLICABILIDAD',
+              '5',
+              (body as { values: Record<string, unknown> }).values,
+            ),
+            status,
+          ),
+        )
+      if (url.pathname === '/v1/catalog/PRESENTACION') {
+        presentationCreated = true
+        return route.fulfill(
+          response(
+            record(
+              'PRESENTACION',
+              '6',
+              (body as { values: Record<string, unknown> }).values,
+            ),
+            status,
+          ),
+        )
+      }
+      return route.fulfill(response({ error: 'unexpected request' }, 404))
+    })
+
+    await page.goto('/catalogo')
+    await page.getByRole('button', { name: 'Materiales' }).click()
+    await page.getByRole('button', { name: 'Conductores' }).click()
+    await page.getByRole('button', { name: 'Cable' }).click()
+    await page.getByRole('tab', { name: 'Atributos' }).click()
+    await expect(
+      page.getByText('No hay atributos efectivos para este contexto.'),
+    ).toBeVisible()
+    const trigger = page.getByRole('button', { name: 'Crear atributo' })
+    await trigger.click()
+    const dialog = page.getByRole('dialog', { name: 'Crear atributo' })
+    await page.keyboard.press('Escape')
+    await expect(trigger).toBeFocused()
+    await trigger.click()
+    await dialog.getByRole('textbox', { name: 'Código' }).fill('VOLT')
+    await dialog
+      .getByRole('textbox', { name: 'Nombre' })
+      .fill('Voltaje nominal')
+    await dialog
+      .getByRole('combobox', { name: 'Tipo de valor' })
+      .selectOption('INTEGER')
+    await dialog
+      .getByRole('combobox', { name: 'Modo' })
+      .selectOption('REQUIRED')
+    await dialog.getByRole('spinbutton', { name: 'Posición' }).fill('7')
+    await dialog
+      .getByRole('checkbox', {
+        name: 'Confirmo que la creación tiene tres pasos y no es atómica.',
+      })
+      .check()
+    captureCanonicalGets = true
+    await dialog.getByRole('button', { name: 'Crear atributo' }).click()
+    const refreshedRow = page.getByRole('button', {
+      name: 'Ver detalle de Voltaje nominal',
+    })
+    await expect.poll(() => mutations.length).toBe(3)
+    await dialog.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(refreshedRow).toBeVisible()
+    expect(canonicalGets).toEqual([
+      '/v1/catalog/CLASE?scope=ALL&text=MAT&limit=50&offset=0',
+      '/v1/catalog/FAMILIA?scope=ALL&text=CON&limit=50&offset=0&classCode=MAT',
+      '/v1/catalog/TIPO?scope=ALL&text=CAB&limit=50&offset=0&familyCode=CON',
+      '/v1/types/CAB/attributes/effective?classCode=MAT&familyCode=CON',
+      '/v1/types/CAB/attributes/effective?classCode=MAT&familyCode=CON',
+      '/v1/types/CAB/attributes/effective?classCode=MAT&familyCode=CON',
+    ])
+    expect(mutations).toEqual([
+      {
+        method: 'POST',
+        path: '/v1/catalog/CARACTERISTICA',
+        status: 201,
+        body: {
+          actor: 'e2e-actor',
+          values: {
+            code: { kind: 'CODE', value: 'VOLT' },
+            name: { kind: 'TEXT', value: 'Voltaje nominal' },
+            valueType: { kind: 'ENUM', value: 'INTEGER' },
+          },
+        },
+      },
+      {
+        method: 'POST',
+        path: '/v1/catalog/APLICABILIDAD',
+        status: 201,
+        body: {
+          actor: 'e2e-actor',
+          rules: [],
+          values: {
+            class: reference('CLASE', '1', 'MAT'),
+            family: reference('FAMILIA', '2', 'CON'),
+            type: reference('TIPO', '3', 'CAB'),
+            characteristic: reference('CARACTERISTICA', '4', 'VOLT'),
+            mode: { kind: 'ENUM', value: 'REQUIRED' },
+            identityParticipates: { kind: 'BOOLEAN', value: false },
+          },
+        },
+      },
+      {
+        method: 'POST',
+        path: '/v1/catalog/PRESENTACION',
+        status: 201,
+        body: {
+          actor: 'e2e-actor',
+          values: {
+            class: reference('CLASE', '1', 'MAT'),
+            family: reference('FAMILIA', '2', 'CON'),
+            type: reference('TIPO', '3', 'CAB'),
+            characteristic: reference('CARACTERISTICA', '4', 'VOLT'),
+            position: { kind: 'INTEGER', value: '7' },
+          },
+        },
+      },
+    ])
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  })
 })
