@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -11,7 +12,10 @@ import {
   StagedSearchSelector,
   type SelectorLoadState,
 } from '../../src/features/resources-master/StagedSearchSelector'
-import { isPrintableStagedSelectorKey } from '../../src/features/resources-master/stagedSearchSelector.model'
+import {
+  isPrintableStagedSelectorKey,
+  stagedSelectorBoundedHeightClass,
+} from '../../src/features/resources-master/stagedSearchSelector.model'
 
 type Item = { id: string; nombre: string }
 type FixtureProps = {
@@ -22,6 +26,8 @@ type FixtureProps = {
   onConfirm?: (item: Item) => void
   onLoadMore?: () => void
   onRetry?: () => void
+  maxVisibleRows?: number
+  waitingForParentLabel?: string
 }
 
 const items: readonly Item[] = [
@@ -58,16 +64,14 @@ describe('StagedSearchSelector', () => {
     render(<Selector preferredActiveKey="cable" onConfirm={onConfirm} />)
 
     expect(
-      screen.getByText('Busca solo entre las opciones cargadas'),
-    ).toBeInTheDocument()
+      screen.queryByText('Busca solo entre las opciones cargadas'),
+    ).not.toBeInTheDocument()
     expect(
-      screen.getByText('2 opciones cargadas; búsqueda local por nombre.'),
-    ).toBeInTheDocument()
+      screen.queryByText('2 opciones cargadas; búsqueda local por nombre.'),
+    ).not.toBeInTheDocument()
     await user.type(screen.getByRole('searchbox', { name: 'Clase' }), 'árb')
 
-    expect(
-      screen.getByText('1 coincidencia entre 2 opciones cargadas.'),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Árbol' })).toBeInTheDocument()
     expect(
       screen.queryByRole('option', { name: 'Cable UTP' }),
     ).not.toBeInTheDocument()
@@ -118,9 +122,7 @@ describe('StagedSearchSelector', () => {
     const { rerender } = render(selector(ready))
     const input = screen.getByRole('searchbox', { name: 'Clase' })
     await user.type(input, 'sin coincidencia')
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'No hay coincidencias entre los elementos cargados.',
-    )
+    expect(screen.getByRole('status')).toHaveTextContent('Sin resultados.')
     await user.click(screen.getByRole('button', { name: 'Cargar más…' }))
     expect(onLoadMore).toHaveBeenCalledOnce()
     await user.clear(input)
@@ -326,6 +328,176 @@ describe('StagedSearchSelector', () => {
     prevented.preventDefault()
     fireEvent(input, prevented)
     expect(input).toHaveFocus()
+  })
+
+  it('renders the unbounded list, with no height cap, when maxVisibleRows is omitted', () => {
+    const onLoadMore = vi.fn()
+    render(
+      <Selector
+        loadState={{ status: 'ready', exhausted: false }}
+        onLoadMore={onLoadMore}
+      />,
+    )
+    const listContainer = screen.getByRole('listbox').parentElement
+    expect(listContainer).not.toBeNull()
+    expect(listContainer?.className).toBe('')
+    expect(
+      screen.getByRole('button', { name: 'Cargar más…' }),
+    ).toBeInTheDocument()
+  })
+
+  it('caps the list height and hides load-more/continuation affordances when maxVisibleRows is set', () => {
+    const onLoadMore = vi.fn()
+    render(
+      <Selector
+        loadState={{ status: 'ready', exhausted: false }}
+        onLoadMore={onLoadMore}
+        maxVisibleRows={5}
+      />,
+    )
+    const listContainer = screen.getByRole('listbox').parentElement
+    expect(listContainer?.className).toContain(
+      stagedSelectorBoundedHeightClass(5),
+    )
+    expect(listContainer?.className).toContain('overflow-y-auto')
+    expect(
+      screen.queryByRole('button', { name: 'Cargar más…' }),
+    ).not.toBeInTheDocument()
+
+    const { rerender } = render(<Selector maxVisibleRows={5} />)
+    rerender(
+      <Selector loadState={{ status: 'partial-error' }} maxVisibleRows={5} />,
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Reintentar continuación' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('still supports keyboard and mouse selection when bounded (maxVisibleRows set)', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+    render(
+      <Selector
+        preferredActiveKey="cable"
+        onConfirm={onConfirm}
+        maxVisibleRows={5}
+      />,
+    )
+    const tree = screen.getByRole('option', { name: 'Árbol' })
+    const cable = screen.getByRole('option', { name: 'Cable UTP' })
+
+    screen.getByRole('listbox').focus()
+    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'ArrowUp' })
+    expect(tree).toHaveFocus()
+    fireEvent.keyDown(tree, { key: 'ArrowDown' })
+    expect(cable).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onConfirm).toHaveBeenCalledWith(items[1])
+
+    const clickConfirm = vi.fn()
+    render(<Selector onConfirm={clickConfirm} maxVisibleRows={5} />)
+    await user.click(screen.getAllByRole('option', { name: 'Árbol' })[1]!)
+    expect(clickConfirm).toHaveBeenCalledWith(items[0])
+  })
+
+  it('keeps a fixed height while loading, so a bounded column never shrinks below its siblings', () => {
+    render(<Selector loadState={{ status: 'loading' }} maxVisibleRows={5} />)
+    expect(screen.getByRole('status')).toHaveClass(
+      stagedSelectorBoundedHeightClass(5),
+    )
+  })
+
+  it('folds the "no results" and "no options" messages into the same fixed-height slot when bounded, instead of stacking extra height below the list', () => {
+    const { rerender } = render(<Selector maxVisibleRows={5} />)
+    const input = screen.getByRole('searchbox', { name: 'Clase' })
+    fireEvent.change(input, { target: { value: 'sin coincidencia' } })
+    const statuses = screen.getAllByRole('status')
+    expect(statuses).toHaveLength(1)
+    expect(statuses[0]).toHaveTextContent('Sin resultados.')
+    expect(statuses[0]).toHaveClass(stagedSelectorBoundedHeightClass(5))
+
+    rerender(
+      <Selector
+        items={[]}
+        loadState={{ status: 'empty' }}
+        maxVisibleRows={5}
+      />,
+    )
+    const emptyStatuses = screen.getAllByRole('status')
+    expect(emptyStatuses).toHaveLength(1)
+    expect(emptyStatuses[0]).toHaveTextContent('No hay opciones disponibles.')
+    expect(emptyStatuses[0]).toHaveClass(stagedSelectorBoundedHeightClass(5))
+  })
+
+  it('keeps the retry affordance inside the fixed-height slot for a bounded initial-load error', async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn()
+    render(
+      <Selector
+        items={[]}
+        loadState={{ status: 'initial-error' }}
+        maxVisibleRows={5}
+        onRetry={onRetry}
+      />,
+    )
+    const alerts = screen.getAllByRole('alert')
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0]).toHaveClass(stagedSelectorBoundedHeightClass(5))
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it('shows a waiting-for-parent message instead of the list, with no default or custom label collision', () => {
+    const { rerender } = render(
+      <Selector items={[]} loadState={{ status: 'waiting-for-parent' }} />,
+    )
+    expect(
+      screen.getByText('Seleccioná un elemento superior primero.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('No hay opciones disponibles.'),
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+
+    rerender(
+      <Selector
+        items={[]}
+        loadState={{ status: 'waiting-for-parent' }}
+        waitingForParentLabel="Seleccioná una Clase primero."
+      />,
+    )
+    expect(
+      screen.getByText('Seleccioná una Clase primero.'),
+    ).toBeInTheDocument()
+  })
+
+  it('renders a label-derived placeholder and a search icon, with no technical legends', () => {
+    render(<Selector />)
+    const input = screen.getByRole('searchbox', { name: 'Clase' })
+
+    expect(input).toHaveAttribute('placeholder', 'Buscar clase...')
+    expect(
+      input.closest('div')?.querySelector('svg[aria-hidden="true"]'),
+    ).not.toBeNull()
+    expect(
+      screen.queryByText('Busca solo entre las opciones cargadas'),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/opciones cargadas; búsqueda local por nombre/),
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders a clean option name with the confirmation check as its own element, never concatenated into one text node', () => {
+    render(<Selector confirmedKey="tree" />)
+    const tree = screen.getByRole('option', { name: 'Árbol' })
+    const cable = screen.getByRole('option', { name: 'Cable UTP' })
+
+    expect(tree.textContent).not.toContain('›')
+    expect(within(tree).getByText('Árbol').textContent).toBe('Árbol')
+    const check = within(tree).getByText('✓')
+    expect(check).toHaveAttribute('aria-hidden', 'true')
+    expect(within(cable).queryByText('✓')).not.toBeInTheDocument()
   })
 
   it('recognizes printable list keys without treating IME or command chords as text', () => {

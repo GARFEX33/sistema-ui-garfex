@@ -10,24 +10,27 @@ describe('REST actor configuration', () => {
     ['absent', {}],
     ['empty', { VITE_REST_ACTOR: '' }],
     ['whitespace', { VITE_REST_ACTOR: ' \t\n' }],
-  ])('fails closed for a %s configured actor before a mutation runs', async (_, env) => {
-    const request = vi.fn(async () => 'sent')
+  ])(
+    'fails closed for a %s configured actor before a mutation runs',
+    async (_, env) => {
+      const request = vi.fn(async () => 'sent')
 
-    await expect(withRestActor(request, {}, env)).rejects.toBeInstanceOf(
-      RestActorConfigurationError,
-    )
+      await expect(withRestActor(request, {}, env)).rejects.toBeInstanceOf(
+        RestActorConfigurationError,
+      )
 
-    expect(request).not.toHaveBeenCalled()
-  })
+      expect(request).not.toHaveBeenCalled()
+    },
+  )
 
   it.each(['create', 'update', 'lifecycle'])(
     'does not invoke a direct %s mutation callback without an actor',
     async () => {
       const request = vi.fn(async () => 'sent')
 
-      await expect(withRestActor(request)).rejects.toBeInstanceOf(
-        RestActorConfigurationError,
-      )
+      await expect(
+        withRestActor(request, {}, { VITE_REST_ACTOR: undefined }),
+      ).rejects.toBeInstanceOf(RestActorConfigurationError)
 
       expect(request).not.toHaveBeenCalled()
     },
@@ -43,5 +46,4 @@ describe('REST actor configuration', () => {
     expect(request).toHaveBeenCalledOnce()
     expect(request).toHaveBeenCalledWith('test actor')
   })
-
 })

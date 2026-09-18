@@ -3,6 +3,7 @@ import {
   deriveVisibleStagedSelectorItems,
   normalizeStagedSelectorQuery,
   repairProvisionalActiveKey,
+  stagedSelectorBoundedHeightClass,
   type StagedSelectorItem,
 } from '../../src/features/resources-master/stagedSearchSelector.model'
 
@@ -56,5 +57,23 @@ describe('staged selector model', () => {
       'tree',
     )
     expect(repairProvisionalActiveKey([], 'tree', 'cable')).toBeNull()
+  })
+
+  it('maps a requested row count to a standard, static Tailwind fixed-height utility', () => {
+    expect(stagedSelectorBoundedHeightClass(4)).toBe('h-44')
+    expect(stagedSelectorBoundedHeightClass(5)).toBe('h-52')
+  })
+
+  it('clamps out-of-range row counts to the supported 1-8 range', () => {
+    expect(stagedSelectorBoundedHeightClass(0)).toBe('h-10')
+    expect(stagedSelectorBoundedHeightClass(-3)).toBe('h-10')
+    expect(stagedSelectorBoundedHeightClass(1)).toBe('h-10')
+    expect(stagedSelectorBoundedHeightClass(8)).toBe('h-80')
+    expect(stagedSelectorBoundedHeightClass(50)).toBe('h-80')
+  })
+
+  it('rounds a fractional row count before mapping it', () => {
+    expect(stagedSelectorBoundedHeightClass(4.4)).toBe('h-44')
+    expect(stagedSelectorBoundedHeightClass(4.6)).toBe('h-52')
   })
 })

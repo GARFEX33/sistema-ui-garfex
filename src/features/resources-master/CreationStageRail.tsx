@@ -1,5 +1,3 @@
-import { Button } from '../../shared/ui/Button'
-
 export type CreationRailStage =
   | 'class'
   | 'family'
@@ -31,6 +29,13 @@ const stages = [
   ['unit', 'Unidad', 'unitName'],
 ] as const
 
+// Compact CLI-style checklist row: an aria-hidden glyph, then two direct text
+// nodes for label and value/status so both the accessible name (which
+// excludes the aria-hidden glyph) and plain-text assertions stay legible,
+// without any button chrome or border.
+const rowClass =
+  'grid w-full grid-cols-[1rem_5.5rem_1fr] items-baseline gap-2 rounded px-1 py-0.5 text-left'
+
 export function CreationStageRail({
   currentStage,
   attributeProgress,
@@ -40,7 +45,7 @@ export function CreationStageRail({
   return (
     <ol
       aria-label="Etapas de creación"
-      className="mb-4 flex flex-wrap gap-2 border-b border-border pb-3"
+      className="mb-4 grid gap-0.5 border-b border-border pb-3 font-mono text-sm"
     >
       {stages.map(([stage, label, selectionKey]) => {
         const value = selections[selectionKey]
@@ -49,23 +54,24 @@ export function CreationStageRail({
         return (
           <li key={stage}>
             {value ? (
-              <Button
-                aria-current={isCurrent ? 'step' : undefined}
-                className="px-3 text-left text-sm hover:bg-surface-subtle active:bg-primary-subtle focus-visible:outline-2 focus-visible:outline-focus"
-                style={{ minHeight: 44 }}
-                onPress={() => onNavigate(stage)}
+              <button
                 type="button"
-                variant="outline"
+                aria-current={isCurrent ? 'step' : undefined}
+                onClick={() => onNavigate(stage)}
+                className={`${rowClass} cursor-pointer text-text-secondary hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-2 focus-visible:outline-focus`}
               >
-                <span aria-hidden="true">{isCurrent ? '●' : '✓'}</span>
-                {label}: {value}
-              </Button>
+                <span aria-hidden="true" className="text-success">
+                  ✓
+                </span>
+                <span>{label}</span>
+                <span className="truncate text-text-primary">{value}</span>
+              </button>
             ) : (
               <span
                 aria-current={isCurrent ? 'step' : undefined}
-                className="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-secondary"
+                className={`${rowClass} text-text-secondary`}
               >
-                <span aria-hidden="true">{isCurrent ? '●' : '○'}</span>
+                <span aria-hidden="true">{isCurrent ? '›' : '·'}</span>
                 {label} · pendiente
               </span>
             )}
@@ -76,9 +82,9 @@ export function CreationStageRail({
         <li>
           <span
             aria-current="step"
-            className="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-secondary"
+            className={`${rowClass} text-text-secondary`}
           >
-            <span aria-hidden="true">●</span>
+            <span aria-hidden="true">›</span>
             {attributeProgress
               ? `Atributos · ${attributeProgress.current} de ${attributeProgress.total}`
               : 'Atributos · pendiente'}
@@ -89,9 +95,9 @@ export function CreationStageRail({
         <li>
           <span
             aria-current="step"
-            className="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-secondary"
+            className={`${rowClass} text-text-secondary`}
           >
-            <span aria-hidden="true">●</span>
+            <span aria-hidden="true">›</span>
             Revisión · pendiente
           </span>
         </li>
@@ -100,9 +106,9 @@ export function CreationStageRail({
         <li>
           <span
             aria-current="step"
-            className="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-text-secondary"
+            className={`${rowClass} text-text-secondary`}
           >
-            <span aria-hidden="true">●</span>
+            <span aria-hidden="true">›</span>
             Contrato backend pendiente
           </span>
         </li>

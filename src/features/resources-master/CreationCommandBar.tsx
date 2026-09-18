@@ -1,17 +1,21 @@
 import type { ReactNode } from 'react'
 import { DialogActions } from '../../shared/ui/Dialog'
+import type { CreationRailStage } from './CreationStageRail'
 
 type CreationCommandBarProps = {
-  stage: 'context' | 'attributes' | 'review-pending' | 'contract-pending'
+  stage: CreationRailStage
   children: ReactNode
 }
 
-const commandCopy = {
-  context: 'Esc Cerrar',
-  attributes: 'Esc / ← Volver · Enter Confirmar',
-  'review-pending': 'Esc / ← Volver',
-  'contract-pending': 'Esc / ← Volver',
-} as const
+const commandCopy: Record<CreationRailStage, string> = {
+  class: '↑/↓ mover · Enter seleccionar · Esc cerrar',
+  family: '↑/↓ mover · Enter seleccionar · Esc volver',
+  type: '↑/↓ mover · Enter seleccionar · Esc volver',
+  unit: '↑/↓ mover · Enter seleccionar · Esc volver',
+  attributes: '↑/↓ mover · Enter seleccionar · Esc volver',
+  'review-pending': 'Enter crear recurso · Esc volver',
+  'contract-pending': 'Esc volver',
+}
 
 export function CreationCommandBar({
   stage,

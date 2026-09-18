@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ResourcesMasterRestReadApi } from './resourcesMaster.api'
-import type { Resource, ResourceLifecycle } from './resourcesMaster.types'
+import type { ResourceLifecycle } from './resourcesMaster.types'
 
 const DEBOUNCE_MS = 250
 
@@ -36,7 +36,14 @@ export function useResourcesMasterRestWindow(
   criteria: ResourcesMasterRestWindowCriteria,
 ) {
   const identity = useMemo(
-    () => ({ ...criteria, text: criteria.text.trim() }),
+    () => ({
+      text: criteria.text.trim(),
+      scope: criteria.scope,
+      classCode: criteria.classCode,
+      familyCode: criteria.familyCode,
+      typeCode: criteria.typeCode,
+      limit: criteria.limit,
+    }),
     [
       criteria.classCode,
       criteria.familyCode,
@@ -93,13 +100,16 @@ export function useResourcesMasterRestWindow(
   const query = useQuery({
     queryKey: key,
     enabled: !waiting,
-    queryFn: ({ signal }) => api.listResources({ ...debounced, offset, signal }),
+    queryFn: ({ signal }) =>
+      api.listResources({ ...debounced, offset, signal }),
     retry: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   })
+  // key is a trigger, not a referenced value: a fresh token per query key
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const token = useMemo(() => Symbol(), [key])
   const active = useRef<symbol | undefined>(undefined)
   useEffect(() => {
@@ -114,7 +124,9 @@ export function useResourcesMasterRestWindow(
     waiting || query.isPending
       ? 'initial-loading'
       : query.isError
-        ? offset ? 'navigation-error' : 'initial-error'
+        ? offset
+          ? 'navigation-error'
+          : 'initial-error'
         : query.isFetching
           ? 'navigating'
           : !page?.resources.length
@@ -125,7 +137,8 @@ export function useResourcesMasterRestWindow(
     if (!query.isFetching) navigating.current = false
   }, [query.isFetching])
   const navigate = (delta: number, allowed: boolean) => {
-    if (!isActive() || !allowed || query.isFetching || navigating.current) return
+    if (!isActive() || !allowed || query.isFetching || navigating.current)
+      return
     navigating.current = true
     setOffset((current) => Math.max(0, current + delta))
   }
@@ -138,7 +151,8 @@ export function useResourcesMasterRestWindow(
     hasNext: page?.hasNext ?? false,
     next: () => navigate(debounced.limit, !!page?.hasNext),
     previous: () => navigate(-debounced.limit, !!page?.hasPrevious),
-    retry: () => (isActive() && query.isError ? query.refetch() : Promise.resolve()),
+    retry: () =>
+      isActive() && query.isError ? query.refetch() : Promise.resolve(),
     refetchActive: () => (isActive() ? query.refetch() : Promise.resolve()),
   }
 }

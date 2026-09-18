@@ -1,7 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { useResourcesHierarchy } from '../../src/features/resources-master/useResourcesHierarchy'
+import {
+  HIERARCHY_FETCH_CAP,
+  useResourcesHierarchy,
+} from '../../src/features/resources-master/useResourcesHierarchy'
 import type { ResourcesMasterRestReadApi } from '../../src/features/resources-master/resourcesMaster.api'
+
+const PAGE_SIZE = 20
 
 const windowPage = <T>(items: T[], hasNext = false) => ({
   items,
@@ -130,39 +135,7 @@ describe('useResourcesHierarchy', () => {
     expect(result.current.types.offset).toBe(0)
   })
 
-  it('resets descendants after selecting from a nonzero class window', async () => {
-    const api = hierarchyApi({
-      listHierarchyClasses: vi
-        .fn()
-        .mockResolvedValueOnce(
-          windowPage([classItem('class-1', 'MATERIAL')], true),
-        )
-        .mockResolvedValueOnce(windowPage([classItem('class-2', 'SERVICIO')])),
-    })
-    const { result } = renderHook(() => useResourcesHierarchy(api))
-
-    await waitFor(() => expect(result.current.classes.items).toHaveLength(1))
-    await act(async () => {
-      result.current.selectClass('class-1')
-    })
-    await waitFor(() => expect(result.current.families.items).toHaveLength(1))
-    await act(async () => {
-      result.current.selectFamily('family-1')
-    })
-    await waitFor(() => expect(result.current.types.items).toHaveLength(1))
-
-    await act(async () => {
-      result.current.continueClasses()
-    })
-    await waitFor(() => expect(result.current.classes.offset).toBe(20))
-
-    act(() => result.current.selectClass('class-2'))
-    expect(result.current.selection).toEqual({ classId: 'class-2' })
-    expect(result.current.families).toMatchObject({ items: [], offset: 0 })
-    expect(result.current.types).toMatchObject({ items: [], offset: 0 })
-  })
-
-  it('clears the selected type and its nonzero window when the family changes', async () => {
+  it('clears the selected type and its window when the family changes', async () => {
     const api = hierarchyApi({
       listHierarchyFamilies: vi.fn(async () =>
         windowPage([
@@ -172,7 +145,7 @@ describe('useResourcesHierarchy', () => {
       ),
       listHierarchyTypes: vi
         .fn()
-        .mockResolvedValueOnce(windowPage([typeItem('type-1', 'UTP')], true))
+        .mockResolvedValueOnce(windowPage([typeItem('type-1', 'UTP')]))
         .mockResolvedValueOnce(windowPage([typeItem('type-2', 'FTP')])),
     })
     const { result } = renderHook(() => useResourcesHierarchy(api))
@@ -184,61 +157,101 @@ describe('useResourcesHierarchy', () => {
     await waitFor(() => expect(result.current.types.items).toHaveLength(1))
     act(() => result.current.selectType('type-1'))
 
-    await act(async () => {
-      result.current.continueTypes()
-    })
-    await waitFor(() => expect(result.current.types.offset).toBe(20))
-
     act(() => result.current.selectFamily('family-2'))
     expect(result.current.selection).toEqual({
       classId: 'class-1',
       familyId: 'family-2',
     })
     expect(result.current.types).toMatchObject({ items: [], offset: 0 })
+    await waitFor(() => expect(result.current.types.items).toHaveLength(1))
+    expect(result.current.types.items[0]?.id).toBe('type-2')
   })
 
-  it('uses server navigation flags to replace the class window in both directions', async () => {
+  it('auto-continues fetching classes internally until the server reports no further page', async () => {
     const api = hierarchyApi({
       listHierarchyClasses: vi
         .fn()
         .mockResolvedValueOnce(
-          windowPage([classItem('class-1', 'MATERIAL')], true),
+          windowPage(
+            [
+              classItem('class-1', 'MATERIAL'),
+              classItem('class-2', 'SERVICIO'),
+            ],
+            true,
+          ),
         )
-        .mockResolvedValueOnce({
-          items: [classItem('class-2', 'SERVICIO')],
-          hasPrevious: true,
-          hasNext: false,
-        })
-        .mockResolvedValueOnce(windowPage([classItem('class-1', 'MATERIAL')])),
+        .mockResolvedValueOnce(
+          windowPage([classItem('class-3', 'HERRAMIENTA')]),
+        ),
     })
     const { result } = renderHook(() => useResourcesHierarchy(api))
 
-    await waitFor(() =>
-      expect(result.current.classes.items[0]?.id).toBe('class-1'),
-    )
-    act(() => result.current.previousClasses())
-    expect(api.listHierarchyClasses).toHaveBeenCalledTimes(1)
-
-    act(() => result.current.continueClasses())
-    await waitFor(() => expect(result.current.classes.offset).toBe(20))
-    expect(result.current.classes).toMatchObject({
-      hasPrevious: true,
-      hasNext: false,
-      items: [{ id: 'class-2' }],
-    })
-    act(() => result.current.continueClasses())
-    expect(api.listHierarchyClasses).toHaveBeenCalledTimes(2)
-
-    act(() => result.current.previousClasses())
-    await waitFor(() => expect(result.current.classes.offset).toBe(0))
-    expect(api.listHierarchyClasses).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(result.current.classes.items).toHaveLength(3))
+    expect(result.current.classes.hasNext).toBe(false)
+    expect(api.listHierarchyClasses).toHaveBeenNthCalledWith(1, {
       scope: 'ACTIVE',
-      limit: 20,
+      limit: PAGE_SIZE,
       offset: 0,
     })
-    expect(result.current.classes.items).toEqual([
-      expect.objectContaining({ id: 'class-1' }),
+    expect(api.listHierarchyClasses).toHaveBeenNthCalledWith(2, {
+      scope: 'ACTIVE',
+      limit: PAGE_SIZE,
+      offset: PAGE_SIZE,
+    })
+    expect(result.current.classes.items.map((item) => item.code)).toEqual([
+      'MATERIAL',
+      'SERVICIO',
+      'HERRAMIENTA',
     ])
+  })
+
+  it('stops auto-continuing once the safety cap is reached, even if the server keeps reporting hasNext', async () => {
+    const alwaysMorePage = vi.fn(async () =>
+      windowPage(
+        Array.from({ length: PAGE_SIZE }, (_, index) =>
+          classItem(`class-${index}`, `CODE-${index}`),
+        ),
+        true,
+      ),
+    )
+    const api = hierarchyApi({ listHierarchyClasses: alwaysMorePage })
+    const { result } = renderHook(() => useResourcesHierarchy(api))
+
+    await waitFor(() => expect(result.current.classes.status).toBe('ready'))
+    expect(result.current.classes.items).toHaveLength(HIERARCHY_FETCH_CAP)
+    // Capped while the server still had more: hasNext stays true so the
+    // hook honestly reports the list is not exhaustive.
+    expect(result.current.classes.hasNext).toBe(true)
+    expect(alwaysMorePage).toHaveBeenCalledTimes(
+      HIERARCHY_FETCH_CAP / PAGE_SIZE,
+    )
+  })
+
+  it('keeps continueClasses/Families/Types as harmless no-ops (still wired by CrearRecursoSurface.tsx)', async () => {
+    const api = hierarchyApi()
+    const { result } = renderHook(() => useResourcesHierarchy(api))
+
+    await waitFor(() => expect(result.current.classes.items).toHaveLength(2))
+    const callsBefore = (api.listHierarchyClasses as ReturnType<typeof vi.fn>)
+      .mock.calls.length
+
+    act(() => result.current.continueClasses())
+    act(() => result.current.continueFamilies())
+    act(() => result.current.continueTypes())
+
+    expect(api.listHierarchyClasses).toHaveBeenCalledTimes(callsBefore)
+    expect(result.current.classes.items).toHaveLength(2)
+  })
+
+  it('no longer exposes previousClasses/Families/Types (Slice E2 removed their only consumer)', async () => {
+    const api = hierarchyApi()
+    const { result } = renderHook(() => useResourcesHierarchy(api))
+
+    await waitFor(() => expect(result.current.classes.items).toHaveLength(2))
+
+    expect(result.current).not.toHaveProperty('previousClasses')
+    expect(result.current).not.toHaveProperty('previousFamilies')
+    expect(result.current).not.toHaveProperty('previousTypes')
   })
 
   it('exposes empty and error windows with a manual retry', async () => {
@@ -259,7 +272,7 @@ describe('useResourcesHierarchy', () => {
     expect(api.listHierarchyClasses).toHaveBeenCalledTimes(2)
     expect(api.listHierarchyClasses).toHaveBeenLastCalledWith({
       scope: 'ACTIVE',
-      limit: 20,
+      limit: PAGE_SIZE,
       offset: 0,
     })
   })
@@ -298,7 +311,7 @@ describe('useResourcesHierarchy', () => {
       expect(api.listHierarchyFamilies).toHaveBeenLastCalledWith({
         classCode: 'SERVICIO',
         scope: 'ACTIVE',
-        limit: 20,
+        limit: PAGE_SIZE,
         offset: 0,
       }),
     )

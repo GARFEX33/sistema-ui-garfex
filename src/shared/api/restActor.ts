@@ -28,6 +28,18 @@ export const resolveRestActor = (
   return actor
 }
 
+export const hasRestActor = (
+  options: RestActorOptions = {},
+  environment: RestActorEnvironment = import.meta.env,
+): boolean => {
+  try {
+    resolveRestActor(options, environment)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export const withRestActor = async <T>(
   mutation: (actor: string) => Promise<T>,
   options: RestActorOptions = {},

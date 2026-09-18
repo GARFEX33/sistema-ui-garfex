@@ -1,96 +1,88 @@
 import { StagedSearchSelector } from './StagedSearchSelector'
-import type { useResourceCreationFlow } from './useResourceCreationFlow'
-
-type ResourceCreationFlow = ReturnType<typeof useResourceCreationFlow>
+import { mapHierarchyWindowToSelectorLoadState } from './resourceCreationWizard.types'
+import type { WizardHierarchyView } from './resourceCreationWizard.types'
+import type {
+  ResourceContextClassRestItem,
+  ResourceContextFamilyRestItem,
+  ResourceContextTypeRestItem,
+  ResourceContextUnitRestItem,
+} from './resourcesMaster.types'
 
 type ResourceCreationContextStageProps = {
-  flow: ResourceCreationFlow
-  onConfirmClass: (item: ResourceCreationFlow['classes'][number]) => void
-  onConfirmFamily: (item: ResourceCreationFlow['families'][number]) => void
-  onConfirmType: (item: ResourceCreationFlow['types'][number]) => void
-  onConfirmUnit: (item: ResourceCreationFlow['units'][number]) => void
+  view: WizardHierarchyView
+  onConfirmClass: (item: ResourceContextClassRestItem) => void
+  onConfirmFamily: (item: ResourceContextFamilyRestItem) => void
+  onConfirmType: (item: ResourceContextTypeRestItem) => void
+  onConfirmUnit: (item: ResourceContextUnitRestItem) => void
 }
 
-const unitLabel = (unit: { nombre: string; simbolo?: string }) =>
-  unit.simbolo ? `${unit.nombre} (${unit.simbolo})` : unit.nombre
+const hierarchyKey = (item: { id: string }) => item.id
+const hierarchyName = (item: { name: string }) => item.name
+const unitLabel = (unit: ResourceContextUnitRestItem) =>
+  unit.symbol ? `${unit.name} (${unit.symbol})` : unit.name
 
 export function ResourceCreationContextStage({
-  flow,
+  view,
   onConfirmClass,
   onConfirmFamily,
   onConfirmType,
   onConfirmUnit,
 }: ResourceCreationContextStageProps) {
-  const showUnitSelector = flow.state.stage.kind === 'unit'
-
   return (
     <>
-      <div hidden={flow.state.stage.kind !== 'class'}>
+      <div hidden={view.stage !== 'class'}>
         <StagedSearchSelector
           label="Clase"
-          items={flow.classes}
-          itemKey={(item) => flow.classKey(item.id)}
-          itemName={(item) => item.nombre}
-          loadState={flow.classLoadState}
+          items={view.classes.state.items}
+          itemKey={hierarchyKey}
+          itemName={hierarchyName}
+          confirmedKey={view.selection.classId}
+          loadState={mapHierarchyWindowToSelectorLoadState(view.classes.state)}
           onConfirm={onConfirmClass}
-          onLoadMore={() => void flow.continueClasses()}
-          onRetry={() => void flow.retryClasses()}
+          onLoadMore={view.classes.onLoadMore}
+          onRetry={view.classes.onRetry}
         />
       </div>
-      <div hidden={flow.state.stage.kind !== 'family'}>
+      <div hidden={view.stage !== 'family'}>
         <StagedSearchSelector
           label="Familia"
-          items={flow.families}
-          itemKey={(item) => flow.classKey(item.id)}
-          itemName={(item) => item.nombre}
-          confirmedKey={
-            flow.state.draft.hierarchy.familyItem
-              ? flow.classKey(flow.state.draft.hierarchy.familyItem.id)
-              : null
-          }
-          loadState={flow.familyLoadState}
+          items={view.families.state.items}
+          itemKey={hierarchyKey}
+          itemName={hierarchyName}
+          confirmedKey={view.selection.familyId}
+          loadState={mapHierarchyWindowToSelectorLoadState(view.families.state)}
           onConfirm={onConfirmFamily}
-          onLoadMore={() => void flow.continueFamilies()}
-          onRetry={() => void flow.retryFamilies()}
+          onLoadMore={view.families.onLoadMore}
+          onRetry={view.families.onRetry}
         />
       </div>
-
-      <div hidden={flow.state.stage.kind !== 'type'}>
+      <div hidden={view.stage !== 'type'}>
         <StagedSearchSelector
           label="Tipo"
-          items={flow.types}
-          itemKey={(item) => flow.classKey(item.id)}
-          itemName={(item) => item.nombre}
-          confirmedKey={
-            flow.state.draft.hierarchy.typeItem
-              ? flow.classKey(flow.state.draft.hierarchy.typeItem.id)
-              : null
-          }
-          loadState={flow.typeLoadState}
+          items={view.types.state.items}
+          itemKey={hierarchyKey}
+          itemName={hierarchyName}
+          confirmedKey={view.selection.typeId}
+          loadState={mapHierarchyWindowToSelectorLoadState(view.types.state)}
           onConfirm={onConfirmType}
-          onLoadMore={() => void flow.continueTypes()}
-          onRetry={() => void flow.retryTypes()}
+          onLoadMore={view.types.onLoadMore}
+          onRetry={view.types.onRetry}
         />
       </div>
-
-      {showUnitSelector && (
+      <div hidden={view.stage !== 'unit'}>
         <StagedSearchSelector
           label="Unidad"
-          items={flow.units}
-          itemKey={(item) => flow.classKey(item.unidadId)}
+          items={view.units.state.items}
+          itemKey={hierarchyKey}
           itemName={unitLabel}
           renderItem={unitLabel}
-          confirmedKey={
-            flow.state.draft.unitId === null
-              ? null
-              : flow.classKey(flow.state.draft.unitId)
-          }
-          loadState={flow.unitLoadState}
+          confirmedKey={view.selection.unitId}
+          loadState={mapHierarchyWindowToSelectorLoadState(view.units.state)}
           onConfirm={onConfirmUnit}
-          onLoadMore={() => void flow.continueUnits()}
-          onRetry={() => void flow.retryUnits()}
+          onLoadMore={view.units.onLoadMore}
+          onRetry={view.units.onRetry}
         />
-      )}
+      </div>
     </>
   )
 }

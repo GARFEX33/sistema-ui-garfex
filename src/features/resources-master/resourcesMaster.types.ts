@@ -91,6 +91,12 @@ export interface ResourcePage {
   hasNext: boolean
 }
 
+export interface ResourceRestCreateInput {
+  scope: ResourceScopeCodes
+  naturalUnit: string
+  attributes: ResourceAttribute[]
+}
+
 export interface ResourceRestListInput {
   scope: ResourceLifecycle
   text?: string
@@ -122,6 +128,16 @@ export interface ResourceContextClassRestItem {
   name: string
   active: boolean
   revision: string
+}
+
+export interface ResourceContextUnitRestItem {
+  id: string
+  code: string
+  name: string
+  active: boolean
+  revision: string
+  symbol: string
+  dimension: string
 }
 
 export interface ResourceContextFamilyRestItem
