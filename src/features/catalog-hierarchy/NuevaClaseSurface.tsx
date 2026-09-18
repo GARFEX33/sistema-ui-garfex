@@ -9,35 +9,40 @@ import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
 import { Field, FieldSeparator } from '../../shared/ui/Field'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
 import { RestActorConfigurationError } from '../../shared/api/restActor'
+import { CatalogHierarchyRestError } from './catalogHierarchy.api'
 import type {
   CatalogClassRestCreateInput,
   CatalogClassRestItem,
-  CatalogCreated,
-  CatalogFamilyCreateInput,
-  CatalogFamilyItem,
-  CatalogTypeCreateInput,
-  CatalogTypeItem,
+  CatalogFamilyRestCreateInput,
+  CatalogFamilyRestCreateOutput,
+  CatalogTypeRestCreateInput,
+  CatalogTypeRestCreateOutput,
 } from './catalogHierarchy.types'
 import { useAutoClosingMessage } from './useAutoClosingMessage'
 
 type NewDraft = {
   key: string
   name: string
-  description: string
   plural: string
   slug: string
 }
-type ParentContext = Readonly<{ id: string; label: string }>
+type ParentContext = Readonly<{
+  classCode: string
+  classLabel: string
+  familyCode?: string
+  familyLabel?: string
+  contextVersion?: number
+}>
 type CreateClass = (
   input: CatalogClassRestCreateInput,
 ) => Promise<CatalogClassRestItem>
 type CreateFamily = (
-  input: CatalogFamilyCreateInput,
-) => Promise<CatalogCreated<CatalogFamilyItem>>
+  input: CatalogFamilyRestCreateInput,
+) => Promise<CatalogFamilyRestCreateOutput>
 type CreateType = (
-  input: CatalogTypeCreateInput,
-) => Promise<CatalogCreated<CatalogTypeItem>>
-type OnCreated = () => void | Promise<unknown>
+  input: CatalogTypeRestCreateInput,
+) => Promise<CatalogTypeRestCreateOutput>
+type OnCreated = () => void | Promise<boolean | void>
 type OnSuccess = (message: string) => void
 type CreateSnapshot = Readonly<NewDraft & { parent: ParentContext | null }>
 
@@ -51,18 +56,19 @@ export interface CatalogCreateSurfaceProps {
   createType?: CreateType
   onCreated?: OnCreated
   onSuccess?: OnSuccess
+  actorAvailable?: boolean
 }
 
 export interface NuevaClaseSurfaceProps {
   createClass?: CreateClass
   onCreated?: OnCreated
   onSuccess?: OnSuccess
+  actorAvailable?: boolean
 }
 
 const emptyDraft = (): NewDraft => ({
   key: '',
   name: '',
-  description: '',
   plural: '',
   slug: '',
 })
@@ -80,6 +86,24 @@ const copyFor = (level: CatalogCreateLevel) => {
   }
 }
 
+const validParent = (level: CatalogCreateLevel, parent: ParentContext | null) =>
+  level === 'class' ||
+  (parent !== null &&
+    parent.classCode.length > 0 &&
+    (level === 'family' ||
+      (typeof parent.familyCode === 'string' && parent.familyCode.length > 0)))
+
+const sameParent = (
+  level: CatalogCreateLevel,
+  captured: ParentContext | null,
+  current: ParentContext | undefined,
+) =>
+  validParent(level, captured) &&
+  validParent(level, current ?? null) &&
+  captured?.classCode === current?.classCode &&
+  captured?.contextVersion === current?.contextVersion &&
+  (level === 'family' || captured?.familyCode === current?.familyCode)
+
 const payloadFor = (level: CatalogCreateLevel, snapshot: CreateSnapshot) => {
   if (level === 'class')
     return {
@@ -88,17 +112,20 @@ const payloadFor = (level: CatalogCreateLevel, snapshot: CreateSnapshot) => {
       plural: snapshot.plural,
       slug: snapshot.slug,
     }
-  const fields = {
-    clave: snapshot.key,
-    nombre: snapshot.name,
-    ...(snapshot.description === ''
-      ? {}
-      : { descripcion: snapshot.description }),
+  const parent = snapshot.parent
+  if (!parent || !validParent(level, parent)) return null
+  if (level === 'family')
+    return {
+      class: { kind: 'CLASE' as const, code: parent.classCode },
+      code: snapshot.key,
+      name: snapshot.name,
+    }
+  return {
+    class: { kind: 'CLASE' as const, code: parent.classCode },
+    family: { kind: 'FAMILIA' as const, code: parent.familyCode! },
+    code: snapshot.key,
+    name: snapshot.name,
   }
-  if (!snapshot.parent) return null
-  return level === 'family'
-    ? { claseRecursoId: snapshot.parent.id, ...fields }
-    : { familiaRecursoId: snapshot.parent.id, ...fields }
 }
 
 const createRequest = (
@@ -113,18 +140,20 @@ const createRequest = (
   if (level === 'class')
     return createClass?.(Object.freeze(payload as CatalogClassRestCreateInput))
   if (level === 'family')
-    return createFamily?.(Object.freeze(payload as CatalogFamilyCreateInput))
-  return createType?.(Object.freeze(payload as CatalogTypeCreateInput))
+    return createFamily?.(
+      Object.freeze(payload as CatalogFamilyRestCreateInput),
+    )
+  return createType?.(Object.freeze(payload as CatalogTypeRestCreateInput))
 }
 
-const creationErrorMessage = (
-  error: unknown,
-  key: string,
-  level: CatalogCreateLevel,
-) => {
-  if (level !== 'class') return copyFor(level).failure
+const creationErrorMessage = (error: unknown, level: CatalogCreateLevel) => {
   if (error instanceof RestActorConfigurationError)
-    return 'No se puede crear la Clase sin configurar el actor local.'
+    return `No se puede crear ${level === 'type' ? 'el' : 'la'} ${copyFor(level).noun} sin configurar el actor local.`
+  if (
+    error instanceof CatalogHierarchyRestError &&
+    error.failure.kind === 'http'
+  )
+    return copyFor(level).failure
   return copyFor(level).failure
 }
 
@@ -136,6 +165,7 @@ export function CatalogCreateSurface({
   createType,
   onCreated,
   onSuccess,
+  actorAvailable = true,
 }: CatalogCreateSurfaceProps) {
   const copy = copyFor(level)
   const [localSuccessMessage, showLocalSuccess] = useAutoClosingMessage()
@@ -148,31 +178,58 @@ export function CatalogCreateSurface({
   const dialogRef = useRef<HTMLDivElement>(null)
   const keyRef = useRef<HTMLInputElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
-  const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const pluralRef = useRef<HTMLInputElement>(null)
   const slugRef = useRef<HTMLInputElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const submitRef = useRef<HTMLButtonElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
   const parentRef = useRef<ParentContext | null>(null)
+  const currentParentRef = useRef(parent)
+  const mountedRef = useRef(true)
   const wasOpen = useRef(false)
   const submittingRef = useRef(false)
+  const submissionTokenRef = useRef<symbol | null>(null)
   const completedDraftRef = useRef<string | null>(null)
   const isOpenRef = useRef(isOpen)
+  const hierarchyContextKey = JSON.stringify([
+    parent?.classCode,
+    parent?.familyCode,
+    parent?.contextVersion,
+  ])
+  const contextKeyRef = useRef(hierarchyContextKey)
+  const generationRef = useRef(0)
+  const openGenerationRef = useRef(0)
   const { registerCommand, registerOverlay } = useKeyboardController()
   isOpenRef.current = isOpen
+  currentParentRef.current = parent
 
   const setField = (field: keyof NewDraft, value: string) => {
     completedDraftRef.current = null
     setErrorMessage(null)
     setDraft((current) => ({ ...current, [field]: value }))
   }
-  const close = useCallback(() => setIsOpen(false), [])
+  const close = useCallback(() => {
+    if (!submittingRef.current) setIsOpen(false)
+  }, [])
   const open = useCallback(
     (opener: HTMLElement | null = triggerRef.current) => {
       const capturedParent = parent
-        ? Object.freeze({ id: parent.id, label: parent.label })
+        ? Object.freeze({
+            classCode: parent.classCode,
+            classLabel: parent.classLabel,
+            ...(parent.familyCode === undefined
+              ? {}
+              : { familyCode: parent.familyCode }),
+            ...(parent.familyLabel === undefined
+              ? {}
+              : { familyLabel: parent.familyLabel }),
+            ...(parent.contextVersion === undefined
+              ? {}
+              : { contextVersion: parent.contextVersion }),
+          })
         : null
+      generationRef.current += 1
+      openGenerationRef.current = generationRef.current
       parentRef.current = capturedParent
       setVisibleParent(capturedParent)
       openerRef.current = opener?.isConnected ? opener : null
@@ -200,12 +257,13 @@ export function CatalogCreateSurface({
     [copy.title, level, open],
   )
   const canSubmit =
+    actorAvailable &&
     (level === 'class'
       ? !!createClass
       : level === 'family'
         ? !!createFamily
         : !!createType) &&
-    (level === 'class' || !!parentRef.current) &&
+    validParent(level, parentRef.current) &&
     draft.key.length > 0 &&
     draft.name.length > 0 &&
     (level !== 'class' || (draft.plural.length > 0 && draft.slug.length > 0)) &&
@@ -217,12 +275,22 @@ export function CatalogCreateSurface({
     const snapshot = Object.freeze({
       key: draft.key,
       name: draft.name,
-      description: draft.description,
       plural: draft.plural,
       slug: draft.slug,
       parent: parentRef.current,
     })
     const draftKey = draftIdentity(draft)
+    const submissionGeneration = openGenerationRef.current
+    const isCurrentSubmission = () =>
+      mountedRef.current &&
+      submissionGeneration === generationRef.current &&
+      sameParent(level, snapshot.parent, currentParentRef.current)
+    if (!isCurrentSubmission()) {
+      setErrorMessage(creationErrorMessage(new Error('stale context'), level))
+      return
+    }
+    const submissionToken = Symbol('catalog-submission')
+    submissionTokenRef.current = submissionToken
     submittingRef.current = true
     setIsSubmitting(true)
     setErrorMessage(null)
@@ -234,30 +302,32 @@ export function CatalogCreateSurface({
         createFamily,
         createType,
       )
-      if (!result) return
-      if (
-        !result ||
-        (level !== 'class' &&
-          (!('disposition' in result) || result.disposition !== 'CREATED'))
-      )
-        throw new Error('Invalid catalog hierarchy response')
+      if (!result) throw new Error('Invalid catalog hierarchy response')
+      if (!isCurrentSubmission()) return
+      if ((await onCreated?.()) === false)
+        throw new Error('Authoritative list refresh failed')
+      if (!isCurrentSubmission()) return
       completedDraftRef.current = draftKey
-      await onCreated?.()
       const successMessage = `${copy.noun} “${snapshot.name}” ${level === 'type' ? 'creado' : 'creada'}.`
       if (onSuccess) onSuccess(successMessage)
       else showLocalSuccess(successMessage)
-      close()
+      setIsOpen(false)
     } catch (error) {
-      setErrorMessage(creationErrorMessage(error, snapshot.key, level))
+      if (isCurrentSubmission())
+        setErrorMessage(creationErrorMessage(error, level))
     } finally {
-      submittingRef.current = false
-      setIsSubmitting(false)
+      if (submissionTokenRef.current === submissionToken) {
+        submissionTokenRef.current = null
+        submittingRef.current = false
+        if (mountedRef.current) setIsSubmitting(false)
+      }
     }
   }
 
   const handleDialogKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
       event.preventDefault()
+      event.stopPropagation()
       close()
       return
     }
@@ -275,26 +345,15 @@ export function CatalogCreateSurface({
     const fields =
       level === 'class'
         ? [keyRef.current, nameRef.current, pluralRef.current, slugRef.current]
-        : [keyRef.current, nameRef.current, descriptionRef.current]
+        : [keyRef.current, nameRef.current]
     if (target === cancelRef.current && event.key === 'ArrowUp') {
       event.preventDefault()
       fields.at(-1)?.focus()
       return
     }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      const index = fields.indexOf(
-        target as HTMLInputElement | HTMLTextAreaElement,
-      )
+      const index = fields.indexOf(target as HTMLInputElement)
       if (index < 0) return
-      if (target instanceof HTMLTextAreaElement) {
-        const selectionStart = target.selectionStart
-        const selectionEnd = target.selectionEnd
-        const collapsed = selectionStart === selectionEnd
-        if (!collapsed) return
-        if (event.key === 'ArrowUp' && selectionStart !== 0) return
-        if (event.key === 'ArrowDown' && selectionEnd !== target.value.length)
-          return
-      }
       const nextIndex = index + (event.key === 'ArrowUp' ? -1 : 1)
       const next = fields[nextIndex]
       if (!next) {
@@ -319,6 +378,18 @@ export function CatalogCreateSurface({
     }
   }
 
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+  useEffect(() => {
+    if (contextKeyRef.current !== hierarchyContextKey) {
+      contextKeyRef.current = hierarchyContextKey
+      generationRef.current += 1
+    }
+  }, [hierarchyContextKey])
   useEffect(() => registerCommand(command), [command, registerCommand])
   useEffect(() => registerOverlay(() => dialogRef.current), [registerOverlay])
   useEffect(() => {
@@ -337,7 +408,6 @@ export function CatalogCreateSurface({
 
   const keyId = `new-${level}-key`
   const nameId = `new-${level}-name`
-  const descriptionId = `new-${level}-description`
   const pluralId = `new-${level}-plural`
   const slugId = `new-${level}-slug`
   return (
@@ -356,7 +426,9 @@ export function CatalogCreateSurface({
         ref={dialogRef}
         isOpen={isOpen}
         height={440}
-        onOpenChange={(openState) => !openState && close()}
+        onOpenChange={(openState) => {
+          if (!openState) close()
+        }}
         data-approved-frame={
           level === 'class' ? 'n2418' : level === 'family' ? 'n2487' : 'n2556'
         }
@@ -367,6 +439,7 @@ export function CatalogCreateSurface({
           onKeyDown={(event) => {
             if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
               event.preventDefault()
+              event.stopPropagation()
               close()
             }
           }}
@@ -378,14 +451,23 @@ export function CatalogCreateSurface({
           <DialogHeading title={copy.title} />
           <div className="catalog-dialog-content">
             {visibleParent && copy.parentLabel && (
-              <div className="catalog-creation-parent">
-                <span>{copy.parentLabel}</span>
-                <output
-                  data-testid="creation-parent"
-                  data-parent-id={visibleParent.id}
-                >
-                  {visibleParent.label}
+              <div
+                className="catalog-creation-parent"
+                data-testid="creation-parent"
+                data-parent-code={visibleParent.classCode}
+              >
+                <span>Clase</span>
+                <output data-parent-code={visibleParent.classCode}>
+                  {visibleParent.classLabel}
                 </output>
+                {level === 'type' && visibleParent.familyLabel && (
+                  <>
+                    <span>Familia</span>
+                    <output data-parent-code={visibleParent.familyCode}>
+                      {visibleParent.familyLabel}
+                    </output>
+                  </>
+                )}
               </div>
             )}
             <div className="catalog-dialog-fields">
@@ -450,29 +532,18 @@ export function CatalogCreateSurface({
                   </Field>
                   <FieldSeparator />
                 </>
-              ) : (
-                <>
-                  <Field label="DESCRIPCIÓN" htmlFor={descriptionId}>
-                    <textarea
-                      ref={descriptionRef}
-                      onKeyDown={handleDialogKeyDown}
-                      id={descriptionId}
-                      aria-label="Descripción"
-                      className={`${fieldInputClass} h-[60px] resize-none`}
-                      value={draft.description}
-                      disabled={isSubmitting}
-                      onChange={(event) =>
-                        setField('description', event.target.value)
-                      }
-                    />
-                  </Field>
-                  <FieldSeparator />
-                </>
-              )}
+              ) : null}
             </div>
             <div className="catalog-dialog-error-region" role="alert">
-              <span aria-hidden="true">{errorMessage ? '⚠' : ''}</span>
-              <span>{errorMessage}</span>
+              <span aria-hidden="true">
+                {errorMessage || actorAvailable ? '' : '⚠'}
+              </span>
+              <span>
+                {errorMessage ??
+                  (actorAvailable
+                    ? null
+                    : `No se puede crear ${level === 'type' ? 'el' : 'la'} ${copy.noun} sin configurar el actor local.`)}
+              </span>
             </div>
           </div>
           <DialogActions>
@@ -481,6 +552,7 @@ export function CatalogCreateSurface({
               variant="outline"
               onKeyDown={handleDialogKeyDown}
               onPress={close}
+              isDisabled={isSubmitting}
               type="button"
             >
               Cancelar
@@ -509,6 +581,7 @@ export function NuevaClaseSurface({
   createClass,
   onCreated,
   onSuccess,
+  actorAvailable,
 }: NuevaClaseSurfaceProps) {
   return (
     <CatalogCreateSurface
@@ -516,6 +589,7 @@ export function NuevaClaseSurface({
       createClass={createClass}
       onCreated={onCreated}
       onSuccess={onSuccess}
+      actorAvailable={actorAvailable}
     />
   )
 }

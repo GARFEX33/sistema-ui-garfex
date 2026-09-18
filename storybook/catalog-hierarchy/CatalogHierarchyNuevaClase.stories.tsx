@@ -37,8 +37,9 @@ export const Approved: Story = {
       within(dialog).getByRole('textbox', { name: 'Nombre' }),
     ).toBeVisible()
     expect(
-      within(dialog).getByRole('textbox', { name: 'Descripción' }),
+      within(dialog).getByRole('textbox', { name: 'Plural' }),
     ).toBeVisible()
+    expect(within(dialog).getByRole('textbox', { name: 'Slug' })).toBeVisible()
     expect(
       within(dialog).getByRole('button', { name: 'Crear Clase' }),
     ).toBeDisabled()

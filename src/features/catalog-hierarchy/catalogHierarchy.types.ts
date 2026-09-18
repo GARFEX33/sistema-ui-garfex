@@ -13,6 +13,7 @@ export interface DependentQuery {
 export interface CatalogHierarchyItem {
   id: string
   label: string
+  code?: string
 }
 
 export interface CatalogHierarchyPresentation {
@@ -56,6 +57,44 @@ export interface CatalogClassRestCreateInput {
   plural: string
   slug: string
 }
+
+export type CatalogHierarchyRestReferenceInput<Kind extends string> = {
+  kind: Kind
+  code: string
+}
+export type CatalogHierarchyRestReference<Kind extends string> = {
+  kind: Kind
+  id: string
+  code: string
+}
+export type CatalogFamilyRestCreateInput = {
+  class: CatalogHierarchyRestReferenceInput<'CLASE'>
+  code: string
+  name: string
+}
+export type CatalogTypeRestCreateInput = {
+  class: CatalogHierarchyRestReferenceInput<'CLASE'>
+  family: CatalogHierarchyRestReferenceInput<'FAMILIA'>
+  code: string
+  name: string
+}
+type CatalogHierarchyRestCreateOutput<Kind extends string> = {
+  kind: Kind
+  id: string
+  revision: string
+  active: true
+  code: string
+  name: string
+}
+export type CatalogFamilyRestCreateOutput =
+  CatalogHierarchyRestCreateOutput<'FAMILIA'> & {
+    class: CatalogHierarchyRestReference<'CLASE'>
+  }
+export type CatalogTypeRestCreateOutput =
+  CatalogHierarchyRestCreateOutput<'TIPO'> & {
+    class: CatalogHierarchyRestReference<'CLASE'>
+    family: CatalogHierarchyRestReference<'FAMILIA'>
+  }
 
 export interface CatalogWindowInput {
   scope: CatalogMode

@@ -1,17 +1,23 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
+import { hasRestActor } from '../../shared/api/restActor'
 import { HierarchyNavigator } from '../../shared/ui/HierarchyNavigator'
 import { Button } from '../../shared/ui/Button'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { WorkCard } from '../../shared/ui/WorkCard'
 import { CatalogCreateSurface, NuevaClaseSurface } from './NuevaClaseSurface'
 import { CatalogTypeEffectiveAttributes } from './CatalogTypeEffectiveAttributes'
+import { CatalogTypePresentation } from './CatalogTypePresentation'
 import {
-  createCatalogHierarchyConvexApi,
   createCatalogHierarchyRestApi,
-  type CatalogHierarchyApi,
   type CatalogHierarchyRestApi,
 } from './catalogHierarchy.api'
+import { createCatalogAttributeCreationApi } from './catalogAttributeCreation.api'
+import type { CatalogAttributeCreationContext } from './catalogAttributeCreation.types'
+import { createCatalogPresentationAdminApi } from './catalogPresentationAdmin.api'
+import { CatalogPresentationEditor } from './CatalogPresentationEditor'
 import { createCatalogTypeEffectiveAttributesApi } from './catalogTypeEffectiveAttributes.api'
+import { createCatalogOptionsAdminApi } from './catalogOptionsAdmin.api'
+import { useCatalogAttributeCreation } from './useCatalogAttributeCreation'
 import { useCatalogTypeEffectiveAttributes } from './useCatalogTypeEffectiveAttributes'
 import {
   createInitialCatalogHierarchyContext,
@@ -27,6 +33,7 @@ import {
 } from './useCatalogList'
 import type {
   CatalogFamilyRestItem,
+  CatalogHierarchyItem,
   CatalogHierarchyPresentation,
   CatalogTypeRestItem,
 } from './catalogHierarchy.types'
@@ -38,7 +45,9 @@ type ConnectedLists = {
   types: CatalogDependentWindowController<CatalogTypeRestItem>
 }
 
-const project = (items: readonly { id: unknown; nombre: string }[]) =>
+const project = (
+  items: readonly { id: unknown; nombre: string }[],
+): CatalogHierarchyItem[] =>
   items.map((item) => ({ id: item.id as string, label: item.nombre }))
 
 function makeLists(api: CatalogHierarchyRestApi): ConnectedLists {
@@ -122,14 +131,12 @@ export function CatalogHierarchyScreen({
 }: {
   presentation?: CatalogHierarchyPresentation
   createClass?: CatalogHierarchyRestApi['createClass']
-  createFamily?: CatalogHierarchyApi['createFamily']
-  createType?: CatalogHierarchyApi['createType']
+  createFamily?: CatalogHierarchyRestApi['createFamily']
+  createType?: CatalogHierarchyRestApi['createType']
 }) {
   const [context, setContext] = useState(createInitialCatalogHierarchyContext)
+  const [selectionVersion, setSelectionVersion] = useState(0)
   const [successMessage, showSuccess] = useAutoClosingMessage()
-  const [api] = useState<CatalogHierarchyApi | null>(() =>
-    presentation === undefined ? createCatalogHierarchyConvexApi() : null,
-  )
   const [classApi] = useState<CatalogHierarchyRestApi | null>(() =>
     presentation === undefined ? createCatalogHierarchyRestApi() : null,
   )
@@ -142,15 +149,20 @@ export function CatalogHierarchyScreen({
   const [effectiveAttributesApi] = useState(
     createCatalogTypeEffectiveAttributesApi,
   )
-  const [activeTab, setActiveTab] = useState<'summary' | 'attributes'>(
-    'summary',
-  )
+  const [optionsApi] = useState(createCatalogOptionsAdminApi)
+  const [attributeCreationApi] = useState(createCatalogAttributeCreationApi)
+  const [presentationAdminApi] = useState(createCatalogPresentationAdminApi)
+  const [activeTab, setActiveTab] = useState<
+    'summary' | 'attributes' | 'presentation'
+  >('summary')
   const screenRef = useRef<HTMLElement>(null)
   const attributesTabRef = useRef<HTMLButtonElement>(null)
+  const creationSessionId = useId()
   const classState = useClassWindowSnapshot(classList)
   const familyState = useDependentWindowSnapshot(lists?.families ?? null)
   const typeState = useDependentWindowSnapshot(lists?.types ?? null)
   const isStatic = presentation !== undefined
+  const actorAvailable = hasRestActor()
   const classes = isStatic
     ? presentation.classes
     : project(classState?.items ?? [])
@@ -177,14 +189,49 @@ export function CatalogHierarchyScreen({
   const selectedTypeRecord = typeState?.items.find(
     (item) => item.id === selectedTypeId,
   )
+  // Static presentation mode has no REST window, so classState/familyState/
+  // typeState are always empty — the code has to come from the static
+  // presentation item instead of the REST record.
+  const selectedClassCode = isStatic
+    ? selectedClass?.code
+    : selectedClassRecord?.clave
+  const selectedFamilyCode = isStatic
+    ? selectedFamily?.code
+    : selectedFamilyRecord?.clave
+  const selectedTypeCode = isStatic
+    ? selectedType?.code
+    : selectedTypeRecord?.clave
   const effectiveAttributes = useCatalogTypeEffectiveAttributes(
     effectiveAttributesApi,
     {
-      classCode: selectedClassRecord?.clave,
-      familyCode: selectedFamilyRecord?.clave,
-      typeCode: selectedTypeRecord?.clave,
+      classCode: selectedClassCode,
+      familyCode: selectedFamilyCode,
+      typeCode: selectedTypeCode,
     },
   )
+  const effectiveContext = {
+    classCode: selectedClassCode,
+    familyCode: selectedFamilyCode,
+    typeCode: selectedTypeCode,
+  }
+  const refreshEffective = (snapshot: CatalogAttributeCreationContext) =>
+    snapshot.classCode === effectiveContext.classCode &&
+    snapshot.familyCode === effectiveContext.familyCode &&
+    snapshot.typeCode === effectiveContext.typeCode
+      ? effectiveAttributes.refresh()
+      : Promise.resolve(false)
+  const creationContext = {
+    sessionId: creationSessionId,
+    classCode: effectiveContext.classCode ?? '',
+    familyCode: effectiveContext.familyCode ?? '',
+    typeCode: effectiveContext.typeCode ?? '',
+  }
+  const attributeCreation = useCatalogAttributeCreation({
+    api: attributeCreationApi,
+    context: creationContext,
+    refreshEffective,
+    canSubmit: hasRestActor,
+  })
   const selectedPath =
     selectedClass && selectedFamily && selectedType
       ? {
@@ -198,7 +245,7 @@ export function CatalogHierarchyScreen({
     : selectedClass
       ? 'family'
       : 'class'
-  const showCreationAction = activeTab !== 'attributes'
+  const showCreationAction = activeTab === 'summary'
 
   useEffect(() => {
     void classList?.start()
@@ -222,6 +269,7 @@ export function CatalogHierarchyScreen({
     )
     if (!lists || !selectedClassRecord) return
     setContext((current) => selectClass(current, classId))
+    setSelectionVersion((version) => version + 1)
     lists.families.setContext({ parentCode: selectedClassRecord.clave })
     lists.types.setContext({})
     void lists.families.start()
@@ -243,6 +291,7 @@ export function CatalogHierarchyScreen({
     setContext((current) =>
       selectFamily(current, { familyId, classId: current.classId! }),
     )
+    setSelectionVersion((version) => version + 1)
     lists.types.setContext({
       classCode: selectedClassRecord.clave,
       parentCode: selectedFamilyRecord.clave,
@@ -255,21 +304,9 @@ export function CatalogHierarchyScreen({
       selectType(current, { typeId, familyId: current.familyId! }),
     )
   }
-  const reloadClasses = () => classList?.start() ?? Promise.resolve(false)
-  const reloadFamilies = () => {
-    if (!lists || !selectedClassRecord) return Promise.resolve(false)
-    lists.families.setContext({ parentCode: selectedClassRecord.clave })
-    return lists.families.start()
-  }
-  const reloadTypes = () => {
-    if (!lists || !selectedClassRecord || !selectedFamilyRecord)
-      return Promise.resolve(false)
-    lists.types.setContext({
-      classCode: selectedClassRecord.clave,
-      parentCode: selectedFamilyRecord.clave,
-    })
-    return lists.types.start()
-  }
+  const reloadClasses = () => classList?.retry() ?? Promise.resolve(false)
+  const reloadFamilies = () => lists?.families.retry() ?? Promise.resolve(false)
+  const reloadTypes = () => lists?.types.retry() ?? Promise.resolve(false)
 
   return (
     <section
@@ -301,44 +338,55 @@ export function CatalogHierarchyScreen({
           showCreationAction ? (
             <>
               {creationLevel === 'class' &&
-                (createClass ?? api?.createClass) && (
+                (createClass ?? classApi?.createClass) && (
                   <div data-contextual-action="class">
                     <NuevaClaseSurface
                       createClass={createClass ?? classApi?.createClass}
                       onCreated={reloadClasses}
                       onSuccess={showSuccess}
+                      actorAvailable={actorAvailable}
                     />
                   </div>
                 )}
               {creationLevel === 'family' &&
-                (createFamily ?? api?.createFamily) && (
+                selectedClassCode &&
+                (createFamily ?? classApi?.createFamily) && (
                   <div data-contextual-action="family">
                     <CatalogCreateSurface
                       level="family"
                       parent={{
-                        id: selectedClass!.id,
-                        label: selectedClass!.label,
+                        classCode: selectedClassCode,
+                        classLabel: selectedClass!.label,
+                        contextVersion: selectionVersion,
                       }}
-                      createFamily={createFamily ?? api?.createFamily}
+                      createFamily={createFamily ?? classApi?.createFamily}
                       onCreated={reloadFamilies}
                       onSuccess={showSuccess}
+                      actorAvailable={actorAvailable}
                     />
                   </div>
                 )}
-              {creationLevel === 'type' && (createType ?? api?.createType) && (
-                <div data-contextual-action="type">
-                  <CatalogCreateSurface
-                    level="type"
-                    parent={{
-                      id: selectedFamily!.id,
-                      label: selectedFamily!.label,
-                    }}
-                    createType={createType ?? api?.createType}
-                    onCreated={reloadTypes}
-                    onSuccess={showSuccess}
-                  />
-                </div>
-              )}
+              {creationLevel === 'type' &&
+                selectedClassCode &&
+                selectedFamilyCode &&
+                (createType ?? classApi?.createType) && (
+                  <div data-contextual-action="type">
+                    <CatalogCreateSurface
+                      level="type"
+                      parent={{
+                        classCode: selectedClassCode,
+                        classLabel: selectedClass!.label,
+                        familyCode: selectedFamilyCode,
+                        familyLabel: selectedFamily!.label,
+                        contextVersion: selectionVersion,
+                      }}
+                      createType={createType ?? classApi?.createType}
+                      onCreated={reloadTypes}
+                      onSuccess={showSuccess}
+                      actorAvailable={actorAvailable}
+                    />
+                  </div>
+                )}
             </>
           ) : null
         }
@@ -516,15 +564,56 @@ export function CatalogHierarchyScreen({
             >
               Atributos
             </button>
+            <button
+              id="catalog-presentation-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'presentation'}
+              aria-controls="catalog-presentation-panel"
+              tabIndex={activeTab === 'presentation' ? 0 : -1}
+              data-spatial-id="catalog.tab.presentation"
+              onClick={() => setActiveTab('presentation')}
+            >
+              Presentación
+            </button>
           </div>
           {activeTab === 'summary' ? (
             <AttributeSummaryPanel selectedTypeLabel={selectedType?.label} />
+          ) : activeTab === 'presentation' ? (
+            <>
+              {effectiveAttributes.status === 'ready' &&
+                effectiveAttributes.attributes.length > 0 && (
+                  <div
+                    className="mb-4"
+                    data-contextual-action="presentation-order"
+                  >
+                    <CatalogPresentationEditor
+                      actorAvailable={actorAvailable}
+                      context={creationContext}
+                      creationApi={attributeCreationApi}
+                      presentationApi={presentationAdminApi}
+                      attributes={effectiveAttributes.attributes}
+                    />
+                  </div>
+                )}
+              <CatalogTypePresentation
+                status={effectiveAttributes.status}
+                attributes={effectiveAttributes.attributes}
+                selectedTypeLabel={selectedType?.label}
+              />
+            </>
           ) : (
             <CatalogTypeEffectiveAttributes
               status={effectiveAttributes.status}
+              isFresh={effectiveAttributes.isFresh}
               attributes={effectiveAttributes.attributes}
               retry={effectiveAttributes.retry}
               fallbackFocus={() => attributesTabRef.current}
+              actorAvailable={actorAvailable}
+              context={creationContext}
+              creation={attributeCreation}
+              optionsApi={optionsApi}
+              refreshEffective={refreshEffective}
             />
           )}
         </WorkCard>
