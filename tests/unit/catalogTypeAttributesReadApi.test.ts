@@ -35,7 +35,9 @@ const page = {
 
 describe('catalog type attributes REST API', () => {
   it('uses only the encoded type window query and returns validated REST flags', async () => {
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => page })
+    const fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => page })
     const api = createCatalogTypeAttributesReadApi(fetch)
 
     await expect(api.listDirectApplicabilities(input)).resolves.toMatchObject({
@@ -62,10 +64,19 @@ describe('catalog type attributes REST API', () => {
       status: 422,
       json: async () => ({ error: 'Rejected' }),
     })
-    await expect(api.listDirectApplicabilities(input)).rejects.toThrow('Rejected')
+    await expect(api.listDirectApplicabilities(input)).rejects.toThrow(
+      'Rejected',
+    )
     fetch.mockRejectedValueOnce(new Error('offline'))
-    await expect(api.listDirectApplicabilities(input)).rejects.toThrow('offline')
-    fetch.mockResolvedValueOnce({ ok: true, json: async () => { throw Error('JSON') } })
+    await expect(api.listDirectApplicabilities(input)).rejects.toThrow(
+      'offline',
+    )
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => {
+        throw Error('JSON')
+      },
+    })
     await expect(api.listDirectApplicabilities(input)).rejects.toThrow('JSON')
   })
 })

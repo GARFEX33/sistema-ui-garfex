@@ -1,17 +1,46 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AppShell } from '../../src/app/shell/AppShell'
 import { CatalogHierarchyScreen } from '../../src/features/catalog-hierarchy/CatalogHierarchyScreen'
-import type {
-  CatalogHierarchyApi,
-  CatalogHierarchyRestApi,
-} from '../../src/features/catalog-hierarchy/catalogHierarchy.api'
+import { CatalogTypeEffectiveAttributes } from '../../src/features/catalog-hierarchy/CatalogTypeEffectiveAttributes'
+import type { CatalogHierarchyRestApi } from '../../src/features/catalog-hierarchy/catalogHierarchy.api'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
-const hierarchyFactory = vi.hoisted(() => vi.fn())
 const restFactory = vi.hoisted(() => vi.fn())
 const effectiveAttributesFactory = vi.hoisted(() => vi.fn())
 const effectiveAttributesHook = vi.hoisted(() => vi.fn())
+const attributeCreationFactory = vi.hoisted(() => vi.fn())
+const attributeCreationHook = vi.hoisted(() => vi.fn())
+const restActorAvailable = vi.hoisted(() => vi.fn())
+
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
+    '@tanstack/react-router',
+  )
+  const { forwardRef } = await import('react')
+  return {
+    ...actual,
+    Link: forwardRef<
+      HTMLAnchorElement,
+      React.ComponentPropsWithoutRef<'a'> & {
+        activeProps?: unknown
+        to: string
+      }
+    >(({ activeProps, to, ...props }, ref) => {
+      void activeProps
+      void to
+      return <a {...props} ref={ref} />
+    }),
+    useRouterState: () => '/catalogo',
+  }
+})
 
 vi.mock(
   '../../src/features/catalog-hierarchy/catalogHierarchy.api',
@@ -21,7 +50,6 @@ vi.mock(
     >('../../src/features/catalog-hierarchy/catalogHierarchy.api')
     return {
       ...actual,
-      createCatalogHierarchyConvexApi: hierarchyFactory,
       createCatalogHierarchyRestApi: restFactory,
     }
   },
@@ -36,6 +64,20 @@ vi.mock(
   '../../src/features/catalog-hierarchy/useCatalogTypeEffectiveAttributes',
   () => ({ useCatalogTypeEffectiveAttributes: effectiveAttributesHook }),
 )
+vi.mock(
+  '../../src/features/catalog-hierarchy/catalogAttributeCreation.api',
+  () => ({ createCatalogAttributeCreationApi: attributeCreationFactory }),
+)
+vi.mock(
+  '../../src/features/catalog-hierarchy/useCatalogAttributeCreation',
+  () => ({ useCatalogAttributeCreation: attributeCreationHook }),
+)
+vi.mock('../../src/shared/api/restActor', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../src/shared/api/restActor')
+  >('../../src/shared/api/restActor')
+  return { ...actual, hasRestActor: restActorAvailable }
+})
 
 const item = (id: string, clave: string, nombre: string) => ({
   activo: true,
@@ -99,13 +141,25 @@ const rest = (
 
 beforeEach(() => {
   vi.clearAllMocks()
-  hierarchyFactory.mockReturnValue({} as CatalogHierarchyApi)
   restFactory.mockReturnValue(rest())
   effectiveAttributesFactory.mockReturnValue({})
   effectiveAttributesHook.mockReturnValue({
     status: 'ready',
     attributes: effectiveAttributes,
     retry: vi.fn(),
+    refresh: vi.fn().mockResolvedValue(true),
+  })
+  attributeCreationFactory.mockReturnValue({})
+  restActorAvailable.mockReturnValue(true)
+  attributeCreationHook.mockReturnValue({
+    status: 'idle',
+    steps: [],
+    draft: null,
+    retained: [],
+    clearExistingSearch: vi.fn(),
+    submit: vi.fn(),
+    rereadCore: vi.fn(),
+    continuePendingStep: vi.fn(),
   })
 })
 
@@ -140,6 +194,148 @@ describe('CatalogHierarchyScreen effective attributes wiring', () => {
     ).toBeNull()
   })
 
+  it('shows the read-only Presentación tab using the same Core effective attributes, no new HTTP call', async () => {
+    const user = await selectConnectedType()
+    await waitFor(() =>
+      expect(effectiveAttributesHook).toHaveBeenLastCalledWith(
+        {},
+        { classCode: 'MAT', familyCode: 'FER', typeCode: 'TOR' },
+      ),
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'Presentación' }))
+
+    const list = screen.getByRole('list', {
+      name: 'Atributos que arman el nombre, en orden',
+    })
+    expect(list).toBeVisible()
+    expect(within(list).getByText('Color')).toBeVisible()
+    expect(effectiveAttributesFactory).toHaveBeenCalledOnce()
+  })
+
+  it('wires the creation hook to the selected context and refreshes only Core effective attributes', async () => {
+    const refresh = vi.fn().mockResolvedValue(true)
+    effectiveAttributesHook.mockReturnValue({
+      status: 'ready',
+      attributes: effectiveAttributes,
+      retry: vi.fn(),
+      refresh,
+    })
+    const user = userEvent.setup()
+    render(<CatalogHierarchyScreen />)
+
+    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+    expect(
+      screen.getByRole('button', { name: 'Crear atributo' }),
+    ).toBeDisabled()
+
+    await user.click(await screen.findByRole('button', { name: 'Material' }))
+    await user.click(await screen.findByRole('button', { name: 'Ferretería' }))
+    await user.click(await screen.findByRole('button', { name: 'Tornillo' }))
+
+    expect(screen.getByRole('button', { name: 'Crear atributo' })).toBeEnabled()
+    expect(attributeCreationFactory).toHaveBeenCalledOnce()
+    const options = attributeCreationHook.mock.calls.at(-1)?.[0]
+    expect(options).toMatchObject({
+      api: {},
+      context: {
+        classCode: 'MAT',
+        familyCode: 'FER',
+        typeCode: 'TOR',
+      },
+    })
+    expect(options.canSubmit).toBeTypeOf('function')
+
+    await options.refreshEffective({
+      classCode: 'MAT',
+      familyCode: 'FER',
+      typeCode: 'TOR',
+    })
+    expect(refresh).toHaveBeenCalledOnce()
+    await options.refreshEffective({
+      classCode: 'OTHER',
+      familyCode: 'FER',
+      typeCode: 'TOR',
+    })
+    expect(refresh).toHaveBeenCalledOnce()
+  })
+
+  it('closes a create dialog on hierarchy invalidation and restores fallback tab focus', async () => {
+    const user = await selectConnectedType()
+    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+    const material = screen.getByRole('button', { name: 'Material' })
+    await user.click(screen.getByRole('button', { name: 'Crear atributo' }))
+    expect(screen.getByRole('dialog', { name: 'Crear atributo' })).toBeVisible()
+
+    fireEvent.click(material)
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Crear atributo' }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('tab', { name: 'Atributos' })).toHaveFocus()
+  })
+
+  it('renders each effective attribute as one spatial native control', async () => {
+    const user = await selectConnectedType()
+    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+
+    const row = screen.getByRole('button', { name: 'Ver detalle de Color' })
+    expect(row).toHaveAttribute('data-catalog-level', 'attributes')
+    expect(row).toHaveAttribute(
+      'data-spatial-id',
+      'catalog.row.attributes.effective.0',
+    )
+    expect(row.querySelectorAll('button')).toHaveLength(0)
+    row.focus()
+    await user.keyboard('{Enter}')
+    expect(
+      screen.getByRole('dialog', { name: 'Detalle de Color' }),
+    ).toBeVisible()
+  })
+
+  it('moves between attribute rows with arrows without opening detail, while Enter opens once', async () => {
+    const user = userEvent.setup()
+    render(
+      <AppShell>
+        <CatalogTypeEffectiveAttributes
+          status="ready"
+          attributes={[
+            effectiveAttributes[0],
+            {
+              ...effectiveAttributes[0],
+              characteristic: {
+                ...effectiveAttributes[0].characteristic,
+                code: 'SIZE',
+                name: 'Size',
+              },
+            },
+          ]}
+          retry={vi.fn()}
+          fallbackFocus={() => null}
+        />
+      </AppShell>,
+    )
+
+    const color = screen.getByRole('button', { name: 'Ver detalle de Color' })
+    const size = screen.getByRole('button', { name: 'Ver detalle de Size' })
+    color.focus()
+    await user.keyboard('{ArrowDown}')
+    expect(size).toHaveFocus()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await user.keyboard('{ArrowUp}')
+    expect(color).toHaveFocus()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await user.keyboard('{ArrowDown}{Enter}')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(
+      screen.getByRole('dialog', { name: 'Detalle de Size' }),
+    ).toBeVisible()
+  })
+
   it('preserves tabs and leaves attribute mutations unavailable to keyboard actions', async () => {
     const user = userEvent.setup()
     render(
@@ -172,6 +368,77 @@ describe('CatalogHierarchyScreen effective attributes wiring', () => {
 })
 
 describe('CatalogHierarchyScreen retained hierarchy regressions', () => {
+  it('creates a Family through REST and renders it only after the active window refetches', async () => {
+    let releaseRefetch!: () => void
+    const refetch = new Promise<ReturnType<typeof page>>((resolve) => {
+      releaseRefetch = () =>
+        resolve(
+          page([
+            {
+              ...item('family-new', 'TUB', 'Tuberías'),
+              classCode: 'MAT',
+            },
+          ]),
+        )
+    })
+    const createFamily = vi.fn().mockResolvedValue({
+      active: true,
+      class: { code: 'MAT', id: 'class-1', kind: 'CLASE' as const },
+      code: 'TUB',
+      id: 'family-new',
+      kind: 'FAMILIA' as const,
+      name: 'Tuberías',
+      revision: '2',
+    })
+    const api = rest({
+      createFamily,
+      listFamilies: vi
+        .fn()
+        .mockResolvedValueOnce(page([]))
+        .mockReturnValueOnce(refetch),
+    })
+    restFactory.mockReturnValue(api)
+    const user = userEvent.setup()
+    render(
+      <KeyboardControllerProvider
+        activeSurface="catalog"
+        onCommandPalette={vi.fn()}
+        onHelp={vi.fn()}
+      >
+        <CatalogHierarchyScreen />
+      </KeyboardControllerProvider>,
+    )
+
+    expect(restActorAvailable).toHaveBeenCalled()
+    await user.click(await screen.findByRole('button', { name: 'Material' }))
+    expect(button('Nueva Familia')).toBeEnabled()
+    await user.keyboard('n')
+    expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
+    await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'TUB')
+    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Tuberías')
+    await user.click(button('Crear Familia'))
+
+    await waitFor(() =>
+      expect(createFamily).toHaveBeenCalledWith({
+        class: { code: 'MAT', kind: 'CLASE' },
+        code: 'TUB',
+        name: 'Tuberías',
+      }),
+    )
+    await waitFor(() => expect(api.listFamilies).toHaveBeenCalledTimes(2))
+    expect(screen.queryByRole('button', { name: 'Tuberías' })).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
+
+    releaseRefetch()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Nueva Familia' }),
+      ).not.toBeInTheDocument(),
+    )
+    await waitFor(() => expect(button('Material')).toHaveFocus())
+    expect(screen.getByRole('button', { name: 'Tuberías' })).toBeVisible()
+  })
+
   it('refetches the active Classes window after a created class without selecting it', async () => {
     const listClasses = vi
       .fn()
@@ -286,7 +553,6 @@ describe('CatalogHierarchyScreen retained hierarchy regressions', () => {
     await waitFor(() => expect(classApi.listClasses).toHaveBeenCalledTimes(1))
     view.unmount()
     restFactory.mockClear()
-    hierarchyFactory.mockClear()
 
     render(
       <CatalogHierarchyScreen
@@ -298,7 +564,6 @@ describe('CatalogHierarchyScreen retained hierarchy regressions', () => {
       />,
     )
     expect(restFactory).not.toHaveBeenCalled()
-    expect(hierarchyFactory).not.toHaveBeenCalled()
     expect(button('Presentación')).toBeVisible()
   })
 

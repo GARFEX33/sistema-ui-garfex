@@ -18,6 +18,8 @@ export interface DialogProps
    * of Catálogo's approved dialogs are pixel-locked to a fixed height by the
    * OpenPencil design authority; pass it explicitly for those. */
   height?: number
+  /** Keeps dialog chrome fixed while a descendant content region owns scrolling. */
+  layout?: 'default' | 'single-scroll'
   className?: string
   children: ReactNode
 }
@@ -28,6 +30,7 @@ export function Dialog({
   onOpenChange,
   width = 630,
   height,
+  layout = 'default',
   className,
   children,
   ref,
@@ -46,7 +49,8 @@ export function Dialog({
           {...dialogProps}
           style={height === undefined ? undefined : { height }}
           className={[
-            'box-border flex max-h-[calc(100vh-32px)] flex-col overflow-y-auto rounded-xl border border-primary bg-surface pt-[26px] pr-[27px] pb-[18px] pl-[27px] text-text-primary shadow-[0_18px_50px_rgb(31_31_29_/_25%)] sm:max-h-[calc(100vh-156px)]',
+            'box-border flex max-h-[calc(100vh-32px)] flex-col rounded-xl border border-primary bg-surface pt-[26px] pr-[27px] pb-[18px] pl-[27px] text-text-primary shadow-[0_18px_50px_rgb(31_31_29_/_25%)] sm:max-h-[calc(100vh-156px)]',
+            layout === 'single-scroll' ? 'overflow-hidden' : 'overflow-y-auto',
             className,
           ]
             .filter(Boolean)
@@ -76,8 +80,22 @@ export function DialogHeading({
   )
 }
 
-export function DialogContent({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+export function DialogContent({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={['flex min-h-0 flex-1 flex-col', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {children}
+    </div>
+  )
 }
 
 export function DialogActions({ children }: { children: ReactNode }) {

@@ -1,13 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { restoreFocusNextFrame } from '../../shared/keyboard/focusRestoration'
 import { Button } from '../../shared/ui/Button'
+import { CrearAtributoSurface } from './CrearAtributoSurface'
 import { CatalogTypeEffectiveAttributeDetail } from './CatalogTypeEffectiveAttributeDetail'
+import type { CatalogAttributeCreationContext } from './catalogAttributeCreation.types'
+import type { CatalogOptionsAdminApi } from './catalogOptionsAdmin.types'
 import type { EffectiveAttribute } from './catalogTypeEffectiveAttributes.types'
+import type { useCatalogAttributeCreation } from './useCatalogAttributeCreation'
 import type { CatalogTypeEffectiveAttributesStatus } from './useCatalogTypeEffectiveAttributes'
 
+const unavailableOptionsApi: CatalogOptionsAdminApi = {
+  resolveReferences: async () => {
+    throw new Error('Options administration is unavailable')
+  },
+  list: async () => ({ records: [], hasPrevious: false, hasNext: false }),
+  create: async () => {
+    throw new Error('Options administration is unavailable')
+  },
+  update: async () => {
+    throw new Error('Options administration is unavailable')
+  },
+  deactivate: async () => {
+    throw new Error('Options administration is unavailable')
+  },
+  reactivate: async () => {
+    throw new Error('Options administration is unavailable')
+  },
+}
+
 type DetailState = {
-  attribute: EffectiveAttribute
-  index: number
+  characteristicCode: string
   opener: HTMLElement | null
 }
 
@@ -18,74 +40,90 @@ function EffectiveAttributeRow({
 }: {
   attribute: EffectiveAttribute
   rowIndex: number
-  onOpenDetail: (
-    attribute: EffectiveAttribute,
-    index: number,
-    opener: HTMLElement | null,
-  ) => void
+  onOpenDetail: (characteristicCode: string, opener: HTMLElement | null) => void
 }) {
   const descriptor = [
     attribute.characteristic.code,
     attribute.characteristic.valueType,
   ].join(' · ')
 
+  const rowRef = useRef<HTMLButtonElement>(null)
+
   return (
     <li>
-      <article
-        className="flex min-h-16 flex-col gap-3 rounded-lg border border-border bg-surface-subtle px-4 py-3 transition-colors hover:border-border-strong hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2 sm:min-h-14 sm:flex-row sm:items-center sm:justify-between"
+      <Button
+        aria-label={`Ver detalle de ${attribute.characteristic.name}`}
+        className="min-h-16 w-full flex-col items-start justify-between gap-3 rounded-lg border-border bg-surface-subtle px-4 py-3 text-left hover:border-border-strong hover:bg-surface sm:min-h-14 sm:flex-row sm:items-center"
         data-catalog-level="attributes"
         data-spatial-id={`catalog.row.attributes.effective.${rowIndex}`}
-        tabIndex={0}
+        onClick={() =>
+          onOpenDetail(attribute.characteristic.code, rowRef.current)
+        }
+        ref={rowRef}
+        variant="outline"
       >
-        <div className="min-w-0 space-y-1">
+        <span className="min-w-0 space-y-1">
           <span className="block break-words text-sm font-bold text-text-primary">
             {attribute.characteristic.name}
           </span>
           <span className="block text-xs font-medium tracking-wide text-text-secondary">
             {descriptor}
           </span>
-        </div>
-        <Button
-          aria-label={`Ver detalle de ${attribute.characteristic.name}`}
-          className="self-start sm:self-auto"
-          variant="outline"
-          onClick={(event) =>
-            onOpenDetail(
-              attribute,
-              rowIndex,
-              event.currentTarget instanceof HTMLElement
-                ? event.currentTarget
-                : null,
-            )
-          }
-        >
-          Ver detalle
-        </Button>
-      </article>
+        </span>
+      </Button>
     </li>
   )
 }
 
 export function CatalogTypeEffectiveAttributes({
   status,
+  isFresh = false,
   attributes,
   retry,
   fallbackFocus,
+  optionsApi,
+  context,
+  creation,
+  actorAvailable,
+  refreshEffective,
 }: {
   status: CatalogTypeEffectiveAttributesStatus
+  isFresh?: boolean
   attributes: readonly EffectiveAttribute[]
   retry: () => void
   fallbackFocus: () => HTMLElement | null
+  optionsApi?: CatalogOptionsAdminApi
+  context?: Readonly<{
+    sessionId?: string
+    classCode?: string
+    familyCode?: string
+    typeCode?: string
+  }>
+  creation?: ReturnType<typeof useCatalogAttributeCreation>
+  actorAvailable?: boolean
+  refreshEffective?: (
+    snapshot: CatalogAttributeCreationContext,
+  ) => Promise<boolean>
 }) {
   const [detail, setDetail] = useState<DetailState | null>(null)
   const detailRef = useRef(detail)
   const fallbackFocusRef = useRef(fallbackFocus)
   detailRef.current = detail
   fallbackFocusRef.current = fallbackFocus
-  const detailIsCurrent =
-    status === 'ready' &&
-    detail !== null &&
-    attributes[detail.index] === detail.attribute
+  const detailAttribute =
+    detail !== null && (status === 'loading' || status === 'ready')
+      ? (attributes.find(
+          (attribute) =>
+            attribute.characteristic.code === detail.characteristicCode,
+        ) ?? null)
+      : null
+  const detailIsCurrent = detailAttribute !== null
+  const creationContext = {
+    sessionId: context?.sessionId,
+    classCode: context?.classCode ?? '',
+    familyCode: context?.familyCode ?? '',
+    typeCode: context?.typeCode ?? '',
+  }
 
   const closeDetail = useCallback(() => {
     const current = detailRef.current
@@ -116,9 +154,23 @@ export function CatalogTypeEffectiveAttributes({
           className="mt-1 max-w-3xl text-sm leading-6 text-text-secondary"
           id="catalog-effective-read-only-reason"
         >
-          La asignación, edición y gestión de opciones no están disponibles en
+          La edición y gestión de opciones existentes no están disponibles en
           esta lectura de sólo consulta.
         </p>
+        {creation && (
+          <div className="mt-4" data-contextual-action="attribute">
+            <CrearAtributoSurface
+              actorAvailable={actorAvailable ?? false}
+              context={creationContext}
+              creation={creation}
+              effectiveCharacteristicCodes={attributes.map(
+                (attribute) => attribute.characteristic.code,
+              )}
+              effectiveFresh={isFresh}
+              effectiveStatus={status}
+            />
+          </div>
+        )}
       </header>
       {status === 'waiting-context' && (
         <p
@@ -165,8 +217,8 @@ export function CatalogTypeEffectiveAttributes({
               <EffectiveAttributeRow
                 attribute={attribute}
                 key={`${attribute.characteristic.code}-${rowIndex}`}
-                onOpenDetail={(nextAttribute, index, opener) =>
-                  setDetail({ attribute: nextAttribute, index, opener })
+                onOpenDetail={(characteristicCode, opener) =>
+                  setDetail({ characteristicCode, opener })
                 }
                 rowIndex={rowIndex}
               />
@@ -174,10 +226,13 @@ export function CatalogTypeEffectiveAttributes({
           </ul>
         </section>
       )}
-      {detail !== null && (
+      {detailAttribute !== null && (
         <CatalogTypeEffectiveAttributeDetail
-          attribute={detail.attribute}
+          attribute={detailAttribute}
           isOpen={detailIsCurrent}
+          context={context ?? {}}
+          optionsApi={optionsApi ?? unavailableOptionsApi}
+          refreshEffective={refreshEffective ?? (async () => false)}
           onOpenChange={(isOpen) => {
             if (!isOpen) closeDetail()
           }}

@@ -60,7 +60,10 @@ const record = (
 ): DirectApplicabilityRecord => {
   const classReference = reference(value.values.class, 'CLASE')
   const family = reference(value.values.family, 'FAMILIA')
-  const characteristic = reference(value.values.characteristic, 'CARACTERISTICA')
+  const characteristic = reference(
+    value.values.characteristic,
+    'CARACTERISTICA',
+  )
   const type = reference(value.values.type, 'TIPO')
   const optionSet =
     value.values.optionSet === undefined
@@ -75,7 +78,8 @@ const record = (
     type.code !== input.typeCode ||
     mode?.kind !== 'ENUM' ||
     !modes.has(mode.value as DirectApplicabilityMode) ||
-    (identityParticipates !== undefined && identityParticipates.kind !== 'BOOLEAN')
+    (identityParticipates !== undefined &&
+      identityParticipates.kind !== 'BOOLEAN')
   )
     return bad()
   return {

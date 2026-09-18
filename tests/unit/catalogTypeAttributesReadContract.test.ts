@@ -80,25 +80,81 @@ describe('direct applicability REST contract', () => {
   })
 
   it('rejects an invalid record and never returns a partial page', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { type: _type, ...withoutType } = record().values
     const invalid = [
       [record({ kind: 'TIPO' })],
       [record({ id: 1 })],
       [record({ revision: 1 })],
-      [record({ rules: [{ attributeCode: 'x', equals: { kind: 'CODE', value: 'x' }, mode: 'REQUIRED', identityParticipates: false, notApplicable: false, active: 'yes' }] })],
-      [record({ values: { ...record().values, mode: { kind: 'ENUM', value: 'NO' } } })],
-      [record({ values: { ...record().values, class: reference('CLASE', 'OTHER') } })],
-      [record({ values: { ...record().values, family: reference('FAMILIA', 'OTHER') } })],
-      [record({ values: { ...record().values, characteristic: { kind: 'CODE', value: 'x' } } })],
+      [
+        record({
+          rules: [
+            {
+              attributeCode: 'x',
+              equals: { kind: 'CODE', value: 'x' },
+              mode: 'REQUIRED',
+              identityParticipates: false,
+              notApplicable: false,
+              active: 'yes',
+            },
+          ],
+        }),
+      ],
+      [
+        record({
+          values: { ...record().values, mode: { kind: 'ENUM', value: 'NO' } },
+        }),
+      ],
+      [
+        record({
+          values: { ...record().values, class: reference('CLASE', 'OTHER') },
+        }),
+      ],
+      [
+        record({
+          values: { ...record().values, family: reference('FAMILIA', 'OTHER') },
+        }),
+      ],
+      [
+        record({
+          values: {
+            ...record().values,
+            characteristic: { kind: 'CODE', value: 'x' },
+          },
+        }),
+      ],
       [record({ values: withoutType })],
-      [record({ values: { ...record().values, type: reference('FAMILIA', 'CABLE') } })],
-      [record({ values: { ...record().values, type: reference('TIPO', 'OTHER') } })],
-      [record({ values: { ...record().values, optionSet: reference('OPCION', 'x') } })],
+      [
+        record({
+          values: { ...record().values, type: reference('FAMILIA', 'CABLE') },
+        }),
+      ],
+      [
+        record({
+          values: { ...record().values, type: reference('TIPO', 'OTHER') },
+        }),
+      ],
+      [
+        record({
+          values: { ...record().values, optionSet: reference('OPCION', 'x') },
+        }),
+      ],
       [record({ active: 'yes' })],
-      [record({ values: { ...record().values, characteristic: reference('CARACTERISTICA', 'durable', '01') } })],
+      [
+        record({
+          values: {
+            ...record().values,
+            characteristic: reference('CARACTERISTICA', 'durable', '01'),
+          },
+        }),
+      ],
     ]
     for (const records of invalid)
-      expect(() => parseDirectApplicabilityPage(page([record(), ...records]), request)).toThrow()
-    expect(() => parseDirectApplicabilityPage({ records: [], hasNext: true }, request)).toThrow()
+      expect(() =>
+        parseDirectApplicabilityPage(page([record(), ...records]), request),
+      ).toThrow()
+    expect(() =>
+      parseDirectApplicabilityPage({ records: [], hasNext: true }, request),
+    ).toThrow()
   })
 })
