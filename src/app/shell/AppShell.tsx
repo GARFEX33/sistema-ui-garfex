@@ -81,11 +81,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         return
       }
       if (event.currentTarget.dataset.spatialId === 'sidebar.recursos') {
-        const firstClass = boundaryRoot.querySelector<HTMLElement>(
-          '[data-spatial-level="class"][data-spatial-id]',
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-spatial-id="resources.class"]',
+          ),
         )
-        focusRow(firstClass)
-        firstClass?.click()
         return
       }
       focusSpatialTarget({
@@ -112,16 +112,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       const target = event.target
       const boundaryRoot = workspaceMainRef.current
       if (!(target instanceof HTMLElement) || !boundaryRoot) return
+      // StagedSearchSelector columns have no per-item "currently selected"
+      // element to jump back to (search results are dynamically filtered,
+      // not a static button grid) — land on the deepest column's search
+      // input instead, which is always present and lets the user type/
+      // arrow/Enter locally from there.
       const focusDeepestResourcesHierarchy = () => {
-        for (const level of ['type', 'family', 'class']) {
-          const selected = boundaryRoot.querySelector<HTMLElement>(
-            `[data-spatial-level="${level}"][aria-pressed="true"]`,
-          )
-          if (selected) {
-            focusRow(selected)
-            return
-          }
-        }
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-spatial-id="resources.type"]',
+          ),
+        )
       }
       if (target.dataset.spatialId === 'resources.search') {
         if (event.key === 'ArrowDown') {
@@ -213,69 +214,50 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
         return
       }
-      const resourcesHierarchyRow = target.closest<HTMLElement>(
-        '[data-spatial-level]',
+      // Resources master's Clase/Familia/Tipo columns (StagedSearchSelector)
+      // each expose one spatial-nav landing target: their search input.
+      // ArrowRight/Left hop between the three inputs in sequence and on to
+      // sidebar.recursos / resources.search at the ends — mirroring the
+      // directionality the old HierarchyNavigator button-grid used, but
+      // landing on the input itself (focus only, no click/select) since a
+      // dynamically-filtered list has no fixed "first item" to land on.
+      // ArrowUp/Down are left untouched here so StagedSearchSelector's own
+      // in-list arrow handling keeps working.
+      const resourcesColumnOrder = [
+        'resources.class',
+        'resources.family',
+        'resources.type',
+      ]
+      const resourcesColumnIndex = resourcesColumnOrder.indexOf(
+        target.dataset.spatialId ?? '',
       )
-      if (resourcesHierarchyRow) {
+      if (resourcesColumnIndex !== -1) {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
         event.preventDefault()
-        const level = resourcesHierarchyRow.dataset.spatialLevel!
-        const move = (candidate: HTMLElement | null) => {
-          focusRow(candidate)
-          candidate?.click()
-        }
-        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-          const rows = [
-            ...boundaryRoot.querySelectorAll<HTMLElement>(
-              `[data-spatial-level="${level}"]`,
-            ),
-          ]
-          const index = rows.indexOf(resourcesHierarchyRow)
-          move(
-            rows[
-              Math.max(
-                0,
-                Math.min(
-                  rows.length - 1,
-                  index + (event.key === 'ArrowDown' ? 1 : -1),
-                ),
-              )
-            ] ?? null,
-          )
-          return
-        }
         if (event.key === 'ArrowRight') {
-          if (level === 'type') {
-            focusRow(
-              boundaryRoot.querySelector<HTMLElement>(
-                '[data-spatial-id="resources.search"]',
-              ),
-            )
-            return
-          }
-          const child = level === 'class' ? 'family' : 'type'
-          move(
-            boundaryRoot.querySelector<HTMLElement>(
-              `[data-spatial-level="${child}"][data-spatial-id]`,
-            ),
-          )
-          return
-        }
-        if (event.key === 'ArrowLeft') {
-          if (level === 'class') {
-            focusRow(
-              document.querySelector<HTMLElement>(
-                '[data-spatial-id="sidebar.recursos"]',
-              ),
-            )
-            return
-          }
-          const parent = level === 'type' ? 'family' : 'class'
+          const nextId =
+            resourcesColumnOrder[resourcesColumnIndex + 1] ??
+            'resources.search'
           focusRow(
             boundaryRoot.querySelector<HTMLElement>(
-              `[data-spatial-level="${parent}"][aria-pressed="true"]`,
+              `[data-spatial-id="${nextId}"]`,
             ),
           )
+          return
         }
+        if (resourcesColumnIndex === 0) {
+          focusRow(
+            document.querySelector<HTMLElement>(
+              '[data-spatial-id="sidebar.recursos"]',
+            ),
+          )
+          return
+        }
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            `[data-spatial-id="${resourcesColumnOrder[resourcesColumnIndex - 1]}"]`,
+          ),
+        )
         return
       }
       const row = target.closest<HTMLElement>('[data-catalog-level]')
@@ -328,7 +310,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             index + (event.key === 'ArrowDown' ? 1 : -1),
           ),
         )
-        move(rows[next] ?? null)
+        if (level === 'attributes') {
+          focusRow(rows[next] ?? null)
+        } else {
+          move(rows[next] ?? null)
+        }
         return
       }
       if (event.key === 'ArrowRight') {

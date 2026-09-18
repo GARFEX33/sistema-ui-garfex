@@ -32,9 +32,11 @@ Light mode only today (`color-scheme: light` — Dark is future work, not implem
 | `--color-accent`         | `#f2d031`                  |
 | `--color-on-accent`      | `#2b2500`                  |
 | `--color-focus`          | `#8a6800`                  |
+| `--color-success`        | `#2f6b4f`                  |
+| `--color-success-subtle` | `#f2f8f4`                  |
 | `--font-sans`            | `Inter, Arial, sans-serif` |
 
-`success` / `warning` / `error` / `info` semantic tokens don't exist yet — add them when a real screen needs them, not speculatively. Other token categories (spacing, radius, shadows, z-index, breakpoints, motion, component sizes) are not centralized yet; see `references/atomic-vocabulary.md` in the skill for the target list.
+`--color-success` / `--color-success-subtle` were added for Resources Master's creation-success toast (Slice C2e) — the same green already established visually by `catalog-hierarchy`'s (pre-existing, hardcoded) `.catalog-success-toast`, now expressed as real tokens instead of inline hex so new consumers reuse them instead of hardcoding. `warning` / `error` / `info` semantic tokens still don't exist — add them when a real screen needs them, not speculatively. Other token categories (spacing, radius, shadows, z-index, breakpoints, motion, component sizes) are not centralized yet; see `references/atomic-vocabulary.md` in the skill for the target list.
 
 Tailwind's `@theme inline` mapping generates utilities named after the property + the token key, so some read redundantly (`text-text-secondary`, `border-border`, `border-border-strong`, `bg-surface-subtle`) because the token names already embed a category word. This is a known, accepted Tailwind naming quirk — not a bug, and not worth renaming the underlying tokens (that would ripple through the whole existing CSS).
 

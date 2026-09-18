@@ -20,28 +20,48 @@ vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
   }
 })
 
-const resource = (id: string, identityV1: string) => ({
+const resource = (id: string, identityV1: string, label: string) => ({
   id,
   identityV1,
   scope: { classCode: 'MATERIAL', familyCode: 'CABLE', typeCode: 'UTP' },
   naturalUnit: 'm',
   active: true,
   revision: '1',
-  attributes: [],
+  attributes: [{ code: 'ETIQUETA', value: { kind: 'TEXT', value: label } }],
 })
 
 function stubResourcesMasterApi() {
   const api = {
     listResources: vi.fn(async () => ({
       resources: [
-        resource('r1', 'MATERIAL-CABLE-UTP-001'),
-        resource('r2', 'MATERIAL-CABLE-UTP-002'),
+        resource('r1', 'MATERIAL-CABLE-UTP-001', 'Uno'),
+        resource('r2', 'MATERIAL-CABLE-UTP-002', 'Dos'),
       ],
       hasPrevious: false,
       hasNext: false,
     })),
     getResourceDetail: vi.fn(),
     describeResource: vi.fn(),
+    getTypeEffectiveAttributes: vi.fn(async () => ({
+      typeCode: 'UTP',
+      attributes: [
+        {
+          characteristic: {
+            code: 'ETIQUETA',
+            name: 'Etiqueta',
+            valueType: 'CONTROLLED_TEXT',
+          },
+          effectiveMode: 'OPTIONAL',
+          identityParticipates: false,
+          notApplicable: false,
+          position: 0,
+          hasPosition: true,
+          options: [],
+          source: { level: 'TYPE', code: 'UTP' },
+          rules: [],
+        },
+      ],
+    })),
     listHierarchyClasses: vi.fn(async () => ({
       items: [
         {
@@ -338,58 +358,144 @@ describe('sidebar triangulation', () => {
 })
 
 describe('resources maestros keyboard navigation', () => {
-  it('navigates Resources spatially through hierarchy, search, and resource rows', async () => {
+  // Slice E2 replaced the three HierarchyNavigator button columns with
+  // StagedSearchSelector (search + arrow + Enter, auto-focus advancing to
+  // the next column) — a deliberate, approved divergence from the
+  // arrow-hopping grid HierarchyNavigator still gives Catálogo. This test
+  // exercises the real (unmocked) useResourcesHierarchy + REST stub end to
+  // end: type-ahead search, arrow-highlight, Enter-confirm, and the
+  // automatic focus jump to the next column, three times in a row, ending
+  // with the resource list actually filtered by the confirmed scope.
+  //
+  // Slice E2b: AppShell.tsx's cross-region ArrowLeft/Right wiring now lands
+  // on each StagedSearchSelector's search input directly
+  // (`data-spatial-id="resources.class"|"resources.family"|"resources.type"`,
+  // additive `spatialId` prop) instead of the old
+  // `data-spatial-level`/`aria-pressed` button-grid lookup, which no longer
+  // matches this component's DOM. ArrowUp/Down are left untouched so
+  // StagedSearchSelector's own in-list arrow handling (exercised above)
+  // keeps working; only entering/leaving a column from outside it changed.
+  // See the chain test below.
+  it('confirms Clase→Familia→Tipo purely via search+arrow+Enter, auto-focusing the next column each time', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    const sidebar = await screen.findByRole('link', {
+    await screen.findByRole('link', { name: 'Recursos maestros' })
+    const user = userEvent.setup()
+
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    await user.click(claseInput)
+    await user.type(claseInput, 'mat')
+    fireEvent.keyDown(claseInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'Material' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    const familiaInput = screen.getByRole('searchbox', { name: 'Familia' })
+    expect(familiaInput).toHaveFocus()
+    await screen.findByRole('option', { name: 'Cable' })
+    await user.type(familiaInput, 'cab')
+    fireEvent.keyDown(familiaInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'Cable' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+    expect(tipoInput).toHaveFocus()
+    await screen.findByRole('option', { name: 'UTP' })
+    await user.type(tipoInput, 'utp')
+    fireEvent.keyDown(tipoInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'UTP' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    await screen.findByText('UTP Uno')
+    expect(screen.getByText('UTP Dos')).toBeVisible()
+
+    fireEvent.keyDown(document, { key: 'b' })
+    expect(screen.getByPlaceholderText('Buscar recursos')).toHaveFocus()
+  })
+
+  it('enters the hierarchy from the sidebar and hops Clase→Familia→Tipo→search with ArrowRight', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+
+    const recursosLink = screen.getByRole('link', {
       name: 'Recursos maestros',
     })
-    const material = await screen.findByRole('button', { name: 'Material' })
-    expect(material).toHaveAttribute('data-spatial-level', 'class')
-    const service = screen.getByRole('button', { name: 'Servicio' })
+    recursosLink.focus()
+    fireEvent.keyDown(recursosLink, { key: 'ArrowRight' })
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    expect(claseInput).toHaveFocus()
+
+    fireEvent.keyDown(claseInput, { key: 'ArrowRight' })
+    const familiaInput = screen.getByRole('searchbox', { name: 'Familia' })
+    expect(familiaInput).toHaveFocus()
+
+    fireEvent.keyDown(familiaInput, { key: 'ArrowRight' })
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+    expect(tipoInput).toHaveFocus()
+
+    fireEvent.keyDown(tipoInput, { key: 'ArrowRight' })
+    expect(screen.getByPlaceholderText('Buscar recursos')).toHaveFocus()
+  })
+
+  it('hops back Tipo→Familia→Clase→sidebar with ArrowLeft', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+
+    const recursosLink = screen.getByRole('link', {
+      name: 'Recursos maestros',
+    })
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    const familiaInput = screen.getByRole('searchbox', { name: 'Familia' })
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+
+    fireEvent.keyDown(tipoInput, { key: 'ArrowLeft' })
+    expect(familiaInput).toHaveFocus()
+
+    fireEvent.keyDown(familiaInput, { key: 'ArrowLeft' })
+    expect(claseInput).toHaveFocus()
+
+    fireEvent.keyDown(claseInput, { key: 'ArrowLeft' })
+    expect(recursosLink).toHaveFocus()
+  })
+
+  it('sends ArrowLeft/Escape from the resource search box or a result row back to the Tipo column', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+
     const search = screen.getByPlaceholderText('Buscar recursos')
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
 
-    sidebar.focus()
-    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
-    expect(material).toHaveFocus()
-    fireEvent.keyDown(material, { key: 'ArrowDown' })
-    expect(service).toHaveFocus()
-    fireEvent.keyDown(service, { key: 'ArrowUp' })
-    expect(material).toHaveFocus()
-    await screen.findByText('Cable')
-    fireEvent.keyDown(material, { key: 'ArrowRight' })
-    const family = screen.getByRole('button', { name: 'Cable' })
-    expect(family).toHaveFocus()
-    await screen.findByText('UTP')
-    fireEvent.keyDown(family, { key: 'ArrowRight' })
-    const type = screen.getByRole('button', { name: 'UTP' })
-    expect(type).toHaveFocus()
-    fireEvent.keyDown(type, { key: 'ArrowRight' })
-    expect(search).toHaveFocus()
-    await screen.findByText('MATERIAL-CABLE-UTP-001')
-    const firstRow = document.querySelector<HTMLElement>('[data-resource-row]')!
-
-    fireEvent.keyDown(search, { key: 'ArrowDown' })
-    expect(firstRow).toHaveFocus()
-    fireEvent.keyDown(firstRow, { key: 'ArrowUp' })
-    expect(search).toHaveFocus()
     fireEvent.keyDown(search, { key: 'ArrowLeft' })
-    expect(type).toHaveFocus()
-    search.focus()
-    fireEvent.keyDown(search, { key: 'Escape' })
-    expect(type).toHaveFocus()
-    firstRow.focus()
-    fireEvent.keyDown(firstRow, { key: 'ArrowLeft' })
-    expect(type).toHaveFocus()
-    firstRow.focus()
+    expect(tipoInput).toHaveFocus()
+
+    const firstRow = document.querySelector(
+      '[data-resource-row]',
+    ) as HTMLElement
     fireEvent.keyDown(firstRow, { key: 'Escape' })
-    expect(type).toHaveFocus()
+    expect(tipoInput).toHaveFocus()
+  })
+
+  it('leaves typing, in-list arrow highlighting, and Enter-confirm inside a column untouched by the new hop wiring', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+    const user = userEvent.setup()
+
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    await user.click(claseInput)
+    await user.type(claseInput, 'mat')
+    fireEvent.keyDown(claseInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'Material' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('searchbox', { name: 'Familia' })).toHaveFocus()
   })
 
   it('does not capture Resources spatial keys while the search input is composing', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('MATERIAL-CABLE-UTP-001')
+    await screen.findByText('UTP Uno')
     const search = screen.getByPlaceholderText('Buscar recursos')
     search.focus()
     fireEvent.keyDown(search, { key: 'ArrowDown', isComposing: true })
@@ -399,7 +505,7 @@ describe('resources maestros keyboard navigation', () => {
   it('jumps to the search box with B from anywhere on the screen', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('MATERIAL-CABLE-UTP-001')
+    await screen.findByText('UTP Uno')
     const search = screen.getByPlaceholderText('Buscar recursos')
     const firstRow = document.querySelector(
       '[data-resource-row]',
@@ -412,7 +518,7 @@ describe('resources maestros keyboard navigation', () => {
   it('does not steal B from an unrelated editing context', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('MATERIAL-CABLE-UTP-001')
+    await screen.findByText('UTP Uno')
     const input = document.createElement('input')
     document.body.append(input)
     input.focus()

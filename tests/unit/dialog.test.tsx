@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { Dialog } from '../../src/shared/ui/Dialog'
+import { Dialog, DialogContent } from '../../src/shared/ui/Dialog'
 
 describe('Dialog responsive contract', () => {
   it('keeps the desktop width while constraining the modal within a padded viewport', () => {
@@ -27,6 +27,26 @@ describe('Dialog responsive contract', () => {
       'sm:max-h-[calc(100vh-156px)]',
       'overflow-y-auto',
     )
+  })
+
+  it('supports a single-scroll layout without changing the default dialog contract', () => {
+    render(
+      <Dialog
+        isOpen
+        isDismissable
+        layout="single-scroll"
+        onOpenChange={vi.fn()}
+        aria-label="Single scroll dialog"
+      >
+        <DialogContent className="overflow-y-auto">
+          Contenido desplazable
+        </DialogContent>
+      </Dialog>,
+    )
+
+    expect(
+      screen.getByRole('dialog', { name: 'Single scroll dialog' }),
+    ).toHaveClass('overflow-hidden')
   })
 
   it('keeps Tab focus inside the open dialog', async () => {
