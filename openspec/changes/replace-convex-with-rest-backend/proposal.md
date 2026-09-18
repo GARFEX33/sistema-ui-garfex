@@ -6,6 +6,37 @@ Migrar el frontend desde Convex al contrato REST público ya suministrado, adapt
 
 Esta propuesta autoriza planificación, no implementación. El alcance y las etapas deberán revisarse con el humano antes de apply.
 
+## Enmienda de decisión humana — G9 resuelto y administración de opciones restaurada
+
+Esta decisión sustituye el bloqueo temporal de mutaciones `OPCION` y restaura la autorización humana anterior para administrar registros base compartidos desde la pestaña **Opciones**.
+
+### Evidencia pública que resuelve G9
+
+- `GET /v1/catalog/OPCION`, filtrado por `optionSetCode=DEFAULT` y `characteristicCode=insulation`, devuelve los siete registros con ids `14`–`20`, todos decimales estrictamente positivos.
+- Las referencias observadas son canónicas: `characteristic.id` es `3` y `optionSet.id` es `1`.
+- La página devuelve `hasNext: false`, por lo que la ventana pública verificada contiene todos los resultados de ese filtro.
+
+**G9 queda resuelto para el slice filtrado verificado por evidencia pública.** Ya no existe la incompatibilidad que justificaba bloquear todas las mutaciones de opciones; no se necesita filtrar por signo, traducir ids ni ofrecer CRUD parcial.
+
+### Alcance vigente restaurado
+
+- Una fila de atributo enfocada se activa mediante el comportamiento nativo de `Enter` o `Space` y abre su `Dialog` de detalle.
+- El `Dialog` contiene las pestañas internas **Detalle** y **Opciones**.
+- **Detalle** conserva la proyección efectiva de sólo lectura y Core sigue siendo su única autoridad; el cliente no deriva, recompone ni evalúa reglas localmente.
+- **Opciones** administra exclusivamente registros base compartidos `OPCION`: crear, editar, desactivar y reactivar mediante las rutas públicas documentadas.
+- `DELETE` permanente continúa expresamente excluido; tampoco se ofrece, simula o llama.
+- Toda mutación usa el `actor` local configurable y falla cerrada antes de HTTP si está ausente, vacío o inválido.
+- Edición y lifecycle preservan `id`, `revision` y `expectedRevision` como strings contractuales, sin coerción ni revisión fabricada. Un `409` se muestra como conflicto explícito, nunca se sobrescribe ni reintenta silenciosamente.
+- Tras éxito confirmado o conflicto `409`, se releen tanto la lista base filtrada como la proyección efectiva de Core. No hay actualización optimista ni recomposición local; respuestas stale o de otro contexto no sustituyen el estado vigente.
+- Antes y durante las acciones se mantiene una advertencia visible y accesible de alcance global: crear, editar, desactivar o reactivar puede afectar a todos los consumidores del conjunto o característica y no es un cambio local al Tipo.
+
+### No objetivos, riesgo y rollback
+
+- No se introduce `DELETE` permanente ni edición masiva.
+- G9 no autoriza mutaciones fuera del contexto filtrado y validado ni relaja los schemas públicos de ids, referencias, payloads o respuestas.
+- El riesgo principal es presentar una mutación global como cambio local o aceptar concurrencia obsoleta; la mitigación es el aviso global persistente, `expectedRevision`, conflicto explícito y doble refetch autoritativo.
+- El rollback retira únicamente la superficie administrativa y su wiring; mantiene **Detalle** efectivo read-only, REST como única autoridad y cero fallback Convex.
+
 ## Intención y resultado de producto
 
 El cambio busca que catálogo, jerarquía y maestro de recursos consuman el backend REST PostgreSQL como única autoridad de runtime. Para las personas usuarias, la interfaz debe conservar su identidad visual, accesibilidad y eficiencia operativa en los flujos respaldados por el contrato. Cuando Convex ofrecía una semántica más rica que REST, la UI se simplificará o dejará de ofrecer esa acción/estado, de forma explícita y sin presentar cálculos locales como decisiones del backend.
@@ -62,7 +93,7 @@ La migración no es una copia literal de RPC Convex: REST usa records tipados, r
 1. **Equivalencia demostrada:** un flujo se conserva cuando sus entradas, salidas, errores y concurrencia tienen respaldo en el contrato público.
 2. **Equivalencia parcial:** la UI conserva sólo la parte soportada y comunica claramente cualquier acción o información retirada.
 3. **Capacidad ausente:** el flujo no se sustituye silenciosamente; se registra y reporta al humano mediante el proceso de brechas.
-4. **Concurrencia:** `id`, `revision` y `expectedRevision` permanecen como `string`; no habrá coerción numérica.
+4. **Identificadores y concurrencia:** cada `id`, `revision` y `expectedRevision` conserva el tipo y las restricciones de su contrato REST específico, sin coerciones inventadas. G9 queda resuelto para `DEFAULT` + `insulation` por la ventana pública completa con ids positivos `14`–`20` y referencias canónicas; las mutaciones sólo operan sobre records que validen íntegramente el contrato vigente.
 5. **Jerarquía:** no se inventará un filtro por padre. Cualquier carga y relación local deberá estar respaldada por una decisión posterior basada en volumen, rendimiento y UX; si esa decisión no puede tomarse con el contrato suministrado, será una brecha.
 6. **Mutaciones:** sin actor local configurado no se enviará ninguna petición mutante. El actor no se presentará como prueba de autenticación o autorización.
 7. **Errores:** los estatus y `{ error }` documentados se mapearán a estados explícitos; no se transformarán errores contractuales en éxitos aparentes.
@@ -78,7 +109,7 @@ Cuando una etapa necesite una capacidad no documentada:
 4. Reportar la brecha al humano para que **esa persona** decida si solicita la capacidad al equipo backend, reduce alcance o acepta una adaptación visible.
 5. Reanudar el flujo únicamente con una decisión humana y, si corresponde, un contrato público actualizado.
 
-Brechas ya conocidas que requieren este tratamiento incluyen el filtrado jerárquico por padre, el orden estable de paginación, estados efectivos/diagnósticos y la evaluación/fingerprint del flujo keyboard-first. Su presencia no implica que se haya elegido todavía cómo alterar cada pantalla.
+Brechas ya conocidas que requieren este tratamiento incluyen el orden estable de paginación y cualquier diagnóstico o evaluación/fingerprint del flujo keyboard-first que no esté documentado públicamente. **G9 ya está resuelto** para el filtro público verificado `DEFAULT` + `insulation`: ids `14`–`20`, referencias canónicas `characteristic.id=3` y `optionSet.id=1`, y `hasNext=false`. La proyección efectiva documentada sigue siendo sólo lectura y autoridad de Core; habilitar administración base no autoriza evaluación local.
 
 ## Etapas propuestas y verificación
 
@@ -101,9 +132,14 @@ Toda implementación posterior seguirá TDD estricto: primero prueba fallida, lu
 ### 3. Atributos, opciones, aplicabilidad y unidades
 
 - Auditar operación por operación los kinds documentados (`CARACTERISTICA`, `CONJUNTO_OPCIONES`, `OPCION`, `RELACION_OPCIONES`, `UNIDAD`, `POLITICA_UNIDAD`, `APLICABILIDAD`, `PRESENTACION`).
+- Para el slice aprobado, activar una fila de atributo enfocada con `Enter`/`Space` nativos y mantener **Detalle** y **Opciones** dentro del `Dialog` de detalle.
+- Habilitar en **Opciones** sólo crear, editar, desactivar y reactivar registros base compartidos mediante las rutas públicas documentadas; no ofrecer `DELETE` permanente.
+- Mantener la proyección efectiva de Core en sólo lectura, sin parchear, recomponer ni evaluar resultados en cliente.
+- Mantener actor fail-closed, concurrencia por revisión string, conflicto `409` explícito, protección stale y refetch de lista base más proyección efectiva después de éxito o conflicto.
+- Mostrar de forma persistente y accesible que las mutaciones son globales y pueden afectar a todos los consumidores del conjunto o característica, no sólo al Tipo abierto.
 - Migrar únicamente contratos equivalentes; retirar o adaptar indicadores Convex no respaldados.
-- **Pruebas:** valores tipados, referencias, campos requeridos, lifecycle confirmado, estados parciales y errores.
-- **Gate:** cualquier noción de efectividad, razones, violaciones o política derivada no documentada se reporta, no se calcula.
+- **Pruebas:** valores tipados, referencias canónicas, ids positivos, campos requeridos, actor ausente, concurrencia/409, doble refetch, stale, advertencia global y ausencia total de `DELETE`.
+- **Gate resuelto:** la evidencia pública completa de `DEFAULT` + `insulation` devuelve ids `14`–`20`, `characteristic.id=3`, `optionSet.id=1` y `hasNext=false`; G9 deja de bloquear este alcance mutante aprobado.
 
 ### 4. Recursos de lectura
 
@@ -135,7 +171,13 @@ Las etapas son límites de revisión y validación, no afirmaciones de que todas
 - [ ] No existe fallback de runtime ni sustitución local de semánticas backend.
 - [ ] El proxy Vite local dirige las peticiones frontend de desarrollo a `http://localhost:8090`; no se incluyen cambios de producción.
 - [ ] Las mutaciones fallan cerradas y no envían requests cuando falta el actor local configurable.
-- [ ] Revisiones e identificadores REST se conservan como `string` y los payloads/respuestas se validan en la frontera.
+- [ ] Los identificadores y revisiones REST conservan los tipos y restricciones documentados por operación; G9 está resuelto para la ventana verificada con ids `14`–`20` y referencias canónicas, sin traducción ni reparación cliente.
+- [ ] Una fila de atributo enfocada se activa con `Enter`/`Space` nativos; el `Dialog` contiene **Detalle** read-only y **Opciones** administrativa.
+- [ ] **Opciones** ofrece sólo crear, editar, desactivar y reactivar registros base compartidos; no ofrece, simula ni llama `DELETE` permanente.
+- [ ] Toda mutación falla cerrada sin actor válido, preserva concurrencia mediante `expectedRevision` string y muestra `409` sin overwrite o retry silencioso.
+- [ ] Tras éxito confirmado o `409`, se refetchan la lista base filtrada y la proyección efectiva; no hay actualización optimista y las respuestas stale no reemplazan el contexto vigente.
+- [ ] La advertencia global visible y accesible explica que las mutaciones pueden afectar a todos los consumidores del conjunto o característica, no sólo al Tipo actual.
+- [ ] G9 registra como evidencia de cierre ids `14`–`20`, `characteristic.id=3`, `optionSet.id=1` y `hasNext=false` para `DEFAULT` + `insulation`.
 - [ ] La paginación utiliza offset/limit y flags REST, sin cursores sintéticos.
 - [ ] Cada capacidad no documentada tiene reporte de brecha y decisión humana antes de omitir, alterar o bloquear su flujo.
 - [ ] El diseño visual, accesibilidad y recorridos de teclado se preservan en todos los flujos declarados como soportados.
@@ -155,6 +197,8 @@ Las etapas son límites de revisión y validación, no afirmaciones de que todas
 | Semánticas Convex reconstruidas en frontend | Divergencia silenciosa de negocio | Prohibición explícita y proceso humano de brechas. |
 | Proxy interpretado como solución productiva | Despliegue no funcional o inseguro | Etiquetar proxy como desarrollo local; producción fuera de alcance. |
 | Regresión visual o de teclado | Pérdida de productividad y accesibilidad | Reutilizar sistema de diseño y contratos de teclado; regresión focalizada por slice. |
+| Una mutación de opción compartida se interpreta como local al Tipo | Impacto involuntario sobre otros consumidores del conjunto o característica | Advertencia global persistente y accesible antes y durante formularios/confirmaciones. |
+| Revisión obsoleta, refetch parcial o respuesta stale | Sobrescritura, estado engañoso o mezcla de contextos | `expectedRevision` string, `409` explícito, cero retry/optimismo, doble refetch autoritativo y guardas de identidad/generación. |
 | Cambio transversal superior a 400 líneas | Sobrecarga de revisión | Forecast antes de apply y pausa `ask-on-risk`; cadena/estrategia permanece diferida. |
 
 ## Rollback

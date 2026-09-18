@@ -2,69 +2,76 @@
 
 ## ADDED Requirements
 
-### Requirement: Atributos efectivos de Tipo como composición de pantalla
+### Requirement: Core-authoritative attribute rows and detail dialog
 
-Con Clase, Familia y Tipo contextuales seleccionados, la pantalla MUST solicitar `GET /v1/types/{encodedTypeCode}/attributes/effective?classCode={encodedClassCode}&familyCode={encodedFamilyCode}`, donde cada código de ruta o query se codifica para URL. Esta petición MUST ser la única fuente de composición de pantalla para el baseline estático de atributos del Tipo; no contiene valores de Recurso conocidos. Core resuelve sus defaults condicionales en esa respuesta, y la pantalla MUST NOT inventar ni reevaluar valores o reglas. La pantalla MUST NOT consultar Convex, reconstruir la respuesta con lecturas base ni sustituirla por el filtro genérico `characteristicCode`. `characteristicCode` MAY usarse sólo en lecturas base de catálogo donde el contrato lo documente, pero MUST NOT reemplazar, filtrar localmente ni recomponer el endpoint efectivo de pantalla. El adapter MUST validar el `EffectiveAttributesResponse` completo antes de React: su `typeCode` MUST coincidir exactamente con el Tipo contextual; cada `EffectiveAttribute`, `CharacteristicDescriptor`, `EffectiveAttributeSource`, regla y valor anidado MUST satisfacer el schema público exacto y sus campos requeridos, opcionales y nulos. `effectiveMode` MUST ser exactamente `REQUIRED`, `OPTIONAL`, `CONDITIONAL` o `FORBIDDEN`; cada atributo MUST incluir `options` como arreglo de objetos exactos `{ code, label }` con ambos campos string; `source` y todo dominio anidado MUST limitarse a los literales documentados por sus schemas públicos. Cualquier envelope, `typeCode`, campo anidado, regla, valor tipado o literal de dominio inválido MUST hacer fallar la respuesta completa antes de React.
+With contextual Class, Family, and Type codes, the screen MUST obtain the static attribute baseline only from `GET /v1/types/{encodedTypeCode}/attributes/effective?classCode={encodedClassCode}&familyCode={encodedFamilyCode}`. Core's response MUST remain the sole authority for attribute order, effective semantics, rules, options, and presentation data. The adapter MUST validate the complete public `EffectiveAttributesResponse` and all nested public descriptor schemas before React receives it. It MUST reject the whole response when its `typeCode`, required structure, typed value, or documented literal domain is invalid; it MUST NOT default, correct, derive, locally evaluate, or recompute any effective result.
 
-La pestaña Atributos MUST presentar como superficie primaria una lista compacta y pulida, en el mismo orden emitido por Core, con sólo la identidad de cada atributo: su nombre y, únicamente cuando ayude a desambiguar, código o tipo de valor como texto secundario sobrio. Cada fila MUST ofrecer exactamente una acción clara **Ver detalle** y MUST NOT mostrar inline `effectiveMode`, `source`, `identityParticipates`, `notApplicable`, posición, `optionSetCode`, `options` ni `rules`.
+The primary attribute list MUST preserve the exact order emitted by Core. Each attribute row MUST be exactly one native interactive control that opens its detail Dialog with native `Enter` and `Space` activation. `ArrowUp` and `ArrowDown` on an eligible row MUST only move focus through the existing spatial-navigation contract; they MUST NOT open detail, change the selected attribute, or submit an action. `Enter` MUST open detail only for the focused row. The row MUST retain its existing spatial-navigation identifier and eligibility, so Arrow navigation remains governed by the unchanged `keyboard-interaction` contract. The row MUST NOT contain a nested button or any other nested interactive control; a separate **View detail** button or an inline option-management action is prohibited.
 
-**Ver detalle** MUST abrir el Dialog compartido de GARFEX en modo sólo lectura. El Dialog MUST presentar los datos completos emitidos por Core —`effectiveMode`, `source`, `rules`, `identityParticipates`, `notApplicable`, `hasPosition`, posición cuando exista, `optionSetCode` y `options`— sin reordenarlos, resumirlos como cálculo local ni omitirlos por la composición compacta. Las `options` son opciones de baseline, no valores de Recurso seleccionados. Si `hasPosition` es falso, ni la lista ni el Dialog MUST reclamar o inventar una posición u orden para ese atributo; si es verdadero, el Dialog sólo MAY presentar la posición entregada. La interfaz MUST NOT derivar ni estrechar opciones por valores de Recurso; esa evaluación pertenece exclusivamente a `POST /evaluate` cuando el Creador disponga de valores.
+The detail Dialog MUST contain accessible **Detalle** and **Opciones** tabs. Its tab controls MUST implement `tablist`, `tab`, and `tabpanel` semantics with correct accessible names and selection relationships. Within the tablist, `ArrowLeft` and `ArrowRight` MUST move focus between enabled tabs, `Home` MUST move focus to the first enabled tab, `End` MUST move focus to the last enabled tab, and `Enter` MUST select only the focused tab. These local tab keys MUST NOT activate a row, submit a mutation, close the Dialog, or invoke a global shortcut. The Dialog MUST keep focus contained while open, close through **Close** or `Escape`, and restore focus to its opening row when that row remains connected, visible, enabled, and operable; otherwise it MUST restore focus to an explicit accessible attribute-tab fallback.
 
-El Dialog MUST ser operable por teclado, contener el foco sólo mientras esté activo, cerrarse mediante su control **Cerrar** o `Escape`, y restaurar el foco al control **Ver detalle** que lo abrió cuando éste siga siendo elegible, o al fallback accesible de la pestaña cuando no lo sea. Su contenido MUST adaptarse al viewport disponible sin ocultar sus datos ni convertir la lista primaria en una superficie de detalle editable.
+**Detalle** MUST present the complete data emitted by Core without reordering, omission, or local interpretation. If `hasPosition` is false, neither the row nor the Dialog MUST claim a position. If it is true, the Dialog MAY present only the position returned by Core. Baseline options MUST NOT be represented as Resource selections, and the client MUST NOT narrow, derive, or evaluate them locally.
 
-Ante cambio de Clase, Familia o Tipo, la pantalla MUST descartar la respuesta efectiva anterior, restablecer sus estados de carga/error/vacío y aceptar únicamente la respuesta correspondiente al contexto vigente; una respuesta tardía de un contexto anterior MUST descartarse. Mientras la petición vigente está pendiente MUST mostrar un estado de carga diseñado y accesible; un error de red, HTTP, parsing o validación MUST mostrar un estado de error diseñado, explícito y con la recuperación existente, sin conservar resultados obsoletos como actuales; una respuesta válida sin atributos MUST mostrar un estado vacío confirmado y diseñado.
+**Opciones** MUST make authorized shared-base option administration available, and MUST NOT remain read-only, only when the effective attribute includes an `optionSetCode` and its characteristic context. In that eligible context, the tab MUST expose create, edit, deactivate, and reactivate as defined by the public `OPCION` contract; it MUST NOT expose permanent `DELETE`. When no `optionSetCode` exists, the tab MUST instead present an accessible explanatory empty state and MUST expose no option-management mutation. When an option set exists, the tab MUST display a clear warning that base options are shared and that an edit or lifecycle change can affect every consumer of the same option set or characteristic.
 
-El adapter paginado de `GET /v1/catalog/APLICABILIDAD?typeCode=...` permanece como evidencia y capacidad lower-level/administrativa de Unidad 6, pero MUST NOT ser la ruta de composición de esta pantalla efectiva.
+When the contextual Class, Family, or Type changes, the screen MUST cancel or otherwise invalidate the previous effective request, clear its former result, and accept only a validated response for the current context. A late or aborted response MUST NOT replace the current context. The current request MUST expose accessible loading, confirmed empty, recoverable error, and explicit retry states without presenting stale attributes as current. The paginated `APLICABILIDAD` adapter MUST NOT compose or substitute this Core-authoritative effective screen.
 
-#### Scenario: El contexto seleccionado carga atributos efectivos de Core
+#### Scenario: A native row opens detail without changing spatial navigation
 
-- GIVEN una Clase, Familia y Tipo contextuales con códigos validados
-- WHEN Catálogo compone la vista de atributos del Tipo
-- THEN solicita el endpoint efectivo con el Tipo codificado en ruta y los códigos Clase y Familia codificados en query
-- AND no consulta Convex, aplicabilidades base ni `characteristicCode` para sustituir esa respuesta
+- GIVEN a valid Core effective response and a focused attribute row with its established spatial identifier
+- WHEN the user presses `Enter` or `Space` on that row
+- THEN the native row opens its detail Dialog
+- AND the row remains the sole interactive control for that attribute and retains its spatial identifier
+- AND Arrow navigation remains subject to the existing spatial-navigation contract
 
-#### Scenario: Un DTO efectivo incoherente invalida la respuesta completa
+#### Scenario: Nested controls are not introduced in an attribute row
 
-- GIVEN una respuesta del endpoint efectivo para un contexto seleccionado
-- WHEN su `typeCode` no coincide, falta o invalida un campo anidado, o contiene un `effectiveMode`, source o valor fuera del dominio público
-- THEN el adapter falla la respuesta completa antes de React
-- AND no presenta atributos parciales ni corrige o evalúa datos localmente
+- GIVEN the primary attribute list is rendered
+- WHEN an assistive technology or keyboard user encounters an attribute row
+- THEN the row exposes one native interactive control
+- AND it contains neither a nested button nor another nested interactive descendant
 
-#### Scenario: La lista primaria conserva el orden de Core sin exponer detalle inline
+#### Scenario: Detail tabs use scoped accessible keyboard behavior
 
-- GIVEN una respuesta efectiva válida con atributos de distintos sources y modos
-- WHEN la pestaña Atributos presenta la lista primaria
-- THEN conserva el orden emitido por Core y muestra sólo identidad más texto secundario de desambiguación cuando aplique
-- AND cada fila ofrece únicamente **Ver detalle**, sin exponer inline modos, sources, reglas, opciones ni posición
+- GIVEN the detail Dialog is open with both tabs enabled
+- WHEN the user presses `ArrowLeft`, `ArrowRight`, `Home`, `End`, or `Enter` in its tablist
+- THEN focus or selection changes only according to the tablist behavior for **Detalle** and **Opciones**
+- AND the key does not reopen the row, submit an option mutation, close the Dialog, or trigger a global command
 
-#### Scenario: Cambio contextual descarta una respuesta obsoleta
+#### Scenario: Shared scope is visible before administration
 
-- GIVEN una petición efectiva pendiente para un Tipo contextual anterior
-- WHEN la persona cambia Clase, Familia o Tipo antes de que llegue la respuesta
-- THEN la pantalla limpia el resultado anterior y muestra el estado de carga del contexto vigente
-- AND descarta la respuesta tardía anterior
+- GIVEN an effective attribute with an `optionSetCode`
+- WHEN the user opens **Opciones**
+- THEN the tab clearly warns that base options are shared across consumers of that option set or characteristic
+- AND the warning remains available before the user starts a create, edit, deactivate, or reactivate action
 
-#### Scenario: Los estados remoto y vacío son explícitos
+#### Scenario: The authorized tab exposes only supported administration
 
-- GIVEN una petición efectiva para el contexto vigente
-- WHEN falla por red, HTTP, parsing o validación
-- THEN la pantalla muestra un error accesible y no conserva atributos anteriores como actuales
-- WHEN recibe una respuesta válida sin atributos
-- THEN muestra un estado vacío confirmado
+- GIVEN an effective attribute with an `optionSetCode` and characteristic context
+- WHEN the user selects **Opciones**
+- THEN the tab exposes create, edit, deactivate, and reactivate for shared base options
+- AND it exposes no permanent `DELETE` or read-only block in place of those authorized actions
 
-#### Scenario: El detalle muestra datos completos sin evaluación local
+#### Scenario: A missing option set explains unavailable administration
 
-- GIVEN un atributo efectivo válido con `options` de `{ code, label }` y `hasPosition` falso
-- WHEN la persona activa **Ver detalle**
-- THEN el Dialog muestra las opciones y demás datos de Core en modo sólo lectura
-- AND no muestra una posición, valor de Recurso seleccionado ni evaluación dinámica inventados
+- GIVEN an effective attribute with no `optionSetCode`
+- WHEN the user selects **Opciones**
+- THEN the Dialog presents an accessible explanatory empty state
+- AND no create, edit, deactivate, or reactivate control is available
 
-#### Scenario: El Dialog conserva teclado, cierre y foco
+#### Scenario: The dialog restores focus safely
 
-- GIVEN una persona que abre **Ver detalle** desde una fila elegible
-- WHEN usa `Escape` o activa **Cerrar**
-- THEN el Dialog se cierra y restaura el foco a ese control **Ver detalle**
-- AND mientras permanece abierto contiene el foco y mantiene sus datos accesibles en el viewport
+- GIVEN a user opens detail from an eligible attribute row
+- WHEN the Dialog closes through `Escape` or **Close**
+- THEN focus returns to that row when it remains eligible
+- AND otherwise focus moves to the explicit accessible attribute-tab fallback
+
+#### Scenario: A context change rejects stale effective data
+
+- GIVEN an effective request is pending for a prior Type context
+- WHEN the user changes the Class, Family, or Type context
+- THEN the prior request is aborted or invalidated and its result is not presented as current
+- AND the current context presents loading, empty, error, or retry state as applicable
 
 ### Requirement: Enriquecimiento opcional y exacto de Característica
 
@@ -86,16 +93,64 @@ Si no existe una única definición exacta válida, la interfaz MUST conservar e
 - THEN la interfaz presenta el código de la referencia
 - AND comunica que la definición no está disponible sin ocultar ni alterar la aplicabilidad directa
 
-### Requirement: Bases de opciones y presentación permanecen separadas
+### Requirement: Option administration remains separate from effective composition
 
-El adapter lower-level de lectura directa de `APLICABILIDAD` MUST limitarse a aplicabilidades y, opcionalmente, a la definición exacta de su Característica. Ese adapter MUST NOT cargar, combinar ni inferir `OPCION`, valores permitidos, evaluación, herencia o `PRESENTACION` para completar una vista, ni sustituir el endpoint efectivo de pantalla. `OPCION` y `PRESENTACION` MAY abordarse únicamente como bases de lectura separadas, con sus propios filtros públicos, validación de records y decisión posterior de producto.
+The direct `APLICABILIDAD` adapter MUST remain limited to applicability records and, optionally, an exact characteristic definition. It MUST NOT load, combine, infer, or locally evaluate `OPCION`, allowed values, inheritance, or `PRESENTACION` to compose the effective screen. The approved `OPCION` administration surface is limited to the **Opciones** tab of an effective attribute Dialog with an `optionSetCode`; it MUST use its own public REST filters and contracts. That approval MUST NOT authorize option administration to alter applicability, presentation, inheritance, effective modes, identity participation, rules, or any other Core-authoritative effective semantics.
 
-#### Scenario: Una aplicabilidad directa no desencadena evaluación ni bases ajenas
+#### Scenario: Direct applicability does not compose or mutate option semantics
 
-- GIVEN una página válida de aplicabilidades directas para un Tipo
-- WHEN la interfaz presenta sus filas
-- THEN no solicita opciones, presentación, valores permitidos ni una evaluación para completar el resultado
-- AND mantiene bloqueadas las semánticas de efectividad, herencia, razones y allowed values
+- GIVEN a valid page of direct applicability records for a Type
+- WHEN the interface renders those records
+- THEN it does not request options, presentation, allowed values, or evaluation to complete the result
+- AND it does not use direct applicability data to enable or recompute shared-option administration
+
+### Requirement: Guided creation of a global attribute for the selected Type
+
+When a valid Class, Family, and Type are selected, **Atributos** MUST offer **Crear atributo** through a guided GARFEX Dialog. The Dialog MUST identify the selected hierarchy context and provide a visible, accessible warning before confirmation and throughout the creation flow that the new `CARACTERISTICA` is global and may affect consumers beyond the selected Type.
+
+A confirmed flow MUST create one new global `CARACTERISTICA`, then assign that exact created characteristic to the selected Type through one simple `APLICABILIDAD` and one `PRESENTACION`. The `APLICABILIDAD` MUST contain the selected Class, Family, Type, and newly created Characteristic references, MUST use exactly one of `REQUIRED`, `OPTIONAL`, or `FORBIDDEN`, and MUST contain the required empty rules collection. The Dialog MUST NOT offer `CONDITIONAL`, a conditional-rule builder, or any local condition evaluation. `PRESENTACION` MUST contain the selected Class, Family, Type, and newly created Characteristic references and all other descriptor-required values. The flow MUST NOT create a Type-local substitute for the global characteristic, infer required values, or assign a different characteristic.
+
+The interface MUST keep explicit, accessible state for each public write step: characteristic creation, applicability creation, presentation creation, and reconciliation. It MUST advance only after the prior response fully validates. Every step MUST fail closed before HTTP without a valid configurable local actor or the exact public request representation. The generic public REST writes are non-transactional: a confirmed earlier step combined with a failed, conflicted, or unconfirmed later step MUST be reported as partial success requiring reconciliation; the interface MUST NOT claim rollback, atomicity, or overall success, and MUST NOT issue a compensating write or permanent deletion. A user MUST explicitly choose any retry or reconciliation action from the recorded step state.
+
+After a write that is confirmed or whose result is unconfirmed, the interface MUST refresh the effective attribute projection only from Core for the captured Class, Family, and Type context. It MUST NOT optimistically insert or compose the attribute, use Convex, a fallback, local persistence, `POST /evaluate`, or a local business-rule evaluator to determine the projection. A stale refresh or a response for another dialog or hierarchy context MUST NOT replace the current projection.
+
+#### Scenario: Guided creation assigns the newly global characteristic to the selected Type
+
+- GIVEN valid selected Class, Family, and Type context, a valid actor, and all descriptor-required values
+- WHEN the user confirms **Crear atributo** with mode `REQUIRED`, `OPTIONAL`, or `FORBIDDEN`
+- THEN the Dialog creates a new global `CARACTERISTICA` and uses that confirmed characteristic for one simple `APLICABILIDAD` and one `PRESENTACION` for the selected Type
+- AND the effective projection is refreshed only from Core after the writes
+
+#### Scenario: Conditional authoring is unavailable
+
+- GIVEN the user opens **Crear atributo**
+- WHEN the Dialog presents applicability choices
+- THEN it offers only `REQUIRED`, `OPTIONAL`, and `FORBIDDEN`
+- AND it exposes neither `CONDITIONAL` nor a conditional-rule builder or local rule evaluation
+
+#### Scenario: A missing actor prevents every creation step
+
+- GIVEN the selected hierarchy context is valid but the local actor is absent, blank, or invalid
+- WHEN the user attempts to confirm **Crear atributo**
+- THEN the Dialog communicates the configuration failure before the first write
+- AND it sends no `CARACTERISTICA`, `APLICABILIDAD`, or `PRESENTACION` request
+
+#### Scenario: Partial success is reconciled without fictitious rollback
+
+- GIVEN `CARACTERISTICA` creation has been confirmed and a later assignment step fails, conflicts, or has an unconfirmed network outcome
+- WHEN the Dialog reports the operation
+- THEN it identifies the confirmed and unresolved steps as partial success requiring reconciliation
+- AND it neither claims atomic completion nor sends a compensating delete or automatic retry
+- AND it refreshes the captured context only from Core before a user explicitly retries or reconciles
+
+#### Scenario: Arrow focus does not activate an attribute
+
+- GIVEN an eligible attribute row has focus
+- WHEN the user presses `ArrowUp` or `ArrowDown`
+- THEN focus moves only according to the existing spatial-navigation contract
+- AND no detail Dialog opens or attribute write begins
+- WHEN the user presses `Enter`
+- THEN the focused row opens its detail Dialog
 
 ## MODIFIED Requirements
 

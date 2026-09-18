@@ -2,6 +2,8 @@
 
 ## Decisión y estado
 
+> **Precedencia vigente:** la sección 16 habilita únicamente Crear atributo guiado y sustituye sus bloqueos históricos; conserva la administración OPCION independiente. La sección 15 sustituye las restricciones históricas de administración de OPCION y la acción separada «Ver detalle» de sección 14. La fila es un único botón nativo; Detalle conserva la proyección Core read-only y Opciones administra registros base compartidos mediante una frontera independiente.
+
 Migrar los tres adapters existentes a REST, conservar la composición feature-first y bloquear explícitamente los recorridos que el contrato público no permite representar. No reproducir Convex mediante DTOs compatibles, evaluación local ni un runtime dual. Este diseño habilita planificación de tareas, **no apply**: quedan gates de contrato, aceptación del alcance visible y entrega.
 
 - `skill_resolution: paths-injected` para las tres habilidades solicitadas. La habilidad ejecutora SDD no fue inyectada; un intento degradado en la ruta convencional `gentle-pi/skills/sdd-design/SKILL.md` no encontró archivo. Se sigue el contrato de fase del executor, sin descubrir registros adicionales.
@@ -485,3 +487,230 @@ Cambio de Clase/Familia/Tipo, nueva carga que invalida el snapshot o fallo que r
 U7a-i/ii y U7b no cambian por esta UX. U7c se enfoca en lista compacta + detalle feature-local, con pruebas futuras de orden/secciones, options baseline, reglas legibles sin JSON y acciones sin mutación. U7d verifica wiring, apertura/cierre, Escape, restauración de foco, contexto invalidado, nombres accesibles y viewport. Mantener <=400 líneas autorales por corte incluyendo pruebas; si U7c supera el techo, separar lista y detalle con sus casos dependientes antes de apply bajo ask-on-risk, sin descartar el candidato actual ni quitar cobertura.
 
 Checklist expresa decisiones de diseño, **no verificación visual o accesible ejecutada**. Implementación posterior seguirá TDD con `pnpm test` y regresión focalizada de Dialog/teclado. Esta enmienda modifica sólo design.md; no crea componentes, CSS, tests, specs ni tasks, y no ejecuta pruebas.
+
+## 15. Enmienda vigente — Fila nativa y administración de opciones compartidas
+
+### Decisión, autoridad y límites
+
+**ADR 11:** una fila equivale a un único botón nativo que abre el Dialog GARFEX existente. Dentro, **Detalle** presenta el baseline efectivo de Core y **Opciones** administra exclusivamente OPCION base. Nunca editar la proyección efectiva ni componerla con esos registros. Esta sección prevalece sobre la acción separada de sección 14 y los bloqueos históricos de OPCION en secciones 6 y 11–14; no desbloquea aplicabilidad, reglas, herencia, PRESENTACION, RELACION_OPCIONES ni evaluación del Creador.
+
+Entradas leídas directamente: propuesta vigente, specs `catalog-hierarchy` y `rest-backend-integration`, evidencia contractual, este diseño y código frontend relevante. La evidencia local declara campos requeridos OPCION, pero no basta para inventar cada literal wire o referencia de escritura: la implementación deberá contrastarlos con los schemas/descriptors públicos exactos. No se inspeccionó backend ni se hicieron peticiones. Backend de artefactos: OpenSpec; único cambio autorizado: este `design.md`.
+
+`skill_resolution: fallback-path`: habilidades GARFEX, Tailwind y documentación cargadas desde rutas explícitas disponibles; no se inyectó ruta de habilidad ejecutora SDD y no se descubrió registro adicional. El parent debe pasar rutas indexadas de fase y apoyo la próxima vez. CodeGraph y shell no están disponibles; no se pudo resolver raíz Git ni consultar su índice en esta enmienda. Lectura estática degradada desde el workspace indicado, sin atribuir verificación estructural o de runtime a CodeGraph.
+
+### Reutilización antes de componentes nuevos
+
+| Evidencia actual | Decisión de composición |
+| --- | --- |
+| `src/shared/ui/Button.tsx` envuelve React Aria y expone ref de HTMLButtonElement | Usarlo con `type="button"` como **toda** la fila, variante existente y utilidades sólo de distribución/ancho/texto. No clonar chrome, crear una variante de fila especulativa ni mantener article enfocável más botón hijo. |
+| `Dialog.tsx` contiene overlay, contención, scroll, encabezado y acciones | Conservar ese Dialog, sin modal alternativo ni diálogo anidado para administrar. Usar altura automática y su ancho/cap existentes. |
+| `Field.tsx` y `fieldStyles.ts`, formularios de `NuevaClaseSurface` | Reutilizar campos etiquetados, controles y acciones Crear/Guardar/Cancelar, sin copiar el frame legacy de `GestionarOpcionesSurface`. |
+| Tabs nativas existentes en `CatalogHierarchyScreen.tsx` | Reutilizar su patrón semántico/visual por composición; completar localmente activación manual y roving focus requeridos, sin copiar el acoplamiento de navegación del shell. No existe Tabs compartido en el inventario leído. |
+| `restoreFocusNextFrame`, `keyboardArbitration` y fallback `attributesTabRef` | Mantener estos propietarios. No introducir listener de documento, trap propio ni reemplazar arbitraje global. |
+
+Detalle, editor y controlador de opciones son feature-locales: una única necesidad administrativa no justifica promover lógica a shared. Si al implementar se demuestra un segundo consumidor con idéntico contrato de tabs, extraer sólo presentación/interacción común y migrar ambos; similitud visual no basta. No inventar Table/ConfirmAction/EmptyState compartidos que hoy no existen: listas semánticas, regiones de estado y Button/Field/Dialog ya cubren este recorrido.
+
+### Fila, tabs y teclado
+
+- Sustituir el `article tabIndex=0` y su Button hijo por un solo Button nativo dentro del `li`. Nombre visible y accesible identifica el atributo; code/valueType secundarios mediante spans no interactivos. Eliminar «Ver detalle» como acción independiente. No anidar enlaces, botones, inputs ni elementos con tabIndex. Conservar exactamente `data-catalog-level="attributes"`, `data-spatial-id="catalog.row.attributes.effective.${rowIndex}"` y elegibilidad espacial en el botón, no en su wrapper; mantener orden Core.
+- Usar una única activación nativa/React Aria para click, Enter y Space. No duplicar apertura con keydown más click, ni sintetizar clicks. Si hace falta impedir que Enter llegue al comando contextual global, consumir sólo su propagación local preservando la acción nativa; no interceptar Arrow ni marcar toda la fila como contexto editable. Comprobar la ruta real del evento en regresión.
+- Al abrir, seleccionar Detalle y enfocar su tab mediante el mecanismo de foco del Dialog. `tablist` con nombre «Información y opciones del atributo»; tabs Detalle/Opciones con IDs únicos por sesión, `aria-selected` y `aria-controls`; cada `tabpanel` con `aria-labelledby`. Panel inactivo oculto y sin descendientes enfocables. El panel de lectura puede ser enfocável para acceder al contenido con Tab.
+- Activación **manual**: ArrowLeft/Right recorren tabs habilitadas con wrap; Home/End enfocan primera/última. Foco y selección son estados distintos. Enter selecciona únicamente la enfocada; click y Space nativo también seleccionan. Roving tabIndex deja una sola tab en la secuencia. Estos eventos quedan dentro del tablist; no llegan al shell, no envían formularios ni abren/cerran Dialog. Tabs llevan type=button y están fuera de los forms. No capturar teclas de inputs desde un handler del panel.
+- Tab/Shift+Tab siguen el orden natural y contención compartida. Escape y Cerrar cierran el Dialog sin guardar ni confirmar lifecycle; Cancelar en un subestado vuelve a la lista sin mutar. Arrow fuera del tablist conserva su dueño existente: no modificar geometría ni algoritmo espacial.
+- Al cerrar, restaurar al botón de apertura sólo si conectado, visible, habilitado y operable, incluidos ancestros no ocultos/inert. Reutilizar la infraestructura de restauración y el fallback explícito `catalog-attributes-tab`; no confiar únicamente en que una ref no sea null. Evitar restauraciones competidoras entre Dialog y callback. Si la fila se desmontó durante refetch, usar fallback, nunca la nueva fila situada en su antiguo índice.
+
+### Contrato visible dentro del Dialog
+
+**Detalle** conserva íntegramente resumen, aplicabilidad, options baseline y reglas legibles de sección 14, sin JSON crudo ni controles de edición. Core sigue siendo la única autoridad para orden, modos, origen, posición, identidad y reglas. Ajustar copy general a «Proyección efectiva de sólo lectura; administración base en Opciones», evitando afirmar que ninguna gestión está disponible.
+
+**Opciones**, siempre seleccionable, muestra «Este atributo no tiene conjunto de opciones; no hay administración disponible» si falta optionSetCode: cero consulta OPCION y cero CTAs mutantes. No usar characteristicCode solo para sortear este gate.
+
+Con conjunto válido, mantener un aviso visible antes y durante cada operación, asociado al formulario/confirmación mediante aria-describedby: **«Opciones compartidas globalmente. Crear, editar, desactivar o reactivar puede afectar a todos los consumidores de este conjunto o característica; no es un cambio local a este Tipo.»** Mostrar los códigos exactos del conjunto y característica. No reducirlo a tooltip o color.
+
+| Subestado | Contenido y acciones |
+| --- | --- |
+| Lista | Registros base con código, etiqueta y estado textual Activa/Inactiva. Mostrar ambas clases mediante scope público documentado; no filtrar el array efectivo ni ocultar inactivas localmente. Navegación por ventanas con flags REST, sin prometer exhaustividad. Crear opción; por registro Editar y sólo Desactivar si activo, Reactivar si inactivo. |
+| Crear | Field Código y Etiqueta; contexto conjunto/característica visible y no editable. Entradas explícitas, sin autogeneración ni defaults de negocio. Crear/Cancelar. No enviar hasta disponer de referencias y mapping públicos válidos. |
+| Editar | Precargar desde OPCION base validada, no desde `{code,label}` efectivo. Mostrar identidad y revisión capturada; fields Código/Etiqueta editables sólo donde el descriptor/update lo permita. Conservar referencias contextuales sin reclasificación. Guardar cambios/Cancelar. |
+| Confirmar lifecycle | Panel de confirmación dentro de Opciones, no modal anidado. Nombrar código/etiqueta, acción, estado y alcance global. Confirmar desactivación/Confirmar reactivación y Cancelar; foco inicial en Cancelar. Desactivar no elimina permanentemente. |
+| Carga/vacío/error | Región accesible con estado específico de lista base, vacío confirmado de esta ventana, fallo o Reintentar. Un fallo nunca se presenta como ausencia de opciones. La pestaña Detalle no depende del éxito de esta lista. |
+| Actor inválido/ausente | Lecturas disponibles; explicación persistente y acciones mutantes deshabilitadas. Revalidar al confirmar y dentro del adapter: cero HTTP incluso si se invoca directamente. Actor no prueba permisos. |
+
+No hay DELETE, «Eliminar», borrado permanente, edición masiva ni atajos N/E/O/Del nuevos. Cambiar de tab no envía un form; puede conservar borrador sólo en la misma sesión/contexto. Cerrar o cambiar contexto lo descarta sin escribir. Mientras una mutación está pendiente, bloquear dobles envíos y acciones conflictivas; cerrar sigue permitido y no significa que el servidor haya cancelado una escritura.
+
+### Frontera estricta OPCION y flujo de datos
+
+```text
+Fila → Dialog (sesión + contexto + tab)
+  Detalle → DTO GET efectivo validado, sin consultas base para completarlo
+  Opciones → useCatalogOptionsAdmin (estado local separado)
+           → catalogOptionsAdmin.api (fetch inyectable, actor, validación estricta)
+           → GET /v1/catalog/OPCION?optionSetCode=…&characteristicCode=…
+                 + scope/offset/limit públicos
+           → unknown → CatalogPage + descriptor OPCION + matching contextual
+           → lista base / borrador UI → mapping validado → mutación documentada
+           → éxito confirmado o 409 → refetch base filtrada Y GET efectivo
+```
+
+Proponer `catalogOptionsAdmin.api.ts`, `catalogOptionsAdmin.types.ts` y `useCatalogOptionsAdmin.ts` bajo `src/features/catalog-hierarchy/`. Añadir **sólo ese adapter** a la whitelist HTTP cerrada; no extender permisos por sufijo. Reutilizar schemas públicos puros existentes, validación/configuración local de actor y modelo de error. No añadir Query, cliente global, store, almacenamiento ni dependencia del adapter directo APLICABILIDAD. El hook efectivo conserva su GET y admite una orden explícita de refresh desde la coordinación de pantalla, nunca desde un mapper.
+
+Snapshot de lista: sesión Dialog, códigos Clase/Familia/Tipo para aislamiento UI, optionSetCode, characteristicCode, scope, offset, limit y generación. Enviar **ambos** filtros optionSetCode y characteristicCode con URLSearchParams; nunca classCode/familyCode/typeCode al listado OPCION. Scope debe usar el literal público que incluya activas e inactivas; si el extracto no lo precisa, confirmar el contrato antes de cablearlo, no inventar `all` ni `includeInactive`. Resetear offset al cambiar filtros/scope; respetar flags y límites públicos sin sort/dedupe/promesas G2.
+
+Antes de React validar página completa y cada record: kind OPCION, id/revision string estrictamente positivos conforme al patrón público de operación, active boolean, values y rules públicos; values contiene exactamente los campos descriptor-confirmados `optionSet`, `characteristic`, `code`, `label` y no extras prohibidos. Referencias a CONJUNTO_OPCIONES y CARACTERISTICA válidas y códigos exactamente iguales al snapshot solicitado. Un mismatch, campo faltante o valor mal tipado invalida **toda** la página, no se filtra/repara. La tolerancia histórica a id de referencia `"0"` en Unidad 6 no autoriza usarlo como id de OPCION ni saltar restricciones de escritura.
+
+| Comando del adapter | Frontera pública y concurrencia |
+| --- | --- |
+| list | GET anterior; no actor requerido. |
+| create | POST `/v1/catalog/OPCION`; actor y values construidos según request público. Validar status y CatalogRecord de respuesta antes de confirmar éxito. |
+| update | PUT `/v1/catalog/OPCION/{encodedId}`; actor, expectedRevision string capturada del registro base y values permitidos por update. No sustituir revisión por la efectiva. |
+| deactivate/reactivate | POST `/v1/catalog/OPCION/{encodedId}/deactivate` o `/reactivate`; actor y expectedRevision según schema público; sin values/active inventados. |
+
+**Mapping descriptor-validado, no wire inventado:** el draft UI contiene entradas de código/etiqueta y referencias validadas separadas. El mapper exhaustivo obtiene los kinds, campos permitidos, opcionales, restricciones y forma de REFERENCE del descriptor/request público OPCION. No asumir TEXT, CODE, ENUM o CONTROLLED_OPTION por el nombre del campo ni copiar el mapping de Resource de sección 13. Para edición preservar valores base no editados requeridos por PUT; jamás generar defaults de rules/active o reenviar campos técnicos como values. Para crear, los códigos del DTO efectivo no demuestran IDs de referencia: usar únicamente la representación de referencia de escritura documentada. Si necesita IDs no disponibles, bloquear Crear con causa contractual hasta una resolución pública exacta autorizada; no usar index, id0, código como ID, búsqueda parcial ni endpoint supuesto. Este gate de precisión no reabre la aprobación de las rutas OPCION.
+
+Validar request completo antes de fetch y respuesta completa antes de React, sin trim, coerción numérica, reparación ni passthrough donde se prohíben extras. Conservar los strings originales de id/revision/expectedRevision; no comparar revisiones por aritmética. Rechazar inválidos en llamadas directas del adapter además de UI. Status/cuerpos se verifican contra schemas públicos exactos, no por aceptar cualquier 2xx.
+
+### Stale, conflictos y doble refetch sin perder la sesión
+
+Separar estado de lectura base (`idle/loading/ready/empty/error`) del comando (`idle/submitting/conflict/unconfirmed/refreshing/refresh-error`) y del borrador. Cada petición captura identidad y generación; abort y guard de vigencia para éxito, error y finally, incluyendo A→B→A, cambio de atributo/conjunto, nueva sesión y cierre. Una respuesta vieja no cambia lista, revisión, foco o tab ni reabre el Dialog.
+
+- **Éxito confirmado:** anunciar la operación y bloquear nuevas mutaciones hasta releer. Lanzar ambas lecturas autoritativas: la ventana OPCION con ambos filtros y el GET efectivo del contexto. No insertar/actualizar registros localmente ni cambiar options, position o reglas efectivos desde la respuesta mutante. Refrescar no selecciona automáticamente un registro ni cambia offset para encontrar el creado.
+- **409 de revisión:** mantener aviso de conflicto y borrador como intención no enviada; invalidar la revisión utilizable. Refetch **ambas** autoridades igual que en éxito, sin ocultar el conflicto al terminar. Ofrecer revisar datos actuales y descartar/reaplicar explícitamente cambios en un nuevo intento confirmado. No sustituir expectedRevision dentro del draft y reenviar silenciosamente. Si la fila dejó la ventana, no reutilizar el record viejo: volver a localizarlo mediante lecturas documentadas antes de editar.
+- **Refetch parcial/fallido:** distinguir «Operación confirmada; actualización pendiente» de conflicto. Ninguna lectura fallida convierte escritura confirmada en fallo reintentable de Guardar. Mostrar cuál autoridad falta y reintento sólo de esa lectura; comandos bloqueados hasta datos actuales. No tratar base exitosa como proyección efectiva ni viceversa.
+- **Red o respuesta mutante inválida:** resultado no confirmado, no ofrecer envío automático; reconciliar mediante lecturas disponibles y decisión explícita. La ausencia del creado en una ventana no demuestra que la creación falló.
+
+La regla de sección 14 de cerrar ante toda carga se refina **sólo para refresh administrativo del mismo contexto**: mantener el shell de Dialog y su estado de conflicto/borrador, retirar detalle efectivo obsoleto y mostrar actualización pendiente. Reasociar tras respuesta válida por característica y conjunto en el mismo snapshot contextual, nunca por índice ni igualdad de objeto. Si no hay coincidencia única, retirar administración y explicar el cambio sin presentar un atributo arbitrario; permitir Cerrar y fallback de foco. Un cambio real de Clase/Familia/Tipo o sesión sí cierra, limpia e invalida todo.
+
+La coordinación de pantalla posee el refresh posterior al comando ya despachado. Si se cierra durante la escritura, el resultado puede requerir reconciliar lecturas del contexto capturado, pero nunca repoblar otra sesión ni refrescar un Tipo diferente como si fuese el original. Invalidar/descartar resultados UI viejos; la siguiente apertura obtiene lista nueva y el contexto efectivo se relee antes de presentarse vigente. Cancelar fetch no promete rollback del servidor.
+
+### Archivos previstos, verificación y rollout
+
+Sólo este documento se modifica ahora. Futuro impacto: `CatalogTypeEffectiveAttributes.tsx` (fila y sesión), `CatalogTypeEffectiveAttributeDetail.tsx` (tabs y presentación), `CatalogHierarchyScreen.tsx` y `useCatalogTypeEffectiveAttributes.ts` (coordinación de refresh), los tres archivos OPCION propuestos y un panel/editor feature-local como `CatalogOptionsAdmin.tsx`. Mantener helpers compartidos salvo una insuficiencia demostrada en su contrato; no migrar superficies legacy por conveniencia.
+
+Pruebas **a planificar, no creadas ni ejecutadas aquí**: contrato/API OPCION con página indivisible, referencias discordantes, campos extra, IDs/revisiones cero/negativos/no string, payload mapping exacto, ambos filtros y cero DELETE; actor ausente en los cuatro métodos; hooks con generación, cierre, A→B→A, doble envío, éxito/409 y ambos refetch, fallo parcial y resultado incierto; UI de estados activos/inactivos, forms, confirmación cancelable, ausencia de conjunto y aviso global. Regresión de una sola interacción por fila, Enter/Space sin doble apertura, Arrow espacial intacto, tabs manuales/Home/End, ningún submit desde tabs, Escape y foco tras desmontaje, refresh sin perder conflicto. Implementación posterior sigue RED→GREEN→REFACTOR y suites focalizadas, axe y navegador real para teclado.
+
+| Checklist responsive/Light/tokens/accesibilidad | Criterio de aceptación posterior |
+| --- | --- |
+| Reutilización y consistencia | Button, Field, Dialog y WorkCard existentes; sin chrome duplicado, CSS nuevo ni variante sin necesidad aprobada. Negocio y estado permanecen en feature. |
+| Tokens y modos | Tokens GARFEX de superficie/borde/texto/foco; no hex, medidas arbitrarias ni colores warning inventados. Aviso mediante texto y jerarquía existentes. Light únicamente; Dark no aplica. |
+| Responsive | Altura automática y scroll del Dialog; forms/acciones apilables, nombre/código largo envuelve, sin ancho fijo adicional ni overflow horizontal a 320 CSS px/zoom 400%. Footer no tapa campos enfocados ni errores. |
+| Estados visuales | Hover/active/disabled de controles compartidos, foco visible sin recorte; carga anunciada sin salto de foco y sin ocultar la causa del bloqueo. Contraste WCAG AA y estado Activa/Inactiva no sólo por color. |
+| Semántica | Un botón por fila, nombres contextuales, labels Field y ayudas asociadas, tabs/paneles relacionados y panel oculto fuera del árbol accesible; orden de encabezados coherente. |
+| Interacción | Objetivos cómodos cercanos a 44 px mediante escala existente; teclado completo, foco contenido y restaurado a candidato realmente operable; lector de pantalla anuncia error/conflicto/éxito sin repetir toda la lista. |
+
+Rollout posterior por unidades medidas <=400 líneas autorales con cobertura: contrato/adapter estricto → hook/refetch → fila/tabs → forms/lifecycle/wiring. Subdividir bajo ask-on-risk si exceden, sin comprimir cobertura ni rehacer el candidato histórico. Habilitar administración sólo con payload/referencias/scope públicamente precisados y regresión de teclado aceptada. Rollback retira exclusivamente superficie administrativa y su wiring; Detalle efectivo sigue read-only y REST-only. No deshacer datos, DELETE, recomposición local o fallback Convex. No se modifican propuesta, specs, tasks, código ni pruebas en esta enmienda.
+
+## 16. Enmienda — Crear atributo global y asignarlo al Tipo
+
+### Decisión y evidencia
+
+**ADR 12:** incorporar un único Dialog guiado con tres creaciones REST estrictamente secuenciales: **CARACTERISTICA → APLICABILIDAD → PRESENTACION**. No es una transacción, un editor genérico ni una extensión de OPCION. Esta autorización sustituye sólo los bloqueos históricos de creación/asignación de atributos; editar asignaciones existentes, lifecycle, reglas, conjuntos/opciones nuevos y evaluación del Creador permanecen fuera de este recorrido.
+
+Entradas leídas directamente: propuesta, requisitos guiados de `specs/catalog-hierarchy/spec.md` y `specs/rest-backend-integration/spec.md`, evidencia pública local y diseño vigente. Patrones contrastados en `catalogOptionsAdmin.api.ts`, `restActor.ts`, `useCatalogTypeEffectiveAttributes.ts` y `CatalogTypeEffectiveAttributes.tsx`. No se consultó backend ni se repitió HTTP. La propuesta aún describe principalmente OPCION; los requisitos guiados y la aprobación actual precisan esta ampliación sin reescribirla aquí.
+
+`skill_resolution: fallback-path`: cargadas habilidades GARFEX, Tailwind y documentación desde rutas explícitas disponibles. La ruta convencional del executor SDD no existe; no se descubrieron registros. Sin shell ni herramienta CodeGraph, la lectura estática es degradada y no constituye verificación de índice, Git o runtime. Único artefacto a modificar: este diseño.
+
+### Arquitectura acotada y propietarios
+
+```text
+CatalogHierarchyScreen: snapshot validado + sesión + coordinación de refresh
+  → CrearAtributoSurface: borrador, resumen y confirmación explícita
+  → useCatalogAttributeCreation: secuencia y registro de pasos en memoria
+  → catalogAttributeCreation.api: referencias, wire, actor y transporte
+       GET canónicos acotados de CLASE/FAMILIA/TIPO
+       POST CARACTERISTICA → validar record → referencia exacta creada
+       POST APLICABILIDAD → validar record
+       POST PRESENTACION → validar record
+  → hook efectivo existente: GET Core del contexto capturado
+  → resultado completo, parcial o no confirmado; nunca composición local
+```
+
+| Archivo futuro bajo `src/features/catalog-hierarchy/` | Responsabilidad y límite |
+| --- | --- |
+| `catalogAttributeCreation.types.ts` | Draft, referencias canónicas, inputs/outputs específicos y registro discriminado de pasos; sin React/HTTP. |
+| `catalogAttributeCreation.api.ts` | Factory fetch-inyectable; `resolveHierarchyReferences`, `createCharacteristic`, `createApplicability`, `createPresentation` y lecturas acotadas de reconciliación. Parsers descriptor-específicos y mappers puros privados. Añadir sólo este archivo a whitelist HTTP, no permiso por sufijo. |
+| `useCatalogAttributeCreation.ts` | Secuencia explícita, exclusión mutua, snapshot/generación, pasos confirmados e inciertos y coordinación con callback Core. No Query ni workflow engine genérico. |
+| `CrearAtributoSurface.tsx` | Composición de Dialog/Field/Button existentes; edición previa, revisión y estados legibles. No imports de schemas ni fetch. |
+| `CatalogHierarchyScreen.tsx` | CTA Crear atributo en Atributos, instancia API, propietario del registro mientras vive la pantalla, aislamiento contextual y refresco autoritativo. |
+| `useCatalogTypeEffectiveAttributes.ts` | Refinamiento mínimo de refresh explícito para no perder solicitudes y no presentar baseline previo como vigente durante reconciliación. |
+| `CatalogTypeEffectiveAttributes.tsx` | Sólo conexión de CTA/estado si su propietario actual lo requiere; conservar filas, detalle y Opciones. |
+
+Reutilizar `CatalogRecordSchema`, `CatalogPageSchema`, variantes públicas y `ErrorEnvelopeSchema` de `src/shared/catalog/catalogRest.contract.ts`, y `hasRestActor`/`withRestActor` de `src/shared/api/restActor.ts`. No convertir el adapter OPCION en cliente genérico ni importar sus helpers privados. Su resolución textual acotada es precedente de transporte, no evidencia pública de identidad para otros kinds. Sin cambios previstos a shared UI, configuración, resources-master o paquetes externos.
+
+### Referencias canónicas: resolver antes de la primera escritura
+
+El snapshot contiene códigos originales Clase/Familia/Tipo, identidad de sesión y generación. No usar IDs de modelos UI legacy ni referencias id0 como identificadores de escritura. Resolver por los listados públicos, con `URLSearchParams` y una sola ventana `scope=ALL&text=<código exacto>&limit=50&offset=0` por kind:
+
+| Kind | Filtro adicional público | Validación contextual |
+| --- | --- | --- |
+| CLASE | Ninguno | kind CLASE y `values.code` CODE igual al código seleccionado. |
+| FAMILIA | Sólo `classCode` de Clase | Código exacto y referencia `class` igual a la referencia canónica CLASE resuelta, incluidos kind/id/code. |
+| TIPO | Sólo `familyCode` de Familia | Código exacto y referencias `class` y `family` iguales a las canónicas resueltas. |
+
+Resolver CLASE → FAMILIA → TIPO para verificar ancestros antes de aceptar descendientes. Validar la página completa y descriptors, no rescatar candidatos si contiene records inválidos. Requerir `hasPrevious=false`, `hasNext=false` y exactamente un candidato de código exacto; coincidencias parciales válidas no son candidatos. Cero coincidencias, dos coincidencias exactas (sin dedupe), flags incompletos, ID no utilizable o parentesco discordante bloquean la primera escritura con causa visible. No barrer páginas, inventar GET por código ni aceptar el primer resultado. Este presupuesto acota consultas; no prueba orden estable ni unicidad global más allá del resultado público. Si se exige una garantía adicional, aplicar el gate contractual abajo.
+
+La referencia de escritura tiene exactamente `{ kind: 'REFERENCE', reference: { kind, id, code } }`. Obtener id del record público validado y code de su CODE exacto, sin trim, parseInt, conversión de signo o usar code como id. Aplicar restricciones del schema de escritura específico; conservar id/revision como strings. No copiar el patrón de revisión de OPCION a otros kinds sin evidencia.
+
+**Característica recién creada:** el lookup canónico es el `CatalogRecord` íntegro del POST confirmado, no otra búsqueda que pueda sustituirlo. Validar kind CARACTERISTICA, id/revision contractuales y todos los campos enviados contra respuesta. Construir su referencia a partir de ese record y reutilizar exactamente el mismo triple en ambas asignaciones. Una búsqueda textual posterior sólo puede reconciliar incertidumbre, nunca convertir un record preexistente del mismo código en “el creado”. No fabricar dependencias hasta validar esta respuesta.
+
+### Borrador, wire y confirmación
+
+Recoger todos los valores exigidos por los tres descriptors **antes** de crear CARACTERISTICA, para evitar parciales previsibles. Mostrar contexto de sólo lectura, código/nombre explícitos, valueType público, modo simple y posición explícita. Campos opcionales como dimensión/defaultIdentityParticipates/identityParticipates sólo se envían si hay entrada expresa y representación pública precisa; no derivarlos del modo. No crear ni asignar optionSet como efecto lateral. Si un valueType requiere información no cubierta por el contrato disponible, bloquear ese caso antes del primer POST en lugar de inventarla.
+
+| Paso | Petición pública prevista | Validación y prohibiciones |
+| --- | --- | --- |
+| Característica | `POST /v1/catalog/CARACTERISTICA`, body `{ actor, values }` | `code` CODE y `name` TEXT confirmados; `valueType` usa su variante descriptor-confirmada, no una deducción por nombre. Opcionales sólo documentados. |
+| Aplicabilidad | `POST /v1/catalog/APLICABILIDAD`, actor, values y `rules: []` requerido en el nivel público del request | values incluye class/family/type/characteristic REFERENCE canónicas y mode. Sólo REQUIRED, OPTIONAL o FORBIDDEN; ninguna regla ni CONDITIONAL. Confirmar variante wire exacta de mode antes de habilitar. |
+| Presentación | `POST /v1/catalog/PRESENTACION`, body `{ actor, values }` | Las mismas cuatro referencias y `position: { kind: 'INTEGER', value: <string canónico explícito> }`; validar patrón público, sin Number, ordinal de fila, siguiente posición calculada ni default cero. |
+
+No enviar expectedRevision en creates, active, metadatos técnicos ni rules adicionales salvo exigencia pública. Validar cada request antes de fetch y cada status/record completo antes de avanzar: el contrato genérico de creación debe confirmar `201 CatalogRecord` para los tres kinds. Una respuesta 2xx cualquiera no basta. Comprobar referencias completas, campos descriptor-requeridos, rules y valores devueltos sin defaults, reparación o coerción; un mismatch vuelve el resultado no confirmado y detiene dependencias.
+
+Fail-closed doble: la UI explica y deshabilita confirmar si `hasRestActor` falla; **cada método** ejecuta `withRestActor` antes de su HTTP. Revalidar también justo antes de cada paso, incluso tras una espera y en invocación directa. Actor ausente inicialmente produce cero POST; si deja de estar disponible después de un paso confirmado, detener y conservar parcial. No normalizar el actor ni asumir permisos por su presencia.
+
+### Estado de pasos, cierre y reconciliación honesta
+
+Registro inmutable en memoria de pantalla, separado del borrador y la proyección: snapshot, sesión, valores confirmados por usuario y, por paso, `not-started | pending | confirmed | failed | unconfirmed | reconciliation-required`, junto con record validado si existe, clase de error y último resultado de lectura. Conservar la evidencia de confirmación aunque el estado general requiera reconciliación. “Durable” aquí significa no perder pasos entre renders, errores, refresh o cierre del Dialog durante la vida de la pantalla; no storage, persistencia local ni garantía después de recarga.
+
+| Resultado | Transición y acción permitida |
+| --- | --- |
+| Confirmación inicial válida | Bloquear doble submit y edición del snapshot; iniciar sólo CARACTERISTICA. Tras cada respuesta válida, registrar confirmado antes de iniciar el siguiente POST. |
+| Fallo antes de HTTP | Paso failed sin envío; restantes not-started. Si hay pasos confirmados, mostrar parcial. Nunca reiniciar todo el flujo automáticamente. |
+| Rechazo HTTP, incluido 409 | Detener secuencia y conservar código/status seguro; conflicto no demuestra que exista el record deseado. Releer para reconciliar, no sobrescribir ni cambiar el código automáticamente. |
+| Red, abort de escritura, JSON/201/DTO inválido | Paso unconfirmed: el servidor pudo escribir. No afirmar fallo sin efectos ni habilitar “Crear otra vez”. Los siguientes pasos no se envían. |
+| Tres records confirmados | “Tres escrituras confirmadas; actualización de Core pendiente”. Sólo después de refresh efectivo válido se anuncia flujo completo; no prometer que Core mostrará una fila específica. |
+| Refresh fallido | Mantener confirmaciones, indicar autoridad pendiente y ofrecer sólo reintento de lectura; nunca reenviar una creación confirmada. |
+
+El spec REST exige refresh Core **después de cada escritura confirmada o incierta**, además del refresh final tras PRESENTACION. Coordinarlo secuencialmente para no perderlo con el guard `inFlight` actual: confirmar paso → GET Core del snapshot → siguiente paso. Si falla esa lectura, pausar en reconciliación; acción explícita “Releer Core” repite sólo GET y, si queda válido, “Continuar paso pendiente” puede despachar el siguiente paso nunca enviado. No es retry de un POST incierto. El refresco intermedio no autoriza completar localmente atributos ni anuncia éxito total.
+
+Reutilizar endpoint `/v1/types/{encodedTypeCode}/attributes/effective?classCode=…&familyCode=…`; no POST /evaluate, Query, Convex ni fallback directo. El hook actual conserva proyección durante refresh y puede devolver false sin solicitar; el nuevo coordinador debe diferenciar refresh pendiente/fallido/obsoleto y asegurar una lectura efectiva real. Retirar o etiquetar claramente el baseline previo como no vigente, sin afectar silenciosamente el contrato administrativo OPCION.
+
+**Reconciliación de escrituras inciertas:** ofrecer lectura explícita, no retry mutante genérico. Para CARACTERISTICA, búsqueda acotada por código exacto; para APLICABILIDAD/PRESENTACION, listado público con `typeCode` del snapshot, `scope=ALL`, offset 0 y limit 50, validado completo. Comparar referencias y payload exactos, sin filtros characteristicCode no probados para estos kinds. Si se tiene id confirmado, comparar también ese id. Más páginas, ausencia, duplicados o error dejan reconciliación pendiente: una ventana vacía no prueba ausencia de escritura. Incluso un candidato idéntico sin identidad confirmada no prueba autoría del intento; mostrarlo como observación, no promocionarlo automáticamente a confirmed. Core confirma su proyección, no la ejecución individual de tres POST.
+
+No diseñar idempotency keys, recuperación transaccional, compensaciones, DELETE, desactivación para “deshacer”, rollback de datos ni reenvío automático/manual ciego. Si la evidencia pública no permite resolver un POST incierto, bloquear la continuación mutante y reportar al humano la necesidad de reconciliación autoritativa. Reintentar lecturas o continuar un paso inequívocamente nunca enviado requiere acción explícita desde el registro existente, nunca recrear pasos confirmados.
+
+Cerrar/Escape sigue disponible: detener despachos posteriores, mantener el registro y advertir que una petición enviada puede completarse. No interpretar abort como cancelación del servidor. Una reapertura del mismo flujo recupera su resumen en memoria, no empieza CARACTERISTICA de nuevo. Cambiar jerarquía invalida la vista y detiene dependencias no enviadas, sin desechar evidencia de escrituras del contexto capturado. Bloquear un segundo flujo mientras haya operación pendiente/no reconciliada; ofrecer acceso al resumen previo sin aplicarlo al nuevo Tipo. Desmontar la pantalla no ofrece recuperación persistente inventada.
+
+Cada request captura contexto, sesión y generación; aceptar resultado en su registro de operación, pero sólo actualizar la vista si sigue vigente. Un resultado tardío no abre Dialog, cambia foco ni rellena otro contexto, incluso A→B→A. El coordinador puede leer Core del contexto capturado sin inyectarlo en el seleccionado diferente; éste obtiene su propia lectura al volver.
+
+### UI GARFEX y teclado preservados
+
+CTA explícita “Crear atributo” dentro del WorkCard Atributos y Dialog compartido independiente del detalle, nunca anidado. Recorrido: datos → revisión de los tres pasos → confirmación → progreso/resumen. Volver permite editar sólo antes del primer envío. Aviso asociado con aria-describedby y visible en cada etapa: **“La característica se crea globalmente y puede afectar a consumidores fuera de este Tipo. Su asignación se hará al contexto indicado mediante tres operaciones independientes.”** Mostrar también contexto exacto y advertencia de que cerrar no deshace escrituras.
+
+Reutilizar DialogHeading/Content/Actions, Field, estilos de inputs/selects y Button; sin formulario legacy AsignarAtributo, nuevo framework wizard, chrome duplicado ni promoción shared de una única necesidad. Tokens semánticos GARFEX Light, utilidades existentes, sin CSS/hex/medidas arbitrarias ni Dark. Labels/errores asociados, progreso textual anunciado por región de estado, resumen parcial persistente y foco visible; no representar éxito sólo por color. Scroll y altura del Dialog existentes, texto largo envolvente y acciones apilables sin overflow a viewport estrecho/zoom.
+
+Foco inicial en primer campo o explicación del bloqueo; confirmación es botón explícito y no efecto de cambiar select o etapa. Tab/Shift+Tab y Escape pertenecen a Dialog; no listener global ni nuevos N/E/Del. Enter en campos no salta etapas ni duplica POST; botones no-submit declaran type=button. Filas existentes mantienen único botón nativo, Enter/Space, identificadores espaciales y ArrowUp/Down sólo foco. Cerrar restaura al opener realmente operable; si desapareció, al fallback existente de pestaña Atributos, no a una fila por índice. Estados remotos no roban foco ni cierran un Dialog nuevo.
+
+### Gates públicos antes de implementación segura
+
+| Gate | Evidencia disponible y falta concreta | Consecuencia |
+| --- | --- | --- |
+| GA1 — wire de los tres creates | Evidencia local confirma campos/descriptores y unión CatalogValue, pero no registra el mapping exacto de valueType/mode ni el schema completo de Create por kind (incluido nivel de rules y status). Código OPCION no es prueba contractual de éstos. | Obtener extracto público exacto; bloquear el primer POST hasta validar los tres payloads. No adivinar ENUM/TEXT ni copiar opcionales por analogía. |
+| GA2 — referencias jerárquicas | Listados y filtros están documentados; la muestra histórica contiene referencias id0. No hay muestra canónica actual de escritura CLASE/FAMILIA/TIPO en esta evidencia. | Resolver y validar mediante lookup acotado descrito; si no entrega un único record y ancestros canónicos utilizables, cero POST. No extrapolar cierre G9 de opciones. |
+| GA3 — resultado incierto | No consta contrato público de idempotencia, correlación de intento o prueba concluyente de ausencia mediante búsqueda textual/offset. | Impide retry seguro o recuperación automática de POST incierto, no diseñar esa capacidad. Mantener bloqueo de continuación y reconciliación humana cuando lecturas no basten. |
+
+GA1 bloquea hoy el wiring mutante seguro con los extractos locales leídos; aprobación del producto no suple precisión wire. GA2 es gate de datos públicos en preflight, no motivo para asumir IDs. G2 no se cierra: si la búsqueda necesita varias ventanas o garantía de unicidad global, el recorrido queda bloqueado en lugar de barrer el catálogo. No se requiere investigar internals ni cambiar backend desde este trabajo.
+
+### Verificación futura y entrega
+
+Sin crear ni editar pruebas ahora. Cobertura posterior prevista: exactitud de las tres URLs/bodies/status; orden estricto y ausencia de pasos dependientes tras fallo; referencia creada exacta; lookup cero/duplicados/parciales/hasNext/id0/parent mismatch; actor antes de cada POST incluso invocación directa; modos simples y position canónico explícito; fallos en cada uno de los tres pasos, 409, 201 inválido, red y cierre; ningún replay de pasos confirmados; refresh tras cada resultado relevante y final, error de refresh sin falso retry de create; generaciones A→B→A, nueva sesión y resumen parcial; aviso global, foco, Escape, Tab, Enter/Space y Arrow intactos. Guardas negativas de HTTP exacto, cero compensación/DELETE/evaluate/optimismo/storage y ningún evaluator.
+
+Rollout: resolver GA1 → contrato/lookup estricto → secuencia con registro/reconciliación → Dialog/wiring/refresh con regresión GARFEX. Implementación futura con RED→GREEN→REFACTOR, pruebas junto a su unidad y medidas <=400 líneas autorales por corte. Riesgo de exceder presupuesto: bajo ask-on-risk decidir entrega antes de apply; no elegir cadena ni size:exception aquí. Activar CTA mutante sólo con gates satisfechos; si no, explicar bloqueo sin afectar Detalle/Opciones existentes. Retirar el wiring del creador revierte únicamente disponibilidad frontend, nunca escrituras globales ya efectuadas. No se editan código, pruebas, tasks, propuesta o specs ni se ejecutan tests en esta enmienda.

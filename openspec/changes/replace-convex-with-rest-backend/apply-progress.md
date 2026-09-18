@@ -1329,3 +1329,248 @@ Only `tests/unit/catalogHierarchyScreen.test.tsx` is listed in the supplied Unit
 - RED: the complete-value test exposed BOOLEAN as `true`, REFERENCE without its id, and comma-flattened STRING_LIST; the Dialog geometry contract lacked the desktop max-height. GREEN: `pnpm exec vitest run tests/unit/catalogTypeEffectiveAttributes.test.tsx tests/unit/dialog.test.tsx` → 2 files, 8 tests passed.
 - Correction verification: focused 7-file suite → 40 tests passed; `pnpm typecheck`, scoped Prettier/ESLint, and `git diff --check` passed; full `pnpm test` → 70 files, 635 tests passed. Previously recorded global lint/format blockers remain non-causal and out of scope.
 - Updated conservative bound: 789 current lines across the same five code/test files plus the prior 24-line closure and this 8-line correction record = 821 lines, still within the 900-line cap.
+
+## Unit 7c-ii — Native row and read-only detail tabs
+
+**Status:** complete; the Unit 7c-ii implementation and its authorized-650 preflight are marked `[x]`.
+
+- Rows are sole native controls with retained spatial metadata and focus restoration; the Dialog supplies manual Detalle/Opciones tabs, Core detail data, and read-only shared/unavailable option states without fetches or mutations.
+- RED: focused unit coverage failed on the old article/nested-button rows and absent tab semantics. GREEN/TRIANGULATE: `pnpm exec vitest run tests/unit/catalogTypeEffectiveAttributes.test.tsx tests/unit/catalogHierarchyKeyboard.test.tsx tests/unit/catalogHierarchyScreen.test.tsx` → 3 files, 27 tests passed.
+- `pnpm typecheck`, scoped ESLint, and scoped Prettier passed. `pnpm exec playwright test tests/e2e/catalogHierarchy.workstation.spec.ts --grep "opens one effective-attribute row"` passed.
+- Full E2E file run has 8 unrelated legacy fixture failures; the new grep scenario passes. `git diff --check` passed.
+- Exact Unit 7c-ii delta against `HEAD`, excluding the six already-dirty planning paths, is 617 additions plus deletions, within the authorized 650-line ceiling.
+
+## Unit 7c-iii — Strict OPCION list boundary
+
+**Status:** complete under the fresh 400-line baseline; only the Unit 7c-iii implementation checkbox is marked `[x]`.
+
+- Added feature-local DTOs and an injected-fetch `GET /v1/catalog/OPCION` adapter. It sends only `scope=ALL`, encoded option-set/characteristic codes, `limit`, and `offset`; it exposes no mutation method, retry, fallback, Convex, or local filter.
+- The parser rejects a whole page unless its envelope, records, descriptor values, references, IDs, revisions, flags, and empty rules are exact. Accepted references have matching requested codes, documented kinds, and positive IDs.
+- RED: `pnpm exec vitest run tests/unit/catalogOptionsAdminContract.test.ts tests/unit/catalogOptionsAdminApi.test.ts` failed because `catalogOptionsAdmin.api.ts` did not exist. GREEN/TRIANGULATE: the same command passed 2 files / 6 tests, covering canonical refs, malformed/extra/partial data, encoded query/signal, invalid request, HTTP envelope/status, network, and JSON failures.
+- `pnpm typecheck` passed. Runtime: N/A; all HTTP is injected fetch doubles.
+- Size: 313 source/test lines from the approved current-byte baseline, plus this closure and checkbox update, remains below the hard 400-line limit.
+
+### 7c-iii public-contract correction
+
+- Public OpenAPI permits unsigned `revision` strings including `"0"`; the adapter and existing test fixture already enforce that contract. Corrected the task wording from positive revision to unsigned/non-negative string.
+- Added explicit acceptance for a complete empty page and fail-closed parser/API checks for zero limit and non-integer offset. A→B→A stale-request coverage remains exclusively scoped to Unit 7c-v.
+
+## Unit 7c-iv — OPCION fail-closed mutations
+
+**Status:** complete; the implementation checkbox is `[x]`.
+
+- RED: `create is not a function`; GREEN/TRIANGULATE: focused contract/API suite passed 11 tests.
+- Verification: `pnpm typecheck`, scoped ESLint, scoped Prettier, and `git diff --check` passed; runtime is N/A (injected fetch only).
+- **550-line exception:** maintainer reset authorizes the prior exact 510-line candidate as this closure baseline; no production/test behavior changed here.
+
+## Unit 7c-v — OPCION controller and authority refresh
+
+**Status:** complete under the fresh 400-line baseline; the implementation checkbox is `[x]`.
+
+- Added feature-local list/command states, pagination flags, abort/stale session guards, explicit effective refresh, and fail-closed create/update/lifecycle reconciliation without local patches.
+- RED: focused tests failed for the missing hook and missing effective `refresh`. GREEN/TRIANGULATE: `pnpm exec vitest run tests/unit/useCatalogOptionsAdmin.test.tsx tests/unit/useCatalogTypeEffectiveAttributes.test.tsx` → 2 files, 9 tests passed.
+- `pnpm typecheck` passed. Runtime: N/A; all calls use injected API doubles.
+- Size: 374 source/test lines plus this progress/task update remains within the hard 400-line ceiling.
+
+### 7c-v fresh 550 closure
+- RED: required base-refresh failure left the command idle; GREEN: focused suite passed 12 tests.
+- Verification: `pnpm typecheck`, scoped ESLint/Prettier, and `git diff --check` passed; no runtime service was invoked.
+
+### 7c-v remediation closure
+- RED: stale commands, early 409 conflict, awaited effective refresh, and unmount reconciliation failed; GREEN: focused suite passed 12 tests.
+- Generation/mount guards clear valid context transitions and trigger (never await) one effective refresh; full original unit remains 555/650 lines.
+
+### 7c-v StrictMode remediation
+- RED: StrictMode replay left the initial list loading; GREEN: focused suite passed 13 tests.
+- `pnpm typecheck` regenerated `src/app/routeTree.gen.ts`; scoped ESLint/Prettier and diff check passed. Full original unit is 578/650 lines.
+
+## Unit 7c-vi — Presentational OPCION list
+
+**Status:** presentational slice complete; 7c-vi remains open until 7c-ix composition/harness.
+
+- Added a feature-local, presentational `CatalogOptionsAdmin` panel. It accepts the future controller view-model values as props and does not instantiate a hook, fetch, or integration seam; detail-tab wiring remains deferred to 7c-ix.
+- The panel keeps a persistent named global-scope warning, renders received active/inactive records without sorting or deduplication, handles waiting/loading/empty/error states, uses shared `Button` for retry and flag-driven pagination, and explains absent `optionSetCode` without controls.
+- RED: `pnpm exec vitest run tests/unit/catalogOptionsAdmin.test.tsx --reporter=verbose` failed because `CatalogOptionsAdmin` did not exist. GREEN/TRIANGULATE: `pnpm exec vitest run tests/unit/catalogOptionsAdmin.test.tsx tests/unit/catalogTypeEffectiveAttributes.test.tsx tests/unit/catalogHierarchyKeyboard.test.tsx` passed 22 tests, including native Enter/Space pagination activation and existing local tab navigation.
+- `pnpm typecheck` passed. Runtime: N/A; this isolated presentational slice makes no HTTP request or browser harness call.
+- Size: 311 source/test lines plus this concise task/progress closure remains below the hard 400-line limit.
+
+### 7c-vi verifier correction
+- Scoped Prettier write/check and ESLint pass; 27 focused component/detail/keyboard tests and typecheck pass.
+- The provider-begin-tree delta is exactly 391 changed lines: 377 new source/test lines and 14 progress additions; it remains within the 400-line hard cap.
+
+## Unit 7c-vii — presentational/form-controller slice
+
+**Status:** presentational slice complete; the 7c-vii task remains unchecked pending the 7c-ix composition switch.
+
+- Added feature-local `CatalogOptionForm` only. It renders create/edit fields and immutable canonical context, emits strict create/update drafts, and neither fetches nor renders a Dialog.
+- Actor/input/pending disable reasons and 422/503/network/conflict messages are accessible; Cancel delegates focus restoration to its parent callback. No lifecycle or delete control was added.
+- RED: `pnpm exec vitest run tests/unit/catalogOptionForm.test.tsx` failed before the component existed. GREEN/TRIANGULATE: the same command passed 4 tests for exact values, edit ID/revision, failure states, pending, and cancel delegation.
+- Focused typecheck, ESLint, and Prettier checks passed. Integration, parent Dialog composition, runtime harness, and the task checkbox remain deferred to 7c-ix.
+
+### 7c-vii accessibility correction
+- RED: the focused form test found that a submit button referenced a non-rendered disabled-reason ID when an actor failure and a 422 error coincided.
+- GREEN: the form now renders the disabled reason and command error as separate live regions; the test resolves the button's described element and its error alert.
+- Validation: focused test, typecheck, scoped ESLint/Prettier, and diff checks passed.
+
+## Unit 7c-viii — Lifecycle confirmation panel
+
+**Status:** feature-local slice complete; the 7c-viii checkbox remains unchecked pending 7c-ix integration and harness verification.
+
+- Added `CatalogOptionLifecycleConfirmation` as an Options-panel substate, not a Dialog. It derives the sole lifecycle action from `active`, names the option/code and shared global impact, and emits only `{ id, expectedRevision, action }` after Confirm.
+- Cancel receives `autoFocus`/an optional ref and delegates Cancel/Escape to the parent restoration callback. Missing actor disables Confirm with an associated reason; pending disables Confirm and Cancel; conflict, 422, 503, and network states are announced without success or local `active` updates.
+- RED: `pnpm exec vitest run tests/unit/catalogOptionLifecycleConfirmation.test.tsx` exited 1 before the component module existed. GREEN/TRIANGULATE: the same command passed 3 tests for exact intent, inactive action, focus/ref, parent cancel/Escape delegation, pending, and failure feedback.
+- Validation: `pnpm exec tsc --noEmit`, scoped ESLint, scoped Prettier, and `git diff --check` passed. Runtime harness and parent wiring remain deferred; no lifecycle request or DELETE was added.
+
+### 7c-viii direct lifecycle-test correction
+
+- Added direct assertions that an inactive record emits exactly the `reactivate` intent and that the parent-owned pending state blocks duplicate click and Enter activation after the first confirmation.
+- Existing implementation already satisfied this behavior, so the new regression tests passed on first execution: `pnpm exec vitest run tests/unit/catalogOptionLifecycleConfirmation.test.tsx` → 5 tests passed. Typecheck, scoped ESLint/Prettier, and diff checks passed.
+
+## Unit 7c-ix — final integration evidence
+
+**Status:** complete for the approved OPCION integration boundary. Units 7c-vi, 7c-vii, 7c-viii, and 7c-ix are marked complete; the pre-7c-ix parent evidence gate is also recorded complete.
+
+- Canonical lookup now has loading/error/retry, abort, stale A→B→A, and empty-list create-readiness coverage. Empty confirmed windows keep creation available after canonical references resolve.
+- The mocked REST E2E covers Enter → Opciones, canonical references, exact create/PUT/deactivate/reactivate methods and bodies, visible 409 recovery focus, and list plus effective double refetch. It sends no request to a real backend.
+- Focused options/architecture suite: **64 tests passed**. Full `pnpm test`: **76 files, 682 tests passed**. `pnpm typecheck`, `pnpm build`, targeted Playwright, scoped ESLint/Prettier, and `pnpm verify:runtime-bundle` passed. Verifier correction removed the unused detail import and two regex escapes; the full scoped ESLint command now passes with no issues, and scoped Prettier passes.
+- `pnpm test:stories` remains non-causal: `CatalogHierarchyNuevaClase.stories.tsx` still expects the removed `Descripción` field while the current rendered form has `Plural` and `Slug`; no Unit 7c path was changed to mask that stale story expectation.
+- Independently measured untracked-aware diff against Unit 7c-ix begin tree `6f86291ffbff85a4b4534eb2fcd65853b180e693`: **1200/1300** lines.
+
+### Post-review remediation — canonical reference pagination (`sha256:ea9b0e81e3e51eb75e94b3a3c05fd2205bec5522c9395247ce84c3df7bc71326`)
+
+- Fixed the canonical-reference request identity so it tracks only the stable complete context codes and session, rather than the list offset. A pending lookup now remains current through pagination, while abort and generation guards still reject stale A→B→A context results.
+- Create context now prefers resolved canonical references; page-record references remain the source for edit and lifecycle flows.
+- RED: `pnpm exec vitest run tests/unit/useCatalogOptionsAdmin.test.tsx tests/unit/catalogOptionsAdmin.test.tsx` → 2 failures: pending lookup stayed loading after pagination, and create used the first record references.
+- GREEN/TRIANGULATE: same focused command → 23 tests passed, including pagination while the lookup is pending and the existing stale A→B→A regression.
+- Validation: `pnpm typecheck`, scoped ESLint, and scoped Prettier passed. `tasks.md` task state was intentionally unchanged; this is a bounded post-review correction, not a reopened work unit.
+
+### Post-review remediation — effective detail refresh (`sha256:76f3b757343702e666b488ff5bac68e7c097d8ac12debc2149362d83982cf5af`)
+
+- Detail state now retains the opening characteristic code and opener, then resolves the current attribute by code from the retained loading or ready Core response. A reordered ready response replaces Dialog content without closing or moving focus; a missing code in ready closes safely to the existing fallback.
+- RED: `pnpm exec vitest run tests/unit/catalogTypeEffectiveAttributes.test.tsx` failed because the selected Dialog closed after the ready response reordered the attributes.
+- GREEN/TRIANGULATE: the same focused command passed 9 tests, including retained ready → loading → reordered ready values for options, rules, and source, plus a ready response where the selected code is absent.
+- `tasks.md` task state remains unchanged; this is a bounded stale-detail remediation with no change to base option records.
+
+### Formatting correction — effective detail refresh
+
+- Ran `pnpm exec prettier --write` only for `CatalogTypeEffectiveAttributes.tsx` and its unit test; no progress artifact formatting rewrite occurred.
+- Focused 9-test regression, application typecheck, scoped ESLint, scoped Prettier, and `git diff --check` pass.
+- `tasks.md` remains unchanged; no base option record behavior changed.
+
+### Post-review remediation — attribute arrow activation
+
+- AppShell now keeps ArrowUp/ArrowDown focus-only for effective attribute rows; hierarchy-level movement retains its click-as-selection behavior.
+- RED: `pnpm exec vitest run tests/unit/catalogHierarchyScreen.test.tsx --testNamePattern "moves between attribute rows"` failed because ArrowDown opened the Size detail Dialog.
+- GREEN/TRIANGULATE: `pnpm exec vitest run tests/unit/catalogHierarchyKeyboard.test.tsx tests/unit/catalogHierarchyScreen.test.tsx tests/unit/catalogTypeEffectiveAttributes.test.tsx` → 30 tests passed, including two rows with ArrowDown/ArrowUp focus movement, no detail Dialog, and one native Enter open.
+- Validation: `pnpm exec tsc -p tsconfig.app.json --incremental false`, scoped ESLint, and scoped Prettier passed. No runtime service was invoked.
+
+## Planning amendment — guided Create Attribute and arrow-navigation closure
+
+**Status:** planning-only; no source, test, backend, branch, commit, PR, or runtime action occurred in this amendment.
+
+- The approved guided flow is recorded as sequential `CARACTERISTICA → APLICABILIDAD → PRESENTACION` with canonical Class/Family/Type references, distinct partial-success states, Core-only refresh, GARFEX Dialog composition, mock E2E, and final verification in `tasks.md` units 15a–15i.
+- **GA1 blocks units 15b–15h:** current public evidence identifies descriptors and generic create capability but not the exact public request representation for `valueType`, applicability `mode`/`rules`, presentation `position`, actor/body placement, and per-kind success schema/status. The plan therefore requires an exact OpenAPI/public extract in `api-contract-evidence.md` before any fixture, parser, mapper, or POST is authored; no contract is inferred from OPCION.
+- Canonical context resolution (15a) is separately bounded to strict public list lookups and cannot silently use UI IDs, code-as-ID, `id:"0"`, pagination scans, or detail-by-id.
+- **Arrow navigation is already complete:** the existing checked 7c-ii regression and the immediately preceding remediation evidence remain authoritative. RED proved ArrowDown incorrectly opened Size detail; GREEN/TRIANGULATE passed 30 focused tests showing ArrowUp/ArrowDown move focus only across two rows and Enter opens exactly once. TypeScript app check, scoped ESLint, and scoped Prettier passed; no work is scheduled to reimplement that behavior.
+- Delivery for the newly planned scope follows current `ask-on-risk`: one writer and one bounded work unit at a time, each measured against 400 changed lines. The user explicitly selected `stacked-to-main` for the chain topology; no size exception is implied.
+
+## Planning amendment — guided Create Attribute delivery selected
+
+**Status:** planning-only. This amendment changes only `tasks.md` and this record; it does not modify source, tests, backend, branches, commits, PRs, runtime state, or public-contract evidence.
+
+### Recorded delivery decision
+
+- The user selected the guided Create Attribute chain `15a → 15b → 15c → 15d → 15e → 15f → 15g → 15h → 15i` under `auto-chain`.
+- The inclusive review budget is 400 changed lines per slice, including additions plus deletions across code, tests, fixtures, and causal artifacts; no `size:exception` is authorized.
+- Exact caps are: 15a 390, 15b 390, 15c 390, 15d 390, 15e 400, 15f 400, 15g 400, 15h 360, and 15i 180 changed lines. Each slice starts only after the preceding receipt and ends at its own rollback boundary documented in `tasks.md`.
+- The user explicitly resolved the delivery topology as `stacked-to-main`; this retained decision is not inferred from the selected chain. No delivery-topology decision remains before apply.
+
+### Contract and blockers readback
+
+- Cached public OpenAPI and descriptor evidence are the available contract for planning and RED cases in all guided slices. GA1 is therefore no longer recorded as a discovery blocker; each slice must cite the exact public wire form it exercises and fail closed only if that form is absent from the supplied cache.
+- No other public-contract blocker is known before the chain begins. A non-unique or invalid canonical lookup is a fail-closed runtime precondition of 15a, and an unconfirmed write is a reconciliation state of 15e; neither permits speculative HTTP, local identity fabrication, retry, compensation, or DELETE.
+- Strict TDD and a pre-edit `git diff --stat` measurement remain mandatory for every ordered slice. A forecast above that slice's cap requires subdivision before implementation, not an implicit exception.
+
+## Unit 15a — Canonical hierarchy references
+
+**Status:** complete within the 390-line cap.
+
+- Added a read-only, fetch-injected resolver that performs only sequential `GET /v1/catalog/{CLASE,FAMILIA,TIPO}` lookups with exact `scope=ALL`, `text`, window, and parent filters.
+- It returns only canonical `REFERENCE` triples after full-page validation, exactly one code match, false flags, positive IDs, and exact canonical parent triples; invalid, incomplete, nonunique, or mismatched results fail closed before any write.
+- RED: focused tests failed because `catalogAttributeCreation.api.ts` was absent. GREEN/TRIANGULATE: `pnpm exec vitest run tests/unit/catalogAttributeCreationReferences.test.ts tests/unit/catalogAttributeCreationApi.test.ts tests/architecture/restTransportBoundaries.test.ts` passed 12 tests, including zero/duplicate matches, id `"0"`, partial pages, parent mismatch, encoded filters, and zero fetch for incomplete context.
+- `pnpm typecheck` passed. Full lint/format checks retain unrelated pre-existing failures; no POST, backend request, commit, branch, push, or PR occurred.
+
+## Unit 15b — `CARACTERISTICA` create contract
+
+- Completed strict `POST /v1/catalog/CARACTERISTICA` validation for documented `actor`, `CODE`/`TEXT`/`ENUM` values, six `valueType` literals, and confirmed 201 records; optional undocumented fields remain omitted.
+- RED: missing `createCharacteristic`; GREEN/TRIANGULATE: 19 focused characteristic/reference/transport tests passed. `pnpm typecheck` passed; the unrelated Core-effective architecture guard still fails.
+
+## Unit 15c — `APLICABILIDAD`: strict `createApplicability` permits only the documented POST, canonical refs, simple modes, explicit identity, controlled option set, and empty top-level rules.
+- RED: missing method; GREEN/TRIANGULATE: 25 focused tests and typecheck passed; no retry, fallback, DELETE, backend request, or commit.
+
+## Unit 15d — `PRESENTACION` create contract
+
+**Status:** implementation and focused validation complete; no UI coordination, retry, fallback, compensation, backend request, or commit. The active worktree's aggregate diff includes pre-existing changes and exceeds the 390-line cap, so this slice requires parent budget reconciliation before it can be certified.
+
+- `createPresentation` makes only `POST /v1/catalog/PRESENTACION` with actor, four canonical references, and an explicitly supplied positive canonical `INTEGER` position. It validates an exact echoed 201 `CatalogRecord`, including reference and position equality, before returning success.
+- RED: `pnpm exec vitest run tests/unit/catalogAttributeCreationPresentation.test.ts` failed with `createPresentation is not a function` (3 tests).
+- GREEN/TRIANGULATE: the focused presentation/creation/transport suite passed 28 tests; it covers actor failure before fetch, integer-boundary rejection, mismatched 201, 409, network, and invalid JSON without retry.
+- Non-mutating typecheck (`pnpm router:check && pnpm exec tsc --noEmit --incremental false -p tsconfig.app.json`) and scoped ESLint passed. Scoped Prettier passed for source/tests; existing broad Markdown formatting in the OpenSpec artifacts remains outside this unit's causal text.
+
+## Unit 15e-b — Creation coordinator stale/close matrix
+
+**Status:** complete within the 400-line slice budget; no new mutation route, retry, compensation, persistence, UI wiring, or delivery action.
+
+- The coordinator now retains stale A→B→A/unmounted work without overwriting the active context, stops refresh and later POSTs after close, and fails closed when the actor disappears.
+- A successful manual Core reread restores only locally confirmed steps. It leaves invalid/unconfirmed writes and definite failed steps unresolved/partial, so a later POST can occur only through the explicit continuation command.
+- RED: focused hook test recorded stale retention and `rereadCore` recovery failures. GREEN/TRIANGULATE: focused coverage passed for stale, unmount, actor loss, invalid 201, refresh failure, partial preservation, and stable commands.
+
+## Unit 15f — GARFEX guided Create Attribute dialog
+
+**Status:** complete; standalone feature-local surface only, with no screen wiring, REST mapping, listener, or CSS.
+
+- Added a context-gated CTA and GARFEX Dialog composition for global characteristic data, simple assignment, positive explicit position, explicit confirmation, and a visible non-atomic three-step summary.
+- `CONTROLLED_OPTION` discloses that this version assigns no option set and requires later configuration; the UI offers neither `CONDITIONAL` nor rule editing.
+- RED: `pnpm exec vitest run tests/unit/crearAtributoSurface.test.tsx --reporter=verbose` failed because `CrearAtributoSurface` did not exist.
+- GREEN/TRIANGULATE: the same focused RTL command passed 3 tests covering context gating/global warning/Escape focus restoration, explicit draft submission/mode boundary/controlled-option disclosure, and actor/error/pending fail-closed states.
+- Remaining: 15g exclusively owns screen composition and Core refresh wiring.
+
+## Unit 15g-a — CTA wiring and current-snapshot Core refresh
+
+**Status:** complete; 15g-b context invalidation remains unchecked.
+
+- `CatalogHierarchyScreen` owns the creation API/hook and passes a session plus selected REST codes to the attributes panel; the CTA is disabled until Clase, Familia and Tipo are complete.
+- Creation uses the existing REST actor fail-closed seam. Its refresh callback compares the captured codes and invokes only the current Core effective-attributes hook; it adds no optimistic row, evaluate call, Convex path, or direct transport.
+- RED: the focused panel test failed because “Crear atributo” was absent. GREEN/TRIANGULATE: focused screen/panel/boundary coverage passed 35 tests, preserving Arrow rows, Detail and Options.
+- Verification: full `pnpm test` passed 83 files / 733 tests; non-mutating typecheck, scoped ESLint and scoped Prettier passed. No backend request, commit, branch, push or PR occurred.
+
+## Unit 15g-b — Create/refetch context invalidation
+
+**Status:** complete; aggregate 15g is complete.
+
+- The Dialog captures its complete Class/Family/Type context when opened. A changed or incomplete context closes a non-pending Dialog and restores focus to the current CTA or the Attributes tab fallback, never the stale opener.
+- An in-flight context switch retains the prior operation as partial, prevents stale completion from progressing the new context, keeps its partial status visible, and locks submit and dismissal in the invalidated Dialog.
+- RED: `pnpm exec vitest run tests/unit/crearAtributoSurface.test.tsx tests/unit/catalogHierarchyScreen.test.tsx` failed with two still-open Dialog assertions; `pnpm exec vitest run tests/unit/useCatalogAttributeCreation.test.tsx` then failed because retained stale work remained `pending`.
+- GREEN/TRIANGULATE: `pnpm exec vitest run tests/unit/useCatalogAttributeCreation.test.tsx tests/unit/crearAtributoSurface.test.tsx tests/unit/catalogHierarchyScreen.test.tsx` passed 29 tests. Full `pnpm test` passed 83 files / 735 tests and `pnpm typecheck` passed.
+- Global `pnpm lint` and `pnpm format:check` remain non-causal failures in pre-existing Resources Master and catalog formatting paths; scoped Prettier passed for every changed source/test path. No API/business mapping, backend request, commit, branch, push, or PR occurred.
+- `git diff --stat` on the allowed surfaces reports 613 changed lines, already including pre-existing tracked 15g-a/artifact work and excluding the untracked 15g-b source/test paths. The current dirty baseline prevents an exact aggregate <=260 certification; no pre-existing bytes were modified to force that measurement.
+
+## Unit 15h — Mocked Create Attribute E2E
+
+**Status:** complete within the 360-line cap.
+
+- The focused Playwright scenario uses only `page.route('**/v1/**')` doubles for canonical hierarchy reads, three ordered attribute POSTs, and Core effective-attribute refreshes; it performs no connected backend mutation.
+- GREEN/TRIANGULATE: `pnpm exec playwright test tests/e2e/catalogHierarchy.workstation.spec.ts --grep "creates a simple attribute only through mocked canonical REST and refreshed Core data"` passed (1 test). It asserts canonical GETs, exact `CARACTERISTICA → APLICABILIDAD → PRESENTACION` payloads, explicit simple mode/empty rules/position, Escape focus restoration, refreshed Core row, and axe.
+- Validation: scoped ESLint and Prettier passed; `git diff --check` passed. The non-emitting application typecheck passed. The untracked-aware comparison against begin tree `3caa71ffde4f20d6c34fa6c5df6e021814d1eddc` measures 250 additions and 0 deletions across the seven allowed paths (250/360).
+- A diagnostic full-file Playwright run was not the acceptance command and reported failures in seven existing workstation scenarios; no unrelated E2E flow was changed to hide them.
+
+## Unit 15i — Causal verification closure
+
+**Status:** complete within the 180-line cap; guard-only change, with no production UI/API or backend mutation.
+
+- RED: `pnpm exec vitest run tests/architecture/restTransportBoundaries.test.ts` first failed because the new guard was undefined, then rejected the unguarded direct `globalThis.fetch` fixture.
+- GREEN/TRIANGULATE: 93 focused creation/UI/architecture tests and the mock-only 15h Playwright scenario passed; the guard permits the canonical catalog adapter and rejects alternate fetch/POST, Convex, DELETE, compensation, storage, `POST /evaluate`, and local mappers.
+- GA1 remains cited by the completed 15b–15d contract evidence; this closure adds no mapper or fallback.
+- `pnpm test` initially passed (83 files, 736 tests); its final rerun had one non-causal flaky failure in unmodified `useResourcesHierarchy` navigation flags, whose focused rerun passed with the architecture guards. `pnpm typecheck`, `pnpm build`, and `pnpm verify:runtime-bundle` passed; scoped ESLint and Prettier passed for the three architecture guards.
+- `pnpm test:stories` is non-causal: the pre-existing Nueva Clase story still seeks removed `Descripción` while the rendered contract exposes `Plural` and `Slug`.
+- Baseline-differential size: 102 additions plus deletions (89 guard, 2 task state, 11 receipt, 0 production), within 180.

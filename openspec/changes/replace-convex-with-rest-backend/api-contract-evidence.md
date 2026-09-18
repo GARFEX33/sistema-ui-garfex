@@ -70,6 +70,16 @@ La evidencia completa de schemas wire resolvió G7 y el contrato/runtime públic
 | `APLICABILIDAD` | `parentKind: FAMILIA`; `parentField: family` | referencias `class`, `family`, `characteristic`; `mode` (`REQUIRED`, `OPTIONAL`, `FORBIDDEN`); `rules: []` incluso sin condicionalidad | referencias opcionales `type`, `optionSet`; `identityParticipates` booleano opcional |
 | `PRESENTACION` | `parentKind: TIPO`; `parentField: type` | referencias `class`, `family`, `type`, `characteristic`; `position` INTEGER | — |
 
+### 15c `APLICABILIDAD`: public `POST /v1/catalog/{kind}` requires `actor`/`values`, returns `201 CatalogRecord`, and supports canonical `REFERENCE` values, simple `ENUM` modes, explicit `BOOLEAN` identity participation, controlled-option `optionSet`, and top-level `rules: []`.
+
+### 15d `PRESENTACION`: public `POST /v1/catalog/PRESENTACION` requires `actor` and `values` with canonical `REFERENCE` values for `class`, `family`, `type`, and `characteristic`, plus an explicitly supplied `position` as `INTEGER.value` using the public canonical integer pattern. It returns `201 CatalogRecord`; the descriptor declares no default, derived position, or rule payload.
+
+### GA1 extract — 15b `CARACTERISTICA` create
+
+The supplied public OpenAPI documents generic `POST /v1/catalog/{kind}` with `kind` in the path, a strict `CatalogCreateRequest` body requiring only `actor: string` and `values`, and a `201 CatalogRecord` response. `409`, `422`, and `503` use the public `{ error: string }` envelope. The supplied `CARACTERISTICA` descriptor fixes the supported create values to `code` as `CODE.value`, `name` as `TEXT.value`, and `valueType` as `ENUM.value` from exactly `CONTROLLED_OPTION`, `INTEGER`, `DECIMAL`, `QUANTITY`, `BOOLEAN`, or `CONTROLLED_TEXT`.
+
+The descriptor names `dimension` and `defaultIdentityParticipates` as optional but the supplied extract does not establish their `CatalogValue` wire variants. Unit 15b therefore sends neither optional field; it does not infer a value kind, default, or response value for either.
+
 La existencia de descriptors hace que atributos, unidades y políticas sean superficies REST descubribles y documentadas. Aun así, debe auditarse operación por operación si sus resultados/ciclo de vida equivalen a cada UX Convex actual antes de cambiar código.
 
 ### Evidencia runtime pública de jerarquía
@@ -177,3 +187,22 @@ El parent verificó los siguientes hechos mediante OpenAPI y POST público en vi
 Los gaps de **lectura de valores/opciones permitidos** y de **evaluación por valores** quedan cerrados solamente para los endpoints documentados: el frontend puede presentar `options` emitidas por Core y enviar `ResourceAttribute[]` a `POST /evaluate`, consumiendo su respuesta sin calcular aplicabilidad, prohibiciones, identidad ni validación local.
 
 Las mutaciones de aplicabilidad, presentación, opciones o recursos continúan siendo capacidades separadas. Nada de esta evidencia las confirma ni permite inferirlas.
+
+## Actualización posterior — ruta absoluta y contexto de `POST /evaluate`
+
+### Procedencia y límite
+
+El equipo de backend confirmó estos hechos citando el OpenAPI embebido en `garfex-api` (`internal/httpapi/openapi.yaml:747-763`). No hay URL pública independiente de ese archivo fuera del binario: se sirve en runtime en `{base-de-la-api}/openapi.yaml` (crudo) y `{base-de-la-api}/docs` (Scalar renderizado). Esta sesión no realizó ninguna petición en vivo ni inspeccionó el repositorio `garfex-api`; registra únicamente la cita recibida.
+
+### Contrato público confirmado
+
+- Ruta absoluta: `POST /v1/types/{typeCode}/attributes/evaluate` — única variante documentada, coincide con el código del router.
+- `typeCode` viaja en la ruta (`in: path`, `required: true`).
+- `classCode` y `familyCode` viajan como query params (`in: query`, `required: true` en el schema), igual que `GET /v1/types/{typeCode}/attributes/effective`.
+- Dato de riesgo explícito en el schema, no evidente en el código: aunque `required: true`, el handler los lee con `Query().Get()` sin validar su ausencia — omitirlos evalúa contra un `ResourceScope` vacío en esos campos en lugar de fallar con un 400 claro. El cliente MUST enviarlos siempre.
+- Ejemplo confirmado: `POST /v1/types/CABLE_CONTROL/attributes/evaluate?classCode=MATERIALES&familyCode=CABLES` con `Content-Type: application/json` y body `{ "values": [...] }`.
+- El body sigue siendo exclusivamente `{ values: ResourceAttribute[] }`, sin `typeCode` duplicado ni otro campo.
+
+### Reclasificación de gaps
+
+Esto cierra la reapertura pendiente de G4/tarea 7f: la ruta absoluta y el mecanismo de contexto de `POST /evaluate` ya están confirmados por contrato público (cita de fuente), no inferidos ni concatenados. El adapter `resourceAttributeEvaluation.api.ts` puede implementarse con esta evidencia exacta. Esto no confirma `catalogFingerprint`, disposiciones `CATALOG_CHANGED`/`INCOMPLETE`/`INVALID`, ni ninguna otra capacidad de creación — esos gaps permanecen separados.
