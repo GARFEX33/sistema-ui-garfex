@@ -23,13 +23,6 @@ const modelSource = readFileSync(
   ),
   'utf8',
 )
-const flowSource = readFileSync(
-  resolve(
-    process.cwd(),
-    'src/features/resources-master/useResourceCreationFlow.ts',
-  ),
-  'utf8',
-)
 const loaderSource = readFileSync(
   resolve(
     process.cwd(),
@@ -51,20 +44,6 @@ const attributeViewSource = readFileSync(
   ),
   'utf8',
 )
-const selectorStateSource = readFileSync(
-  resolve(
-    process.cwd(),
-    'src/features/resources-master/resourceCreation.selectorState.ts',
-  ),
-  'utf8',
-)
-const createDriverSource = readFileSync(
-  resolve(
-    process.cwd(),
-    'src/features/resources-master/useResourceCreationCreate.ts',
-  ),
-  'utf8',
-)
 const creationRuntimeFiles = [
   'CrearRecursoSurface.tsx',
   'CreationStageRail.tsx',
@@ -82,13 +61,6 @@ const creationRuntimeFiles = [
   'resourceCreation.loaders.ts',
   'resourceCreation.model.ts',
   'resourceCreation.selectionDraft.ts',
-  'resourceCreation.selectorState.ts',
-  'useResourceCreationAllowedValues.ts',
-  'useResourceCreationAttributeDefinition.ts',
-  'useResourceCreationAttributeQueries.ts',
-  'useResourceCreationCreate.ts',
-  'useResourceCreationEvaluation.ts',
-  'useResourceCreationFlow.ts',
 ]
 const creationRuntimeSources = creationRuntimeFiles.map((file) =>
   readFileSync(
@@ -105,15 +77,6 @@ describe('resource creation safety wall', () => {
         /createResource(?!FromSelections)|ResourceCreateInput|buildResourceCreateInput|(?:document|window)\.addEventListener\(['"]key/,
       )
     })
-  })
-
-  it('allows the sole creation mutation driver without legacy creation types', () => {
-    expect(createDriverSource.split('\n').length).toBeLessThan(500)
-    expect(createDriverSource).toContain('useMutation')
-    expect(createDriverSource).toContain('createResourceFromSelections')
-    expect(createDriverSource).not.toMatch(
-      /createResource(?!FromSelections)|ResourceCreateInput|onCreated/,
-    )
   })
 
   // Slice C2d (replace-convex-with-rest-backend) intentionally retired the
@@ -143,40 +106,10 @@ describe('resource creation safety wall', () => {
     expect(surfaceSource).not.toMatch(
       /ResourceCreationAttributesStage|resourceCreation\.attributeView/,
     )
-    expect(flowSource.match(/useResourceCreationEvaluation\(\{/g)).toHaveLength(
-      1,
-    )
-    expect(flowSource.match(/useResourceCreationCreate\(\{/g)).toHaveLength(1)
-    expect(flowSource).toContain('useResourceCreationAttributeQueries({')
-    expect(flowSource).not.toContain('api.createResourceFromSelections')
-  })
-
-  it('keeps the definition driver bounded to current definitions', () => {
-    const definitionDriverSource = readFileSync(
-      resolve(
-        process.cwd(),
-        'src/features/resources-master/useResourceCreationAttributeDefinition.ts',
-      ),
-      'utf8',
-    )
-
-    expect(definitionDriverSource).toContain('getAttributeDefinition')
-    expect(definitionDriverSource).not.toContain('listAllowedAttributeValues')
   })
 
   it('keeps the direct Unit flow independent of the removed policy controller', () => {
-    expect(flowSource).not.toContain('createUnitPolicyPageController')
     expect(loaderSource).not.toContain('createUnitPolicyPageController')
-  })
-
-  it('keeps selector-state mapping and controller subscription behind the local flow boundary', () => {
-    expect(flowSource).toContain("} from './resourceCreation.selectorState'")
-    expect(flowSource).not.toContain('const selectorLoadState')
-    expect(flowSource).not.toContain('const unitSelectorLoadState')
-    expect(flowSource).not.toContain('const useControllerState')
-    expect(selectorStateSource).toContain('export const selectorLoadState')
-    expect(selectorStateSource).toContain('export const unitSelectorLoadState')
-    expect(selectorStateSource).toContain('export const useControllerState')
   })
 
   it('keeps the raw staged selector encapsulated inside its context boundary', () => {

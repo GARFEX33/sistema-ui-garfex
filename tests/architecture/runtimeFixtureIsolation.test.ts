@@ -75,26 +75,12 @@ describe('runtime and presentation fixture boundary', () => {
       resolve(root, 'src/features/catalog-hierarchy/catalogHierarchy.api.ts'),
       'utf8',
     )
-    expect(adapter).toContain("from 'convex/browser'")
-    expect(adapter).toContain("from 'convex/server'")
-    const mutationRoutes = [
-      ...adapter.matchAll(
-        /(['"])(catalogoAdmin\/jerarquia:(?:crearClase|crearFamilia|crearTipo))\1/g,
-      ),
-    ].map(([, , route]) => route)
-    expect(new Set(mutationRoutes)).toEqual(
-      new Set([
-        'catalogoAdmin/jerarquia:crearClase',
-        'catalogoAdmin/jerarquia:crearFamilia',
-        'catalogoAdmin/jerarquia:crearTipo',
-      ]),
-    )
-    expect(adapter).toMatch(/\bclient\.mutation\s*\(/)
+    expect(adapter).not.toMatch(/convex/i)
     expect(adapter).toMatch(
       /export function createCatalogHierarchyRestApi\([\s\S]*fetch/,
     )
     expect(adapter).not.toMatch(
-      /`[^`]*catalogoAdmin\/jerarquia|String\.(?:fromCharCode|fromCodePoint)|decodeURIComponent|(?:client|operation)\s*\[\s*['"`]/,
+      /`[^`]*\/v1\/catalog|String\.(?:fromCharCode|fromCodePoint)|decodeURIComponent/,
     )
     expect(adapter).not.toMatch(/\\u[0-9a-fA-F]{4}/)
     expect(adapter).not.toMatch(

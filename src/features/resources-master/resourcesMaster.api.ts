@@ -1,6 +1,3 @@
-import { ConvexHttpClient } from 'convex/browser'
-import { makeFunctionReference } from 'convex/server'
-import type { FunctionReference } from 'convex/server'
 import { z } from 'zod'
 import {
   CatalogPageSchema,
@@ -8,37 +5,22 @@ import {
   ErrorEnvelopeSchema,
   type CatalogRecord as RestCatalogRecord,
 } from '../../shared/catalog/catalogRest.contract'
+import {
+  parseEffectiveAttributesResponse,
+  validEffectiveAttributesRequest,
+} from '../../shared/catalog/effectiveAttributes.contract'
+import {
+  withRestActor,
+  type RestActorOptions,
+} from '../../shared/api/restActor'
 import type {
-  ResourceAllowedAttributeValueItem,
-  ResourceAllowedAttributeValueListInput,
-  ResourceAttributeAssignment,
-  ResourceAttributeAssignmentListInput,
-  ResourceAttributeDefinition,
-  ResourceAttributeDefinitionInput,
-  ResourceAttributeOption,
-  ResourceAttributeOptionListInput,
-  ResourceCreationEvaluation,
-  ResourceCreationEvaluationInput,
-  ResourceCreationResult,
-  ResourceCreateFromSelectionsInput,
-  ResourceChangeResult,
-  ResourceClassificationStatus,
-  ResourceContextClassItem,
-  ResourceContextFamilyItem,
-  ResourceContextFamilyListInput,
-  ResourceContextListInput,
-  ResourceContextListPage,
-  ResourceContextTypeItem,
-  ResourceContextTypeListInput,
-  ResourceCreateInput,
-  ResourceCreated,
-  ResourceDetail,
-  ResourceDetailInput,
-  ResourceHierarchyRef,
-  ResourceId,
-  ResourceLifecycleInput,
+  EffectiveAttributesRequest,
+  EffectiveAttributesResponse,
+} from '../../shared/catalog/effectiveAttributes.contract'
+import type {
   Resource,
   ResourcePage,
+  ResourceRestCreateInput,
   ResourceRestDetailInput,
   ResourceRestListInput,
   ResourceHierarchyWindowInput,
@@ -48,794 +30,11 @@ import type {
   ResourceContextFamilyRestItem,
   ResourceContextTypeRestInput,
   ResourceContextTypeRestItem,
-  ResourceListFilters,
-  ResourceListInput,
-  ResourceListPage,
-  ResourceSearchInput,
-  ResourceSummary,
-  ResourceUnitDetail,
-  ResourceUnitDetailInput,
-  ResourceUnitListInput,
-  ResourceUnitPolicy,
-  ResourceUnitPolicyListInput,
-  ResourceUnitRef,
-  ResourceUpdateInput,
+  ResourceContextUnitRestItem,
 } from './resourcesMaster.types'
-
-export type ResourceListOperation =
-  | 'catalogoAdmin/recursos:listarRecursosResumen'
-  | 'catalogoAdmin/recursos:buscarRecursosResumen'
-
-export type ResourceDetailOperation =
-  'catalogoAdmin/recursos:obtenerDetalleRecurso'
-
-export type ResourceCreateOperation = 'catalogoAdmin/recursos:crearRecurso'
-
-export type ResourceCreateFromSelectionsOperation =
-  'catalogoAdmin/recursos:crearRecursoDesdeSelecciones'
-
-export type ResourceUpdateOperation = 'catalogoAdmin/recursos:actualizarRecurso'
-
-export type ResourceLifecycleOperation =
-  | 'catalogoAdmin/recursos:activarRecurso'
-  | 'catalogoAdmin/recursos:desactivarRecurso'
-
-export type ResourceContextListOperation =
-  | 'catalogoAdmin/jerarquia:listarClases'
-  | 'catalogoAdmin/jerarquia:listarFamilias'
-  | 'catalogoAdmin/jerarquia:listarTipos'
-
-export type ResourceUnitPolicyListOperation =
-  'catalogoAdmin/unidades:listarPoliticasUnidad'
-
-export type ResourceUnitDetailOperation = 'catalogoAdmin/unidades:obtenerUnidad'
-
-export type ResourceUnitListOperation = 'catalogoAdmin/unidades:listarUnidades'
-
-export type ResourceAttributeAssignmentListOperation =
-  'catalogoAdmin/atributos:listarAsignacionesAtributo'
-
-export type ResourceAttributeDefinitionOperation =
-  'catalogoAdmin/atributos:obtenerDefinicionAtributo'
-
-export type ResourceAllowedAttributeValueListOperation =
-  'catalogoAdmin/atributos:listarValoresPermitidosAtributo'
-
-export type ResourceAttributeOptionListOperation =
-  'catalogoAdmin/atributos:listarOpcionesAtributo'
-
-export type ResourceCreationEvaluationOperation =
-  'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones'
-
-export type ResourceOperation =
-  | ResourceListOperation
-  | ResourceDetailOperation
-  | ResourceCreateOperation
-  | ResourceCreateFromSelectionsOperation
-  | ResourceUpdateOperation
-  | ResourceLifecycleOperation
-  | ResourceContextListOperation
-  | ResourceUnitPolicyListOperation
-  | ResourceUnitDetailOperation
-  | ResourceUnitListOperation
-  | ResourceAttributeAssignmentListOperation
-  | ResourceAttributeDefinitionOperation
-  | ResourceAllowedAttributeValueListOperation
-  | ResourceAttributeOptionListOperation
-  | ResourceCreationEvaluationOperation
-
-export interface ResourceTransport {
-  invoke: (
-    operation: ResourceOperation,
-    args: Readonly<Record<string, unknown>>,
-  ) => Promise<unknown>
-}
-
-export interface ResourcesMasterConvexApiOptions {
-  url?: string
-}
-
-export interface ResourcesMasterApi {
-  listResources: (
-    input: ResourceListInput,
-  ) => Promise<ResourceListPage<ResourceSummary>>
-  searchResources: (
-    input: ResourceSearchInput,
-  ) => Promise<ResourceListPage<ResourceSummary>>
-  getResourceDetail: (
-    input: ResourceDetailInput,
-  ) => Promise<ResourceDetail | null>
-  createResource: (input: ResourceCreateInput) => Promise<ResourceCreated>
-  createResourceFromSelections: (
-    input: ResourceCreateFromSelectionsInput,
-  ) => Promise<ResourceCreationResult>
-  updateResource: (input: ResourceUpdateInput) => Promise<ResourceChangeResult>
-  activateResource: (
-    input: ResourceLifecycleInput,
-  ) => Promise<ResourceChangeResult>
-  deactivateResource: (
-    input: ResourceLifecycleInput,
-  ) => Promise<ResourceChangeResult>
-  listContextClasses: (
-    input?: ResourceContextListInput,
-  ) => Promise<ResourceContextListPage<ResourceContextClassItem>>
-  listContextFamilies: (
-    input: ResourceContextFamilyListInput,
-  ) => Promise<ResourceContextListPage<ResourceContextFamilyItem>>
-  listContextTypes: (
-    input: ResourceContextTypeListInput,
-  ) => Promise<ResourceContextListPage<ResourceContextTypeItem>>
-  listUnitPolicies: (
-    input: ResourceUnitPolicyListInput,
-  ) => Promise<ResourceContextListPage<ResourceUnitPolicy>>
-  getUnit: (
-    input: ResourceUnitDetailInput,
-  ) => Promise<ResourceUnitDetail | null>
-  listUnits: (
-    input: ResourceUnitListInput,
-  ) => Promise<ResourceContextListPage<ResourceUnitDetail>>
-  listAttributeAssignments: (
-    input: ResourceAttributeAssignmentListInput,
-  ) => Promise<ResourceContextListPage<ResourceAttributeAssignment>>
-  getAttributeDefinition: (
-    input: ResourceAttributeDefinitionInput,
-  ) => Promise<ResourceAttributeDefinition | null>
-  listAllowedAttributeValues: (
-    input: ResourceAllowedAttributeValueListInput,
-  ) => Promise<ResourceContextListPage<ResourceAllowedAttributeValueItem>>
-  listAttributeOptions: (
-    input: ResourceAttributeOptionListInput,
-  ) => Promise<ResourceContextListPage<ResourceAttributeOption>>
-  evaluateResourceCreation: (
-    input: ResourceCreationEvaluationInput,
-  ) => Promise<ResourceCreationEvaluation>
-}
-
-type ResourceRecord = Record<string, unknown>
-
-const record = (value: unknown): value is ResourceRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const has = (value: ResourceRecord, key: string) => key in value
 
 const bad = (): never => {
   throw new Error('Invalid resources master response')
-}
-
-const definedId = (value: ResourceId): value is ResourceId =>
-  value !== undefined && value !== null
-
-const classificationStatus = (value: unknown): ResourceClassificationStatus => {
-  if (
-    !record(value) ||
-    (value.state !== 'EFFECTIVE' &&
-      value.state !== 'INERT' &&
-      value.state !== 'BROKEN_REFERENCE') ||
-    !Array.isArray(value.reasons) ||
-    !value.reasons.every((reason) => typeof reason === 'string')
-  ) {
-    return bad()
-  }
-  return { state: value.state, reasons: [...value.reasons] }
-}
-
-const resourceSummary = (value: unknown): ResourceSummary => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    typeof value.identificadorTecnico !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    !definedId(value.tipoRecursoId) ||
-    !definedId(value.unidadId) ||
-    typeof value.activo !== 'boolean' ||
-    typeof value.revision !== 'number' ||
-    (has(value, 'organizacionId') &&
-      value.organizacionId !== undefined &&
-      !definedId(value.organizacionId))
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    identificadorTecnico: value.identificadorTecnico,
-    nombre: value.nombre,
-    tipoRecursoId: value.tipoRecursoId,
-    unidadId: value.unidadId,
-    ...(value.organizacionId === undefined
-      ? {}
-      : { organizacionId: value.organizacionId }),
-    activo: value.activo,
-    revision: value.revision,
-    classificationStatus: classificationStatus(value.classificationStatus),
-  }
-}
-
-const hierarchyRef = (value: unknown): ResourceHierarchyRef | null => {
-  if (value === null) return null
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    typeof value.clave !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    typeof value.activo !== 'boolean' ||
-    value.revision === undefined ||
-    value.revision === null
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    clave: value.clave,
-    nombre: value.nombre,
-    activo: value.activo,
-    revision: value.revision,
-  }
-}
-
-const unitRef = (value: unknown): ResourceUnitRef | null => {
-  if (value === null) return null
-  const base = hierarchyRef(value)
-  if (
-    base === null ||
-    !record(value) ||
-    (value.simbolo !== null && typeof value.simbolo !== 'string')
-  ) {
-    return bad()
-  }
-  return { ...base, simbolo: value.simbolo }
-}
-
-const resourceDetail = (value: unknown): ResourceDetail => {
-  const summary = resourceSummary(value)
-  if (
-    !record(value) ||
-    (value.descripcion !== null && typeof value.descripcion !== 'string') ||
-    (value.identidadVersion !== null &&
-      typeof value.identidadVersion !== 'number') ||
-    !record(value.catalogDiagnostics) ||
-    !Array.isArray(value.valores) ||
-    !value.valores.every(record)
-  ) {
-    return bad()
-  }
-  return {
-    ...summary,
-    descripcion: value.descripcion,
-    identidadVersion: value.identidadVersion,
-    clase: hierarchyRef(value.clase),
-    familia: hierarchyRef(value.familia),
-    tipo: hierarchyRef(value.tipo),
-    organizacion: hierarchyRef(value.organizacion),
-    unidad: unitRef(value.unidad),
-    catalogDiagnostics: { ...value.catalogDiagnostics },
-    valores: [...value.valores],
-  }
-}
-
-const contextItemBase = (value: unknown) => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    typeof value.clave !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    typeof value.activo !== 'boolean' ||
-    value.revision === undefined ||
-    value.revision === null ||
-    typeof value.effective !== 'boolean' ||
-    !Array.isArray(value.effectiveReasons) ||
-    !value.effectiveReasons.every((reason) => typeof reason === 'string')
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    clave: value.clave,
-    nombre: value.nombre,
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-    effectiveReasons: [...value.effectiveReasons],
-  }
-}
-
-const contextClassItem = (value: unknown): ResourceContextClassItem =>
-  contextItemBase(value)
-
-const contextFamilyItem = (value: unknown): ResourceContextFamilyItem => {
-  const parsed = contextItemBase(value)
-  if (!record(value) || !definedId(value.claseRecursoId)) return bad()
-  return { ...parsed, claseRecursoId: value.claseRecursoId }
-}
-
-const contextTypeItem = (value: unknown): ResourceContextTypeItem => {
-  const parsed = contextItemBase(value)
-  if (
-    !record(value) ||
-    !definedId(value.familiaRecursoId) ||
-    typeof value.aggregateStatus !== 'string' ||
-    !Array.isArray(value.violations) ||
-    !value.violations.every(record)
-  ) {
-    return bad()
-  }
-  return {
-    ...parsed,
-    familiaRecursoId: value.familiaRecursoId,
-    aggregateStatus: value.aggregateStatus,
-    violations: value.violations.map((violation) => ({ ...violation })),
-  }
-}
-
-const unitPolicyItem = (value: unknown): ResourceUnitPolicy => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    !definedId(value.familiaRecursoId) ||
-    (has(value, 'tipoRecursoId') &&
-      value.tipoRecursoId !== undefined &&
-      !definedId(value.tipoRecursoId)) ||
-    !definedId(value.unidadId) ||
-    typeof value.principal !== 'boolean' ||
-    typeof value.activo !== 'boolean' ||
-    typeof value.revision !== 'number' ||
-    typeof value.effective !== 'boolean' ||
-    typeof value.selected !== 'boolean' ||
-    typeof value.shadowed !== 'boolean' ||
-    (value.selection !== 'SELECTED' &&
-      value.selection !== 'SHADOWED' &&
-      value.selection !== 'SUPPRESSED' &&
-      value.selection !== 'NONE')
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    familiaRecursoId: value.familiaRecursoId,
-    ...(value.tipoRecursoId === undefined
-      ? {}
-      : { tipoRecursoId: value.tipoRecursoId }),
-    unidadId: value.unidadId,
-    principal: value.principal,
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-    selected: value.selected,
-    shadowed: value.shadowed,
-    selection: value.selection,
-  }
-}
-
-const contextPage = (value: unknown) => {
-  if (
-    !record(value) ||
-    !has(value, 'continuationCursor') ||
-    (typeof value.continuationCursor !== 'string' &&
-      value.continuationCursor !== null) ||
-    typeof value.isExhausted !== 'boolean' ||
-    !Array.isArray(value.items)
-  ) {
-    return bad()
-  }
-  return {
-    continuationCursor: value.continuationCursor,
-    isExhausted: value.isExhausted,
-    items: value.items as unknown[],
-  }
-}
-
-export function parseContextClassesPage(
-  value: unknown,
-): ResourceContextListPage<ResourceContextClassItem> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(contextClassItem) }
-}
-
-export function parseContextFamiliesPage(
-  value: unknown,
-): ResourceContextListPage<ResourceContextFamilyItem> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(contextFamilyItem) }
-}
-
-export function parseContextTypesPage(
-  value: unknown,
-): ResourceContextListPage<ResourceContextTypeItem> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(contextTypeItem) }
-}
-
-export function parseUnitPoliciesPage(
-  value: unknown,
-): ResourceContextListPage<ResourceUnitPolicy> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(unitPolicyItem) }
-}
-
-const unitDetail = (value: unknown): ResourceUnitDetail => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    typeof value.clave !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    (has(value, 'descripcion') &&
-      value.descripcion !== undefined &&
-      typeof value.descripcion !== 'string') ||
-    (has(value, 'simbolo') &&
-      value.simbolo !== undefined &&
-      typeof value.simbolo !== 'string') ||
-    typeof value.activo !== 'boolean' ||
-    typeof value.revision !== 'number' ||
-    typeof value.effective !== 'boolean'
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    clave: value.clave,
-    nombre: value.nombre,
-    ...(value.descripcion === undefined
-      ? {}
-      : { descripcion: value.descripcion as string }),
-    ...(value.simbolo === undefined
-      ? {}
-      : { simbolo: value.simbolo as string }),
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-  }
-}
-
-export function parseUnitDetail(value: unknown): ResourceUnitDetail | null {
-  if (value === null) return null
-  return unitDetail(value)
-}
-
-export function parseUnitsPage(
-  value: unknown,
-): ResourceContextListPage<ResourceUnitDetail> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(unitDetail) }
-}
-
-const attributeApplicabilities = [
-  'REQUIRED',
-  'OPTIONAL',
-  'CONDITIONAL',
-  'FORBIDDEN',
-  'NOT_APPLICABLE',
-]
-
-const attributeSelections = ['SELECTED', 'SHADOWED', 'SUPPRESSED', 'NONE']
-
-const attributeAssignmentItem = (
-  value: unknown,
-): ResourceAttributeAssignment => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    !definedId(value.familiaRecursoId) ||
-    !definedId(value.definicionAtributoId) ||
-    (has(value, 'tipoRecursoId') &&
-      value.tipoRecursoId !== undefined &&
-      !definedId(value.tipoRecursoId)) ||
-    !attributeApplicabilities.includes(value.aplicabilidad as string) ||
-    typeof value.participaIdentidad !== 'boolean' ||
-    typeof value.orden !== 'number' ||
-    typeof value.activo !== 'boolean' ||
-    value.revision === undefined ||
-    value.revision === null ||
-    typeof value.effective !== 'boolean' ||
-    !Array.isArray(value.effectiveReasons) ||
-    !value.effectiveReasons.every((reason) => typeof reason === 'string') ||
-    !attributeSelections.includes(value.selection as string)
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    familiaRecursoId: value.familiaRecursoId,
-    definicionAtributoId: value.definicionAtributoId,
-    ...(value.tipoRecursoId === undefined
-      ? {}
-      : { tipoRecursoId: value.tipoRecursoId }),
-    aplicabilidad:
-      value.aplicabilidad as ResourceAttributeAssignment['aplicabilidad'],
-    participaIdentidad: value.participaIdentidad,
-    orden: value.orden,
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-    effectiveReasons: [...value.effectiveReasons],
-    selection: value.selection as ResourceAttributeAssignment['selection'],
-  }
-}
-
-export function parseAttributeAssignmentsPage(
-  value: unknown,
-): ResourceContextListPage<ResourceAttributeAssignment> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(attributeAssignmentItem) }
-}
-
-const attributeContractIdSchema = z
-  .string()
-  .refine((value) => value.trim().length > 0)
-const attributeDefinitionSchema = z
-  .object({
-    id: attributeContractIdSchema,
-    clave: z.string(),
-    nombre: z.string(),
-    descripcion: z.string().optional(),
-    tipoDato: z.enum(['TEXTO', 'NUMERO', 'BOOLEANO', 'OPCION']),
-    modoCaptura: z.enum(['SELECCION', 'LIBRE']),
-    unidadId: attributeContractIdSchema.optional(),
-    activo: z.boolean(),
-    revision: z.number(),
-    effective: z.boolean(),
-    effectiveReasons: z.array(z.string()),
-  })
-  .strict()
-const allowedAttributeValueSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('TEXTO'), value: z.string() }).strict(),
-  z.object({ kind: z.literal('NUMERO'), value: z.number() }).strict(),
-  z.object({ kind: z.literal('BOOLEANO'), value: z.boolean() }).strict(),
-  z
-    .object({
-      kind: z.literal('OPCION'),
-      opcionAtributoId: attributeContractIdSchema,
-    })
-    .strict(),
-])
-const allowedAttributeValueItemSchema = z
-  .object({
-    id: attributeContractIdSchema,
-    definicionAtributoId: attributeContractIdSchema,
-    clave: z.string(),
-    valor: allowedAttributeValueSchema,
-    nombre: z.string(),
-    descripcion: z.string().optional(),
-    orden: z.number(),
-    activo: z.boolean(),
-    revision: z.number(),
-    effective: z.boolean(),
-    effectiveReasons: z.array(z.string()),
-  })
-  .strict()
-const allowedAttributeValuesPageSchema = z
-  .object({
-    items: z.array(allowedAttributeValueItemSchema),
-    continuationCursor: z.string().nullable(),
-    isExhausted: z.boolean(),
-  })
-  .strict()
-
-export function parseAttributeDefinition(
-  value: unknown,
-): ResourceAttributeDefinition | null {
-  if (value === null) return null
-  const result = attributeDefinitionSchema.safeParse(value)
-  if (!result.success) return bad()
-  return result.data
-}
-
-export function parseAllowedAttributeValuesPage(
-  value: unknown,
-): ResourceContextListPage<ResourceAllowedAttributeValueItem> {
-  const result = allowedAttributeValuesPageSchema.safeParse(value)
-  if (!result.success) return bad()
-  return result.data
-}
-
-const resolvedAssignmentSchema = z
-  .object({
-    asignacionAtributoId: attributeContractIdSchema,
-    definicionAtributoId: attributeContractIdSchema,
-    aplicabilidadResuelta: z.enum([
-      'REQUIRED',
-      'OPTIONAL',
-      'FORBIDDEN',
-      'NOT_APPLICABLE',
-    ]),
-    participaIdentidad: z.boolean(),
-    orden: z.number(),
-    effectiveReasons: z.array(z.string()),
-    selectedValueId: attributeContractIdSchema.optional(),
-  })
-  .strict()
-const normalizedCreationValueSchema = z
-  .object({
-    atributoRecursoId: attributeContractIdSchema,
-    valor: z.union([z.string(), z.number(), z.boolean()]),
-    opcionAtributoId: attributeContractIdSchema.optional(),
-  })
-  .strict()
-const evaluationIssueSchema = z
-  .object({
-    code: z.enum([
-      'HIERARCHY_INVALID',
-      'UNIT_INVALID',
-      'OWNERSHIP_INVALID',
-      'ASSIGNMENT_UNKNOWN',
-      'ASSIGNMENT_DUPLICATE',
-      'ALLOWED_VALUE_UNKNOWN',
-      'ALLOWED_VALUE_FOREIGN',
-      'ALLOWED_VALUE_INACTIVE',
-      'SELECTION_NON_EFFECTIVE',
-      'SELECTION_FORBIDDEN',
-      'SELECTION_NOT_APPLICABLE',
-      'UNSUPPORTED_FREE_CAPTURE',
-      'IDENTITY_CONFLICT',
-    ]),
-    message: z.string(),
-    asignacionAtributoId: attributeContractIdSchema.optional(),
-  })
-  .strict()
-const resourceCreationEvaluationSchema = z
-  .object({
-    status: z.enum(['INCOMPLETE', 'VALID', 'INVALID']),
-    valid: z.boolean(),
-    catalogFingerprint: z.string(),
-    nombre: z.string().nullable(),
-    identificadorTecnico: z.string().nullable(),
-    asignaciones: z.array(resolvedAssignmentSchema),
-    faltantesRequeridos: z.array(attributeContractIdSchema),
-    seleccionesInvalidas: z.array(attributeContractIdSchema),
-    valoresNormalizados: z.array(normalizedCreationValueSchema),
-    issues: z.array(evaluationIssueSchema),
-  })
-  .strict()
-  .refine((value) => value.valid === (value.status === 'VALID'), {
-    path: ['valid'],
-  })
-
-export function parseResourceCreationEvaluation(
-  value: unknown,
-): ResourceCreationEvaluation {
-  const result = resourceCreationEvaluationSchema.safeParse(value)
-  if (!result.success) return bad()
-  return result.data
-}
-
-const resourceCreatedItemSchema = z
-  .object({
-    id: attributeContractIdSchema,
-    tipoRecursoId: attributeContractIdSchema,
-    unidadId: attributeContractIdSchema,
-    identificadorTecnico: z.string(),
-    nombre: z.string(),
-    activo: z.boolean(),
-    revision: z.number(),
-    classificationStatus: z
-      .object({
-        state: z.enum(['EFFECTIVE', 'INERT', 'BROKEN_REFERENCE']),
-        reasons: z.array(z.string()),
-      })
-      .strict(),
-    organizacionId: attributeContractIdSchema.optional(),
-  })
-  .strict()
-  .superRefine((value, context) => {
-    if ('organizacionId' in value && value.organizacionId === undefined)
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['organizacionId'],
-      })
-  })
-
-const resourceCreationResultEvaluationSchema =
-  resourceCreationEvaluationSchema.refine(
-    (value) => value.catalogFingerprint.trim().length > 0,
-  )
-
-const resourceCreationResultSchema = z.discriminatedUnion('disposition', [
-  z
-    .object({
-      disposition: z.literal('CREATED'),
-      item: resourceCreatedItemSchema,
-    })
-    .strict(),
-  z
-    .object({
-      disposition: z.literal('CATALOG_CHANGED'),
-      evaluation: resourceCreationResultEvaluationSchema,
-    })
-    .strict(),
-  z
-    .object({
-      disposition: z.literal('INCOMPLETE'),
-      evaluation: resourceCreationResultEvaluationSchema.refine(
-        (value) => value.status === 'INCOMPLETE',
-      ),
-    })
-    .strict(),
-  z
-    .object({
-      disposition: z.literal('INVALID'),
-      evaluation: resourceCreationResultEvaluationSchema.refine(
-        (value) => value.status === 'INVALID',
-      ),
-    })
-    .strict(),
-])
-
-export function parseResourceCreationResult(
-  value: unknown,
-): ResourceCreationResult {
-  const result = resourceCreationResultSchema.safeParse(value)
-  if (!result.success) return bad()
-  return result.data as ResourceCreationResult
-}
-
-const resourceCreationEvaluationInputSchema = z
-  .object({
-    claseRecursoId: attributeContractIdSchema,
-    familiaRecursoId: attributeContractIdSchema,
-    tipoRecursoId: attributeContractIdSchema,
-    unidadId: attributeContractIdSchema,
-    selecciones: z.array(
-      z
-        .object({
-          asignacionAtributoId: attributeContractIdSchema,
-          valorPermitidoId: attributeContractIdSchema,
-        })
-        .strict(),
-    ),
-    ownership: z.discriminatedUnion('kind', [
-      z.object({ kind: z.literal('GLOBAL') }).strict(),
-      z
-        .object({
-          kind: z.literal('ORGANIZATION'),
-          organizacionId: attributeContractIdSchema,
-        })
-        .strict(),
-    ]),
-  })
-  .strict()
-
-const resourceCreateFromSelectionsInputSchema =
-  resourceCreationEvaluationInputSchema
-    .extend({ expectedCatalogFingerprint: attributeContractIdSchema })
-    .strict()
-
-const attributeOptionItem = (value: unknown): ResourceAttributeOption => {
-  if (
-    !record(value) ||
-    !definedId(value.id) ||
-    !definedId(value.definicionAtributoId) ||
-    typeof value.clave !== 'string' ||
-    typeof value.nombre !== 'string' ||
-    (has(value, 'descripcion') &&
-      value.descripcion !== undefined &&
-      typeof value.descripcion !== 'string') ||
-    typeof value.activo !== 'boolean' ||
-    value.revision === undefined ||
-    value.revision === null ||
-    typeof value.effective !== 'boolean' ||
-    !Array.isArray(value.effectiveReasons) ||
-    !value.effectiveReasons.every((reason) => typeof reason === 'string')
-  ) {
-    return bad()
-  }
-  return {
-    id: value.id,
-    definicionAtributoId: value.definicionAtributoId,
-    clave: value.clave,
-    nombre: value.nombre,
-    ...(value.descripcion === undefined
-      ? {}
-      : { descripcion: value.descripcion as string }),
-    activo: value.activo,
-    revision: value.revision,
-    effective: value.effective,
-    effectiveReasons: [...value.effectiveReasons],
-  }
-}
-
-export function parseAttributeOptionsPage(
-  value: unknown,
-): ResourceContextListPage<ResourceAttributeOption> {
-  const result = contextPage(value)
-  return { ...result, items: result.items.map(attributeOptionItem) }
 }
 
 export interface ResourcesMasterRestReadApi {
@@ -851,11 +50,23 @@ export interface ResourcesMasterRestReadApi {
   listHierarchyTypes: (
     input: ResourceContextTypeRestInput,
   ) => Promise<ResourceHierarchyWindowPage<ResourceContextTypeRestItem>>
+  listUnits: (
+    input: ResourceHierarchyWindowInput,
+  ) => Promise<ResourceHierarchyWindowPage<ResourceContextUnitRestItem>>
+  getTypeEffectiveAttributes: (
+    input: EffectiveAttributesRequest,
+  ) => Promise<EffectiveAttributesResponse>
+  createResource: (input: ResourceRestCreateInput) => Promise<Resource>
 }
 
 type ResourceRestFetch = (
   input: string,
-  init?: { signal?: AbortSignal },
+  init?: {
+    signal?: AbortSignal
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+  },
 ) => Promise<{
   ok: boolean
   status: number
@@ -951,7 +162,7 @@ const readRestJson = async (
 
 const restHierarchyBase = (
   record: RestCatalogRecord,
-  kind: 'CLASE' | 'FAMILIA' | 'TIPO',
+  kind: 'CLASE' | 'FAMILIA' | 'TIPO' | 'UNIDAD',
 ): ResourceContextClassRestItem => {
   const code = record.values.code
   const name = record.values.name
@@ -1002,6 +213,19 @@ const restContextTypeItem = (
   }
 }
 
+const restUnitItem = (
+  record: RestCatalogRecord,
+): ResourceContextUnitRestItem => {
+  const symbol = record.values.symbol
+  const dimension = record.values.dimension
+  if (symbol?.kind !== 'TEXT' || dimension?.kind !== 'TEXT') return bad()
+  return {
+    ...restHierarchyBase(record, 'UNIDAD'),
+    symbol: symbol.value,
+    dimension: dimension.value,
+  }
+}
+
 const restHierarchyParams = (input: ResourceHierarchyWindowInput) =>
   new URLSearchParams({
     scope: input.scope,
@@ -1012,14 +236,18 @@ const restHierarchyParams = (input: ResourceHierarchyWindowInput) =>
 
 const readRestCatalogPage = async (
   fetch: ResourceRestFetch,
-  kind: 'CLASE' | 'FAMILIA' | 'TIPO',
+  kind: 'CLASE' | 'FAMILIA' | 'TIPO' | 'UNIDAD',
   input: ResourceHierarchyWindowInput,
   filter?: readonly [string, string],
 ) => {
   const params = restHierarchyParams(input)
   if (filter) params.set(...filter)
   const result = CatalogPageSchema.safeParse(
-    await readRestJson(fetch, '/v1/catalog/' + kind + '?' + params, input.signal),
+    await readRestJson(
+      fetch,
+      '/v1/catalog/' + kind + '?' + params,
+      input.signal,
+    ),
   )
   if (!result.success) return bad()
   return result.data
@@ -1027,6 +255,7 @@ const readRestCatalogPage = async (
 
 export function createResourcesMasterRestApi(
   fetch: ResourceRestFetch = globalThis.fetch,
+  actorOptions: RestActorOptions = {},
 ): ResourcesMasterRestReadApi {
   return {
     async listResources(input) {
@@ -1120,550 +349,57 @@ export function createResourcesMasterRestApi(
         hasNext: page.hasNext,
       }
     },
-  }
-}
-
-const resourceListIdSchema = z.custom<ResourceId>(
-  (value) => value !== undefined && value !== null,
-)
-
-const resourceListRevisionSchema = z.custom<number>(
-  (value) => typeof value === 'number',
-)
-
-const resourceListClassificationStatusSchema = z.object({
-  state: z.enum(['EFFECTIVE', 'INERT', 'BROKEN_REFERENCE']),
-  reasons: z.array(z.string()),
-})
-
-const resourceListSummarySchema = z.object({
-  id: resourceListIdSchema,
-  identificadorTecnico: z.string(),
-  nombre: z.string(),
-  tipoRecursoId: resourceListIdSchema,
-  unidadId: resourceListIdSchema,
-  organizacionId: resourceListIdSchema.optional(),
-  activo: z.boolean(),
-  revision: resourceListRevisionSchema,
-  classificationStatus: resourceListClassificationStatusSchema,
-})
-
-const resourceListPageSchema = z.object({
-  page: z.array(resourceListSummarySchema),
-  isDone: z.boolean(),
-  continueCursor: z.string(),
-})
-
-const resourceListSummary = (
-  value: z.infer<typeof resourceListSummarySchema>,
-): ResourceSummary => ({
-  id: value.id,
-  identificadorTecnico: value.identificadorTecnico,
-  nombre: value.nombre,
-  tipoRecursoId: value.tipoRecursoId,
-  unidadId: value.unidadId,
-  ...(value.organizacionId === undefined
-    ? {}
-    : { organizacionId: value.organizacionId }),
-  activo: value.activo,
-  revision: value.revision,
-  classificationStatus: {
-    state: value.classificationStatus.state,
-    reasons: [...value.classificationStatus.reasons],
-  },
-})
-
-export function parseResourceListPage(
-  value: unknown,
-): ResourceListPage<ResourceSummary> {
-  const result = resourceListPageSchema.safeParse(value)
-  if (!result.success) return bad()
-  return {
-    page: result.data.page.map(resourceListSummary),
-    isDone: result.data.isDone,
-    continueCursor: result.data.continueCursor,
-  }
-}
-
-export function parseResourceDetail(value: unknown): ResourceDetail | null {
-  if (value === null) return null
-  return resourceDetail(value)
-}
-
-export function parseResourceCreated(value: unknown): ResourceCreated {
-  if (!record(value) || value.disposition !== 'CREATED' || !has(value, 'item'))
-    return bad()
-  return { disposition: 'CREATED', item: resourceSummary(value.item) }
-}
-
-export function parseResourceChangeResult(
-  value: unknown,
-): ResourceChangeResult {
-  if (
-    !record(value) ||
-    typeof value.disposition !== 'string' ||
-    value.disposition.length === 0 ||
-    !has(value, 'item')
-  ) {
-    return bad()
-  }
-  return { disposition: value.disposition, item: resourceSummary(value.item) }
-}
-
-const paginationOpts = (input: {
-  cursor?: string | null
-  pageSize: number
-}) => ({
-  numItems: input.pageSize,
-  cursor: input.cursor ?? null,
-})
-
-const listFilterArgs = (filters: ResourceListFilters) => {
-  const result: Record<string, unknown> = {}
-  if (filters.lifecycle !== undefined) result.lifecycle = filters.lifecycle
-  if (filters.tipoRecursoId !== undefined)
-    result.tipoRecursoId = filters.tipoRecursoId
-  else if (filters.familiaRecursoId !== undefined)
-    result.familiaRecursoId = filters.familiaRecursoId
-  else if (filters.claseRecursoId !== undefined)
-    result.claseRecursoId = filters.claseRecursoId
-  if (filters.scope !== undefined) result.scope = filters.scope
-  return result
-}
-
-const listArgs = (input: ResourceListInput) =>
-  Object.freeze({
-    paginationOpts: paginationOpts(input),
-    ...listFilterArgs(input),
-  })
-
-const searchArgs = (input: ResourceSearchInput) =>
-  Object.freeze({
-    ...listArgs(input),
-    searchText: input.searchText,
-  })
-
-const contextListArgs = (input: ResourceContextListInput = {}) => {
-  const result: Record<string, unknown> = { modo: 'ACTIVE' }
-  if (input.cursor !== undefined) result.cursor = input.cursor
-  if (input.pageSize !== undefined) result.pageSize = input.pageSize
-  return result
-}
-
-const contextFamilyArgs = (input: ResourceContextFamilyListInput) =>
-  Object.freeze({
-    claseRecursoId: input.claseRecursoId,
-    ...contextListArgs(input),
-  })
-
-const contextTypeArgs = (input: ResourceContextTypeListInput) =>
-  Object.freeze({
-    familiaRecursoId: input.familiaRecursoId,
-    ...contextListArgs(input),
-  })
-
-const unitPolicyArgs = (input: ResourceUnitPolicyListInput) =>
-  Object.freeze({
-    familiaRecursoId: input.familiaRecursoId,
-    paraTipoRecursoId: input.paraTipoRecursoId,
-    ...contextListArgs(input),
-  })
-
-const unitListArgs = (input: ResourceUnitListInput) => {
-  const result: Record<string, unknown> = { modo: 'ACTIVE' }
-  if (input.cursor !== undefined) result.cursor = input.cursor
-  if (input.pageSize !== undefined) result.pageSize = input.pageSize
-  return Object.freeze(result)
-}
-
-const attributeAssignmentArgs = (input: ResourceAttributeAssignmentListInput) =>
-  Object.freeze({
-    tipoRecursoId: input.tipoRecursoId,
-    ...contextListArgs(input),
-  })
-
-const allowedAttributeValueArgs = (
-  input: ResourceAllowedAttributeValueListInput,
-) => {
-  const result: Record<string, unknown> = {
-    definicionAtributoId: input.definicionAtributoId,
-  }
-  if (input.cursor !== undefined) result.cursor = input.cursor
-  if (input.pageSize !== undefined) result.pageSize = input.pageSize
-  if (input.modo !== undefined) result.modo = input.modo
-  return Object.freeze(result)
-}
-
-const attributeOptionArgs = (input: ResourceAttributeOptionListInput) =>
-  Object.freeze({
-    definicionAtributoId: input.definicionAtributoId,
-    ...contextListArgs(input),
-  })
-
-type ResourceQueryReference = FunctionReference<
-  'query',
-  'public',
-  Record<string, unknown>,
-  unknown
->
-type ResourceMutationReference = FunctionReference<
-  'mutation',
-  'public',
-  Record<string, unknown>,
-  unknown
->
-
-const queryReference = (
-  name:
-    | ResourceListOperation
-    | ResourceDetailOperation
-    | ResourceContextListOperation
-    | ResourceUnitPolicyListOperation
-    | ResourceUnitDetailOperation
-    | ResourceUnitListOperation
-    | ResourceAttributeAssignmentListOperation
-    | ResourceAttributeDefinitionOperation
-    | ResourceAllowedAttributeValueListOperation
-    | ResourceAttributeOptionListOperation
-    | ResourceCreationEvaluationOperation,
-) => makeFunctionReference<'query', Record<string, unknown>, unknown>(name)
-
-const mutationReference = (
-  name:
-    | ResourceCreateOperation
-    | ResourceCreateFromSelectionsOperation
-    | ResourceUpdateOperation
-    | ResourceLifecycleOperation,
-) => makeFunctionReference<'mutation', Record<string, unknown>, unknown>(name)
-
-const listResourcesReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/recursos:listarRecursosResumen',
-)
-const searchResourcesReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/recursos:buscarRecursosResumen',
-)
-const getDetailReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/recursos:obtenerDetalleRecurso',
-)
-const createResourceReference: ResourceMutationReference = mutationReference(
-  'catalogoAdmin/recursos:crearRecurso',
-)
-const createResourceFromSelectionsReference: ResourceMutationReference =
-  mutationReference('catalogoAdmin/recursos:crearRecursoDesdeSelecciones')
-const updateResourceReference: ResourceMutationReference = mutationReference(
-  'catalogoAdmin/recursos:actualizarRecurso',
-)
-const activateResourceReference: ResourceMutationReference = mutationReference(
-  'catalogoAdmin/recursos:activarRecurso',
-)
-const deactivateResourceReference: ResourceMutationReference =
-  mutationReference('catalogoAdmin/recursos:desactivarRecurso')
-const listContextClassesReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/jerarquia:listarClases',
-)
-const listContextFamiliesReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/jerarquia:listarFamilias',
-)
-const listContextTypesReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/jerarquia:listarTipos',
-)
-const listUnitPoliciesReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/unidades:listarPoliticasUnidad',
-)
-const getUnitReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/unidades:obtenerUnidad',
-)
-const listUnitsReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/unidades:listarUnidades',
-)
-const listAttributeAssignmentsReference: ResourceQueryReference =
-  queryReference('catalogoAdmin/atributos:listarAsignacionesAtributo')
-const getAttributeDefinitionReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/atributos:obtenerDefinicionAtributo',
-)
-const listAllowedAttributeValuesReference: ResourceQueryReference =
-  queryReference('catalogoAdmin/atributos:listarValoresPermitidosAtributo')
-const listAttributeOptionsReference: ResourceQueryReference = queryReference(
-  'catalogoAdmin/atributos:listarOpcionesAtributo',
-)
-const evaluateResourceCreationReference: ResourceQueryReference =
-  queryReference('catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones')
-
-const configuredUrl = (options: ResourcesMasterConvexApiOptions) =>
-  'url' in options ? options.url : import.meta.env.VITE_CONVEX_URL
-
-const validHttpUrl = (value: unknown): value is string => {
-  if (typeof value !== 'string' || value.length === 0) return false
-  try {
-    const url = new URL(value)
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      url.hostname.length > 0
-    )
-  } catch {
-    return false
-  }
-}
-
-export function createResourcesMasterConvexApi(
-  options: ResourcesMasterConvexApiOptions = {},
-): ResourcesMasterApi {
-  let client: ConvexHttpClient | undefined
-  const transport: ResourceTransport = {
-    invoke: async (operation, requestArgs) => {
-      const url = configuredUrl(options)
-      if (!validHttpUrl(url))
-        throw new Error('Resources master transport unavailable')
-      client ??= new ConvexHttpClient(url)
-      switch (operation) {
-        case 'catalogoAdmin/recursos:listarRecursosResumen':
-          return client.query(listResourcesReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:buscarRecursosResumen':
-          return client.query(searchResourcesReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:obtenerDetalleRecurso':
-          return client.query(getDetailReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:crearRecurso':
-          return client.mutation(createResourceReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:crearRecursoDesdeSelecciones':
-          return client.mutation(createResourceFromSelectionsReference, {
-            ...requestArgs,
-          })
-        case 'catalogoAdmin/recursos:actualizarRecurso':
-          return client.mutation(updateResourceReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:activarRecurso':
-          return client.mutation(activateResourceReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:desactivarRecurso':
-          return client.mutation(deactivateResourceReference, {
-            ...requestArgs,
-          })
-        case 'catalogoAdmin/jerarquia:listarClases':
-          return client.query(listContextClassesReference, { ...requestArgs })
-        case 'catalogoAdmin/jerarquia:listarFamilias':
-          return client.query(listContextFamiliesReference, { ...requestArgs })
-        case 'catalogoAdmin/jerarquia:listarTipos':
-          return client.query(listContextTypesReference, { ...requestArgs })
-        case 'catalogoAdmin/unidades:listarPoliticasUnidad':
-          return client.query(listUnitPoliciesReference, { ...requestArgs })
-        case 'catalogoAdmin/unidades:obtenerUnidad':
-          return client.query(getUnitReference, { ...requestArgs })
-        case 'catalogoAdmin/unidades:listarUnidades':
-          return client.query(listUnitsReference, { ...requestArgs })
-        case 'catalogoAdmin/atributos:listarAsignacionesAtributo':
-          return client.query(listAttributeAssignmentsReference, {
-            ...requestArgs,
-          })
-        case 'catalogoAdmin/atributos:obtenerDefinicionAtributo':
-          return client.query(getAttributeDefinitionReference, {
-            ...requestArgs,
-          })
-        case 'catalogoAdmin/atributos:listarValoresPermitidosAtributo':
-          return client.query(listAllowedAttributeValuesReference, {
-            ...requestArgs,
-          })
-        case 'catalogoAdmin/atributos:listarOpcionesAtributo':
-          return client.query(listAttributeOptionsReference, { ...requestArgs })
-        case 'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones':
-          return client.query(evaluateResourceCreationReference, {
-            ...requestArgs,
-          })
+    async listUnits(input) {
+      const { signal, ...window } = input
+      const parsed = restHierarchyWindowInputSchema.safeParse(window)
+      if (!parsed.success) return bad()
+      const page = await readRestCatalogPage(fetch, 'UNIDAD', {
+        ...parsed.data,
+        signal,
+      })
+      return {
+        items: page.records.map((record) => restUnitItem(record)),
+        hasPrevious: page.hasPrevious,
+        hasNext: page.hasNext,
       }
     },
-  }
-  return createResourcesMasterApi(transport)
-}
-
-export function createResourcesMasterApi(
-  transport: ResourceTransport,
-): ResourcesMasterApi {
-  return {
-    async listResources(input) {
-      return parseResourceListPage(
-        await transport.invoke(
-          'catalogoAdmin/recursos:listarRecursosResumen',
-          listArgs(input),
-        ),
+    async getTypeEffectiveAttributes(input) {
+      if (!validEffectiveAttributesRequest(input)) return bad()
+      const query = new URLSearchParams({
+        classCode: input.classCode,
+        familyCode: input.familyCode,
+      })
+      const body = await readRestJson(
+        fetch,
+        '/v1/types/' +
+          encodeURIComponent(input.typeCode) +
+          '/attributes/effective?' +
+          query,
+        input.signal,
       )
-    },
-    async searchResources(input) {
-      if (input.searchText.trim().length === 0) return bad()
-      return parseResourceListPage(
-        await transport.invoke(
-          'catalogoAdmin/recursos:buscarRecursosResumen',
-          searchArgs(input),
-        ),
-      )
-    },
-    async getResourceDetail(input) {
-      if (!definedId(input.recursoId)) return bad()
-      return parseResourceDetail(
-        await transport.invoke('catalogoAdmin/recursos:obtenerDetalleRecurso', {
-          recursoId: input.recursoId,
-        }),
-      )
+      return parseEffectiveAttributesResponse(body, input)
     },
     async createResource(input) {
-      const requestArgs = Object.freeze({
-        claseRecursoId: input.claseRecursoId,
-        familiaRecursoId: input.familiaRecursoId,
-        tipoRecursoId: input.tipoRecursoId,
-        unidadId: input.unidadId,
-        nombre: input.nombre,
-        ...(input.descripcion !== undefined && input.descripcion !== ''
-          ? { descripcion: input.descripcion }
-          : {}),
-        valores: input.valores,
-        ownership: input.ownership,
-      })
-      return parseResourceCreated(
-        await transport.invoke(
-          'catalogoAdmin/recursos:crearRecurso',
-          requestArgs,
-        ),
-      )
-    },
-    async createResourceFromSelections(input) {
-      const request = resourceCreateFromSelectionsInputSchema.safeParse(input)
-      if (!request.success) return bad()
-      return parseResourceCreationResult(
-        await transport.invoke(
-          'catalogoAdmin/recursos:crearRecursoDesdeSelecciones',
-          request.data,
-        ),
-      )
-    },
-    async updateResource(input) {
-      const requestArgs: Record<string, unknown> = {
-        recursoId: input.recursoId,
-        expectedRevision: input.expectedRevision,
-      }
-      if (input.unidadId !== undefined) requestArgs.unidadId = input.unidadId
-      if (input.nombre !== undefined) requestArgs.nombre = input.nombre
-      if (input.descripcion !== undefined)
-        requestArgs.descripcion = input.descripcion
-      if (input.valores !== undefined) requestArgs.valores = input.valores
-      return parseResourceChangeResult(
-        await transport.invoke(
-          'catalogoAdmin/recursos:actualizarRecurso',
-          Object.freeze(requestArgs),
-        ),
-      )
-    },
-    async activateResource(input) {
-      return parseResourceChangeResult(
-        await transport.invoke('catalogoAdmin/recursos:activarRecurso', {
-          recursoId: input.recursoId,
-          expectedRevision: input.expectedRevision,
-        }),
-      )
-    },
-    async deactivateResource(input) {
-      return parseResourceChangeResult(
-        await transport.invoke('catalogoAdmin/recursos:desactivarRecurso', {
-          recursoId: input.recursoId,
-          expectedRevision: input.expectedRevision,
-        }),
-      )
-    },
-    async listContextClasses(input = {}) {
-      return parseContextClassesPage(
-        await transport.invoke(
-          'catalogoAdmin/jerarquia:listarClases',
-          contextListArgs(input),
-        ),
-      )
-    },
-    async listContextFamilies(input) {
-      if (!definedId(input.claseRecursoId)) return bad()
-      return parseContextFamiliesPage(
-        await transport.invoke(
-          'catalogoAdmin/jerarquia:listarFamilias',
-          contextFamilyArgs(input),
-        ),
-      )
-    },
-    async listContextTypes(input) {
-      if (!definedId(input.familiaRecursoId)) return bad()
-      return parseContextTypesPage(
-        await transport.invoke(
-          'catalogoAdmin/jerarquia:listarTipos',
-          contextTypeArgs(input),
-        ),
-      )
-    },
-    async listUnitPolicies(input) {
-      if (
-        !definedId(input.familiaRecursoId) ||
-        !definedId(input.paraTipoRecursoId)
-      )
-        return bad()
-      return parseUnitPoliciesPage(
-        await transport.invoke(
-          'catalogoAdmin/unidades:listarPoliticasUnidad',
-          unitPolicyArgs(input),
-        ),
-      )
-    },
-    async getUnit(input) {
-      if (!definedId(input.unidadId)) return bad()
-      return parseUnitDetail(
-        await transport.invoke('catalogoAdmin/unidades:obtenerUnidad', {
-          unidadId: input.unidadId,
-        }),
-      )
-    },
-    async listUnits(input) {
-      return parseUnitsPage(
-        await transport.invoke(
-          'catalogoAdmin/unidades:listarUnidades',
-          unitListArgs(input),
-        ),
-      )
-    },
-    async listAttributeAssignments(input) {
-      if (!definedId(input.tipoRecursoId)) return bad()
-      return parseAttributeAssignmentsPage(
-        await transport.invoke(
-          'catalogoAdmin/atributos:listarAsignacionesAtributo',
-          attributeAssignmentArgs(input),
-        ),
-      )
-    },
-    async getAttributeDefinition(input) {
-      if (!definedId(input.definicionAtributoId)) return bad()
-      return parseAttributeDefinition(
-        await transport.invoke(
-          'catalogoAdmin/atributos:obtenerDefinicionAtributo',
-          { definicionAtributoId: input.definicionAtributoId },
-        ),
-      )
-    },
-    async listAllowedAttributeValues(input) {
-      if (!definedId(input.definicionAtributoId)) return bad()
-      return parseAllowedAttributeValuesPage(
-        await transport.invoke(
-          'catalogoAdmin/atributos:listarValoresPermitidosAtributo',
-          allowedAttributeValueArgs(input),
-        ),
-      )
-    },
-    async listAttributeOptions(input) {
-      if (!definedId(input.definicionAtributoId)) return bad()
-      return parseAttributeOptionsPage(
-        await transport.invoke(
-          'catalogoAdmin/atributos:listarOpcionesAtributo',
-          attributeOptionArgs(input),
-        ),
-      )
-    },
-    async evaluateResourceCreation(input) {
-      const request = resourceCreationEvaluationInputSchema.safeParse(input)
-      if (!request.success) return bad()
-      return parseResourceCreationEvaluation(
-        await transport.invoke(
-          'catalogoAdmin/recursos:evaluarCreacionDesdeSelecciones',
-          request.data,
-        ),
-      )
+      return withRestActor(async (actor) => {
+        const response = await fetch('/v1/resources', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            actor,
+            scope: input.scope,
+            naturalUnit: input.naturalUnit,
+            attributes: input.attributes,
+          }),
+        })
+        const body: unknown = await response.json()
+        if (response.status !== 201) {
+          const error = ErrorEnvelopeSchema.safeParse(body)
+          throw new Error(
+            error.success ? error.data.error : 'HTTP ' + response.status,
+          )
+        }
+        return restResource(body)
+      }, actorOptions)
     },
   }
 }

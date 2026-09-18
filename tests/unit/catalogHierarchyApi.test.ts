@@ -1,170 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  createCatalogHierarchyApi,
-  createCatalogHierarchyRestApi,
-  parseClassesPage,
-  parseFamiliesPage,
-  parseTypesPage,
-} from '../../src/features/catalog-hierarchy/catalogHierarchy.api'
-
-const item = (extra: Record<string, unknown> = {}) => ({
-  activo: true,
-  clave: 'C-1',
-  effective: true,
-  effectiveReasons: [],
-  id: 'id-1',
-  nombre: 'Clase',
-  revision: 'rev-1',
-  ...extra,
-})
-
-const page = (items: unknown[] = [item()]) => ({
-  continuationCursor: 'opaque-next',
-  isExhausted: false,
-  items,
-})
+import { createCatalogHierarchyRestApi } from '../../src/features/catalog-hierarchy/catalogHierarchy.api'
 
 describe('catalog hierarchy API boundary', () => {
-  it('parses unknown pages and rejects invalid envelopes and items', () => {
-    expect(parseClassesPage(page()).items[0]?.id).toBe('id-1')
-    expect(() => parseClassesPage({ items: [], isExhausted: false })).toThrow()
-    expect(() => parseClassesPage(page([{ ...item(), nombre: 42 }]))).toThrow()
-    expect(() =>
-      parseTypesPage(page([item({ aggregateStatus: 'OK', violations: [] })])),
-    ).toThrow()
-  })
-
-  it('validates level parents and rejects crossed pages', () => {
-    const family = item({ claseRecursoId: 'class-1' })
-    const type = item({
-      aggregateStatus: 'OK',
-      violations: [],
-      familiaRecursoId: 'family-1',
-    })
-
-    expect(parseFamiliesPage(page([family]), 'class-1').items[0]).toMatchObject(
-      {
-        claseRecursoId: 'class-1',
-      },
-    )
-    expect(parseTypesPage(page([type]), 'family-1').items[0]).toMatchObject({
-      familiaRecursoId: 'family-1',
-    })
-    expect(() => parseFamiliesPage(page([family]), 'class-2')).toThrow()
-    expect(() => parseTypesPage(page([type]), 'family-2')).toThrow()
-  })
-
-  it('requires exact page cursors and structured Tipo violations', () => {
-    expect(
-      parseClassesPage({
-        continuationCursor: null,
-        isExhausted: true,
-        items: [],
-      }).continuationCursor,
-    ).toBeNull()
-    expect(() =>
-      parseClassesPage({
-        continuationCursor: 12,
-        isExhausted: true,
-        items: [],
-      }),
-    ).toThrow()
-    expect(() =>
-      parseClassesPage({
-        continuationCursor: {},
-        isExhausted: true,
-        items: [],
-      }),
-    ).toThrow()
-
-    const violations = [{ reason: 'declared boundary' }]
-    expect(
-      parseTypesPage(
-        page([
-          item({
-            aggregateStatus: 'OK',
-            familiaRecursoId: 'family-1',
-            violations,
-          }),
-        ]),
-        'family-1',
-      ).items[0]?.violations,
-    ).toEqual(violations)
-    expect(() =>
-      parseTypesPage(
-        page([
-          item({
-            aggregateStatus: 'OK',
-            familiaRecursoId: 'family-1',
-            violations: ['invented primitive'],
-          }),
-        ]),
-        'family-1',
-      ),
-    ).toThrow()
-  })
-
-  it('rejects missing or empty dependent parents before transport', async () => {
-    const invoke = vi.fn()
-    const api = createCatalogHierarchyApi({ invoke })
-
-    await expect(api.listFamilies()).rejects.toThrow()
-    await expect(api.listFamilies({ parentId: '' })).rejects.toThrow()
-    await expect(api.listFamilies({ parentId: null })).rejects.toThrow()
-    await expect(api.listTypes({ parentId: '' })).rejects.toThrow()
-    expect(invoke).not.toHaveBeenCalled()
-  })
-
-  it('rejects a crossed transport page in the contextual API', async () => {
-    const invoke = vi
-      .fn()
-      .mockResolvedValue(page([item({ claseRecursoId: 'different-class' })]))
-    const api = createCatalogHierarchyApi({ invoke })
-
-    await expect(api.listFamilies({ parentId: 'class-1' })).rejects.toThrow()
-    expect(invoke).toHaveBeenCalledWith(
-      'catalogoAdmin/jerarquia:listarFamilias',
-      { claseRecursoId: 'class-1' },
-    )
-  })
-
-  it('maps exact operations and only sends explicit args', async () => {
-    const invoke = vi.fn()
-    invoke.mockResolvedValueOnce(page())
-    invoke.mockResolvedValueOnce(page([item({ claseRecursoId: 'class-1' })]))
-    invoke.mockResolvedValueOnce(
-      page([
-        item({
-          aggregateStatus: 'OK',
-          familiaRecursoId: 'family-1',
-          violations: [],
-        }),
-      ]),
-    )
-    const api = createCatalogHierarchyApi({ invoke })
-
-    await api.listClasses({ mode: 'ACTIVE' })
-    await api.listFamilies({ parentId: 'class-1' })
-    await api.listTypes({
-      parentId: 'family-1',
-      cursor: 'opaque-cursor',
-      pageSize: 20,
-    })
-
-    expect(invoke.mock.calls).toEqual([
-      ['catalogoAdmin/jerarquia:listarClases', { modo: 'ACTIVE' }],
-      ['catalogoAdmin/jerarquia:listarFamilias', { claseRecursoId: 'class-1' }],
-      [
-        'catalogoAdmin/jerarquia:listarTipos',
-        {
-          cursor: 'opaque-cursor',
-          familiaRecursoId: 'family-1',
-          pageSize: 20,
-        },
-      ],
-    ])
-  })
-
   it('reads Clase through the documented REST window and maps only strict values', async () => {
     const fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -426,41 +263,90 @@ describe('catalog hierarchy API boundary', () => {
     })
   })
 
-    it('maps create operations 1:1 with explicit dependent parents', async () => {
-    const invoke = vi.fn()
-    invoke.mockResolvedValueOnce({
-      disposition: 'CREATED',
-      item: item({ claseRecursoId: 'class-1' }),
+  it('creates Family and Type through REST with snapshotted natural-code references', async () => {
+    const reference = (kind: string, id: string, code: string) => ({
+      kind: 'REFERENCE',
+      reference: { kind, id, code },
     })
-    invoke.mockResolvedValueOnce({
-      disposition: 'CREATED',
-      item: item({
-        aggregateStatus: 'OK',
-        familiaRecursoId: 'family-1',
-        violations: [],
+    const response = (
+      kind: 'FAMILIA' | 'TIPO',
+      id: string,
+      values: Record<string, unknown>,
+    ) => ({
+      status: 201,
+      json: async () => ({
+        kind,
+        id,
+        revision: '1',
+        active: true,
+        values,
+        rules: [],
       }),
     })
-    const api = createCatalogHierarchyApi({ invoke })
-
-    await api.createFamily({
-      claseRecursoId: 'class-1',
-      clave: 'FA-01',
-      nombre: 'Familia',
-    })
-    await api.createType({
-      familiaRecursoId: 'family-1',
-      clave: 'TY-01',
-      nombre: 'Tipo',
-    })
-
-    expect(invoke.mock.calls).toEqual([
+    const classReference = reference('CLASE', '1', 'MAT')
+    const familyReference = reference('FAMILIA', '2', 'FER')
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response('FAMILIA', '2', {
+          class: classReference,
+          code: { kind: 'CODE', value: 'FER' },
+          name: { kind: 'TEXT', value: 'Ferretería' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response('TIPO', '3', {
+          class: classReference,
+          family: familyReference,
+          code: { kind: 'CODE', value: 'TOR' },
+          name: { kind: 'TEXT', value: 'Tornillo' },
+        }),
+      )
+    const api = createCatalogHierarchyRestApi(fetch, { actor: 'catalog-user' })
+    await expect(
+      api.createFamily({
+        class: { kind: 'CLASE', code: 'MAT' },
+        code: 'FER',
+        name: 'Ferretería',
+      }),
+    ).resolves.toMatchObject({ id: '2', class: { id: '1' } })
+    await expect(
+      api.createType({
+        class: { kind: 'CLASE', code: 'MAT' },
+        family: { kind: 'FAMILIA', code: 'FER' },
+        code: 'TOR',
+        name: 'Tornillo',
+      }),
+    ).resolves.toMatchObject({ id: '3', family: { id: '2' } })
+    const requests = fetch.mock.calls.map(([path, init]) => [
+      path,
+      JSON.parse((init as RequestInit).body as string),
+    ])
+    expect(requests).toEqual([
       [
-        'catalogoAdmin/jerarquia:crearFamilia',
-        { claseRecursoId: 'class-1', clave: 'FA-01', nombre: 'Familia' },
+        '/v1/catalog/FAMILIA',
+        {
+          actor: 'catalog-user',
+          active: true,
+          values: {
+            class: reference('CLASE', '0', 'MAT'),
+            code: { kind: 'CODE', value: 'FER' },
+            name: { kind: 'TEXT', value: 'Ferretería' },
+          },
+        },
       ],
       [
-        'catalogoAdmin/jerarquia:crearTipo',
-        { familiaRecursoId: 'family-1', clave: 'TY-01', nombre: 'Tipo' },
+        '/v1/catalog/TIPO',
+        {
+          actor: 'catalog-user',
+          active: true,
+          values: {
+            class: reference('CLASE', '0', 'MAT'),
+            family: reference('FAMILIA', '0', 'FER'),
+            code: { kind: 'CODE', value: 'TOR' },
+            name: { kind: 'TEXT', value: 'Tornillo' },
+          },
+        },
       ],
     ])
   })

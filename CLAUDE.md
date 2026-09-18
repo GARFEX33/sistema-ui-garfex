@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `garfex-erp-frontend`: the frontend-only workstation UI for the GARFEX ERP. React 19 + TypeScript + Vite, TanStack Router (file-based), React Aria Components, Tailwind CSS 4. Package manager is **pnpm** (Node >= 20).
 
-The backend is a **separate, authoritative** Convex deployment (`sistema-garfex`), reached over `VITE_CONVEX_URL` (see `.env.example`). This repository must never grow a backend, persistence layer, or invented domain rules.
+The backend is a **separate, authoritative** REST deployment (`garfex-api`), reached over `/v1` (dev proxy in `vite.config.ts`; mutations require a local actor via `VITE_REST_ACTOR`, see `.env.example`). This repository must never grow a backend, persistence layer, or invented domain rules.
 
 ## Commands
 
@@ -17,7 +17,7 @@ pnpm typecheck           # router:generate + tsc -b
 pnpm lint                # eslint . --max-warnings 0
 pnpm format:check        # Prettier check (pnpm format to write)
 
-pnpm test                # Vitest run: tests/unit, tests/integration, tests/architecture, tests/config
+pnpm test                # Vitest run: tests/unit, tests/architecture, tests/config
 pnpm test:watch
 pnpm test:stories        # Storybook stories as tests (Playwright/Chromium browser mode)
 pnpm test:e2e            # Playwright, boots `pnpm dev` on 127.0.0.1:4173
@@ -48,7 +48,7 @@ Feature-first Scope Rule / Screaming Architecture. Three top-level zones under `
 
 ### Transport adapters
 
-Convex is allowed in exactly three files: `src/features/catalog-hierarchy/catalogHierarchy.api.ts`, `catalogTypeAttributes.api.ts`, and `src/features/resources-master/resourcesMaster.api.ts`. Each exports a plain `interface ...Api` over a `Transport` seam, builds `FunctionReference`s with `makeFunctionReference` from **literal** operation strings (`'catalogoAdmin/jerarquia:listarClases'`, `'catalogoAdmin/atributos:...'`, `'catalogoAdmin/recursos:...'`), and validates every response field before returning typed data. No template strings, no computed property access, no dynamic operation names — the architecture tests assert this literally.
+`fetch` against `/v1` is allowed only in the adapter files whitelisted in `tests/architecture/restTransportBoundaries.test.ts` (one per feature capability — e.g. `catalogHierarchy.api.ts`, `catalogAttributeCreation.api.ts`, `resourcesMaster.api.ts`). Each exports a plain `interface ...Api` over a `Transport` seam, builds requests against **literal** backend paths, and validates every response field before returning typed data. No template strings, no computed property access, no dynamic paths — the architecture tests assert this literally. Mutations resolve their actor via `withRestActor`/`resolveRestActor` (`src/shared/api/restActor.ts`) from `VITE_REST_ACTOR`, never inferred.
 
 There is no global store and no query-cache layer. List paging/state is a hand-rolled controller (`useCatalogList.ts`) with an adapter seam; selection state is pure functions in `catalogHierarchyState.ts`.
 
@@ -68,8 +68,8 @@ The canonical contract is **section 11 of `docs/erp-first-stage-design-brief.md`
 
 `tests/architecture/*.test.ts` read source files as text and fail the build on boundary violations. Before changing runtime code, know that they forbid, among other things:
 
-- `fetch`, `localStorage`, `sessionStorage`, Storybook imports, or fixture names anywhere in `src/`
-- `convex` imports outside the two approved adapter files (in particular, none in `src/app/`)
+- `fetch` outside the approved adapters, `localStorage`, `sessionStorage`, Storybook imports, or fixture names anywhere in `src/`
+- `convex` imports anywhere in `src/` — the backend is REST-only
 - global stores (`zustand`, `redux`, `createStore`, `configureStore`)
 - `@tanstack/react-form|react-table|react-virtual` in `src/` and in stories (also blocked by `no-restricted-imports` in `eslint.config.js`)
 - extra `<Link>` destinations in `AppShell` or extra routes beyond the approved ones
