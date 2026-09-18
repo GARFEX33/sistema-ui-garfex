@@ -88,6 +88,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         )
         return
       }
+      if (event.currentTarget.dataset.spatialId === 'sidebar.proveedores') {
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-spatial-id="proveedores.search"]',
+          ),
+        )
+        return
+      }
       focusSpatialTarget({
         origin: event.currentTarget,
         direction: 'right',
@@ -137,6 +145,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         if (event.key === 'ArrowLeft' || event.key === 'Escape') {
           event.preventDefault()
           focusDeepestResourcesHierarchy()
+        }
+        return
+      }
+      // Proveedores has no column hierarchy above its search input (unlike
+      // Recursos maestros' Clase/Familia/Tipo columns) — ArrowLeft/Escape
+      // return focus directly to the sidebar link that opened it.
+      if (target.dataset.spatialId === 'proveedores.search') {
+        if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+          event.preventDefault()
+          focusRow(
+            document.querySelector<HTMLElement>(
+              '[data-spatial-id="sidebar.proveedores"]',
+            ),
+          )
         }
         return
       }
@@ -372,7 +394,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeCommand = useCallback(() => setCommandOpen(false), [])
   const openHelp = useCallback(
     (
-      _surface: 'bandeja' | 'catalog' | 'recursos',
+      _surface: 'bandeja' | 'catalog' | 'recursos' | 'proveedores',
       opener: HTMLElement | null,
     ) => {
       helpOpenerRef.current = opener?.isConnected ? opener : null
@@ -386,7 +408,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? 'catalog'
       : pathname === '/recursos'
         ? 'recursos'
-        : 'bandeja'
+        : pathname === '/proveedores'
+          ? 'proveedores'
+          : 'bandeja'
 
   useEffect(() => {
     if (commandOpen) {
@@ -453,6 +477,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               Recursos maestros
             </Link>
+            <Link
+              ref={(link) => {
+                sidebarLinks.current[2] = link
+              }}
+              to="/proveedores"
+              data-spatial-id="sidebar.proveedores"
+              onKeyDown={(event) => handleSidebarKeyDown(event, 2)}
+              activeProps={{ className: 'navigation-link is-active' }}
+              className="navigation-link"
+            >
+              Proveedores
+            </Link>
             <span className="navigation-static">Compras</span>
             <span className="navigation-static is-current">Configuración</span>
             <p className="navigation-section-label model-navigation-label">
@@ -465,11 +501,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="navigation-static">Presentación…</span>
             <Link
               ref={(link) => {
-                sidebarLinks.current[2] = link
+                sidebarLinks.current[3] = link
               }}
               to="/catalogo"
               data-spatial-id="sidebar.catalogo"
-              onKeyDown={(event) => handleSidebarKeyDown(event, 2)}
+              onKeyDown={(event) => handleSidebarKeyDown(event, 3)}
               activeProps={{ className: 'navigation-link is-active' }}
               className="navigation-link navigation-catalog-link"
             >
@@ -485,7 +521,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ? 'Configuración / Catálogo'
                 : pathname === '/recursos'
                   ? 'Recursos maestros'
-                  : 'Entrada operativa / Bandeja'}
+                  : pathname === '/proveedores'
+                    ? 'Proveedores'
+                    : 'Entrada operativa / Bandeja'}
             </span>
             <div className="topbar-actions">
               <CommandEntry

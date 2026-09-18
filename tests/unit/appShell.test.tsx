@@ -160,7 +160,7 @@ describe('runtime shell and operations inbox entry', () => {
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(4)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(storageSpy).not.toHaveBeenCalled()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
@@ -180,29 +180,53 @@ describe('runtime shell and operations inbox entry', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(4)
     expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
     expect(screen.getByText('CONFIGURACIÓN DEL MODELO')).toBeVisible()
     expect(screen.getByText('Configuración / Catálogo')).toBeVisible()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
   })
+
+  it('resolves /proveedores and marks only the resolved destination as active', async () => {
+    renderAt('/proveedores')
+    expect(
+      await screen.findByRole('heading', { name: 'Proveedores' }),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Proveedores' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: 'Bandeja' })).not.toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getAllByRole('link')).toHaveLength(4)
+    expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
+    expect(screen.getByText('Proveedores', { selector: 'span' })).toBeVisible()
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
+  })
 })
 
 describe('sidebar keyboard navigation', () => {
-  it('keeps only the three real links in the immediate group and handles local navigation', async () => {
+  it('keeps only the four real links in the immediate group and handles local navigation', async () => {
     renderAt('/bandeja')
     const inbox = await screen.findByRole('link', { name: 'Bandeja' })
     const resources = screen.getByRole('link', { name: 'Recursos maestros' })
+    const proveedores = screen.getByRole('link', { name: 'Proveedores' })
     const catalog = screen.getByRole('link', { name: 'Catálogo' })
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(4)
     inbox.focus()
     fireEvent.keyDown(inbox, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(resources)
     fireEvent.keyDown(resources, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(proveedores)
+    fireEvent.keyDown(proveedores, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(proveedores)
+    fireEvent.keyDown(proveedores, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(resources)
     fireEvent.keyDown(resources, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(inbox)
@@ -211,6 +235,22 @@ describe('sidebar keyboard navigation', () => {
     fireEvent.keyDown(inbox, { key: 'End' })
     expect(document.activeElement).toBe(catalog)
     expect(screen.getByText('Familias')).not.toHaveAttribute('data-spatial-id')
+  })
+
+  it('focuses the Proveedores search input on ArrowRight and returns focus to the sidebar link on ArrowLeft/Escape', async () => {
+    renderAt('/proveedores')
+    const proveedores = await screen.findByRole('link', {
+      name: 'Proveedores',
+    })
+    proveedores.focus()
+    fireEvent.keyDown(proveedores, { key: 'ArrowRight' })
+    const search = screen.getByRole('searchbox', { name: 'Buscar' })
+    expect(search).toHaveFocus()
+    fireEvent.keyDown(search, { key: 'ArrowLeft' })
+    expect(proveedores).toHaveFocus()
+    search.focus()
+    fireEvent.keyDown(search, { key: 'Escape' })
+    expect(proveedores).toHaveFocus()
   })
 
   it('does not cancel native Enter or Tab traversal and keeps focus on ArrowRight without a target', async () => {
