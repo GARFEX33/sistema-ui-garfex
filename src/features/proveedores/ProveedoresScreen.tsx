@@ -5,6 +5,7 @@ import {
 } from './proveedores.api'
 import { useProveedoresRestWindow } from './useProveedoresRestWindow'
 import { CrearProveedorSurface } from './CrearProveedorSurface'
+import { EditarProveedorSurface } from './EditarProveedorSurface'
 import { Button } from '../../shared/ui/Button'
 import { Field } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
@@ -16,9 +17,11 @@ const LIMIT = 20
 // Same header + card + list/table structural pattern as ResourcesMasterScreen
 // (src/features/resources-master/ResourcesMasterScreen.tsx), simplified to
 // Supplier's flat shape: no Clase/Familia/Tipo hierarchy columns, just a
-// single search card. T3 adds the create trigger as the PageHeader action,
+// single search card. T3 added the create trigger as the PageHeader action,
 // mirroring ResourcesMasterScreen's `action={<CrearRecursoSurface .../>}`
-// wiring; editing a supplier is a separate task (T4).
+// wiring. T4 adds a per-row EditarProveedorSurface instance in an "Acciones"
+// column — each row's supplier is only known at render time, so the edit
+// dialog (unlike creation) lives inside the row instead of the header.
 export function ProveedoresScreen() {
   const [api] = useState<ProveedoresRestApi>(() => createProveedoresRestApi())
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -91,20 +94,24 @@ export function ProveedoresScreen() {
               <col />
               <col className="w-56" />
               <col className="w-20" />
+              <col className="w-24" />
             </colgroup>
             <thead className="border-b border-border">
               <tr>
-                {['Proveedor', 'Identificador fiscal', 'Activo'].map(
-                  (label) => (
-                    <th
-                      key={label}
-                      scope="col"
-                      className="px-2 py-2 text-xs font-bold uppercase tracking-wide text-text-muted"
-                    >
-                      {label}
-                    </th>
-                  ),
-                )}
+                {[
+                  'Proveedor',
+                  'Identificador fiscal',
+                  'Activo',
+                  'Acciones',
+                ].map((label) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className="px-2 py-2 text-xs font-bold uppercase tracking-wide text-text-muted"
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -131,6 +138,13 @@ export function ProveedoresScreen() {
                   </td>
                   <td className="border-b border-border px-2 py-2.5 text-sm">
                     {supplier.active ? 'Activo' : 'Inactivo'}
+                  </td>
+                  <td className="border-b border-border px-2 py-2.5 text-sm">
+                    <EditarProveedorSurface
+                      supplier={supplier}
+                      updateSupplier={api.updateSupplier}
+                      onUpdated={refetchActive}
+                    />
                   </td>
                 </tr>
               ))}

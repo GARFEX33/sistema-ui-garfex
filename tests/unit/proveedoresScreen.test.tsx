@@ -221,3 +221,77 @@ describe('ProveedoresScreen create wiring', () => {
     )
   })
 })
+
+describe('ProveedoresScreen edit wiring', () => {
+  it('opens the edit dialog pre-filled for the row that was clicked, not another row', async () => {
+    const rowOne = supplier({ id: 'supplier-1', tradeName: 'Proveedor Uno' })
+    const rowTwo = supplier({
+      id: 'supplier-2',
+      tradeName: 'Proveedor Dos',
+      legalName: 'Proveedor Dos S.A.',
+      taxIdentifier: '30-2-2',
+    })
+    factory.mockReturnValue(api)
+    restWindowHook.mockReturnValue(restWindow({ suppliers: [rowOne, rowTwo] }))
+
+    renderScreen(<ProveedoresScreen />)
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: 'Editar Proveedor Dos' }),
+    )
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nombre comercial')).toHaveValue(
+      'Proveedor Dos',
+    )
+    expect(screen.getByLabelText('Razón social')).toHaveValue(
+      'Proveedor Dos S.A.',
+    )
+    expect(screen.getByLabelText('Identificador fiscal')).toHaveValue('30-2-2')
+  })
+
+  it('updates the visible row and refreshes the list after a successful edit', async () => {
+    const original = supplier({ id: 'supplier-1', tradeName: 'Nombre Viejo' })
+    const updated = supplier({ id: 'supplier-1', tradeName: 'Nombre Nuevo' })
+    const state = restWindow({ suppliers: [original] })
+    const updateSupplier = vi.fn().mockResolvedValue(updated)
+    factory.mockReturnValue({ ...api, updateSupplier })
+    restWindowHook.mockReturnValue(state)
+
+    const { rerender } = renderScreen(<ProveedoresScreen />)
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: 'Editar Nombre Viejo' }),
+    )
+    const tradeNameInput = screen.getByLabelText('Nombre comercial')
+    await user.clear(tradeNameInput)
+    await user.type(tradeNameInput, 'Nombre Nuevo')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() =>
+      expect(updateSupplier).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'supplier-1',
+          tradeName: 'Nombre Nuevo',
+        }),
+      ),
+    )
+    await waitFor(() => expect(state.refetchActive).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+
+    // Simulate refetchActive's real, already-proven effect (see
+    // useProveedoresRestWindow.test.tsx): the window's `suppliers` now
+    // reflect the updated record. Re-render with that fresh hook output and
+    // confirm the row itself — not just the refetch call — shows the new
+    // value without any manual reload action.
+    restWindowHook.mockReturnValue(
+      restWindow({ suppliers: [updated], refetchActive: state.refetchActive }),
+    )
+    rerender(<ProveedoresScreen />)
+
+    expect(screen.getByText('Nombre Nuevo')).toBeVisible()
+    expect(screen.queryByText('Nombre Viejo')).not.toBeInTheDocument()
+  })
+})
