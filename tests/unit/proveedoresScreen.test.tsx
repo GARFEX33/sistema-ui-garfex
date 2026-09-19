@@ -14,7 +14,7 @@ vi.mock('../../src/features/proveedores/useProveedoresRestWindow', () => ({
   useProveedoresRestWindow: restWindowHook,
 }))
 
-const api = { rest: true }
+const api = { rest: true, previewSupplierFromCfdi: vi.fn() }
 
 const supplier = (overrides: Record<string, unknown> = {}) => ({
   id: 'supplier-1',
@@ -219,6 +219,23 @@ describe('ProveedoresScreen create wiring', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     )
+  })
+
+  it('shows a success message with the created supplier name', async () => {
+    const state = restWindow()
+    const createSupplier = vi
+      .fn()
+      .mockResolvedValue(supplier({ tradeName: 'Acme' }))
+    factory.mockReturnValue({ ...api, createSupplier })
+    restWindowHook.mockReturnValue(state)
+
+    renderScreen(<ProveedoresScreen />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Nuevo proveedor' }))
+    await user.type(screen.getByLabelText('Nombre comercial'), 'Acme')
+    await user.click(screen.getByRole('button', { name: 'Crear' }))
+
+    expect(await screen.findByText('Proveedor "Acme" creado.')).toBeVisible()
   })
 })
 

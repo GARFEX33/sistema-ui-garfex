@@ -235,3 +235,74 @@ describe('proveedores REST update boundary', () => {
     ).rejects.toThrow('Invalid proveedores response')
   })
 })
+
+describe('proveedores REST CFDI preview boundary', () => {
+  const file = new Blob(['<cfdi/>'], { type: 'application/xml' })
+
+  it('previews a supplier draft from a CFDI XML with no existing match, and no actor is required', async () => {
+    const fetch = vi.fn(async () =>
+      restResponse({
+        draft: {
+          taxIdentifier: 'CDN010203ABC',
+          legalName: 'Cables del Norte S.A. de C.V.',
+          taxRegime: '601',
+        },
+        existing: null,
+      }),
+    )
+    const api = createProveedoresRestApi(fetch)
+
+    await expect(api.previewSupplierFromCfdi({ file })).resolves.toEqual({
+      draft: {
+        taxIdentifier: 'CDN010203ABC',
+        legalName: 'Cables del Norte S.A. de C.V.',
+        taxRegime: '601',
+      },
+      existing: null,
+    })
+    expect(fetch).toHaveBeenCalledWith('/v1/suppliers/from-cfdi/preview', {
+      method: 'POST',
+      headers: { 'content-type': 'application/xml' },
+      body: file,
+      signal: undefined,
+    })
+  })
+
+  it('previews a supplier draft that already owns the RFC', async () => {
+    const fetch = vi.fn(async () =>
+      restResponse({
+        draft: {
+          taxIdentifier: 'CDN010203ABC',
+          legalName: 'Cables del Norte S.A. de C.V.',
+          taxRegime: '601',
+        },
+        existing: restSupplier(),
+      }),
+    )
+    const api = createProveedoresRestApi(fetch)
+
+    await expect(
+      api.previewSupplierFromCfdi({ file }),
+    ).resolves.toMatchObject({ existing: restSupplier() })
+  })
+
+  it('surfaces the documented ErrorEnvelope message for an invalid CFDI', async () => {
+    const api = createProveedoresRestApi(async () =>
+      restResponse({ error: 'NOT_CFDI' }, 422),
+    )
+
+    await expect(api.previewSupplierFromCfdi({ file })).rejects.toThrow(
+      'NOT_CFDI',
+    )
+  })
+
+  it('rejects a malformed preview response', async () => {
+    const api = createProveedoresRestApi(async () =>
+      restResponse({ draft: { taxIdentifier: 'x' }, existing: null }),
+    )
+
+    await expect(api.previewSupplierFromCfdi({ file })).rejects.toThrow(
+      'Invalid proveedores response',
+    )
+  })
+})

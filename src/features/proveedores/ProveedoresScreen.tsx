@@ -6,11 +6,17 @@ import {
 import { useProveedoresRestWindow } from './useProveedoresRestWindow'
 import { CrearProveedorSurface } from './CrearProveedorSurface'
 import { EditarProveedorSurface } from './EditarProveedorSurface'
+import { ImportarProveedorSurface } from './ImportarProveedorSurface'
 import { Button } from '../../shared/ui/Button'
 import { Field } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { WorkCard } from '../../shared/ui/WorkCard'
 import { fieldInputClass } from '../../shared/ui/fieldStyles'
+import { useAutoClosingMessage } from '../../shared/ui/useAutoClosingMessage'
+import type { Supplier } from './proveedores.types'
+
+const supplierName = (supplier: Supplier) =>
+  supplier.tradeName || supplier.legalName || supplier.id
 
 const LIMIT = 20
 
@@ -26,6 +32,7 @@ export function ProveedoresScreen() {
   const [api] = useState<ProveedoresRestApi>(() => createProveedoresRestApi())
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [searchText, setSearchText] = useState('')
+  const [successMessage, showSuccess] = useAutoClosingMessage()
 
   const criteria = useMemo(
     () => ({
@@ -46,6 +53,23 @@ export function ProveedoresScreen() {
     refetchActive,
   } = useProveedoresRestWindow(api, criteria)
 
+  const onSupplierCreated = (supplier: Supplier) => {
+    showSuccess(`Proveedor "${supplierName(supplier)}" creado.`)
+    return refetchActive()
+  }
+  const onSupplierUpdated = (supplier: Supplier) => {
+    showSuccess(`Proveedor "${supplierName(supplier)}" actualizado.`)
+    return refetchActive()
+  }
+  const onSupplierImported = (
+    supplier: Supplier,
+    mode: 'created' | 'updated',
+  ) => {
+    const verb = mode === 'created' ? 'creado' : 'actualizado'
+    showSuccess(`Proveedor "${supplierName(supplier)}" ${verb}.`)
+    return refetchActive()
+  }
+
   const isLoading = status === 'initial-loading'
   const isInitialError = status === 'initial-error'
   const isNavigationError = status === 'navigation-error'
@@ -64,12 +88,29 @@ export function ProveedoresScreen() {
           </h1>
         }
         action={
-          <CrearProveedorSurface
-            createSupplier={api.createSupplier}
-            onCreated={refetchActive}
-          />
+          <div className="flex gap-2">
+            <ImportarProveedorSurface
+              previewSupplierFromCfdi={api.previewSupplierFromCfdi}
+              createSupplier={api.createSupplier}
+              updateSupplier={api.updateSupplier}
+              onImported={onSupplierImported}
+            />
+            <CrearProveedorSurface
+              createSupplier={api.createSupplier}
+              onCreated={onSupplierCreated}
+            />
+          </div>
         }
       />
+      {successMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-6 right-6 z-30 flex items-center gap-3 rounded-xl border border-success bg-success-subtle px-6 py-4 text-sm font-bold text-success shadow-lg"
+        >
+          {successMessage}
+        </div>
+      )}
       <div className="mt-3">
         <WorkCard aria-labelledby="proveedores-list-title">
           <div className="mb-3 w-full max-w-md">
@@ -143,7 +184,7 @@ export function ProveedoresScreen() {
                     <EditarProveedorSurface
                       supplier={supplier}
                       updateSupplier={api.updateSupplier}
-                      onUpdated={refetchActive}
+                      onUpdated={onSupplierUpdated}
                     />
                   </td>
                 </tr>

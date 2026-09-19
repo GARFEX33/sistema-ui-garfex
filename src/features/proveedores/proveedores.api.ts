@@ -6,6 +6,7 @@ import {
 } from '../../shared/api/restActor'
 import type {
   Supplier,
+  SupplierCFDIPreview,
   SupplierPage,
   SupplierRestCreateInput,
   SupplierRestDetailInput,
@@ -17,11 +18,19 @@ const bad = (): never => {
   throw new Error('Invalid proveedores response')
 }
 
+export interface SupplierRestCFDIPreviewInput {
+  file: Blob
+  signal?: AbortSignal
+}
+
 export interface ProveedoresRestApi {
   listSuppliers: (input: SupplierRestListInput) => Promise<SupplierPage>
   getSupplier: (input: SupplierRestDetailInput) => Promise<Supplier>
   createSupplier: (input: SupplierRestCreateInput) => Promise<Supplier>
   updateSupplier: (input: SupplierRestUpdateInput) => Promise<Supplier>
+  previewSupplierFromCfdi: (
+    input: SupplierRestCFDIPreviewInput,
+  ) => Promise<SupplierCFDIPreview>
 }
 
 type SupplierRestFetch = (
@@ -30,7 +39,7 @@ type SupplierRestFetch = (
     signal?: AbortSignal
     method?: string
     headers?: Record<string, string>
-    body?: string
+    body?: string | Blob
   },
 ) => Promise<{
   ok: boolean
@@ -79,6 +88,15 @@ const restSupplierUpdateInputSchema = restSupplierFieldsSchema.extend({
   id: z.string(),
 })
 
+const restCFDIPreviewSchema = z.object({
+  draft: z.object({
+    taxIdentifier: z.string(),
+    legalName: z.string(),
+    taxRegime: z.string(),
+  }),
+  existing: restSupplierSchema.nullable(),
+})
+
 const restSupplier = (value: unknown): Supplier => {
   const result = restSupplierSchema.safeParse(value)
   if (!result.success) return bad()
@@ -92,6 +110,7 @@ const restSupplierPage = (value: unknown): SupplierPage => {
 }
 
 const restSupplierPath = (id: string) => '/v1/suppliers/' + encodeURIComponent(id)
+const restSupplierFromCfdiPreviewPath = '/v1/suppliers/from-cfdi/preview'
 
 const readRestJson = async (
   fetch: SupplierRestFetch,
@@ -184,6 +203,24 @@ export function createProveedoresRestApi(
           ),
         )
       }, actorOptions)
+    },
+    async previewSupplierFromCfdi({ file, signal }) {
+      const response = await fetch(restSupplierFromCfdiPreviewPath, {
+        method: 'POST',
+        headers: { 'content-type': 'application/xml' },
+        body: file,
+        signal,
+      })
+      const body: unknown = await response.json()
+      if (!response.ok) {
+        const error = ErrorEnvelopeSchema.safeParse(body)
+        throw new Error(
+          error.success ? error.data.error : 'HTTP ' + response.status,
+        )
+      }
+      const result = restCFDIPreviewSchema.safeParse(body)
+      if (!result.success) return bad()
+      return result.data
     },
   }
 }

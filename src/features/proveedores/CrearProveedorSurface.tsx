@@ -25,10 +25,10 @@ const emptyDraft = (): Draft => ({
 
 export interface CrearProveedorSurfaceProps {
   createSupplier: (input: SupplierRestCreateInput) => Promise<Supplier>
-  /** Called after a successful creation, before the dialog closes — the
+  /** Called with the created supplier, before the dialog closes — the
    * caller wires this to the list window's refetch so the new supplier
    * actually appears without a manual reload. */
-  onCreated?: () => void | Promise<unknown>
+  onCreated?: (supplier: Supplier) => void | Promise<unknown>
 }
 
 const genericFailureMessage = 'No se pudo crear el proveedor.'
@@ -116,9 +116,9 @@ export function CrearProveedorSurface({
     setIsSubmitting(true)
     setErrorMessage(null)
     try {
-      await createSupplier({ ...trimmed })
+      const created = await createSupplier({ ...trimmed })
       if (!mountedRef.current) return
-      await onCreated?.()
+      await onCreated?.(created)
       if (!mountedRef.current) return
       setIsOpen(false)
     } catch (error) {

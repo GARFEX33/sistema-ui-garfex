@@ -27,10 +27,10 @@ export interface EditarProveedorSurfaceProps {
   /** The current row's record — read at open time to pre-fill the form. */
   supplier: Supplier
   updateSupplier: (input: SupplierRestUpdateInput) => Promise<Supplier>
-  /** Called after a successful update, before the dialog closes — the caller
+  /** Called with the updated supplier, before the dialog closes — the caller
    * wires this to the list window's refetch so the edited row actually shows
    * the new values without a manual reload. */
-  onUpdated?: () => void | Promise<unknown>
+  onUpdated?: (supplier: Supplier) => void | Promise<unknown>
 }
 
 const genericFailureMessage = 'No se pudo actualizar el proveedor.'
@@ -117,9 +117,9 @@ export function EditarProveedorSurface({
     setIsSubmitting(true)
     setErrorMessage(null)
     try {
-      await updateSupplier({ id: supplier.id, ...trimmed })
+      const updated = await updateSupplier({ id: supplier.id, ...trimmed })
       if (!mountedRef.current) return
-      await onUpdated?.()
+      await onUpdated?.(updated)
       if (!mountedRef.current) return
       setIsOpen(false)
     } catch (error) {

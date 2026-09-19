@@ -47,3 +47,16 @@ export type SupplierRestCreateInput = SupplierRestFields
 export interface SupplierRestUpdateInput extends SupplierRestFields {
   id: string
 }
+
+// Emisor data extracted from a CFDI 4.0 XML, shaped like a supplier create
+// request. `taxRegime` has no supplier field and is informational only.
+export interface SupplierCFDIDraft {
+  taxIdentifier: string
+  legalName: string
+  taxRegime: string
+}
+
+export interface SupplierCFDIPreview {
+  draft: SupplierCFDIDraft
+  existing: Supplier | null
+}
