@@ -277,6 +277,75 @@ input:focus-visible {
   min-height: calc(100vh - 56px);
   padding: 20px 24px;
 }
+
+/* Compras owns the only bounded workspace: the shell fills the dynamic
+   viewport, while each feature layer passes a flex min-height down to the
+   work surface instead of assuming a screen resolution. */
+.app-shell--compras {
+  height: 100dvh;
+  min-height: 0;
+}
+.app-shell--compras .app-rail {
+  min-height: 0;
+}
+.app-shell--compras .app-workspace {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+.app-shell--compras .workspace-main {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compras-screen--documentos {
+  overflow-y: auto;
+}
+.compras-screen--partidas .compras-work-card-wrapper--partidas {
+  display: flex;
+}
+.compras-screen--partidas .compras-work-card--partidas {
+  width: 100%;
+}
+.compras-screen--partidas .compras-partidas-stage {
+  display: flex;
+  flex-direction: column;
+}
+.compras-screen--partidas
+  .compras-partidas-stage
+  > [aria-labelledby='partidas-workbench-title'] {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.compras-screen--partidas
+  .compras-partidas-stage
+  > [aria-labelledby='partidas-workbench-title']
+  > h1,
+.compras-screen--partidas
+  .compras-partidas-stage
+  > [aria-labelledby='partidas-workbench-title']
+  > section[aria-labelledby='partidas-workbench-filters'],
+.compras-screen--partidas
+  .compras-partidas-stage
+  > [aria-labelledby='partidas-workbench-title']
+  > nav {
+  flex: none;
+}
+.compras-screen--partidas
+  .compras-partidas-stage
+  > [aria-labelledby='partidas-workbench-title']
+  > [role='region'][aria-label='Partidas de compras'] {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  max-height: none;
+}
+
 .operations-inbox-entry {
   max-width: 960px;
 }

@@ -28,6 +28,7 @@ export interface PartidasWorkbenchStageProps {
   supplierOptions: readonly SupplierOption[]
   rows: readonly PurchaseLineWorkbenchRow[]
   status: PurchaseLineWorkbenchWindowStatus
+  offset: number
   hasPrevious: boolean
   hasNext: boolean
   onFiltersChange: (filters: PartidasWorkbenchFilters) => void
@@ -38,23 +39,50 @@ export interface PartidasWorkbenchStageProps {
   onNext: () => void
 }
 
+const emptyFilters: PartidasWorkbenchFilters = {
+  supplierId: '',
+  dateFrom: '',
+  dateTo: '',
+  invoice: '',
+  supplierSku: '',
+  description: '',
+  status: undefined,
+}
+
 const statusFilters: readonly {
   label: string
   value: EffectiveLinkStatus | undefined
 }[] = [
   { label: 'Todos', value: undefined },
-  { label: 'PENDIENTE', value: 'PENDIENTE' },
-  { label: 'VINCULADO', value: 'VINCULADO' },
-  { label: 'SUSPENDIDO', value: 'SUSPENDIDO' },
-  { label: 'NO_APLICA', value: 'NO_APLICA' },
-  { label: 'CONFLICTO', value: 'CONFLICTO' },
+  { label: 'Pendiente', value: 'PENDIENTE' },
+  { label: 'Vinculado', value: 'VINCULADO' },
+  { label: 'Suspendido', value: 'SUSPENDIDO' },
+  { label: 'No aplica', value: 'NO_APLICA' },
+  { label: 'Conflicto', value: 'CONFLICTO' },
 ]
 
 const inputClass = `${fieldInputClass} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`
 const cellClass = 'border-b border-border px-3 py-2 align-top text-sm'
+const tableHeaderClass = `${cellClass} sticky top-0 z-10 bg-surface-subtle text-xs font-semibold`
+const actionColumnClass = `${cellClass} sticky left-0 z-10 border-r border-border bg-surface`
+const actionHeaderClass = `${tableHeaderClass} left-0 z-20 border-r border-border`
+const interactiveTargetSelector =
+  'button, a, input, select, textarea, summary, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="combobox"], [role="menuitem"]'
+
+function isEmbeddedInteractiveTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest(interactiveTargetSelector))
+  )
+}
 
 function documentReference(row: PurchaseLineWorkbenchRow) {
   return [row.series, row.folio].filter(Boolean).join('-') || 'Documento CFDI'
+}
+
+function formatIssuedAt(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value
 }
 
 function resourceCell(row: PurchaseLineWorkbenchRow) {
@@ -65,11 +93,19 @@ function resourceCell(row: PurchaseLineWorkbenchRow) {
       : null
 
   return (
-    <div className="grid gap-1">
-      <span>{primary ?? 'Sin recurso vinculado'}</span>
+    <div className="grid min-w-0 gap-1">
+      <span
+        className="block max-w-56 truncate"
+        title={primary ?? 'Sin recurso vinculado'}
+      >
+        {primary ?? 'Sin recurso vinculado'}
+      </span>
       {metadata && (
-        <span className="text-xs text-text-secondary">
-          Identidad: <span>{metadata}</span>
+        <span
+          className="block max-w-56 truncate text-xs text-text-secondary"
+          title={metadata}
+        >
+          Identidad: {metadata}
         </span>
       )}
     </div>
@@ -88,16 +124,24 @@ function Filters({
     key: K,
     value: PartidasWorkbenchFilters[K],
   ) => onFiltersChange({ ...filters, [key]: value })
+  const secondaryFilterCount = [
+    filters.dateFrom,
+    filters.dateTo,
+    filters.supplierSku,
+  ].filter((value) => value.trim()).length
+  const hasActiveFilter = Object.entries(filters).some(([key, value]) =>
+    key === 'status' ? value !== undefined : String(value).trim() !== '',
+  )
 
   return (
     <section
       aria-labelledby="partidas-workbench-filters"
-      className="grid gap-3"
+      className="grid flex-none gap-3"
     >
       <h2 id="partidas-workbench-filters" className="text-sm font-bold">
         Filtros de partidas
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <Field label="Proveedor" htmlFor="partidas-filter-supplier">
           <select
             id="partidas-filter-supplier"
@@ -113,39 +157,13 @@ function Filters({
             ))}
           </select>
         </Field>
-        <Field label="Fecha desde" htmlFor="partidas-filter-date-from">
-          <input
-            id="partidas-filter-date-from"
-            className={inputClass}
-            type="date"
-            value={filters.dateFrom}
-            onChange={(event) => change('dateFrom', event.target.value)}
-          />
-        </Field>
-        <Field label="Fecha hasta" htmlFor="partidas-filter-date-to">
-          <input
-            id="partidas-filter-date-to"
-            className={inputClass}
-            type="date"
-            value={filters.dateTo}
-            onChange={(event) => change('dateTo', event.target.value)}
-          />
-        </Field>
-        <Field label="Factura" htmlFor="partidas-filter-invoice">
+        <Field label="Factura o referencia" htmlFor="partidas-filter-invoice">
           <input
             id="partidas-filter-invoice"
             className={inputClass}
             type="search"
             value={filters.invoice}
             onChange={(event) => change('invoice', event.target.value)}
-          />
-        </Field>
-        <Field label="SKU proveedor" htmlFor="partidas-filter-supplier-sku">
-          <input
-            id="partidas-filter-supplier-sku"
-            className={inputClass}
-            value={filters.supplierSku}
-            onChange={(event) => change('supplierSku', event.target.value)}
           />
         </Field>
         <Field label="Descripción" htmlFor="partidas-filter-description">
@@ -157,12 +175,69 @@ function Filters({
           />
         </Field>
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <details className="min-w-0 flex-1">
+          <summary className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <span aria-hidden="true" className="text-sm leading-none">
+              ›
+            </span>
+            <span>Más filtros</span>
+            {secondaryFilterCount > 0 && (
+              <span className="text-xs font-normal text-text-secondary">
+                {secondaryFilterCount === 1
+                  ? '1 filtro secundario activo'
+                  : `${secondaryFilterCount} filtros secundarios activos`}
+              </span>
+            )}
+          </summary>
+          <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-3">
+            <Field label="Fecha desde" htmlFor="partidas-filter-date-from">
+              <input
+                id="partidas-filter-date-from"
+                className={inputClass}
+                type="date"
+                value={filters.dateFrom}
+                onChange={(event) => change('dateFrom', event.target.value)}
+              />
+            </Field>
+            <Field label="Fecha hasta" htmlFor="partidas-filter-date-to">
+              <input
+                id="partidas-filter-date-to"
+                className={inputClass}
+                type="date"
+                value={filters.dateTo}
+                onChange={(event) => change('dateTo', event.target.value)}
+              />
+            </Field>
+            <Field
+              label="SKU proveedor XML"
+              htmlFor="partidas-filter-supplier-sku"
+            >
+              <input
+                id="partidas-filter-supplier-sku"
+                className={inputClass}
+                value={filters.supplierSku}
+                onChange={(event) => change('supplierSku', event.target.value)}
+              />
+            </Field>
+          </div>
+        </details>
+        {hasActiveFilter && (
+          <Button
+            variant="quiet"
+            className="text-text-secondary"
+            onPress={() => onFiltersChange(emptyFilters)}
+          >
+            Limpiar filtros
+          </Button>
+        )}
+      </div>
       <fieldset className="grid gap-2">
         <legend className="text-[11px] font-bold tracking-[0.08em] text-text-primary">
           Estado
         </legend>
         <div
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-1"
           aria-label="Filtrar por estado"
           role="group"
         >
@@ -171,7 +246,10 @@ function Filters({
             return (
               <Button
                 key={label}
-                variant={pressed ? 'accent' : 'outline'}
+                variant="quiet"
+                className={
+                  pressed ? 'bg-primary-subtle' : 'text-text-secondary'
+                }
                 aria-pressed={pressed}
                 onPress={() => change('status', value)}
               >
@@ -195,7 +273,7 @@ function WorkbenchTable({
 >) {
   return (
     <div
-      className="overflow-x-auto"
+      className="min-h-0 flex-1 overflow-auto"
       role="region"
       aria-label="Partidas de compras"
     >
@@ -203,20 +281,23 @@ function WorkbenchTable({
         <thead>
           <tr>
             {[
+              'Acción',
               'Fecha',
               'Documento',
               'Proveedor',
-              'Descripción',
-              'SKU XML',
-              'Cantidad',
-              'Unidad',
-              'Precio unitario',
+              'Partida',
+              'Cantidad / unidad',
               'Importe',
-              'Recurso actual',
+              'Recurso Maestro',
               'Estado efectivo',
-              'Acción',
             ].map((header) => (
-              <th key={header} scope="col" className={cellClass}>
+              <th
+                key={header}
+                scope="col"
+                className={
+                  header === 'Acción' ? actionHeaderClass : tableHeaderClass
+                }
+              >
                 {header}
               </th>
             ))}
@@ -228,47 +309,135 @@ function WorkbenchTable({
             const canResolve =
               row.effectiveStatus === 'PENDIENTE' &&
               row.resolutionOverride === 'NONE'
+            const activateResolver = () => onResolve(row)
+            const handleRowClick = (
+              event: React.MouseEvent<HTMLTableRowElement>,
+            ) => {
+              if (isEmbeddedInteractiveTarget(event.target)) return
+              activateResolver()
+            }
+            const handleRowKeyDown = (
+              event: React.KeyboardEvent<HTMLTableRowElement>,
+            ) => {
+              if (
+                isEmbeddedInteractiveTarget(event.target) ||
+                (event.key !== 'Enter' && event.key !== ' ')
+              ) {
+                return
+              }
+              event.preventDefault()
+              activateResolver()
+            }
+            const resolveLabel = `Vincular partida ${row.lineNumber} a un Recurso Maestro`
 
             return (
-              <tr key={row.lineId}>
-                <td className={cellClass}>{row.issuedAt}</td>
+              <tr
+                key={row.lineId}
+                aria-label={canResolve ? resolveLabel : undefined}
+                className={
+                  canResolve
+                    ? 'group cursor-pointer transition-colors hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-accent'
+                    : undefined
+                }
+                onClick={canResolve ? handleRowClick : undefined}
+                onKeyDown={canResolve ? handleRowKeyDown : undefined}
+                tabIndex={canResolve ? 0 : undefined}
+              >
+                <td
+                  className={
+                    canResolve
+                      ? `${actionColumnClass} group-hover:bg-surface-subtle group-focus-visible:bg-surface-subtle`
+                      : actionColumnClass
+                  }
+                >
+                  {canResolve && (
+                    <span title={resolveLabel}>
+                      <Button
+                        variant="quiet"
+                        aria-label={resolveLabel}
+                        data-partidas-resolve-id={row.lineId}
+                        onPress={activateResolver}
+                      >
+                        Vincular
+                      </Button>
+                    </span>
+                  )}
+                </td>
+                <td className={`${cellClass} tabular-nums`}>
+                  <time dateTime={row.issuedAt} title={row.issuedAt}>
+                    {formatIssuedAt(row.issuedAt)}
+                  </time>
+                </td>
                 <td className={cellClass}>
-                  <div className="grid gap-1">
-                    <Button
-                      variant="outline"
-                      aria-label={`Inspeccionar documento ${reference}`}
-                      onPress={() => onInspectDocument(row)}
+                  <div className="grid min-w-0 gap-1">
+                    <span title={`Inspeccionar documento ${reference}`}>
+                      <Button
+                        variant="quiet"
+                        className="max-w-40 justify-start truncate text-left"
+                        aria-label={`Inspeccionar documento ${reference}`}
+                        onPress={() => onInspectDocument(row)}
+                      >
+                        <span className="truncate">{reference}</span>
+                      </Button>
+                    </span>
+                    <span
+                      className="block max-w-56 truncate text-xs text-text-secondary"
+                      title={row.cfdiUuid}
                     >
-                      {reference}
-                    </Button>
-                    <span className="text-xs text-text-secondary">
                       CFDI UUID: {row.cfdiUuid}
                     </span>
                   </div>
                 </td>
-                <td className={cellClass}>{row.supplierDisplayName}</td>
-                <td className={cellClass}>{row.description}</td>
-                <td className={cellClass}>{row.supplierSku}</td>
-                <td className={cellClass}>{row.quantity}</td>
-                <td className={cellClass}>{row.unit}</td>
-                <td className={cellClass}>{row.unitPrice}</td>
                 <td className={cellClass}>
-                  {row.amount} {row.currency}
+                  <span
+                    className="block max-w-48 truncate"
+                    title={row.supplierDisplayName}
+                  >
+                    {row.supplierDisplayName}
+                  </span>
+                </td>
+                <td className={cellClass}>
+                  <div className="grid min-w-0 gap-1">
+                    <span
+                      className="block max-w-64 truncate"
+                      title={row.description}
+                    >
+                      {row.description}
+                    </span>
+                    <span
+                      className="block max-w-56 truncate text-xs text-text-secondary"
+                      title={row.supplierSku}
+                    >
+                      XML SKU: {row.supplierSku}
+                    </span>
+                    <span className="text-xs text-text-secondary">
+                      SAT {row.satProductCode}
+                    </span>
+                  </div>
+                </td>
+                <td className={`${cellClass} tabular-nums`}>
+                  <div className="grid gap-1">
+                    <span>
+                      {row.quantity} {row.unit}
+                    </span>
+                    <span className="text-xs text-text-secondary">
+                      Unidad: {row.unitCode}
+                    </span>
+                  </div>
+                </td>
+                <td className={`${cellClass} tabular-nums`}>
+                  <div className="grid gap-1">
+                    <span>
+                      Total: {row.amount} {row.currency}
+                    </span>
+                    <span className="text-xs text-text-secondary">
+                      Precio unitario: {row.unitPrice}
+                    </span>
+                  </div>
                 </td>
                 <td className={cellClass}>{resourceCell(row)}</td>
                 <td className={cellClass}>
                   <PartidaEstadoBadge status={row.effectiveStatus} />
-                </td>
-                <td className={cellClass}>
-                  {canResolve && (
-                    <Button
-                      variant="accent"
-                      data-partidas-resolve-id={row.lineId}
-                      onPress={() => onResolve(row)}
-                    >
-                      Vincular
-                    </Button>
-                  )}
                 </td>
               </tr>
             )
@@ -279,11 +448,65 @@ function WorkbenchTable({
   )
 }
 
+function Pagination({
+  offset,
+  rowCount,
+  hasPrevious,
+  hasNext,
+  navigating,
+  onPrevious,
+  onNext,
+}: Pick<
+  PartidasWorkbenchStageProps,
+  'offset' | 'hasPrevious' | 'hasNext' | 'onPrevious' | 'onNext'
+> & { rowCount: number; navigating: boolean }) {
+  const first = rowCount > 0 ? offset + 1 : 0
+  const last = offset + rowCount
+
+  return (
+    <nav
+      aria-label="Paginación de partidas"
+      className="flex flex-none flex-wrap items-center justify-between gap-3 border-t border-border pt-3"
+    >
+      <div className="text-sm text-text-secondary">
+        <span>
+          Mostrando {first}–{last}
+          {hasNext && (
+            <>
+              <span aria-hidden="true" className="mx-2">
+                {' · '}
+              </span>
+              <span>Más resultados disponibles</span>
+            </>
+          )}
+        </span>
+      </div>
+      <div className="flex gap-1">
+        <Button
+          variant="quiet"
+          onPress={onPrevious}
+          isDisabled={!hasPrevious || navigating}
+        >
+          Anterior
+        </Button>
+        <Button
+          variant="quiet"
+          onPress={onNext}
+          isDisabled={!hasNext || navigating}
+        >
+          Siguiente
+        </Button>
+      </div>
+    </nav>
+  )
+}
+
 export function PartidasWorkbenchStage({
   filters,
   supplierOptions,
   rows,
   status,
+  offset,
   hasPrevious,
   hasNext,
   onFiltersChange,
@@ -298,15 +521,20 @@ export function PartidasWorkbenchStage({
     status === 'navigating' ||
     status === 'navigation-error'
   return (
-    <section aria-labelledby="partidas-workbench-title" className="grid gap-5">
-      <h1
-        id="partidas-workbench-title"
-        data-partidas-workbench-heading
-        tabIndex={-1}
-        className="text-lg font-bold outline-none"
-      >
-        Partidas de compras
-      </h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-5">
+      <header className="flex-none">
+        <h1
+          id="partidas-workbench-title"
+          data-partidas-workbench-heading
+          tabIndex={-1}
+          className="text-lg font-bold outline-none"
+        >
+          Partidas
+        </h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Seleccioná una partida para vincularla a un Recurso Maestro.
+        </p>
+      </header>
       <Filters
         filters={filters}
         supplierOptions={supplierOptions}
@@ -320,7 +548,7 @@ export function PartidasWorkbenchStage({
       {status === 'initial-error' && (
         <div role="alert" className="grid gap-3 text-sm text-text-secondary">
           <p>No se pudieron cargar las partidas.</p>
-          <Button variant="outline" onPress={() => void onRetry()}>
+          <Button variant="quiet" onPress={() => void onRetry()}>
             Reintentar partidas
           </Button>
         </div>
@@ -328,7 +556,7 @@ export function PartidasWorkbenchStage({
       {status === 'navigation-error' && (
         <div role="alert" className="grid gap-3 text-sm text-text-secondary">
           <p>No se pudo cambiar de página.</p>
-          <Button variant="outline" onPress={() => void onRetry()}>
+          <Button variant="quiet" onPress={() => void onRetry()}>
             Reintentar página
           </Button>
         </div>
@@ -343,29 +571,24 @@ export function PartidasWorkbenchStage({
           Cargando página…
         </p>
       )}
-      {showTable && rows.length > 0 && (
-        <WorkbenchTable
-          rows={rows}
-          onResolve={onResolve}
-          onInspectDocument={onInspectDocument}
-        />
+      {showTable && (
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <WorkbenchTable
+            rows={rows}
+            onResolve={onResolve}
+            onInspectDocument={onInspectDocument}
+          />
+          <Pagination
+            offset={offset}
+            rowCount={rows.length}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
+            navigating={status === 'navigating'}
+            onPrevious={onPrevious}
+            onNext={onNext}
+          />
+        </div>
       )}
-      <nav aria-label="Paginación de partidas" className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onPress={onPrevious}
-          isDisabled={!hasPrevious || status === 'navigating'}
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="outline"
-          onPress={onNext}
-          isDisabled={!hasNext || status === 'navigating'}
-        >
-          Siguiente
-        </Button>
-      </nav>
-    </section>
+    </div>
   )
 }

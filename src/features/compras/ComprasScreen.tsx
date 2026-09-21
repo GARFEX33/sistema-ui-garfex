@@ -324,10 +324,15 @@ export function ComprasScreen({
 
   return (
     <section
-      className="w-full text-text-primary"
+      className={`compras-screen flex min-h-0 w-full flex-1 flex-col text-text-primary ${
+        perspective === 'partidas'
+          ? 'compras-screen--partidas'
+          : 'compras-screen--documentos'
+      }`}
       aria-labelledby="compras-title"
     >
       <PageHeader
+        className="compras-page-header flex-none"
         title={
           <h1 id="compras-title" className="text-lg font-bold">
             Compras
@@ -335,19 +340,29 @@ export function ComprasScreen({
         }
         controls={
           <div
-            className="flex flex-wrap gap-2"
+            className="flex w-fit flex-wrap gap-1 rounded border border-border bg-surface-subtle p-1"
             role="group"
             aria-label="Perspectiva de Compras"
           >
             <Button
-              variant={perspective === 'partidas' ? 'accent' : 'outline'}
+              variant="quiet"
+              className={
+                perspective === 'partidas'
+                  ? 'bg-primary-subtle text-primary'
+                  : 'text-text-secondary'
+              }
               aria-pressed={perspective === 'partidas'}
               onPress={() => switchPerspective('partidas')}
             >
               Partidas
             </Button>
             <Button
-              variant={perspective === 'documentos' ? 'accent' : 'outline'}
+              variant="quiet"
+              className={
+                perspective === 'documentos'
+                  ? 'bg-primary-subtle text-primary'
+                  : 'text-text-secondary'
+              }
               aria-pressed={perspective === 'documentos'}
               onPress={() => switchPerspective('documentos')}
             >
@@ -366,7 +381,7 @@ export function ComprasScreen({
         <p
           role="status"
           aria-live="polite"
-          className="mt-3 text-sm text-success"
+          className="mt-3 flex-none text-sm text-success"
         >
           {importFeedback}
         </p>
@@ -375,35 +390,51 @@ export function ComprasScreen({
         <p
           role="status"
           aria-live="polite"
-          className="mt-3 text-sm text-success"
+          className="mt-3 flex-none text-sm text-success"
         >
           {partidasFeedback}
         </p>
       )}
-      <div className="mt-3">
-        <WorkCard aria-labelledby={workCardLabel}>
+      <div
+        className={`compras-work-card-wrapper mt-3 ${
+          perspective === 'partidas'
+            ? 'compras-work-card-wrapper--partidas min-h-0 flex-1'
+            : 'compras-work-card-wrapper--documentos flex-none'
+        }`}
+      >
+        <WorkCard
+          aria-labelledby={workCardLabel}
+          className={`compras-work-card flex min-h-0 flex-col ${
+            perspective === 'partidas'
+              ? 'compras-work-card--partidas'
+              : 'compras-work-card--documentos'
+          }`}
+        >
           {perspective === 'partidas' ? (
-            <PartidasWorkbenchStage
-              filters={partidasFilters}
-              supplierOptions={supplierOptions}
-              rows={workbench.rows}
-              status={workbench.status}
-              hasPrevious={workbench.hasPrevious}
-              hasNext={workbench.hasNext}
-              onFiltersChange={setPartidasFilters}
-              onResolve={(row) => {
-                setSelectedLineId(row.lineId)
-                setResolverOpen(true)
-              }}
-              onInspectDocument={(row) => {
-                setDetailOrigin('partidas')
-                setSelectedPurchaseId(row.purchaseId)
-                setPerspective('documentos')
-              }}
-              onRetry={() => workbench.retry()}
-              onPrevious={workbench.previous}
-              onNext={workbench.next}
-            />
+            <div className="compras-partidas-stage min-h-0 flex-1">
+              <PartidasWorkbenchStage
+                filters={partidasFilters}
+                supplierOptions={supplierOptions}
+                rows={workbench.rows}
+                status={workbench.status}
+                offset={workbench.offset}
+                hasPrevious={workbench.hasPrevious}
+                hasNext={workbench.hasNext}
+                onFiltersChange={setPartidasFilters}
+                onResolve={(row) => {
+                  setSelectedLineId(row.lineId)
+                  setResolverOpen(true)
+                }}
+                onInspectDocument={(row) => {
+                  setDetailOrigin('partidas')
+                  setSelectedPurchaseId(row.purchaseId)
+                  setPerspective('documentos')
+                }}
+                onRetry={() => workbench.retry()}
+                onPrevious={workbench.previous}
+                onNext={workbench.next}
+              />
+            </div>
           ) : selectedPurchaseId ? (
             <>
               {confirmedSupplier && (

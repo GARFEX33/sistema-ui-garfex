@@ -203,6 +203,77 @@ afterEach(() => {
 })
 
 describe('ComprasScreen U3B2 integration', () => {
+  it('exposes bounded Partidas and internally scrollable Documentos contracts', async () => {
+    const listSupplierLineWorkbench = vi.fn().mockResolvedValue(workbenchPage())
+    const partidasRender = renderScreen(
+      makeApi(vi.fn().mockResolvedValue(page([supplier]))),
+      makePurchasesApi(
+        vi.fn().mockResolvedValue({
+          purchases: [],
+          hasPrevious: false,
+          hasNext: false,
+        } satisfies PurchasePage),
+        { listPurchaseLineWorkbench: listSupplierLineWorkbench },
+      ),
+      false,
+      'partidas',
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Partidas' }),
+    ).toBeVisible()
+    const partidasRoot = document.querySelector(
+      'section[aria-labelledby="compras-title"]',
+    )
+    expect(partidasRoot).toHaveClass(
+      'compras-screen',
+      'compras-screen--partidas',
+    )
+    expect(partidasRoot?.querySelector('.compras-page-header')).toHaveClass(
+      'flex-none',
+    )
+    expect(partidasRoot?.querySelector('.compras-partidas-stage')).toHaveClass(
+      'compras-partidas-stage',
+      'min-h-0',
+      'flex-1',
+    )
+    expect(partidasRoot?.querySelector('.compras-work-card')).toHaveClass(
+      'compras-work-card',
+      'compras-work-card--partidas',
+      'min-h-0',
+    )
+    await screen.findAllByRole('region', { name: 'Partidas de compras' })
+    expect(
+      partidasRoot?.querySelector(
+        '[role="region"][aria-label="Partidas de compras"]',
+      ),
+    ).toBeTruthy()
+    expect(
+      partidasRoot?.querySelectorAll(
+        '[aria-labelledby="partidas-workbench-title"]',
+      ),
+    ).toHaveLength(1)
+    expect(screen.getAllByRole('region', { name: 'Partidas' })).toHaveLength(1)
+
+    partidasRender.unmount()
+    renderScreen(makeApi(vi.fn().mockResolvedValue(page([supplier]))))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Seleccionar proveedor' }),
+    ).toBeVisible()
+    const documentosRoot = document.querySelector(
+      'section[aria-labelledby="compras-title"]',
+    )
+    expect(documentosRoot).toHaveClass(
+      'compras-screen',
+      'compras-screen--documentos',
+    )
+    expect(documentosRoot).not.toHaveClass('compras-screen--partidas')
+    expect(
+      documentosRoot?.querySelector('.compras-work-card-wrapper'),
+    ).toHaveClass('compras-work-card-wrapper--documentos', 'flex-none')
+  })
+
   it('mounts ElegirProveedorStage with loading state and the public supplier window', async () => {
     let resolve!: (value: SupplierPage) => void
     const listSuppliers = vi.fn(
@@ -922,9 +993,7 @@ describe('ComprasScreen U3B2 integration', () => {
       'aria-pressed',
       'true',
     )
-    expect(
-      screen.getByRole('heading', { name: 'Partidas de compras' }),
-    ).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Partidas' })).toBeVisible()
     await waitFor(() => expect(listSupplierLineWorkbench).toHaveBeenCalled())
     expect(listSupplierLineWorkbench).toHaveBeenLastCalledWith({
       limit: 20,
@@ -999,9 +1068,7 @@ describe('ComprasScreen U3B2 integration', () => {
       signal: expect.any(AbortSignal),
     })
     await user.click(screen.getByRole('button', { name: 'Volver' }))
-    expect(
-      screen.getByRole('heading', { name: 'Partidas de compras' }),
-    ).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Partidas' })).toBeVisible()
   })
 
   it('refreshes the Partidas workbench after import without a current Documentos supplier', async () => {
@@ -1069,7 +1136,7 @@ describe('ComprasScreen U3B2 integration', () => {
     )
 
     await user.click(
-      (await screen.findAllByRole('button', { name: 'Vincular' }))[0],
+      (await screen.findAllByRole('button', { name: /Vincular partida/ }))[0],
     )
     await user.click(
       await screen.findByRole('option', { name: /ID: resource-1/ }),
@@ -1117,7 +1184,9 @@ describe('ComprasScreen U3B2 integration', () => {
       resolverResourcesApi(),
     )
 
-    await user.click(await screen.findByRole('button', { name: 'Vincular' }))
+    await user.click(
+      await screen.findByRole('button', { name: /Vincular partida/ }),
+    )
     await user.type(
       await screen.findByRole('textbox', {
         name: 'SKU comercial del proveedor',

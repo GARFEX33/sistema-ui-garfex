@@ -447,7 +447,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       onCommandPalette={openCommand}
       onHelp={openHelp}
     >
-      <div ref={appShellRef} className="app-shell">
+      <div
+        ref={appShellRef}
+        className={
+          pathname === '/compras' ? 'app-shell app-shell--compras' : 'app-shell'
+        }
+      >
         <aside className="app-rail">
           <div className="brand-lockup">
             <GarfexLogoNegative />
