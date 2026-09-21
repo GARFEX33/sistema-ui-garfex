@@ -2,15 +2,16 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { LinkStatus } from '../../src/features/compras/compras.types'
+import type { EffectiveLinkStatus } from '../../src/features/compras/compras.types'
 import { PartidaEstadoBadge } from '../../src/features/compras/PartidaEstadoBadge'
 
 const statuses = [
   'PENDIENTE',
   'VINCULADO',
+  'SUSPENDIDO',
   'NO_APLICA',
   'CONFLICTO',
-] as const satisfies readonly LinkStatus[]
+] as const satisfies readonly EffectiveLinkStatus[]
 
 const expected = {
   PENDIENTE: {
@@ -21,6 +22,10 @@ const expected = {
     label: 'Vinculado',
     classes: ['bg-success-subtle', 'text-success', 'border-success'],
   },
+  SUSPENDIDO: {
+    label: 'Suspendido',
+    classes: ['bg-warning-subtle', 'text-warning', 'border-warning'],
+  },
   NO_APLICA: {
     label: 'No aplica',
     classes: ['bg-surface-subtle', 'text-text-secondary', 'border-border'],
@@ -29,10 +34,10 @@ const expected = {
     label: 'Conflicto',
     classes: ['bg-primary-subtle', 'text-primary', 'border-primary'],
   },
-} satisfies Record<LinkStatus, { label: string; classes: string[] }>
+} satisfies Record<EffectiveLinkStatus, { label: string; classes: string[] }>
 
 describe('PartidaEstadoBadge', () => {
-  it('accepts the exact four-state LinkStatus union and exposes visible Spanish labels', () => {
+  it('accepts the exact EffectiveLinkStatus union and exposes visible Spanish labels', () => {
     for (const status of statuses) {
       const { unmount } = render(<PartidaEstadoBadge status={status} />)
       const badge = screen.getByRole('status', {

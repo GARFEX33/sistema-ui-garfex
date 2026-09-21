@@ -30,6 +30,8 @@ const supplierPurchasesRestWindowHookPath =
   'src/features/compras/useSupplierPurchasesRestWindow.ts'
 const supplierProductsRestWindowHookPath =
   'src/features/compras/useSupplierProductsRestWindow.ts'
+const purchaseLineWorkbenchRestWindowHookPath =
+  'src/features/compras/usePurchaseLineWorkbenchRestWindow.ts'
 const comprasApiPath = 'src/features/compras/compras.api.ts'
 const compraDetalleStagePath = 'src/features/compras/CompraDetalleStage.tsx'
 const catalogContractPath = 'src/shared/catalog/catalogRest.contract.ts'
@@ -39,6 +41,7 @@ const queryBindings = new Map([
   [proveedoresRestWindowHookPath, ['useQuery']],
   [supplierPurchasesRestWindowHookPath, ['useQuery']],
   [supplierProductsRestWindowHookPath, ['useQuery']],
+  [purchaseLineWorkbenchRestWindowHookPath, ['useQuery']],
   [compraDetalleStagePath, ['useQuery']],
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],

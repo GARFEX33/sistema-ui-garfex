@@ -40,7 +40,10 @@ const line = {
   taxWithheld: '0.00',
   taxObject: '02',
   supplierProductId: '9',
-  linkStatus: 'PENDIENTE' as const,
+  resolutionRevision: '0',
+  resolutionOverride: 'NONE' as const,
+  effectiveStatus: 'PENDIENTE' as const,
+  effectiveCause: 'UNRESOLVED',
 }
 const product = {
   id: '9',
@@ -48,6 +51,10 @@ const product = {
   supplierSku: 'SKU-1',
   description: 'Cable',
   resourceId: '11',
+  mappingRevision: '0',
+  resourceActive: true,
+  mappingState: 'CONFIRMED' as const,
+  mappingCause: 'NONE' as const,
   notes: '',
   createdAt: '2026-01-02T03:04:06Z',
   updatedAt: '2026-01-02T03:04:06Z',
@@ -58,10 +65,10 @@ const response = (body: unknown, status = 200) => ({
   json: async () => body,
 })
 const importResponse = (alreadyExisted: boolean) => ({
-  ...purchase,
+  purchase,
+  lines: [line],
   alreadyExisted,
 })
-
 describe('compras REST mutation boundary', () => {
   it('imports multipart with actor, optional branch, accepted statuses, and signal', async () => {
     const signal = new AbortController().signal
@@ -98,6 +105,24 @@ describe('compras REST mutation boundary', () => {
     )
   })
 
+  it('rejects legacy linkStatus from imported line responses', async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      response(
+        {
+          purchase,
+          lines: [{ ...line, linkStatus: 'PENDIENTE' }],
+          alreadyExisted: false,
+        },
+        201,
+      ),
+    )
+    const api = createComprasRestApi(fetch, { actor: 'operator-1' })
+
+    await expect(
+      api.importPurchase({ file: new Blob(['xml']) }),
+    ).rejects.toThrow('Invalid compras response')
+  })
+
   it('requires a resolved actor before starting any import mutation', async () => {
     const fetch = vi.fn()
     const api = createComprasRestApi(fetch, { actor: undefined })
@@ -132,91 +157,483 @@ describe('compras REST mutation boundary', () => {
     },
   )
 
-  it('posts link, unlink, and exact link-status values with actor and signals', async () => {
-    const signals = [
-      new AbortController().signal,
-      new AbortController().signal,
-      new AbortController().signal,
-    ]
+  it('exposes every frozen mutation endpoint', () => {
+    const api = createComprasRestApi(vi.fn(), { actor: 'operator-1' })
+
+    expect(api).toMatchObject({
+      resolvePurchaseLine: expect.any(Function),
+      setPurchaseLineResolutionOverride: expect.any(Function),
+      confirmSupplierProductMapping: expect.any(Function),
+      correctSupplierProductMapping: expect.any(Function),
+      retireSupplierProductMapping: expect.any(Function),
+      reportSupplierProductMappingConflict: expect.any(Function),
+      resolveSupplierProductMappingConflict: expect.any(Function),
+    })
+  })
+
+  it('posts the frozen resolution and mapping mutations with injected actor and signals', async () => {
+    const resolvedLine = {
+      id: '8',
+      purchaseId: purchase.id,
+      lineNumber: 1,
+      description: 'Cable',
+      supplierSku: 'SKU-1',
+      satProductCode: '12345678',
+      quantity: '2.50',
+      unitCode: 'H87',
+      unit: 'Pieza',
+      unitPrice: '40.04',
+      amount: '100.10',
+      discount: '0.10',
+      taxTransferred: '16.00',
+      taxWithheld: '0.00',
+      taxObject: '02',
+      supplierProductId: '9',
+      resolutionRevision: '2',
+      resolutionOverride: 'NONE' as const,
+      effectiveStatus: 'VINCULADO' as const,
+      effectiveCause: 'MAPPED',
+    }
+    const mapping = {
+      ...product,
+      mappingRevision: '4',
+      resourceActive: true,
+      mappingState: 'CONFIRMED' as const,
+      mappingCause: 'NONE' as const,
+    }
+    const identity = {
+      supplierProductId: '9',
+      supplierId: '7',
+      commercialSupplierSku: 'SKU-1',
+      disposition: 'ALREADY_MAPPED' as const,
+      mappingRevision: '4',
+      resourceId: '11',
+    }
+    const signals = Array.from(
+      { length: 7 },
+      () => new AbortController().signal,
+    )
     const fetch = vi
       .fn()
-      .mockResolvedValueOnce(response(product))
-      .mockResolvedValueOnce(response({ ...product, resourceId: null }))
-      .mockResolvedValueOnce(response({ ...line, linkStatus: 'NO_APLICA' }))
+      .mockResolvedValueOnce(
+        response({
+          line: resolvedLine,
+          supplierProduct: mapping,
+          commercialIdentity: identity,
+        }),
+      )
+      .mockResolvedValueOnce(response(resolvedLine))
+      .mockResolvedValueOnce(response(mapping))
+      .mockResolvedValueOnce(response(mapping))
+      .mockResolvedValueOnce(response(mapping))
+      .mockResolvedValueOnce(response(mapping))
+      .mockResolvedValueOnce(response(mapping))
     const api = createComprasRestApi(fetch, { actor: 'operator-1' })
 
-    await expect(
-      api.linkSupplierProduct({
-        id: '9',
-        resourceId: '11',
-        signal: signals[0],
-      }),
-    ).resolves.toMatchObject({ resourceId: '11' })
-    await expect(
-      api.unlinkSupplierProduct({ id: '9', signal: signals[1] }),
-    ).resolves.toMatchObject({ resourceId: null })
-    await expect(
-      api.setPurchaseLineLinkStatus({
-        id: '8',
-        status: 'NO_APLICA',
-        signal: signals[2],
-      }),
-    ).resolves.toMatchObject({ linkStatus: 'NO_APLICA' })
+    await api.resolvePurchaseLine({
+      id: '8',
+      reason: 'use catalog match',
+      resourceId: '11',
+      expectedSupplierProductId: '9',
+      expectedMappingRevision: '4',
+      expectedResolutionRevision: '1',
+      commercialSupplierSku: '',
+      signal: signals[0],
+    })
+    await api.setPurchaseLineResolutionOverride({
+      id: '8',
+      reason: 'manual exception',
+      override: 'NO_APLICA',
+      expectedRevision: '2',
+      signal: signals[1],
+    })
+    await api.confirmSupplierProductMapping({
+      id: '9',
+      reason: 'confirmed by operator',
+      resourceId: '11',
+      expectedRevision: '3',
+      signal: signals[2],
+    })
+    await api.correctSupplierProductMapping({
+      id: '9',
+      reason: 'corrected catalog match',
+      expectedCurrentResourceId: '11',
+      resourceId: '12',
+      expectedRevision: '4',
+      signal: signals[3],
+    })
+    await api.retireSupplierProductMapping({
+      id: '9',
+      reason: 'retired mapping',
+      expectedCurrentResourceId: '12',
+      expectedRevision: '5',
+      signal: signals[4],
+    })
+    await api.reportSupplierProductMappingConflict({
+      id: '9',
+      reason: 'duplicate identity',
+      expectedCurrentResourceId: '12',
+      expectedRevision: '6',
+      signal: signals[5],
+    })
+    await api.resolveSupplierProductMappingConflict({
+      id: '9',
+      reason: 'selected canonical identity',
+      expectedCurrentResourceId: '12',
+      resourceId: '11',
+      expectedRevision: '7',
+      signal: signals[6],
+    })
 
     expect(fetch.mock.calls.map(([path]) => path)).toEqual([
-      '/v1/supplier-products/9/link',
-      '/v1/supplier-products/9/unlink',
-      '/v1/purchase-lines/8/link-status',
+      '/v1/purchase-lines/8/resolve',
+      '/v1/purchase-lines/8/resolution-override',
+      '/v1/supplier-products/9/mapping/confirm',
+      '/v1/supplier-products/9/mapping/correct',
+      '/v1/supplier-products/9/mapping/retire',
+      '/v1/supplier-products/9/mapping/report-conflict',
+      '/v1/supplier-products/9/mapping/resolve-conflict',
     ])
     expect(fetch.mock.calls.map(([, init]) => init)).toEqual([
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor: 'operator-1', resourceId: '11' }),
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'use catalog match',
+          resourceId: '11',
+          expectedSupplierProductId: '9',
+          expectedMappingRevision: '4',
+          expectedResolutionRevision: '1',
+          commercialSupplierSku: '',
+        }),
         signal: signals[0],
       },
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor: 'operator-1' }),
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'manual exception',
+          override: 'NO_APLICA',
+          expectedRevision: '2',
+        }),
         signal: signals[1],
       },
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor: 'operator-1', status: 'NO_APLICA' }),
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'confirmed by operator',
+          resourceId: '11',
+          expectedRevision: '3',
+        }),
         signal: signals[2],
+      },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'corrected catalog match',
+          expectedCurrentResourceId: '11',
+          resourceId: '12',
+          expectedRevision: '4',
+        }),
+        signal: signals[3],
+      },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'retired mapping',
+          expectedCurrentResourceId: '12',
+          expectedRevision: '5',
+        }),
+        signal: signals[4],
+      },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'duplicate identity',
+          expectedCurrentResourceId: '12',
+          expectedRevision: '6',
+        }),
+        signal: signals[5],
+      },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          actor: 'operator-1',
+          reason: 'selected canonical identity',
+          expectedCurrentResourceId: '12',
+          resourceId: '11',
+          expectedRevision: '7',
+        }),
+        signal: signals[6],
       },
     ])
   })
 
-  it.each(['PENDIENTE', 'VINCULADO', 'NO_APLICA', 'CONFLICTO'] as const)(
-    'accepts exact LinkStatus value %s',
-    async (status) => {
-      const fetch = vi
-        .fn()
-        .mockResolvedValue(response({ ...line, linkStatus: status }))
+  it('preserves explicit null snapshots and never accepts a UI actor', async () => {
+    const resolvedLine = {
+      ...line,
+      supplierProductId: null,
+      resolutionRevision: '0',
+      resolutionOverride: 'NONE' as const,
+      effectiveStatus: 'PENDIENTE' as const,
+      effectiveCause: 'UNRESOLVED',
+    }
+    const productWithMapping = {
+      ...product,
+      resourceId: null,
+      mappingRevision: '0',
+      resourceActive: null,
+      mappingState: 'UNRESOLVED' as const,
+      mappingCause: 'UNRESOLVED' as const,
+    }
+    const fetch = vi.fn().mockResolvedValue(
+      response({
+        line: resolvedLine,
+        supplierProduct: productWithMapping,
+        commercialIdentity: {
+          supplierProductId: '9',
+          supplierId: '7',
+          commercialSupplierSku: 'SKU-NEW',
+          disposition: 'CREATED' as const,
+          mappingRevision: '0',
+          resourceId: null,
+        },
+      }),
+    )
+    const api = createComprasRestApi(fetch, { actor: 'injected-actor' })
+
+    await api.resolvePurchaseLine({
+      id: '8',
+      reason: 'create identity',
+      resourceId: '11',
+      expectedSupplierProductId: null,
+      expectedMappingRevision: null,
+      expectedResolutionRevision: '0',
+      commercialSupplierSku: 'SKU-NEW',
+      actor: 'spoofed-actor',
+    } as never)
+
+    expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({
+      actor: 'injected-actor',
+      reason: 'create identity',
+      resourceId: '11',
+      expectedSupplierProductId: null,
+      expectedMappingRevision: null,
+      expectedResolutionRevision: '0',
+      commercialSupplierSku: 'SKU-NEW',
+    })
+  })
+
+  it.each([
+    ['PENDIENTE', 'UNRESOLVED'],
+    ['VINCULADO', 'NONE'],
+    ['SUSPENDIDO', 'RESOURCE_INACTIVE'],
+    ['NO_APLICA', 'IDENTITY_CONFLICT'],
+    ['CONFLICTO', 'NONE'],
+  ] as const)(
+    'accepts frozen PurchaseLine status %s and cause %s',
+    async (effectiveStatus, effectiveCause) => {
+      const fetch = vi.fn().mockResolvedValue(
+        response({
+          line: {
+            ...line,
+            supplierProductId: null,
+            resolutionRevision: '0',
+            resolutionOverride: 'NONE',
+            effectiveStatus,
+            effectiveCause,
+          },
+          supplierProduct: {
+            ...product,
+            resourceId: null,
+            mappingRevision: '0',
+            resourceActive: null,
+            mappingState: 'UNRESOLVED',
+            mappingCause: 'UNRESOLVED',
+          },
+          commercialIdentity: {
+            supplierProductId: '9',
+            supplierId: '7',
+            commercialSupplierSku: 'SKU-1',
+            disposition: 'REUSED',
+            mappingRevision: '0',
+            resourceId: null,
+          },
+        }),
+      )
       const api = createComprasRestApi(fetch, { actor: 'operator-1' })
 
       await expect(
-        api.setPurchaseLineLinkStatus({ id: '8', status }),
-      ).resolves.toMatchObject({
-        linkStatus: status,
-      })
-      expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({
-        actor: 'operator-1',
-        status,
-      })
+        api.resolvePurchaseLine({
+          id: '8',
+          reason: 'status check',
+          resourceId: '11',
+          expectedSupplierProductId: null,
+          expectedMappingRevision: null,
+          expectedResolutionRevision: '0',
+          commercialSupplierSku: 'SKU-1',
+        }),
+      ).resolves.toMatchObject({ line: { effectiveStatus, effectiveCause } })
     },
   )
 
-  it('rejects every status outside the exact LinkStatus enum before transport', async () => {
+  it.each([
+    { mappingState: 'UNRESOLVED', mappingCause: 'UNRESOLVED' },
+    { mappingState: 'CONFIRMED', mappingCause: 'NONE' },
+    { mappingState: 'SUSPENDED', mappingCause: 'RESOURCE_INACTIVE' },
+    { mappingState: 'IDENTITY_CONFLICT', mappingCause: 'IDENTITY_CONFLICT' },
+  ] as const)(
+    'accepts frozen SupplierProduct mapping projection %s',
+    async (mapping) => {
+      const fetch = vi.fn().mockResolvedValue(
+        response({
+          ...product,
+          mappingRevision: '1',
+          resourceActive: mapping.mappingState === 'CONFIRMED',
+          ...mapping,
+        }),
+      )
+      const api = createComprasRestApi(fetch, { actor: 'operator-1' })
+
+      await expect(
+        api.confirmSupplierProductMapping({
+          id: '9',
+          reason: 'mapping check',
+          resourceId: '11',
+          expectedRevision: '1',
+        }),
+      ).resolves.toMatchObject(mapping)
+    },
+  )
+
+  it('allows every resolution override and commercial identity disposition enum', async () => {
+    const resolvedLine = {
+      ...line,
+      supplierProductId: '9',
+      resolutionRevision: '1',
+      resolutionOverride: 'NONE' as const,
+      effectiveStatus: 'PENDIENTE' as const,
+      effectiveCause: 'NONE',
+    }
+    const mapping = {
+      ...product,
+      mappingRevision: '1',
+      resourceActive: true,
+      mappingState: 'CONFIRMED' as const,
+      mappingCause: 'NONE' as const,
+    }
+    const dispositions = ['CREATED', 'REUSED', 'ALREADY_MAPPED'] as const
     const fetch = vi.fn()
     const api = createComprasRestApi(fetch, { actor: 'operator-1' })
 
+    for (const override of ['NONE', 'NO_APLICA', 'CONFLICTO'] as const) {
+      fetch.mockResolvedValueOnce(
+        response({ ...resolvedLine, resolutionOverride: override }),
+      )
+      await expect(
+        api.setPurchaseLineResolutionOverride({
+          id: '8',
+          reason: 'override check',
+          override,
+          expectedRevision: '1',
+        }),
+      ).resolves.toMatchObject({ resolutionOverride: override })
+    }
+    for (const disposition of dispositions) {
+      fetch.mockResolvedValueOnce(
+        response({
+          line: resolvedLine,
+          supplierProduct: mapping,
+          commercialIdentity: {
+            supplierProductId: '9',
+            supplierId: '7',
+            commercialSupplierSku: 'SKU-1',
+            disposition,
+            mappingRevision: '1',
+            resourceId: '11',
+          },
+        }),
+      )
+      await expect(
+        api.resolvePurchaseLine({
+          id: '8',
+          reason: 'disposition check',
+          resourceId: '11',
+          expectedSupplierProductId: '9',
+          expectedMappingRevision: '1',
+          expectedResolutionRevision: '1',
+          commercialSupplierSku: '',
+        }),
+      ).resolves.toMatchObject({ commercialIdentity: { disposition } })
+    }
+  })
+
+  it.each([
+    { error: 'Conflict' },
+    { error: 'Conflict', code: 'STALE_MAPPING_REVISION' },
+    { error: 'Conflict', detail: 'refresh the snapshot' },
+  ])('preserves optional structured error fields on 4xx: %s', async (body) => {
+    const fetch = vi.fn().mockResolvedValue(response(body, 409))
+    const api = createComprasRestApi(fetch, { actor: 'operator-1' })
+
     await expect(
-      api.setPurchaseLineLinkStatus({ id: '8', status: 'DONE' as never }),
-    ).rejects.toThrow('Invalid compras input')
-    expect(fetch).not.toHaveBeenCalled()
+      api.confirmSupplierProductMapping({
+        id: '9',
+        reason: 'error check',
+        resourceId: '11',
+        expectedRevision: '1',
+      }),
+    ).rejects.toMatchObject({
+      name: 'PurchasesRestError',
+      status: 409,
+      code: body.code,
+      detail: body.detail,
+    })
+  })
+
+  it('rejects malformed frozen responses and non-200 success statuses', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response({ error: 'created response is not accepted' }, 201),
+      )
+      .mockResolvedValueOnce(
+        response({
+          ...product,
+          mappingRevision: '1',
+          resourceActive: true,
+          mappingState: 'INVALID',
+          mappingCause: 'NONE',
+        }),
+      )
+    const api = createComprasRestApi(fetch, { actor: 'operator-1' })
+
+    await expect(
+      api.confirmSupplierProductMapping({
+        id: '9',
+        reason: 'status check',
+        resourceId: '11',
+        expectedRevision: '1',
+      }),
+    ).rejects.toMatchObject({ status: 201 })
+    await expect(
+      api.confirmSupplierProductMapping({
+        id: '9',
+        reason: 'malformed response',
+        resourceId: '11',
+        expectedRevision: '1',
+      }),
+    ).rejects.toThrow('Invalid compras response')
   })
 })

@@ -5,16 +5,21 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
 import type { PurchaseLine } from './compras.types'
 
-type SetPurchaseLineLinkStatus = (input: {
+const overrideReason = 'Marcado manual de partida como no aplicable'
+
+type SetPurchaseLineResolutionOverride = (input: {
   id: string
-  status: 'NO_APLICA'
+  override: 'NO_APLICA'
+  expectedRevision: string
+  reason: string
 }) => Promise<PurchaseLine>
 
 export interface MarcarNoAplicaActionProps {
   purchaseLineId: string
   /** Optional context is accepted but never required for this status override. */
   supplierProductId?: string | null
-  setPurchaseLineLinkStatus: SetPurchaseLineLinkStatus
+  resolutionRevision: string
+  setPurchaseLineResolutionOverride: SetPurchaseLineResolutionOverride
   onMarked: (updatedLine: PurchaseLine) => void | Promise<void>
 }
 
@@ -33,7 +38,8 @@ const errorMessage = (error: unknown) => {
 
 export function MarcarNoAplicaAction({
   purchaseLineId,
-  setPurchaseLineLinkStatus,
+  resolutionRevision,
+  setPurchaseLineResolutionOverride,
   onMarked,
 }: MarcarNoAplicaActionProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -82,9 +88,11 @@ export function MarcarNoAplicaAction({
     try {
       const updated =
         confirmedLine ??
-        (await setPurchaseLineLinkStatus({
+        (await setPurchaseLineResolutionOverride({
           id: purchaseLineId,
-          status: 'NO_APLICA',
+          override: 'NO_APLICA',
+          expectedRevision: resolutionRevision,
+          reason: overrideReason,
         }))
       if (!mountedRef.current) return
       setConfirmedLine(updated)

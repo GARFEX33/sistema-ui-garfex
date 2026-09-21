@@ -2,29 +2,17 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from '../../shared/ui/Button'
+import type { ResourcesMasterRestReadApi } from '../resources-master/resourcesMaster.api'
 import { PartidaEstadoBadge } from './PartidaEstadoBadge'
-import {
-  createResourcesMasterRestApi,
-  type ResourcesMasterRestReadApi,
-} from '../resources-master/resourcesMaster.api'
-import { DesvincularPartidaSurface } from './DesvincularPartidaSurface'
-import { MarcarNoAplicaAction } from './MarcarNoAplicaAction'
-import { VincularPartidaSurface } from './VincularPartidaSurface'
 import { createComprasRestApi, type ComprasRestApi } from './compras.api'
 import type { Purchase, PurchaseLine, SupplierProduct } from './compras.types'
 
 export interface CompraDetalleStageProps {
-  api: Pick<
-    ComprasRestApi,
-    | 'getPurchase'
-    | 'listPurchaseLines'
-    | 'linkSupplierProduct'
-    | 'unlinkSupplierProduct'
-    | 'setPurchaseLineLinkStatus'
-  > &
+  api: Pick<ComprasRestApi, 'getPurchase' | 'listPurchaseLines'> &
     Partial<Pick<ComprasRestApi, 'getSupplierProduct'>>
   purchaseId: string | null
   onBack: () => void
+  /** Retained for caller compatibility; inspection never reads resources here. */
   resourcesApi?: ResourcesMasterRestReadApi
 }
 
@@ -77,8 +65,8 @@ const lineHeaders = [
 const relationHeaders = [
   'Partida',
   'Metadatos técnicos',
-  'Relación comercial',
-  'Estado',
+  'Relación comercial y mapping',
+  'Estado efectivo',
 ]
 const cellClass = 'border-b border-border px-2 py-2'
 
@@ -103,105 +91,80 @@ const lineRows = (lines: PurchaseLine[]): TableRow[] =>
 const relationRows = (
   lines: PurchaseLine[],
   supplierProducts: Record<string, SupplierProduct>,
-  supplierContext: string,
-  resourcesApi: ResourcesMasterRestReadApi,
-  linkSupplierProduct: ComprasRestApi['linkSupplierProduct'],
-  unlinkSupplierProduct: ComprasRestApi['unlinkSupplierProduct'],
-  setPurchaseLineLinkStatus: ComprasRestApi['setPurchaseLineLinkStatus'],
-  onLineChanged: () => Promise<void>,
 ): TableRow[] =>
-  lines.map((line) => ({
-    key: line.id,
-    cells: [
-      line.lineNumber,
-      <div
-        aria-label={`Metadatos técnicos de partida ${line.lineNumber}`}
-        className="grid gap-1"
-      >
-        <span>ID de partida: {line.id}</span>
-        <span>ID de compra: {line.purchaseId}</span>
-      </div>,
-      <div className="grid gap-2">
-        {line.supplierProductId === null ? (
-          <div
-            role="region"
-            aria-label={`Relación de partida ${line.lineNumber}`}
-            className="grid gap-1"
-          >
-            <span>Sin producto de proveedor</span>
-            <p>
-              No existe una operación publicada para asociar esta partida a un
-              Producto de Proveedor existente. Por eso no está disponible
-              seleccionar ni vincular un Recurso Maestro.
-            </p>
-          </div>
-        ) : (
-          <div
-            role="region"
-            aria-label={`Relación de partida ${line.lineNumber}`}
-            className="grid gap-1"
-          >
-            <span>
-              Producto de Proveedor:{' '}
-              {supplierProducts[line.supplierProductId]?.description}
-            </span>
-            <span>
-              SKU publicado:{' '}
-              {supplierProducts[line.supplierProductId]?.supplierSku}
-            </span>
-            <span>
-              ID publicado: {supplierProducts[line.supplierProductId]?.id}
-            </span>
-            <span>
-              Recurso Maestro:{' '}
-              {supplierProducts[line.supplierProductId]?.resourceId ??
-                'No hay Recurso Maestro vinculado'}
-            </span>
-          </div>
-        )}
-        {line.linkStatus === 'NO_APLICA' && (
-          <span>No aplica a un recurso maestro</span>
-        )}
-        {line.supplierProductId !== null &&
-          (line.linkStatus === 'PENDIENTE' ||
-            line.linkStatus === 'CONFLICTO') && (
+  lines.map((line) => {
+    const supplierProduct =
+      line.supplierProductId === null
+        ? undefined
+        : supplierProducts[line.supplierProductId]
+
+    return {
+      key: line.id,
+      cells: [
+        line.lineNumber,
+        <div
+          aria-label={`Metadatos técnicos de partida ${line.lineNumber}`}
+          className="grid gap-1"
+        >
+          <span>ID de partida: {line.id}</span>
+          <span>ID de compra: {line.purchaseId}</span>
+          <span>Resolución: revisión {line.resolutionRevision}</span>
+          <span>Override: {line.resolutionOverride}</span>
+          <span>Causa efectiva: {line.effectiveCause}</span>
+        </div>,
+        <div
+          role="region"
+          aria-label={`Relación de partida ${line.lineNumber}`}
+          className="grid gap-1"
+        >
+          {supplierProduct ? (
             <>
-              <VincularPartidaSurface
-                supplierProductId={line.supplierProductId}
-                supplierContext={supplierContext}
-                resourcesApi={resourcesApi}
-                linkSupplierProduct={linkSupplierProduct}
-                onLinked={onLineChanged}
-              />
-              <MarcarNoAplicaAction
-                purchaseLineId={line.id}
-                supplierProductId={line.supplierProductId}
-                setPurchaseLineLinkStatus={setPurchaseLineLinkStatus}
-                onMarked={onLineChanged}
-              />
+              <span>Producto de Proveedor: {supplierProduct.description}</span>
+              <span>SKU publicado: {supplierProduct.supplierSku}</span>
+              <span>ID publicado: {supplierProduct.id}</span>
+              <span>
+                Revisión de mapping:{' '}
+                {supplierProduct.mappingRevision ?? 'Sin dato'}
+              </span>
+              <span>
+                Estado de mapping: {supplierProduct.mappingState ?? 'Sin dato'}
+              </span>
+              <span>
+                Causa de mapping: {supplierProduct.mappingCause ?? 'Sin dato'}
+              </span>
+              <span>
+                Recurso Maestro:{' '}
+                {supplierProduct.resourceId ??
+                  'No hay Recurso Maestro vinculado'}
+              </span>
+              <span>
+                Recurso activo:{' '}
+                {supplierProduct.resourceActive === null ||
+                supplierProduct.resourceActive === undefined
+                  ? 'Sin dato'
+                  : supplierProduct.resourceActive
+                    ? 'Sí'
+                    : 'No'}
+              </span>
+              {supplierProduct.notes && (
+                <span>Notas de mapping: {supplierProduct.notes}</span>
+              )}
             </>
+          ) : (
+            <span>Sin producto de proveedor</span>
           )}
-        {line.supplierProductId === null &&
-          (line.linkStatus === 'PENDIENTE' ||
-            line.linkStatus === 'CONFLICTO') && (
-            <MarcarNoAplicaAction
-              purchaseLineId={line.id}
-              supplierProductId={line.supplierProductId}
-              setPurchaseLineLinkStatus={setPurchaseLineLinkStatus}
-              onMarked={onLineChanged}
-            />
+          {supplierProduct === undefined && (
+            <span>No hay mapping ni Recurso Maestro para inspeccionar.</span>
           )}
-        {line.supplierProductId !== null && line.linkStatus === 'VINCULADO' && (
-          <DesvincularPartidaSurface
-            supplierProductId={line.supplierProductId}
-            unlinkSupplierProduct={unlinkSupplierProduct}
-            onUnlinked={onLineChanged}
-          />
-        )}
-      </div>,
-      <PartidaEstadoBadge status={line.linkStatus} />,
-    ],
-  }))
+          <span>Para resolver una partida, volvé a Partidas.</span>
+        </div>,
+        <div className="grid gap-1">
+          <PartidaEstadoBadge status={line.effectiveStatus} />
+          <span>Estado efectivo: {line.effectiveStatus}</span>
+        </div>,
+      ],
+    }
+  })
 
 function LineTable({
   label,
@@ -244,12 +207,9 @@ export function CompraDetalleStage({
   api,
   purchaseId,
   onBack,
-  resourcesApi,
 }: CompraDetalleStageProps) {
   const detailRef = useRef<HTMLElement>(null)
-  const [defaultResourcesApi] = useState(() => createResourcesMasterRestApi())
   const [defaultComprasApi] = useState(() => createComprasRestApi())
-  const effectiveResourcesApi = resourcesApi ?? defaultResourcesApi
   const getSupplierProduct =
     api.getSupplierProduct ?? defaultComprasApi.getSupplierProduct
   const query = useQuery<Detail>({
@@ -305,9 +265,6 @@ export function CompraDetalleStage({
 
   const detail = query.data
   if (!detail) return null
-  const refreshDetail = async () => {
-    await query.refetch({ throwOnError: true })
-  }
   return (
     <section
       ref={detailRef}
@@ -320,7 +277,7 @@ export function CompraDetalleStage({
           Detalle de compra
         </h2>
         <Button variant="outline" onPress={onBack}>
-          Volver al historial
+          Volver
         </Button>
       </div>
       <section
@@ -353,16 +310,7 @@ export function CompraDetalleStage({
             <LineTable
               label="Relaciones de partidas"
               headers={relationHeaders}
-              rows={relationRows(
-                detail.lines,
-                detail.supplierProducts,
-                detail.purchase.supplierId,
-                effectiveResourcesApi,
-                api.linkSupplierProduct,
-                api.unlinkSupplierProduct,
-                api.setPurchaseLineLinkStatus,
-                refreshDetail,
-              )}
+              rows={relationRows(detail.lines, detail.supplierProducts)}
             />
           </>
         )}

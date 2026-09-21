@@ -219,6 +219,23 @@ describe('runtime shell and operations inbox entry', () => {
     expect(screen.getByText('Proveedores', { selector: 'span' })).toBeVisible()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
   })
+
+  it('applies bounded viewport containment only to the Compras shell', async () => {
+    const comprasRender = renderAt('/compras')
+    expect(
+      await screen.findByRole('heading', { name: 'Compras', level: 1 }),
+    ).toBeVisible()
+    expect(document.querySelector('.app-shell')).toHaveClass(
+      'app-shell--compras',
+    )
+
+    comprasRender.unmount()
+    renderAt('/bandeja')
+    await screen.findByRole('heading', { name: 'Bandeja' })
+    expect(document.querySelector('.app-shell')).not.toHaveClass(
+      'app-shell--compras',
+    )
+  })
 })
 
 describe('sidebar keyboard navigation', () => {

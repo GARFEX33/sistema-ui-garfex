@@ -3,35 +3,41 @@ import { RestActorConfigurationError } from '../../src/shared/api/restActor'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SupplierProduct } from '../../src/features/compras/compras.types'
+import type { SupplierProductMappingProjection } from '../../src/features/compras/compras.types'
 import { DesvincularPartidaSurface } from '../../src/features/compras/DesvincularPartidaSurface'
 
-const updated: SupplierProduct = {
+const updated: SupplierProductMappingProjection = {
   id: 'supplier-product-7',
   supplierId: 'supplier-3',
   supplierSku: 'SKU-7',
   description: 'Producto desvinculado',
   resourceId: null,
+  mappingRevision: 'mapping-revision-2',
+  resourceActive: null,
+  mappingState: 'SUSPENDED',
+  mappingCause: 'UNRESOLVED',
   notes: '',
   createdAt: '2026-01-01',
   updatedAt: '2026-01-02',
 }
 
 const renderSurface = (
-  unlinkSupplierProduct = vi.fn().mockResolvedValue(updated),
+  retireSupplierProductMapping = vi.fn().mockResolvedValue(updated),
   onUnlinked = vi.fn(),
   strict = false,
 ) => {
   const view = (
     <DesvincularPartidaSurface
       supplierProductId="supplier-product-7"
-      unlinkSupplierProduct={unlinkSupplierProduct}
+      currentResourceId="resource-7"
+      mappingRevision="mapping-revision-1"
+      retireSupplierProductMapping={retireSupplierProductMapping}
       onUnlinked={onUnlinked}
     />
   )
   return {
     ...render(strict ? <StrictMode>{view}</StrictMode> : view),
-    unlinkSupplierProduct,
+    retireSupplierProductMapping,
     onUnlinked,
   }
 }
@@ -49,12 +55,12 @@ const openSurface = async () => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('DesvincularPartidaSurface', () => {
-  it('requires explicit confirmation and never calls unlink on open or cancel', async () => {
-    const { unlinkSupplierProduct } = renderSurface()
+  it('requires explicit confirmation and never calls retirement on open or cancel', async () => {
+    const { retireSupplierProductMapping } = renderSurface()
     const user = await openSurface()
-    expect(unlinkSupplierProduct).not.toHaveBeenCalled()
+    expect(retireSupplierProductMapping).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect(unlinkSupplierProduct).not.toHaveBeenCalled()
+    expect(retireSupplierProductMapping).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
@@ -64,7 +70,7 @@ describe('DesvincularPartidaSurface', () => {
       resolveCallback = resolve
     })
     const onUnlinked = vi.fn(() => callbackDone)
-    const { unlinkSupplierProduct } = renderSurface(
+    const { retireSupplierProductMapping } = renderSurface(
       vi.fn().mockResolvedValue(updated),
       onUnlinked,
     )
@@ -73,8 +79,11 @@ describe('DesvincularPartidaSurface', () => {
       screen.getByRole('button', { name: 'Confirmar desvinculación' }),
     )
     await waitFor(() =>
-      expect(unlinkSupplierProduct).toHaveBeenCalledWith({
+      expect(retireSupplierProductMapping).toHaveBeenCalledWith({
         id: 'supplier-product-7',
+        expectedCurrentResourceId: 'resource-7',
+        expectedRevision: 'mapping-revision-1',
+        reason: 'Desvinculación manual de producto de proveedor',
       }),
     )
     await waitFor(() => expect(onUnlinked).toHaveBeenCalledWith(updated))
@@ -90,15 +99,15 @@ describe('DesvincularPartidaSurface', () => {
       .fn()
       .mockRejectedValueOnce(new Error('reread failed'))
       .mockResolvedValue(undefined)
-    const unlinkSupplierProduct = vi.fn().mockResolvedValue(updated)
-    renderSurface(unlinkSupplierProduct, onUnlinked)
+    const retireSupplierProductMapping = vi.fn().mockResolvedValue(updated)
+    renderSurface(retireSupplierProductMapping, onUnlinked)
     const user = await openSurface()
 
     await user.click(
       screen.getByRole('button', { name: 'Confirmar desvinculación' }),
     )
     await waitFor(() => expect(onUnlinked).toHaveBeenCalledWith(updated))
-    expect(unlinkSupplierProduct).toHaveBeenCalledOnce()
+    expect(retireSupplierProductMapping).toHaveBeenCalledOnce()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Desvinculación confirmada, pero el detalle no se actualizó. Reintenta la lectura.',
@@ -112,18 +121,20 @@ describe('DesvincularPartidaSurface', () => {
     )
     await waitFor(() => expect(onUnlinked).toHaveBeenCalledTimes(2))
     expect(onUnlinked).toHaveBeenLastCalledWith(updated)
-    expect(unlinkSupplierProduct).toHaveBeenCalledOnce()
+    expect(retireSupplierProductMapping).toHaveBeenCalledOnce()
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     )
   })
 
   it('blocks dismissal and duplicate confirmation while pending', async () => {
-    let resolve!: (value: SupplierProduct) => void
-    const pending = new Promise<SupplierProduct>((complete) => {
-      resolve = complete
-    })
-    const { unlinkSupplierProduct } = renderSurface(
+    let resolve!: (value: SupplierProductMappingProjection) => void
+    const pending = new Promise<SupplierProductMappingProjection>(
+      (complete) => {
+        resolve = complete
+      },
+    )
+    const { retireSupplierProductMapping } = renderSurface(
       vi.fn().mockReturnValue(pending),
     )
     const user = await openSurface()
@@ -133,7 +144,7 @@ describe('DesvincularPartidaSurface', () => {
     await user.click(confirm)
     await user.click(confirm)
     await user.keyboard('{Escape}')
-    expect(unlinkSupplierProduct).toHaveBeenCalledTimes(1)
+    expect(retireSupplierProductMapping).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(confirm).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
@@ -160,11 +171,11 @@ describe('DesvincularPartidaSurface', () => {
       'No se pudo desvincular el producto. Revisa el error y reintenta.',
     ],
   ])('keeps %s errors open and retryable', async (_, error, message) => {
-    const unlinkSupplierProduct = vi
+    const retireSupplierProductMapping = vi
       .fn()
       .mockRejectedValueOnce(error)
       .mockResolvedValue(updated)
-    renderSurface(unlinkSupplierProduct)
+    renderSurface(retireSupplierProductMapping)
     const user = await openSurface()
     await user.click(
       screen.getByRole('button', { name: 'Confirmar desvinculación' }),
@@ -174,14 +185,18 @@ describe('DesvincularPartidaSurface', () => {
     await user.click(
       screen.getByRole('button', { name: 'Confirmar desvinculación' }),
     )
-    await waitFor(() => expect(unlinkSupplierProduct).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(retireSupplierProductMapping).toHaveBeenCalledTimes(2),
+    )
   })
 
   it('restores trigger focus and ignores late completion after StrictMode unmount', async () => {
-    let resolve!: (value: SupplierProduct) => void
-    const pending = new Promise<SupplierProduct>((complete) => {
-      resolve = complete
-    })
+    let resolve!: (value: SupplierProductMappingProjection) => void
+    const pending = new Promise<SupplierProductMappingProjection>(
+      (complete) => {
+        resolve = complete
+      },
+    )
     const onUnlinked = vi.fn()
     const { unmount } = renderSurface(
       vi.fn().mockReturnValue(pending),
