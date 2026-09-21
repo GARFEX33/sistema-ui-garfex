@@ -38,7 +38,14 @@ The 1440×900 rendered screen showed excessive border repetition, a form-like si
 - [x] Add visible-range pagination context and accessible long-text handling.
 - [x] Update unit, architecture/layout, and Playwright coverage.
 - [x] Capture before/after visual evidence and run full independent verification.
-- [ ] Create the local work-unit commit and record its identity.
+- [x] Create the local work-unit commit and record its identity.
+
+## Delivery evidence
+
+- Branch: `feat/purchase-lines-workbench-ui`
+- Work-unit commit: `5426e5f` (`feat(compras): refine purchase line workbench`)
+- Runtime harness: focused Playwright at 1440×980 plus explicit layout probes at 1440×720, 900, and 1080.
+- Rollback boundary: revert `5426e5f` to remove the Partidas visual/layout redesign while preserving the underlying workbench API integration commits.
 
 ## Verification evidence
 
