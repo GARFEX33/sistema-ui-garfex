@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RecursosRouteImport } from './routes/recursos'
+import { Route as ProveedoresRouteImport } from './routes/proveedores'
+import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as BandejaRouteImport } from './routes/bandeja'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +19,16 @@ import { Route as IndexRouteImport } from './routes/index'
 const RecursosRoute = RecursosRouteImport.update({
   id: '/recursos',
   path: '/recursos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProveedoresRoute = ProveedoresRouteImport.update({
+  id: '/proveedores',
+  path: '/proveedores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComprasRoute = ComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CatalogoRoute = CatalogoRouteImport.update({
@@ -39,12 +51,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bandeja': typeof BandejaRoute
   '/catalogo': typeof CatalogoRoute
+  '/compras': typeof ComprasRoute
+  '/proveedores': typeof ProveedoresRoute
   '/recursos': typeof RecursosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bandeja': typeof BandejaRoute
   '/catalogo': typeof CatalogoRoute
+  '/compras': typeof ComprasRoute
+  '/proveedores': typeof ProveedoresRoute
   '/recursos': typeof RecursosRoute
 }
 export interface FileRoutesById {
@@ -52,20 +68,37 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/bandeja': typeof BandejaRoute
   '/catalogo': typeof CatalogoRoute
+  '/compras': typeof ComprasRoute
+  '/proveedores': typeof ProveedoresRoute
   '/recursos': typeof RecursosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bandeja' | '/catalogo' | '/recursos'
+  fullPaths:
+    | '/'
+    | '/bandeja'
+    | '/catalogo'
+    | '/compras'
+    | '/proveedores'
+    | '/recursos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bandeja' | '/catalogo' | '/recursos'
-  id: '__root__' | '/' | '/bandeja' | '/catalogo' | '/recursos'
+  to: '/' | '/bandeja' | '/catalogo' | '/compras' | '/proveedores' | '/recursos'
+  id:
+    | '__root__'
+    | '/'
+    | '/bandeja'
+    | '/catalogo'
+    | '/compras'
+    | '/proveedores'
+    | '/recursos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BandejaRoute: typeof BandejaRoute
   CatalogoRoute: typeof CatalogoRoute
+  ComprasRoute: typeof ComprasRoute
+  ProveedoresRoute: typeof ProveedoresRoute
   RecursosRoute: typeof RecursosRoute
 }
 
@@ -76,6 +109,20 @@ declare module '@tanstack/react-router' {
       path: '/recursos'
       fullPath: '/recursos'
       preLoaderRoute: typeof RecursosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proveedores': {
+      id: '/proveedores'
+      path: '/proveedores'
+      fullPath: '/proveedores'
+      preLoaderRoute: typeof ProveedoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compras': {
+      id: '/compras'
+      path: '/compras'
+      fullPath: '/compras'
+      preLoaderRoute: typeof ComprasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/catalogo': {
@@ -106,6 +153,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BandejaRoute: BandejaRoute,
   CatalogoRoute: CatalogoRoute,
+  ComprasRoute: ComprasRoute,
+  ProveedoresRoute: ProveedoresRoute,
   RecursosRoute: RecursosRoute,
 }
 export const routeTree = rootRouteImport

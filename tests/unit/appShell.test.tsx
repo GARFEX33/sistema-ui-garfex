@@ -1,13 +1,27 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryHistory } from '@tanstack/react-router'
 import { describe, expect, it, vi } from 'vitest'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ComponentProps } from 'react'
 import { AppProviders } from '../../src/app/providers/AppProviders'
 import { createAppRouter } from '../../src/app/router'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 import { useKeyboardController } from '../../src/shared/keyboard/keyboardControllerContext'
-import type { ResourcesMasterApi } from '../../src/features/resources-master/resourcesMaster.api'
+import type { ResourcesMasterRestReadApi } from '../../src/features/resources-master/resourcesMaster.api'
+
+const activeSurfaceSpy = vi.hoisted(() => vi.fn())
+vi.mock('../../src/shared/keyboard/KeyboardController', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../src/shared/keyboard/KeyboardController')
+  >('../../src/shared/keyboard/KeyboardController')
+  const ObservedProvider = (
+    props: ComponentProps<typeof actual.KeyboardControllerProvider>,
+  ) => {
+    activeSurfaceSpy(props.activeSurface)
+    return <actual.KeyboardControllerProvider {...props} />
+  }
+  return { ...actual, KeyboardControllerProvider: ObservedProvider }
+})
 
 const resourcesMasterApiFactory = vi.hoisted(() => vi.fn())
 vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
@@ -16,100 +30,102 @@ vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
   >('../../src/features/resources-master/resourcesMaster.api')
   return {
     ...actual,
-    createResourcesMasterConvexApi: resourcesMasterApiFactory,
+    createResourcesMasterRestApi: resourcesMasterApiFactory,
   }
 })
 
-const resourceSummary = (id: string, nombre: string) => ({
+const resource = (id: string, identityV1: string, label: string) => ({
   id,
-  identificadorTecnico: `REC-${id}`,
-  nombre,
-  tipoRecursoId: 'tipo-1',
-  unidadId: 'unidad-1',
-  activo: true,
-  revision: 1,
-  classificationStatus: { state: 'EFFECTIVE' as const, reasons: [] },
+  identityV1,
+  scope: { classCode: 'MATERIAL', familyCode: 'CABLE', typeCode: 'UTP' },
+  naturalUnit: 'm',
+  active: true,
+  revision: '1',
+  attributes: [{ code: 'ETIQUETA', value: { kind: 'TEXT', value: label } }],
 })
 
 function stubResourcesMasterApi() {
   const api = {
     listResources: vi.fn(async () => ({
-      page: [
-        resourceSummary('r1', 'Cable UTP'),
-        resourceSummary('r2', 'Motor 1/2 HP'),
+      resources: [
+        resource('r1', 'MATERIAL-CABLE-UTP-001', 'Uno'),
+        resource('r2', 'MATERIAL-CABLE-UTP-002', 'Dos'),
       ],
-      isDone: true,
-      continueCursor: '',
+      hasPrevious: false,
+      hasNext: false,
     })),
-    searchResources: vi.fn(async () => ({
-      page: [],
-      isDone: true,
-      continueCursor: '',
+    getResourceDetail: vi.fn(),
+    describeResource: vi.fn(),
+    getTypeEffectiveAttributes: vi.fn(async () => ({
+      typeCode: 'UTP',
+      attributes: [
+        {
+          characteristic: {
+            code: 'ETIQUETA',
+            name: 'Etiqueta',
+            valueType: 'CONTROLLED_TEXT',
+          },
+          effectiveMode: 'OPTIONAL',
+          identityParticipates: false,
+          notApplicable: false,
+          position: 0,
+          hasPosition: true,
+          options: [],
+          source: { level: 'TYPE', code: 'UTP' },
+          rules: [],
+        },
+      ],
     })),
-    getResourceDetail: vi.fn(async () => null),
-    createResource: vi.fn(),
-    updateResource: vi.fn(),
-    activateResource: vi.fn(),
-    deactivateResource: vi.fn(),
-    listContextClasses: vi.fn(async () => ({
+    listHierarchyClasses: vi.fn(async () => ({
       items: [
         {
           id: 'class-1',
-          clave: 'MATERIAL',
-          nombre: 'Material',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
+          code: 'MATERIAL',
+          name: 'Material',
+          active: true,
+          revision: '1',
         },
         {
           id: 'class-2',
-          clave: 'SERVICIO',
-          nombre: 'Servicio',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
+          code: 'SERVICIO',
+          name: 'Servicio',
+          active: true,
+          revision: '2',
         },
       ],
-      continuationCursor: null,
-      isExhausted: true,
+      hasPrevious: false,
+      hasNext: false,
     })),
-    listContextFamilies: vi.fn(async () => ({
+    listHierarchyFamilies: vi.fn(async () => ({
       items: [
         {
           id: 'family-1',
-          claseRecursoId: 'class-1',
-          clave: 'CABLE',
-          nombre: 'Cable',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
+          code: 'CABLE',
+          name: 'Cable',
+          classCode: 'MATERIAL',
+          active: true,
+          revision: '3',
         },
       ],
-      continuationCursor: null,
-      isExhausted: true,
+      hasPrevious: false,
+      hasNext: false,
     })),
-    listContextTypes: vi.fn(async () => ({
+    listHierarchyTypes: vi.fn(async () => ({
       items: [
         {
           id: 'type-1',
-          familiaRecursoId: 'family-1',
-          clave: 'UTP',
-          nombre: 'UTP',
-          activo: true,
-          revision: 1,
-          effective: true,
-          effectiveReasons: [],
-          aggregateStatus: 'CLEAN',
-          violations: [],
+          code: 'UTP',
+          name: 'UTP',
+          classCode: 'MATERIAL',
+          familyCode: 'CABLE',
+          active: true,
+          revision: '4',
         },
       ],
-      continuationCursor: null,
-      isExhausted: true,
+      hasPrevious: false,
+      hasNext: false,
     })),
-  } as ResourcesMasterApi
+  } as ResourcesMasterRestReadApi
   resourcesMasterApiFactory.mockReturnValue(api)
   return api
 }
@@ -158,7 +174,7 @@ describe('runtime shell and operations inbox entry', () => {
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(storageSpy).not.toHaveBeenCalled()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
@@ -178,29 +194,74 @@ describe('runtime shell and operations inbox entry', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
     expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
     expect(screen.getByText('CONFIGURACIÓN DEL MODELO')).toBeVisible()
     expect(screen.getByText('Configuración / Catálogo')).toBeVisible()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
   })
+
+  it('resolves /proveedores and marks only the resolved destination as active', async () => {
+    renderAt('/proveedores')
+    expect(
+      await screen.findByRole('heading', { name: 'Proveedores' }),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Proveedores' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: 'Bandeja' })).not.toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getAllByRole('link')).toHaveLength(5)
+    expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
+    expect(screen.getByText('Proveedores', { selector: 'span' })).toBeVisible()
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
+  })
 })
 
 describe('sidebar keyboard navigation', () => {
-  it('keeps only the three real links in the immediate group and handles local navigation', async () => {
+  it('keeps the five real links in the immediate group and handles local navigation', async () => {
     renderAt('/bandeja')
     const inbox = await screen.findByRole('link', { name: 'Bandeja' })
     const resources = screen.getByRole('link', { name: 'Recursos maestros' })
+    const proveedores = screen.getByRole('link', { name: 'Proveedores' })
+    const compras = screen.getByRole('link', { name: 'Compras' })
     const catalog = screen.getByRole('link', { name: 'Catálogo' })
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
+    expect(
+      within(screen.getByRole('navigation', { name: 'Navegación principal' }))
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual([
+      'Bandeja',
+      'Recursos maestros',
+      'Proveedores',
+      'Compras',
+      'Catálogo',
+    ])
+    expect(
+      screen.getByText('Configuración', { selector: 'span' }),
+    ).toBeVisible()
+    expect(screen.getByText('Configuración')).not.toHaveAttribute('href')
+    expect(screen.getByText('Familias')).not.toHaveAttribute('href')
     inbox.focus()
     fireEvent.keyDown(inbox, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(resources)
     fireEvent.keyDown(resources, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(proveedores)
+    fireEvent.keyDown(proveedores, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(compras)
+    fireEvent.keyDown(compras, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(compras)
+    fireEvent.keyDown(compras, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(proveedores)
+    fireEvent.keyDown(proveedores, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(resources)
     fireEvent.keyDown(resources, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(inbox)
@@ -208,7 +269,24 @@ describe('sidebar keyboard navigation', () => {
     expect(document.activeElement).toBe(inbox)
     fireEvent.keyDown(inbox, { key: 'End' })
     expect(document.activeElement).toBe(catalog)
+    expect(compras).toHaveAttribute('data-spatial-id', 'sidebar.compras')
     expect(screen.getByText('Familias')).not.toHaveAttribute('data-spatial-id')
+  })
+
+  it('focuses the Proveedores search input on ArrowRight and returns focus to the sidebar link on ArrowLeft/Escape', async () => {
+    renderAt('/proveedores')
+    const proveedores = await screen.findByRole('link', {
+      name: 'Proveedores',
+    })
+    proveedores.focus()
+    fireEvent.keyDown(proveedores, { key: 'ArrowRight' })
+    const search = screen.getByRole('searchbox', { name: 'Buscar' })
+    expect(search).toHaveFocus()
+    fireEvent.keyDown(search, { key: 'ArrowLeft' })
+    expect(proveedores).toHaveFocus()
+    search.focus()
+    fireEvent.keyDown(search, { key: 'Escape' })
+    expect(proveedores).toHaveFocus()
   })
 
   it('does not cancel native Enter or Tab traversal and keeps focus on ArrowRight without a target', async () => {
@@ -251,6 +329,22 @@ describe('sidebar triangulation', () => {
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
+  })
+
+  it('activates Compras through native Enter and exposes its active surface and route label', async () => {
+    activeSurfaceSpy.mockClear()
+    renderAt('/bandeja')
+    const compras = await screen.findByRole('link', { name: 'Compras' })
+    expect(compras).toHaveAttribute('href', '/compras')
+    expect(compras).toHaveAttribute('data-spatial-id', 'sidebar.compras')
+    compras.focus()
+    await userEvent.setup().keyboard('{Enter}')
+    expect(
+      await screen.findByRole('heading', { name: 'Compras' }),
+    ).toBeVisible()
+    expect(screen.getByText('Compras', { selector: 'span' })).toBeVisible()
+    expect(compras).toHaveAttribute('aria-current', 'page')
+    expect(activeSurfaceSpy).toHaveBeenLastCalledWith('compras')
   })
 
   it('anchors ArrowLeft at the current route before scoring sidebar geometry', async () => {
@@ -356,59 +450,145 @@ describe('sidebar triangulation', () => {
 })
 
 describe('resources maestros keyboard navigation', () => {
-  it('navigates Resources spatially through hierarchy, search, and resource rows', async () => {
+  // Slice E2 replaced the three HierarchyNavigator button columns with
+  // StagedSearchSelector (search + arrow + Enter, auto-focus advancing to
+  // the next column) — a deliberate, approved divergence from the
+  // arrow-hopping grid HierarchyNavigator still gives Catálogo. This test
+  // exercises the real (unmocked) useResourcesHierarchy + REST stub end to
+  // end: type-ahead search, arrow-highlight, Enter-confirm, and the
+  // automatic focus jump to the next column, three times in a row, ending
+  // with the resource list actually filtered by the confirmed scope.
+  //
+  // Slice E2b: AppShell.tsx's cross-region ArrowLeft/Right wiring now lands
+  // on each StagedSearchSelector's search input directly
+  // (`data-spatial-id="resources.class"|"resources.family"|"resources.type"`,
+  // additive `spatialId` prop) instead of the old
+  // `data-spatial-level`/`aria-pressed` button-grid lookup, which no longer
+  // matches this component's DOM. ArrowUp/Down are left untouched so
+  // StagedSearchSelector's own in-list arrow handling (exercised above)
+  // keeps working; only entering/leaving a column from outside it changed.
+  // See the chain test below.
+  it('confirms Clase→Familia→Tipo purely via search+arrow+Enter, auto-focusing the next column each time', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    const sidebar = await screen.findByRole('link', {
+    await screen.findByRole('link', { name: 'Recursos maestros' })
+    const user = userEvent.setup()
+
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    await user.click(claseInput)
+    await user.type(claseInput, 'mat')
+    fireEvent.keyDown(claseInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'Material' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    const familiaInput = screen.getByRole('searchbox', { name: 'Familia' })
+    expect(familiaInput).toHaveFocus()
+    await screen.findByRole('option', { name: 'Cable' })
+    await user.type(familiaInput, 'cab')
+    fireEvent.keyDown(familiaInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'Cable' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+    expect(tipoInput).toHaveFocus()
+    await screen.findByRole('option', { name: 'UTP' })
+    await user.type(tipoInput, 'utp')
+    fireEvent.keyDown(tipoInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'UTP' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    await screen.findByText('UTP Uno')
+    expect(screen.getByText('UTP Dos')).toBeVisible()
+
+    fireEvent.keyDown(document, { key: 'b' })
+    expect(screen.getByPlaceholderText('Buscar recursos')).toHaveFocus()
+  })
+
+  it('enters the hierarchy from the sidebar and hops Clase→Familia→Tipo→search with ArrowRight', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+
+    const recursosLink = screen.getByRole('link', {
       name: 'Recursos maestros',
     })
-    const material = await screen.findByRole('button', { name: 'Material' })
-    expect(material).toHaveAttribute('data-spatial-level', 'class')
-    const service = screen.getByRole('button', { name: 'Servicio' })
-    const search = screen.getByPlaceholderText('Nombre del recurso')
+    recursosLink.focus()
+    fireEvent.keyDown(recursosLink, { key: 'ArrowRight' })
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    expect(claseInput).toHaveFocus()
 
-    sidebar.focus()
-    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
-    expect(material).toHaveFocus()
-    fireEvent.keyDown(material, { key: 'ArrowDown' })
-    expect(service).toHaveFocus()
-    fireEvent.keyDown(service, { key: 'ArrowUp' })
-    expect(material).toHaveFocus()
-    await screen.findByText('Cable')
-    fireEvent.keyDown(material, { key: 'ArrowRight' })
-    const family = screen.getByRole('button', { name: 'Cable' })
-    expect(family).toHaveFocus()
-    await screen.findByText('UTP')
-    fireEvent.keyDown(family, { key: 'ArrowRight' })
-    const type = screen.getByRole('button', { name: 'UTP' })
-    expect(type).toHaveFocus()
-    fireEvent.keyDown(type, { key: 'ArrowRight' })
-    expect(search).toHaveFocus()
-    await screen.findByText('Cable UTP')
-    const firstRow = document.querySelector<HTMLElement>('[data-resource-row]')!
+    fireEvent.keyDown(claseInput, { key: 'ArrowRight' })
+    const familiaInput = screen.getByRole('searchbox', { name: 'Familia' })
+    expect(familiaInput).toHaveFocus()
 
-    fireEvent.keyDown(search, { key: 'ArrowDown' })
-    expect(firstRow).toHaveFocus()
-    fireEvent.keyDown(firstRow, { key: 'ArrowUp' })
-    expect(search).toHaveFocus()
+    fireEvent.keyDown(familiaInput, { key: 'ArrowRight' })
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+    expect(tipoInput).toHaveFocus()
+
+    fireEvent.keyDown(tipoInput, { key: 'ArrowRight' })
+    expect(screen.getByPlaceholderText('Buscar recursos')).toHaveFocus()
+  })
+
+  it('hops back Tipo→Familia→Clase→sidebar with ArrowLeft', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+
+    const recursosLink = screen.getByRole('link', {
+      name: 'Recursos maestros',
+    })
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    const familiaInput = screen.getByRole('searchbox', { name: 'Familia' })
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+
+    fireEvent.keyDown(tipoInput, { key: 'ArrowLeft' })
+    expect(familiaInput).toHaveFocus()
+
+    fireEvent.keyDown(familiaInput, { key: 'ArrowLeft' })
+    expect(claseInput).toHaveFocus()
+
+    fireEvent.keyDown(claseInput, { key: 'ArrowLeft' })
+    expect(recursosLink).toHaveFocus()
+  })
+
+  it('sends ArrowLeft/Escape from the resource search box or a result row back to the Tipo column', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+
+    const search = screen.getByPlaceholderText('Buscar recursos')
+    const tipoInput = screen.getByRole('searchbox', { name: 'Tipo' })
+
     fireEvent.keyDown(search, { key: 'ArrowLeft' })
-    expect(type).toHaveFocus()
-    search.focus()
-    fireEvent.keyDown(search, { key: 'Escape' })
-    expect(type).toHaveFocus()
-    firstRow.focus()
-    fireEvent.keyDown(firstRow, { key: 'ArrowLeft' })
-    expect(type).toHaveFocus()
-    firstRow.focus()
+    expect(tipoInput).toHaveFocus()
+
+    const firstRow = document.querySelector(
+      '[data-resource-row]',
+    ) as HTMLElement
     fireEvent.keyDown(firstRow, { key: 'Escape' })
-    expect(type).toHaveFocus()
+    expect(tipoInput).toHaveFocus()
+  })
+
+  it('leaves typing, in-list arrow highlighting, and Enter-confirm inside a column untouched by the new hop wiring', async () => {
+    stubResourcesMasterApi()
+    renderAt('/recursos')
+    await screen.findByText('UTP Uno')
+    const user = userEvent.setup()
+
+    const claseInput = screen.getByRole('searchbox', { name: 'Clase' })
+    await user.click(claseInput)
+    await user.type(claseInput, 'mat')
+    fireEvent.keyDown(claseInput, { key: 'ArrowDown' })
+    expect(screen.getByRole('option', { name: 'Material' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('searchbox', { name: 'Familia' })).toHaveFocus()
   })
 
   it('does not capture Resources spatial keys while the search input is composing', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('Cable UTP')
-    const search = screen.getByPlaceholderText('Nombre del recurso')
+    await screen.findByText('UTP Uno')
+    const search = screen.getByPlaceholderText('Buscar recursos')
     search.focus()
     fireEvent.keyDown(search, { key: 'ArrowDown', isComposing: true })
     expect(search).toHaveFocus()
@@ -417,8 +597,8 @@ describe('resources maestros keyboard navigation', () => {
   it('jumps to the search box with B from anywhere on the screen', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('Cable UTP')
-    const search = screen.getByPlaceholderText('Nombre del recurso')
+    await screen.findByText('UTP Uno')
+    const search = screen.getByPlaceholderText('Buscar recursos')
     const firstRow = document.querySelector(
       '[data-resource-row]',
     ) as HTMLElement
@@ -430,7 +610,7 @@ describe('resources maestros keyboard navigation', () => {
   it('does not steal B from an unrelated editing context', async () => {
     stubResourcesMasterApi()
     renderAt('/recursos')
-    await screen.findByText('Cable UTP')
+    await screen.findByText('UTP Uno')
     const input = document.createElement('input')
     document.body.append(input)
     input.focus()

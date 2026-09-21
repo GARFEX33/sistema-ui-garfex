@@ -1,28 +1,24 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
-import { AsignarAtributoSurface } from './AsignarAtributoSurface'
-import { EditarAtributoSurface } from './EditarAtributoSurface'
-import { GestionarOpcionesSurface } from './GestionarOpcionesSurface'
-import {
-  useKeyboardController,
-  type KeyboardActionTarget,
-} from '../../shared/keyboard/keyboardControllerContext'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
+import { hasRestActor } from '../../shared/api/restActor'
+import { HierarchyNavigator } from '../../shared/ui/HierarchyNavigator'
+import { Button } from '../../shared/ui/Button'
+import { PageHeader } from '../../shared/ui/PageHeader'
+import { WorkCard } from '../../shared/ui/WorkCard'
 import { CatalogCreateSurface, NuevaClaseSurface } from './NuevaClaseSurface'
-import { useAutoClosingMessage } from './useAutoClosingMessage'
+import { CatalogTypeEffectiveAttributes } from './CatalogTypeEffectiveAttributes'
+import { CatalogTypePresentation } from './CatalogTypePresentation'
 import {
-  createCatalogHierarchyConvexApi,
-  type CatalogHierarchyApi,
+  createCatalogHierarchyRestApi,
+  type CatalogHierarchyRestApi,
 } from './catalogHierarchy.api'
-import {
-  createCatalogTypeAttributesConvexApi,
-  type CatalogTypeAttributesApi,
-} from './catalogTypeAttributes.api'
+import { createCatalogAttributeCreationApi } from './catalogAttributeCreation.api'
+import type { CatalogAttributeCreationContext } from './catalogAttributeCreation.types'
+import { createCatalogPresentationAdminApi } from './catalogPresentationAdmin.api'
+import { CatalogPresentationEditor } from './CatalogPresentationEditor'
+import { createCatalogTypeEffectiveAttributesApi } from './catalogTypeEffectiveAttributes.api'
+import { createCatalogOptionsAdminApi } from './catalogOptionsAdmin.api'
+import { useCatalogAttributeCreation } from './useCatalogAttributeCreation'
+import { useCatalogTypeEffectiveAttributes } from './useCatalogTypeEffectiveAttributes'
 import {
   createInitialCatalogHierarchyContext,
   selectClass,
@@ -30,138 +26,49 @@ import {
   selectType,
 } from './catalogHierarchyState'
 import {
-  createCatalogListSequence,
-  type CatalogListController,
-  type CatalogListState,
+  createCatalogClassWindow,
+  createCatalogDependentWindow,
+  type CatalogClassWindowController,
+  type CatalogDependentWindowController,
 } from './useCatalogList'
 import type {
-  CatalogClassItem,
-  CatalogFamilyItem,
+  CatalogFamilyRestItem,
+  CatalogHierarchyItem,
   CatalogHierarchyPresentation,
-  CatalogTypeItem,
+  CatalogTypeRestItem,
 } from './catalogHierarchy.types'
-import { HierarchyNavigator } from '../../shared/ui/HierarchyNavigator'
-import type {
-  AttributeDefinition,
-  AttributeOption,
-  TypeAttributeAssignment,
-  TypeAttributePage,
-} from './catalogTypeAttributes.types'
-import { PageHeader } from '../../shared/ui/PageHeader'
-import { WorkCard } from '../../shared/ui/WorkCard'
+import { useAutoClosingMessage } from './useAutoClosingMessage'
 import './catalogHierarchy.css'
 
 type ConnectedLists = {
-  classes: CatalogListController<CatalogClassItem>
-  families: CatalogListController<CatalogFamilyItem>
-  types: CatalogListController<CatalogTypeItem>
+  families: CatalogDependentWindowController<CatalogFamilyRestItem>
+  types: CatalogDependentWindowController<CatalogTypeRestItem>
 }
 
-type DefinitionState =
-  | { status: 'loading' }
-  | { status: 'ready'; definition: AttributeDefinition }
-  | { status: 'missing' }
-  | { status: 'error' }
-
-type AttributeActionTargets = Partial<{
-  edit: KeyboardActionTarget
-  options: KeyboardActionTarget
-}>
-
-type OptionPreviewState =
-  | { status: 'loading' }
-  | { status: 'ready'; page: TypeAttributePage<AttributeOption> }
-  | { status: 'error' }
-
-const attributeEffectivenessLabel = {
-  SELECTED: 'Efectivo',
-  SHADOWED: 'En sombra',
-  SUPPRESSED: 'Suprimido',
-  NONE: 'Sin selección',
-} as const
-
-const attributeApplicabilityLabel = {
-  REQUIRED: 'Obligatorio',
-  OPTIONAL: 'Opcional',
-  CONDITIONAL: 'Condicional',
-  FORBIDDEN: 'No permitido',
-  NOT_APPLICABLE: 'No aplica',
-} as const
-
-const attributeDataTypeLabel = {
-  TEXTO: 'Texto',
-  NUMERO: 'Número',
-  BOOLEANO: 'Booleano',
-  OPCION: 'Opción',
-} as const
-
-function attributeExceptionBadges(assignment: TypeAttributeAssignment) {
-  const badges: string[] = []
-  if (!assignment.tipoRecursoId) badges.push('Heredado')
-  if (!assignment.activo) badges.push('Inactivo')
-  if (assignment.selection !== 'SELECTED')
-    badges.push(attributeEffectivenessLabel[assignment.selection])
-  if (assignment.aplicabilidad !== 'OPTIONAL')
-    badges.push(attributeApplicabilityLabel[assignment.aplicabilidad])
-  if (assignment.participaIdentidad) badges.push('Parte de identidad')
-  return badges
-}
-
-function optionCountClosedLabel(state: OptionPreviewState | undefined) {
-  if (!state || state.status !== 'ready') return null
-  const active = state.page.items.filter((option) => option.activo).length
-  const suffix = state.page.isExhausted ? '' : '+'
-  return `${active}${suffix} ${active === 1 ? 'opción' : 'opciones'}`
-}
-
-const project = (items: readonly { id: unknown; nombre: string }[]) =>
+const project = (
+  items: readonly { id: unknown; nombre: string }[],
+): CatalogHierarchyItem[] =>
   items.map((item) => ({ id: item.id as string, label: item.nombre }))
 
-function makeAttributeList(
-  api: CatalogTypeAttributesApi,
-): CatalogListController<TypeAttributeAssignment> {
-  return createCatalogListSequence({
-    operation: 'attributes',
-    adapter: {
-      load: ({ cursor, parentId }) =>
-        api.listTypeAssignments({
-          tipoRecursoId: parentId as string,
-          cursor,
-          mode: 'ALL',
-        }),
-    },
-  })
-}
-
-function makeLists(api: CatalogHierarchyApi): ConnectedLists {
+function makeLists(api: CatalogHierarchyRestApi): ConnectedLists {
   return {
-    classes: createCatalogListSequence({
-      operation: 'classes',
-      adapter: { load: ({ cursor }) => api.listClasses({ cursor }) },
+    families: createCatalogDependentWindow({
+      load: ({ parentCode, ...input }) =>
+        api.listFamilies({ ...input, classCode: parentCode }),
     }),
-    families: createCatalogListSequence({
-      operation: 'families',
-      adapter: {
-        load: ({ cursor, parentId }) => api.listFamilies({ cursor, parentId }),
-      },
-    }),
-    types: createCatalogListSequence({
-      operation: 'types',
-      adapter: {
-        load: ({ cursor, parentId }) => api.listTypes({ cursor, parentId }),
-      },
+    types: createCatalogDependentWindow({
+      load: ({ parentCode, ...input }) =>
+        api.listTypes({ ...input, familyCode: parentCode }),
     }),
   }
 }
 
 const emptySubscribe = () => () => undefined
 
-function useListSnapshot<T extends { id: unknown }>(
-  controller: CatalogListController<T> | null,
+function useClassWindowSnapshot(
+  controller: CatalogClassWindowController | null,
 ) {
-  const snapshotRef = useRef<CatalogListState<T> | null>(
-    controller?.getState() ?? null,
-  )
+  const snapshotRef = useRef(controller?.getState() ?? null)
   const subscribe = (listener: () => void) => {
     if (!controller) return emptySubscribe()
     return controller.subscribe(() => {
@@ -176,373 +83,29 @@ function useListSnapshot<T extends { id: unknown }>(
   )
 }
 
-const optionCountLabel = (count: number, state: 'activa' | 'inactiva') =>
-  `${count} ${state}${count === 1 ? '' : 's'}`
-
-function AttributeOptionPreview({
-  definition,
-  state,
-  onRetry,
-}: {
-  definition: AttributeDefinition
-  state?: OptionPreviewState
-  onRetry: () => void
-}) {
-  if (!state || state.status === 'loading')
-    return (
-      <section
-        className="catalog-option-preview"
-        aria-label={`Vista previa de opciones de ${definition.nombre}`}
-      >
-        <p>Cargando opciones…</p>
-      </section>
-    )
-  if (state.status === 'error')
-    return (
-      <section
-        className="catalog-option-preview"
-        aria-label={`Vista previa de opciones de ${definition.nombre}`}
-      >
-        <p role="alert">No se pudieron cargar las opciones</p>
-        <button type="button" onClick={onRetry}>
-          Reintentar opciones
-        </button>
-      </section>
-    )
-
-  const active = state.page.items.filter((option) => option.activo)
-  const inactive = state.page.items.length - active.length
-  const prefix = state.page.isExhausted ? '' : 'Al menos '
-  return (
-    <section
-      className="catalog-option-preview"
-      aria-label={`Vista previa de opciones de ${definition.nombre}`}
-    >
-      {active.length ? (
-        <div
-          className="catalog-option-preview-chips"
-          aria-label={`Opciones activas de ${definition.nombre}`}
-        >
-          {active.slice(0, 3).map((option) => (
-            <span key={option.id}>{option.nombre}</span>
-          ))}
-        </div>
-      ) : (
-        <p>Sin opciones activas</p>
-      )}
-      <p className="catalog-option-preview-counts">
-        {prefix}
-        {optionCountLabel(active.length, 'activa')} · {prefix.toLowerCase()}
-        {optionCountLabel(inactive, 'inactiva')}
-        {!state.page.isExhausted && ' (vista parcial)'}
-      </p>
-    </section>
+function useDependentWindowSnapshot<T>(
+  controller: CatalogDependentWindowController<T> | null,
+) {
+  const snapshotRef = useRef(controller?.getState() ?? null)
+  const subscribe = (listener: () => void) => {
+    if (!controller) return emptySubscribe()
+    return controller.subscribe(() => {
+      snapshotRef.current = controller.getState()
+      listener()
+    })
+  }
+  return useSyncExternalStore(
+    subscribe,
+    () => snapshotRef.current,
+    () => snapshotRef.current,
   )
-}
-
-function AttributePanel({
-  api,
-  selectedTypeId,
-  state,
-  definitions,
-  onContinue,
-  onRetry,
-  onRetryDefinition,
-  onReloadDefinition,
-  onAssignmentChanged,
-  optionPreviews,
-  onRetryOptions,
-  onSuccess,
-  onActiveAttributeChange,
-  onAttributeActionTargetChange,
-}: {
-  api: CatalogTypeAttributesApi
-  selectedTypeId?: string
-  state: CatalogListState<TypeAttributeAssignment> | null
-  definitions: Readonly<Record<string, DefinitionState>>
-  onContinue: () => void
-  onRetry: () => void
-  onRetryDefinition: (id: string) => void
-  onReloadDefinition: (id: string) => void | Promise<unknown>
-  onAssignmentChanged: () => void
-  optionPreviews: Readonly<Record<string, OptionPreviewState>>
-  onRetryOptions: (id: string) => void
-  onSuccess: (message: string) => void
-  onActiveAttributeChange: (assignmentId: string) => void
-  onAttributeActionTargetChange: (
-    assignmentId: string,
-    action: keyof AttributeActionTargets,
-    target: KeyboardActionTarget | null,
-  ) => void
-}) {
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  useEffect(() => setExpandedId(null), [selectedTypeId])
-
-  if (!selectedTypeId)
-    return (
-      <div
-        className="catalog-attribute-panel"
-        role="tabpanel"
-        id="catalog-attributes-panel"
-        aria-labelledby="catalog-attributes-tab"
-      >
-        <p className="catalog-attribute-state" role="status">
-          Seleccioná un Tipo para consultar sus atributos.
-        </p>
-      </div>
-    )
-
-  const items = state?.items ?? []
-  const initialLoading = state?.status === 'initial-loading'
-  const initialError = state?.status === 'initial-error'
-  const partialError = state?.status === 'partial-error'
-  const loadingMore = state?.status === 'loading-more'
-  const empty = state?.status === 'empty'
-  const canContinue = state?.status === 'ready' && !state.isExhausted
-
-  return (
-    <div
-      className="catalog-attribute-panel"
-      role="tabpanel"
-      id="catalog-attributes-panel"
-      aria-labelledby="catalog-attributes-tab"
-    >
-      {initialLoading && !items.length && (
-        <p className="catalog-attribute-state" role="status">
-          Cargando atributos…
-        </p>
-      )}
-      {initialError && (
-        <div className="catalog-attribute-state" role="alert">
-          <p>No se pudieron cargar los atributos.</p>
-          <button type="button" onClick={onRetry}>
-            Reintentar atributos
-          </button>
-        </div>
-      )}
-      {empty && (
-        <p className="catalog-attribute-state" role="status">
-          Este Tipo no tiene atributos asignados.
-        </p>
-      )}
-      {items.map((assignment) => {
-        const definition = definitions[assignment.definicionAtributoId]
-        const isReady = definition?.status === 'ready'
-        const isOption = isReady && definition.definition.tipoDato === 'OPCION'
-        const isExpanded = isReady && expandedId === assignment.id
-        const exceptions = isReady ? attributeExceptionBadges(assignment) : []
-        const optionCount = isOption
-          ? optionCountClosedLabel(optionPreviews[definition.definition.id])
-          : null
-        const toggleExpanded = () =>
-          setExpandedId((current) =>
-            current === assignment.id ? null : assignment.id,
-          )
-        return (
-          <article
-            className="catalog-attribute-row"
-            key={assignment.id}
-            tabIndex={0}
-            data-spatial-id={`catalog.row.attributes.${assignment.id}`}
-            data-catalog-level="attributes"
-            onFocus={() => onActiveAttributeChange(assignment.id)}
-            onClick={() => onActiveAttributeChange(assignment.id)}
-          >
-            <div className="catalog-attribute-row-header">
-              {isReady ? (
-                <>
-                  <div className="catalog-attribute-row-heading">
-                    <span className="catalog-attribute-row-name">
-                      {definition.definition.nombre}
-                    </span>
-                    <span className="catalog-attribute-row-meta">
-                      {definition.definition.clave} ·{' '}
-                      {attributeDataTypeLabel[definition.definition.tipoDato]}
-                    </span>
-                    {optionCount && (
-                      <span className="catalog-attribute-row-meta">
-                        {optionCount}
-                      </span>
-                    )}
-                  </div>
-                  <EditarAtributoSurface
-                    api={api}
-                    assignment={assignment}
-                    definition={definition.definition}
-                    shortcutHint={isOption ? 'E' : 'Enter / E'}
-                    onUpdated={() =>
-                      onReloadDefinition(definition.definition.id)
-                    }
-                    onAssignmentChanged={onAssignmentChanged}
-                    onSuccess={onSuccess}
-                    onCommandTargetChange={(target) =>
-                      onAttributeActionTargetChange(
-                        assignment.id,
-                        'edit',
-                        target,
-                      )
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="catalog-attribute-chevron"
-                    aria-expanded={isExpanded}
-                    aria-label={`${isExpanded ? 'Ocultar' : 'Mostrar'} detalle de ${definition.definition.nombre}`}
-                    onClick={toggleExpanded}
-                  >
-                    <span aria-hidden="true">⌄</span>
-                  </button>
-                </>
-              ) : definition?.status === 'missing' ? (
-                <span className="catalog-attribute-row-meta">
-                  Definición no disponible.
-                </span>
-              ) : definition?.status === 'error' ? (
-                <div
-                  className="catalog-attribute-definition-error"
-                  role="status"
-                >
-                  <p>No se pudo cargar la definición.</p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onRetryDefinition(assignment.definicionAtributoId)
-                    }
-                  >
-                    Reintentar definición
-                  </button>
-                </div>
-              ) : (
-                <span className="catalog-attribute-row-meta" role="status">
-                  Cargando definición…
-                </span>
-              )}
-            </div>
-            {isReady && (
-              <div
-                className="catalog-attribute-row-expanded"
-                hidden={!isExpanded}
-              >
-                {exceptions.length > 0 && (
-                  <div
-                    className="catalog-attribute-badges"
-                    aria-label="Estado del atributo"
-                  >
-                    {exceptions.map((label) => (
-                      <span key={label}>{label}</span>
-                    ))}
-                  </div>
-                )}
-                {definition.definition.descripcion && (
-                  <p className="catalog-attribute-description">
-                    {definition.definition.descripcion}
-                  </p>
-                )}
-                {isOption && (
-                  <>
-                    <AttributeOptionPreview
-                      definition={definition.definition}
-                      state={optionPreviews[definition.definition.id]}
-                      onRetry={() => onRetryOptions(definition.definition.id)}
-                    />
-                    <GestionarOpcionesSurface
-                      onOptionsChanged={() =>
-                        onRetryOptions(definition.definition.id)
-                      }
-                      api={api}
-                      definition={definition.definition}
-                      shortcutHint="Enter / O"
-                      onSuccess={onSuccess}
-                      onCommandTargetChange={(target) =>
-                        onAttributeActionTargetChange(
-                          assignment.id,
-                          'options',
-                          target,
-                        )
-                      }
-                    />
-                  </>
-                )}
-              </div>
-            )}
-          </article>
-        )
-      })}
-      {partialError && (
-        <div className="catalog-attribute-state" role="alert">
-          <p>Listado parcial de atributos.</p>
-          <button type="button" onClick={onRetry}>
-            Reintentar continuación de atributos
-          </button>
-        </div>
-      )}
-      {loadingMore && (
-        <p className="catalog-attribute-state" role="status">
-          Cargando más atributos…
-        </p>
-      )}
-      {canContinue && (
-        <button type="button" onClick={onContinue}>
-          Cargar más atributos…
-        </button>
-      )}
-      {canContinue && !items.length && (
-        <p className="catalog-attribute-state">
-          Aún hay más páginas por consultar.
-        </p>
-      )}
-    </div>
-  )
-}
-
-function summaryStatsLine(items: readonly TypeAttributeAssignment[]) {
-  const heredados = items.filter(
-    (assignment) => !assignment.tipoRecursoId,
-  ).length
-  const inactivos = items.filter((assignment) => !assignment.activo).length
-  const noEfectivos = items.filter(
-    (assignment) => assignment.selection !== 'SELECTED',
-  ).length
-  const parts = [
-    `${items.length} ${items.length === 1 ? 'atributo' : 'atributos'}`,
-  ]
-  if (heredados)
-    parts.push(`${heredados} ${heredados === 1 ? 'heredado' : 'heredados'}`)
-  if (inactivos)
-    parts.push(`${inactivos} ${inactivos === 1 ? 'inactivo' : 'inactivos'}`)
-  if (noEfectivos)
-    parts.push(
-      `${noEfectivos} ${noEfectivos === 1 ? 'no efectivo' : 'no efectivos'}`,
-    )
-  return parts.join(' · ')
 }
 
 function AttributeSummaryPanel({
-  selectedTypeId,
-  state,
-  definitions,
-  onRetry,
-  onContinue,
-  onShowAll,
+  selectedTypeLabel,
 }: {
-  selectedTypeId?: string
-  state: CatalogListState<TypeAttributeAssignment> | null
-  definitions: Readonly<Record<string, DefinitionState>>
-  onRetry: () => void
-  onContinue: () => void
-  onShowAll: () => void
+  selectedTypeLabel?: string
 }) {
-  const items = state?.items ?? []
-  const initialLoading = !state || state.status === 'initial-loading'
-  const initialError = state?.status === 'initial-error'
-  const empty = state?.status === 'empty'
-  const partial =
-    !!state &&
-    (!state.isExhausted ||
-      state.status === 'loading-more' ||
-      state.status === 'partial-error')
-  const canContinue = state?.status === 'ready' && !state.isExhausted
-
   return (
     <div
       className="catalog-summary-panel"
@@ -551,89 +114,11 @@ function AttributeSummaryPanel({
       aria-labelledby="catalog-summary-tab"
     >
       <h3>RESUMEN</h3>
-      {!selectedTypeId ? (
-        <p className="catalog-summary-muted">
-          Seleccioná un Tipo para consultar su resumen de atributos.
-        </p>
-      ) : initialLoading ? (
-        <p className="catalog-summary-muted" role="status">
-          Cargando resumen de atributos…
-        </p>
-      ) : initialError ? (
-        <div className="catalog-summary-state" role="alert">
-          <p>No se pudo cargar el resumen de atributos.</p>
-          <button type="button" onClick={onRetry}>
-            Reintentar resumen de atributos
-          </button>
-        </div>
-      ) : empty ? (
-        <p className="catalog-summary-muted" role="status">
-          Este Tipo no tiene atributos asignados.
-        </p>
-      ) : (
-        <>
-          <p className="catalog-summary-stats">
-            {summaryStatsLine(items)}
-            {partial && ' · vista parcial'}
-          </p>
-          <table className="catalog-summary-table">
-            <thead>
-              <tr>
-                <th scope="col">Atributo</th>
-                <th scope="col">Código</th>
-                <th scope="col">Tipo</th>
-                <th scope="col">Origen</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Efectividad</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((assignment) => {
-                const definition = definitions[assignment.definicionAtributoId]
-                const ready = definition?.status === 'ready'
-                const nombre = ready
-                  ? definition.definition.nombre
-                  : definition?.status === 'missing' ||
-                      definition?.status === 'error'
-                    ? 'Definición no disponible.'
-                    : 'Cargando…'
-                return (
-                  <tr key={assignment.id}>
-                    <th scope="row">{nombre}</th>
-                    <td>{ready ? definition.definition.clave : '—'}</td>
-                    <td>
-                      {ready
-                        ? attributeDataTypeLabel[definition.definition.tipoDato]
-                        : '—'}
-                    </td>
-                    <td>{assignment.tipoRecursoId ? 'Directo' : 'Heredado'}</td>
-                    <td>{assignment.activo ? 'Activo' : 'Inactivo'}</td>
-                    <td>{attributeEffectivenessLabel[assignment.selection]}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          {canContinue && (
-            <button
-              className="catalog-summary-continue"
-              type="button"
-              onClick={onContinue}
-            >
-              Cargar más…
-            </button>
-          )}
-        </>
-      )}
-      {!initialLoading && !initialError && !empty && (
-        <button
-          className="catalog-summary-all"
-          type="button"
-          onClick={onShowAll}
-        >
-          Ver todos en Atributos
-        </button>
-      )}
+      <p className="catalog-summary-muted">
+        {selectedTypeLabel
+          ? 'Consultá los atributos efectivos del Tipo en la pestaña Atributos.'
+          : 'Seleccioná un Tipo para consultar sus atributos efectivos.'}
+      </p>
     </div>
   )
 }
@@ -645,47 +130,39 @@ export function CatalogHierarchyScreen({
   createType,
 }: {
   presentation?: CatalogHierarchyPresentation
-  createClass?: CatalogHierarchyApi['createClass']
-  createFamily?: CatalogHierarchyApi['createFamily']
-  createType?: CatalogHierarchyApi['createType']
+  createClass?: CatalogHierarchyRestApi['createClass']
+  createFamily?: CatalogHierarchyRestApi['createFamily']
+  createType?: CatalogHierarchyRestApi['createType']
 }) {
   const [context, setContext] = useState(createInitialCatalogHierarchyContext)
-  const [activeAttributeId, setActiveAttributeId] = useState<string | null>(
-    null,
-  )
+  const [selectionVersion, setSelectionVersion] = useState(0)
   const [successMessage, showSuccess] = useAutoClosingMessage()
-  const attributeActionTargets = useRef(
-    new Map<string, AttributeActionTargets>(),
+  const [classApi] = useState<CatalogHierarchyRestApi | null>(() =>
+    presentation === undefined ? createCatalogHierarchyRestApi() : null,
   )
-  const { registerAction } = useKeyboardController()
-  const [api] = useState<CatalogHierarchyApi | null>(() =>
-    presentation === undefined ? createCatalogHierarchyConvexApi() : null,
+  const [classList] = useState<CatalogClassWindowController | null>(() =>
+    classApi ? createCatalogClassWindow({ load: classApi.listClasses }) : null,
   )
   const [lists] = useState<ConnectedLists | null>(() =>
-    api ? makeLists(api) : null,
+    classApi ? makeLists(classApi) : null,
   )
-  const [attributesApi] = useState(createCatalogTypeAttributesConvexApi)
-  const [attributeList] = useState(() => makeAttributeList(attributesApi))
-  const [activeTab, setActiveTab] = useState<'summary' | 'attributes'>(
-    'summary',
+  const [effectiveAttributesApi] = useState(
+    createCatalogTypeEffectiveAttributesApi,
   )
-  const [definitions, setDefinitions] = useState<
-    Record<string, DefinitionState>
-  >({})
-  const [definitionRetry, setDefinitionRetry] = useState(0)
-  const [optionPreviews, setOptionPreviews] = useState<
-    Record<string, OptionPreviewState>
-  >({})
-  const optionPreviewContext = useRef(0)
-  const optionPreviewRequests = useRef(new Map<string, number>())
-  const definitionToken = useRef(0)
+  const [optionsApi] = useState(createCatalogOptionsAdminApi)
+  const [attributeCreationApi] = useState(createCatalogAttributeCreationApi)
+  const [presentationAdminApi] = useState(createCatalogPresentationAdminApi)
+  const [activeTab, setActiveTab] = useState<
+    'summary' | 'attributes' | 'presentation'
+  >('summary')
   const screenRef = useRef<HTMLElement>(null)
   const attributesTabRef = useRef<HTMLButtonElement>(null)
-  const classState = useListSnapshot(lists?.classes ?? null)
-  const familyState = useListSnapshot(lists?.families ?? null)
-  const typeState = useListSnapshot(lists?.types ?? null)
-  const attributeState = useListSnapshot(attributeList)
+  const creationSessionId = useId()
+  const classState = useClassWindowSnapshot(classList)
+  const familyState = useDependentWindowSnapshot(lists?.families ?? null)
+  const typeState = useDependentWindowSnapshot(lists?.types ?? null)
   const isStatic = presentation !== undefined
+  const actorAvailable = hasRestActor()
   const classes = isStatic
     ? presentation.classes
     : project(classState?.items ?? [])
@@ -700,36 +177,61 @@ export function CatalogHierarchyScreen({
     ? presentation.selectedFamilyId
     : context.familyId
   const selectedTypeId = isStatic ? presentation.selectedTypeId : context.typeId
-  const selectedType = types.find((item) => item.id === selectedTypeId)
-  const selectedAttributeState =
-    attributeState?.parentId === selectedTypeId ? attributeState : null
-  const readyOptionDefinitionIds = useMemo(
-    () => [
-      ...new Set(
-        (activeTab === 'attributes'
-          ? (selectedAttributeState?.items ?? [])
-          : []
-        )
-          .map((assignment) => definitions[assignment.definicionAtributoId])
-          .filter(
-            (
-              definition,
-            ): definition is {
-              status: 'ready'
-              definition: AttributeDefinition
-            } =>
-              definition?.status === 'ready' &&
-              definition.definition.tipoDato === 'OPCION',
-          )
-          .map((definition) => definition.definition.id),
-      ),
-    ],
-    [activeTab, definitions, selectedAttributeState],
-  )
-  const readyOptionDefinitionIdsRef = useRef(new Set<string>())
-  readyOptionDefinitionIdsRef.current = new Set(readyOptionDefinitionIds)
   const selectedClass = classes.find((item) => item.id === selectedClassId)
   const selectedFamily = families.find((item) => item.id === selectedFamilyId)
+  const selectedType = types.find((item) => item.id === selectedTypeId)
+  const selectedClassRecord = classState?.items.find(
+    (item) => item.id === selectedClassId,
+  )
+  const selectedFamilyRecord = familyState?.items.find(
+    (item) => item.id === selectedFamilyId,
+  )
+  const selectedTypeRecord = typeState?.items.find(
+    (item) => item.id === selectedTypeId,
+  )
+  // Static presentation mode has no REST window, so classState/familyState/
+  // typeState are always empty — the code has to come from the static
+  // presentation item instead of the REST record.
+  const selectedClassCode = isStatic
+    ? selectedClass?.code
+    : selectedClassRecord?.clave
+  const selectedFamilyCode = isStatic
+    ? selectedFamily?.code
+    : selectedFamilyRecord?.clave
+  const selectedTypeCode = isStatic
+    ? selectedType?.code
+    : selectedTypeRecord?.clave
+  const effectiveAttributes = useCatalogTypeEffectiveAttributes(
+    effectiveAttributesApi,
+    {
+      classCode: selectedClassCode,
+      familyCode: selectedFamilyCode,
+      typeCode: selectedTypeCode,
+    },
+  )
+  const effectiveContext = {
+    classCode: selectedClassCode,
+    familyCode: selectedFamilyCode,
+    typeCode: selectedTypeCode,
+  }
+  const refreshEffective = (snapshot: CatalogAttributeCreationContext) =>
+    snapshot.classCode === effectiveContext.classCode &&
+    snapshot.familyCode === effectiveContext.familyCode &&
+    snapshot.typeCode === effectiveContext.typeCode
+      ? effectiveAttributes.refresh()
+      : Promise.resolve(false)
+  const creationContext = {
+    sessionId: creationSessionId,
+    classCode: effectiveContext.classCode ?? '',
+    familyCode: effectiveContext.familyCode ?? '',
+    typeCode: effectiveContext.typeCode ?? '',
+  }
+  const attributeCreation = useCatalogAttributeCreation({
+    api: attributeCreationApi,
+    context: creationContext,
+    refreshEffective,
+    canSubmit: hasRestActor,
+  })
   const selectedPath =
     selectedClass && selectedFamily && selectedType
       ? {
@@ -743,219 +245,11 @@ export function CatalogHierarchyScreen({
     : selectedClass
       ? 'family'
       : 'class'
-  const showAssignmentAction =
-    activeTab === 'attributes' && !!selectedFamily && !!selectedType
-  const activeAssignment = selectedAttributeState?.items.find(
-    (assignment) => assignment.id === activeAttributeId,
-  )
-  const activeDefinitionState = activeAssignment
-    ? definitions[activeAssignment.definicionAtributoId]
-    : undefined
-  const activeAttribute =
-    activeTab === 'attributes' && activeDefinitionState?.status === 'ready'
-      ? activeDefinitionState.definition
-      : null
-  const setAttributeActionTarget = useCallback(
-    (
-      assignmentId: string,
-      action: keyof AttributeActionTargets,
-      target: KeyboardActionTarget | null,
-    ) => {
-      const current = attributeActionTargets.current.get(assignmentId) ?? {}
-      if (target) {
-        attributeActionTargets.current.set(assignmentId, {
-          ...current,
-          [action]: target,
-        })
-        return
-      }
-      const remaining = { ...current }
-      delete remaining[action]
-      if (Object.keys(remaining).length)
-        attributeActionTargets.current.set(assignmentId, remaining)
-      else attributeActionTargets.current.delete(assignmentId)
-    },
-    [],
-  )
+  const showCreationAction = activeTab === 'summary'
 
   useEffect(() => {
-    if (!lists) return
-    void lists.classes.start()
-  }, [lists])
-
-  useEffect(() => setActiveAttributeId(null), [activeTab, selectedTypeId])
-
-  useEffect(() => {
-    if (!activeAttribute || !activeAttributeId) return
-    const target = (action: keyof AttributeActionTargets) =>
-      attributeActionTargets.current.get(activeAttributeId)?.[action]
-    const isOption = activeAttribute.tipoDato === 'OPCION'
-    const enterCanHandle = (event: KeyboardEvent) =>
-      event.key !== 'Enter' ||
-      document.activeElement?.closest<HTMLElement>(
-        '[data-catalog-level="attributes"]',
-      )?.dataset.spatialId === `catalog.row.attributes.${activeAttributeId}`
-    const removeEdit = registerAction({
-      id: 'catalog.edit-attribute',
-      surface: 'catalog',
-      key: 'e',
-      keys: isOption ? ['e'] : ['e', 'Enter'],
-      shortcut: isOption ? 'E' : 'Enter / E',
-      label: 'Editar atributo',
-      root: () => target('edit')?.root() ?? null,
-      isAvailable: () => target('edit') !== undefined,
-      canHandle: enterCanHandle,
-      run: (opener) => target('edit')?.open(opener),
-    })
-    const removeOptions = isOption
-      ? registerAction({
-          id: 'catalog.manage-options',
-          surface: 'catalog',
-          key: 'o',
-          keys: ['o', 'Enter'],
-          shortcut: 'Enter / O',
-          label: 'Opciones',
-          root: () => target('options')?.root() ?? null,
-          isAvailable: () => target('options') !== undefined,
-          canHandle: enterCanHandle,
-          run: (opener) => target('options')?.open(opener),
-        })
-      : undefined
-    return () => {
-      removeEdit()
-      removeOptions?.()
-    }
-  }, [activeAttribute, activeAttributeId, registerAction])
-
-  useEffect(() => {
-    definitionToken.current++
-    setDefinitions({})
-    if (!selectedTypeId) {
-      attributeList.setContext({ operation: 'attributes' })
-      return
-    }
-    attributeList.setContext({
-      operation: 'attributes',
-      parentId: selectedTypeId,
-    })
-    void attributeList.start()
-  }, [attributeList, selectedTypeId])
-
-  useEffect(() => {
-    if (!selectedAttributeState || !selectedTypeId) return
-    const ids = [
-      ...new Set(
-        selectedAttributeState.items.map((item) => item.definicionAtributoId),
-      ),
-    ]
-    const pending = ids.filter((id) => definitions[id] === undefined)
-    if (!pending.length) return
-    const token = definitionToken.current
-    setDefinitions((current) => ({
-      ...current,
-      ...Object.fromEntries(pending.map((id) => [id, { status: 'loading' }])),
-    }))
-    pending.forEach((id) => {
-      void attributesApi
-        .getAttributeDefinition(id)
-        .then((definition) => {
-          if (definitionToken.current !== token) return
-          setDefinitions((current) => ({
-            ...current,
-            [id]: definition
-              ? { status: 'ready', definition }
-              : { status: 'missing' },
-          }))
-        })
-        .catch(() => {
-          if (definitionToken.current !== token) return
-          setDefinitions((current) => ({
-            ...current,
-            [id]: { status: 'error' },
-          }))
-        })
-    })
-  }, [
-    selectedAttributeState,
-    attributesApi,
-    definitionRetry,
-    definitions,
-    selectedTypeId,
-  ])
-
-  useEffect(() => {
-    optionPreviewContext.current += 1
-    setOptionPreviews({})
-  }, [selectedTypeId])
-
-  useEffect(() => {
-    if (
-      activeTab !== 'attributes' ||
-      !selectedTypeId ||
-      typeof attributesApi.listAttributeOptions !== 'function'
-    )
-      return
-    const context = optionPreviewContext.current
-    const pending = readyOptionDefinitionIds.filter((id) => !optionPreviews[id])
-    if (!pending.length) return
-    setOptionPreviews((current) => ({
-      ...current,
-      ...Object.fromEntries(pending.map((id) => [id, { status: 'loading' }])),
-    }))
-    pending.forEach((id) => {
-      const request = (optionPreviewRequests.current.get(id) ?? 0) + 1
-      optionPreviewRequests.current.set(id, request)
-      void attributesApi
-        .listAttributeOptions({
-          definicionAtributoId: id,
-          mode: 'ALL',
-          pageSize: 50,
-          cursor: null,
-        })
-        .then((page) => {
-          if (
-            optionPreviewContext.current !== context ||
-            optionPreviewRequests.current.get(id) !== request ||
-            !readyOptionDefinitionIdsRef.current.has(id)
-          )
-            return
-          setOptionPreviews((current) => ({
-            ...current,
-            [id]: { status: 'ready', page },
-          }))
-        })
-        .catch(() => {
-          if (
-            optionPreviewContext.current !== context ||
-            optionPreviewRequests.current.get(id) !== request ||
-            !readyOptionDefinitionIdsRef.current.has(id)
-          )
-            return
-          setOptionPreviews((current) => ({
-            ...current,
-            [id]: { status: 'error' },
-          }))
-        })
-    })
-  }, [
-    activeTab,
-    attributesApi,
-    optionPreviews,
-    readyOptionDefinitionIds,
-    selectedTypeId,
-  ])
-
-  const retryOptionPreview = useCallback((id: string) => {
-    optionPreviewRequests.current.set(
-      id,
-      (optionPreviewRequests.current.get(id) ?? 0) + 1,
-    )
-    setOptionPreviews((current) => {
-      const next = { ...current }
-      delete next[id]
-      return next
-    })
-  }, [])
+    void classList?.start()
+  }, [classList])
 
   useEffect(() => {
     const trigger = screenRef.current?.querySelector<HTMLElement>(
@@ -964,89 +258,55 @@ export function CatalogHierarchyScreen({
     if (!trigger) return
     trigger.dataset.spatialId = `catalog.new-${creationLevel}`
     return () => {
-      if (trigger.dataset.spatialId === `catalog.new-${creationLevel}`) {
+      if (trigger.dataset.spatialId === `catalog.new-${creationLevel}`)
         delete trigger.dataset.spatialId
-      }
     }
   }, [creationLevel])
 
   const handleClassSelect = (classId: string) => {
-    if (!lists) return
-    definitionToken.current++
-    setDefinitions({})
-    attributeList.setContext({ operation: 'attributes' })
+    const selectedClassRecord = classState?.items.find(
+      (item) => item.id === classId,
+    )
+    if (!lists || !selectedClassRecord) return
     setContext((current) => selectClass(current, classId))
-    lists.families.setContext({ operation: 'families', parentId: classId })
-    lists.types.setContext({ operation: 'types' })
+    setSelectionVersion((version) => version + 1)
+    lists.families.setContext({ parentCode: selectedClassRecord.clave })
+    lists.types.setContext({})
     void lists.families.start()
   }
   const handleFamilySelect = (familyId: string) => {
-    if (!lists || !context.classId) return
-    definitionToken.current++
-    setDefinitions({})
-    attributeList.setContext({ operation: 'attributes' })
+    const selectedClassRecord = classState?.items.find(
+      (item) => item.id === context.classId,
+    )
+    const selectedFamilyRecord = familyState?.items.find(
+      (item) => item.id === familyId,
+    )
+    if (
+      !lists ||
+      !context.classId ||
+      !selectedClassRecord ||
+      !selectedFamilyRecord
+    )
+      return
     setContext((current) =>
       selectFamily(current, { familyId, classId: current.classId! }),
     )
-    lists.types.setContext({ operation: 'types', parentId: familyId })
+    setSelectionVersion((version) => version + 1)
+    lists.types.setContext({
+      classCode: selectedClassRecord.clave,
+      parentCode: selectedFamilyRecord.clave,
+    })
     void lists.types.start()
   }
   const handleTypeSelect = (typeId: string) => {
     if (!lists || !context.familyId) return
-    definitionToken.current++
-    setDefinitions({})
-    attributeList.setContext({ operation: 'attributes' })
     setContext((current) =>
       selectType(current, { typeId, familyId: current.familyId! }),
     )
   }
-  const reloadClasses = () => {
-    if (!lists) return Promise.resolve(false)
-    lists.classes.setContext({ operation: 'classes' })
-    return lists.classes.start()
-  }
-  const reloadFamilies = (parentId: string) => {
-    if (!lists) return Promise.resolve(false)
-    lists.families.setContext({ operation: 'families', parentId })
-    return lists.families.start()
-  }
-  const reloadTypes = (parentId: string) => {
-    if (!lists) return Promise.resolve(false)
-    lists.types.setContext({ operation: 'types', parentId })
-    return lists.types.start()
-  }
-  const reloadTypeAttributes = () => {
-    if (!selectedTypeId) return Promise.resolve(false)
-    attributeList.setContext({
-      operation: 'attributes',
-      parentId: selectedTypeId,
-    })
-    return attributeList.start()
-  }
-  const retryDefinition = useCallback((id: string) => {
-    setDefinitions((current) => {
-      const remaining = { ...current }
-      delete remaining[id]
-      return remaining
-    })
-    setDefinitionRetry((current) => current + 1)
-  }, [])
-  const reloadDefinition = useCallback(
-    async (id: string) => {
-      try {
-        const definition = await attributesApi.getAttributeDefinition(id)
-        setDefinitions((current) => ({
-          ...current,
-          [id]: definition
-            ? { status: 'ready', definition }
-            : { status: 'missing' },
-        }))
-      } catch {
-        setDefinitions((current) => ({ ...current, [id]: { status: 'error' } }))
-      }
-    },
-    [attributesApi],
-  )
+  const reloadClasses = () => classList?.retry() ?? Promise.resolve(false)
+  const reloadFamilies = () => lists?.families.retry() ?? Promise.resolve(false)
+  const reloadTypes = () => lists?.types.retry() ?? Promise.resolve(false)
 
   return (
     <section
@@ -1075,66 +335,60 @@ export function CatalogHierarchyScreen({
           </div>
         }
         action={
-          <>
-            {showAssignmentAction && (
-              <div data-contextual-action="attributes">
-                <AsignarAtributoSurface
-                  api={attributesApi}
-                  assignments={selectedAttributeState?.items ?? []}
-                  family={{
-                    id: selectedFamily!.id,
-                    label: selectedFamily!.label,
-                  }}
-                  type={{ id: selectedType!.id, label: selectedType!.label }}
-                  onCreated={reloadTypeAttributes}
-                  onSuccess={showSuccess}
-                />
-              </div>
-            )}
-            {!showAssignmentAction &&
-              creationLevel === 'class' &&
-              (createClass ?? api?.createClass) && (
-                <div data-contextual-action="class">
-                  <NuevaClaseSurface
-                    createClass={createClass ?? api?.createClass}
-                    onCreated={reloadClasses}
-                    onSuccess={showSuccess}
-                  />
-                </div>
-              )}
-            {!showAssignmentAction &&
-              creationLevel === 'family' &&
-              (createFamily ?? api?.createFamily) && (
-                <div data-contextual-action="family">
-                  <CatalogCreateSurface
-                    level="family"
-                    parent={{
-                      id: selectedClass!.id,
-                      label: selectedClass!.label,
-                    }}
-                    createFamily={createFamily ?? api?.createFamily}
-                    onCreated={() => reloadFamilies(selectedClass!.id)}
-                    onSuccess={showSuccess}
-                  />
-                </div>
-              )}
-            {!showAssignmentAction &&
-              creationLevel === 'type' &&
-              (createType ?? api?.createType) && (
-                <div data-contextual-action="type">
-                  <CatalogCreateSurface
-                    level="type"
-                    parent={{
-                      id: selectedFamily!.id,
-                      label: selectedFamily!.label,
-                    }}
-                    createType={createType ?? api?.createType}
-                    onCreated={() => reloadTypes(selectedFamily!.id)}
-                    onSuccess={showSuccess}
-                  />
-                </div>
-              )}
-          </>
+          showCreationAction ? (
+            <>
+              {creationLevel === 'class' &&
+                (createClass ?? classApi?.createClass) && (
+                  <div data-contextual-action="class">
+                    <NuevaClaseSurface
+                      createClass={createClass ?? classApi?.createClass}
+                      onCreated={reloadClasses}
+                      onSuccess={showSuccess}
+                      actorAvailable={actorAvailable}
+                    />
+                  </div>
+                )}
+              {creationLevel === 'family' &&
+                selectedClassCode &&
+                (createFamily ?? classApi?.createFamily) && (
+                  <div data-contextual-action="family">
+                    <CatalogCreateSurface
+                      level="family"
+                      parent={{
+                        classCode: selectedClassCode,
+                        classLabel: selectedClass!.label,
+                        contextVersion: selectionVersion,
+                      }}
+                      createFamily={createFamily ?? classApi?.createFamily}
+                      onCreated={reloadFamilies}
+                      onSuccess={showSuccess}
+                      actorAvailable={actorAvailable}
+                    />
+                  </div>
+                )}
+              {creationLevel === 'type' &&
+                selectedClassCode &&
+                selectedFamilyCode &&
+                (createType ?? classApi?.createType) && (
+                  <div data-contextual-action="type">
+                    <CatalogCreateSurface
+                      level="type"
+                      parent={{
+                        classCode: selectedClassCode,
+                        classLabel: selectedClass!.label,
+                        familyCode: selectedFamilyCode,
+                        familyLabel: selectedFamily!.label,
+                        contextVersion: selectionVersion,
+                      }}
+                      createType={createType ?? classApi?.createType}
+                      onCreated={reloadTypes}
+                      onSuccess={showSuccess}
+                      actorAvailable={actorAvailable}
+                    />
+                  </div>
+                )}
+            </>
+          ) : null
         }
       />
       {successMessage && (
@@ -1179,15 +433,11 @@ export function CatalogHierarchyScreen({
                   retry: 'Reintentar',
                   partial: 'Listado parcial',
                   retryContinuation: 'Reintentar continuación',
-                  loadMore: 'Cargar más…',
+                  loadMore: 'Siguiente ventana',
                 },
                 onSelect: isStatic ? undefined : handleClassSelect,
-                onContinue: isStatic
-                  ? undefined
-                  : () => void lists?.classes.continue(),
-                onRetry: isStatic
-                  ? undefined
-                  : () => void lists?.classes.retry(),
+                onContinue: isStatic ? undefined : () => void classList?.next(),
+                onRetry: isStatic ? undefined : () => void classList?.retry(),
               },
               {
                 id: 'families',
@@ -1209,12 +459,12 @@ export function CatalogHierarchyScreen({
                   retry: 'Reintentar',
                   partial: 'Listado parcial',
                   retryContinuation: 'Reintentar continuación',
-                  loadMore: 'Cargar más…',
+                  loadMore: 'Siguiente ventana',
                 },
                 onSelect: isStatic ? undefined : handleFamilySelect,
                 onContinue: isStatic
                   ? undefined
-                  : () => void lists?.families.continue(),
+                  : () => void lists?.families.next(),
                 onRetry: isStatic
                   ? undefined
                   : () => void lists?.families.retry(),
@@ -1237,16 +487,36 @@ export function CatalogHierarchyScreen({
                   retry: 'Reintentar',
                   partial: 'Listado parcial',
                   retryContinuation: 'Reintentar continuación',
-                  loadMore: 'Cargar más…',
+                  loadMore: 'Siguiente ventana',
                 },
                 onSelect: isStatic ? undefined : handleTypeSelect,
                 onContinue: isStatic
                   ? undefined
-                  : () => void lists?.types.continue(),
+                  : () => void lists?.types.next(),
                 onRetry: isStatic ? undefined : () => void lists?.types.retry(),
               },
             ]}
           />
+          <section
+            className="catalog-region-state"
+            aria-label="Alcance REST de Catálogo"
+          >
+            <p>
+              La navegación entre ventanas no garantiza orden ni continuidad.
+            </p>
+            <p>
+              Los atributos efectivos se resuelven por Core en la pestaña
+              Atributos.
+            </p>
+          </section>
+          {!isStatic && classState?.hasPrevious && (
+            <Button
+              variant="outline"
+              onPress={() => void classList?.previous()}
+            >
+              Ventana anterior
+            </Button>
+          )}
         </WorkCard>
         <WorkCard
           className="catalog-summary"
@@ -1294,35 +564,56 @@ export function CatalogHierarchyScreen({
             >
               Atributos
             </button>
+            <button
+              id="catalog-presentation-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'presentation'}
+              aria-controls="catalog-presentation-panel"
+              tabIndex={activeTab === 'presentation' ? 0 : -1}
+              data-spatial-id="catalog.tab.presentation"
+              onClick={() => setActiveTab('presentation')}
+            >
+              Presentación
+            </button>
           </div>
           {activeTab === 'summary' ? (
-            <AttributeSummaryPanel
-              selectedTypeId={selectedTypeId}
-              state={selectedAttributeState}
-              definitions={definitions}
-              onRetry={() => void attributeList.retry()}
-              onContinue={() => void attributeList.continue()}
-              onShowAll={() => {
-                setActiveTab('attributes')
-                attributesTabRef.current?.focus()
-              }}
-            />
+            <AttributeSummaryPanel selectedTypeLabel={selectedType?.label} />
+          ) : activeTab === 'presentation' ? (
+            <>
+              {effectiveAttributes.status === 'ready' &&
+                effectiveAttributes.attributes.length > 0 && (
+                  <div
+                    className="mb-4"
+                    data-contextual-action="presentation-order"
+                  >
+                    <CatalogPresentationEditor
+                      actorAvailable={actorAvailable}
+                      context={creationContext}
+                      creationApi={attributeCreationApi}
+                      presentationApi={presentationAdminApi}
+                      attributes={effectiveAttributes.attributes}
+                    />
+                  </div>
+                )}
+              <CatalogTypePresentation
+                status={effectiveAttributes.status}
+                attributes={effectiveAttributes.attributes}
+                selectedTypeLabel={selectedType?.label}
+              />
+            </>
           ) : (
-            <AttributePanel
-              api={attributesApi}
-              selectedTypeId={selectedTypeId}
-              state={selectedAttributeState}
-              definitions={definitions}
-              onContinue={() => void attributeList.continue()}
-              onRetry={() => void attributeList.retry()}
-              onRetryDefinition={retryDefinition}
-              onReloadDefinition={reloadDefinition}
-              onAssignmentChanged={() => void reloadTypeAttributes()}
-              optionPreviews={optionPreviews}
-              onRetryOptions={retryOptionPreview}
-              onSuccess={showSuccess}
-              onActiveAttributeChange={setActiveAttributeId}
-              onAttributeActionTargetChange={setAttributeActionTarget}
+            <CatalogTypeEffectiveAttributes
+              status={effectiveAttributes.status}
+              isFresh={effectiveAttributes.isFresh}
+              attributes={effectiveAttributes.attributes}
+              retry={effectiveAttributes.retry}
+              fallbackFocus={() => attributesTabRef.current}
+              actorAvailable={actorAvailable}
+              context={creationContext}
+              creation={attributeCreation}
+              optionsApi={optionsApi}
+              refreshEffective={refreshEffective}
             />
           )}
         </WorkCard>

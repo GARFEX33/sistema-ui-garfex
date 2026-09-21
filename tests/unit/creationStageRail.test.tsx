@@ -56,8 +56,55 @@ describe('CreationStageRail', () => {
     )
 
     expect(screen.getByText('Atributos · pendiente')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Familia: Áridos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Familia Áridos' }))
 
     expect(onNavigate).toHaveBeenCalledWith('family')
+  })
+
+  it('renders a compact vertical checklist with a checkmark per confirmed selection, never a bordered button row', () => {
+    render(
+      <CreationStageRail
+        currentStage="unit"
+        onNavigate={vi.fn()}
+        selections={selections}
+      />,
+    )
+
+    const rail = screen.getByRole('list', { name: 'Etapas de creación' })
+    expect(rail.querySelectorAll('button')).toHaveLength(4)
+    expect(
+      screen.getByRole('button', { name: 'Clase Material' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Familia Áridos' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Tipo Arena' }),
+    ).toBeInTheDocument()
+  })
+
+  it('marks the current unconfirmed stage with › and a later stage with ·', () => {
+    render(
+      <CreationStageRail
+        currentStage="family"
+        onNavigate={vi.fn()}
+        selections={{
+          ...selections,
+          familyName: '',
+          typeName: '',
+          unitName: '',
+        }}
+      />,
+    )
+
+    const rail = screen.getByRole('list', { name: 'Etapas de creación' })
+    const familyRow = within(rail)
+      .getByText('Familia · pendiente')
+      .closest('[aria-current="step"]')
+    expect(familyRow?.textContent).toContain('›')
+
+    const typeRow = screen.getByText('Tipo · pendiente').closest('li')
+    expect(typeRow?.textContent).toContain('·')
+    expect(typeRow?.querySelector('[aria-current]')).toBeNull()
   })
 })

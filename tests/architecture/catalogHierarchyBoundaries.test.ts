@@ -7,6 +7,19 @@ const source = readdirSync(root)
   .filter((file) => /\.(ts|tsx|css)$/.test(file))
   .map((file) => readFileSync(join(root, file), 'utf8'))
   .join('\n')
+// OPCION is the one approved exception to deactivate/reactivate-only lifecycle:
+// an option never referenced by a Recurso may be hard-deleted, gated server-side.
+const sourceWithoutOptionsAdmin = readdirSync(root)
+  .filter(
+    (file) =>
+      /\.(ts|tsx|css)$/.test(file) && file !== 'catalogOptionsAdmin.api.ts',
+  )
+  .map((file) => readFileSync(join(root, file), 'utf8'))
+  .join('\n')
+const optionsAdminSource = readFileSync(
+  join(root, 'catalogOptionsAdmin.api.ts'),
+  'utf8',
+)
 const shell = readFileSync(
   join(process.cwd(), 'src/app/shell/AppShell.tsx'),
   'utf8',
@@ -22,70 +35,56 @@ describe('catalog hierarchy boundaries', () => {
       join(root, 'catalogHierarchy.api.ts'),
       'utf8',
     )
-    expect(transport).toContain("from 'convex/browser'")
-    expect(transport).toContain("from 'convex/server'")
-    const allowedOperations = [
-      'catalogoAdmin/jerarquia:listarClases',
-      'catalogoAdmin/jerarquia:listarFamilias',
-      'catalogoAdmin/jerarquia:listarTipos',
-      'catalogoAdmin/jerarquia:crearClase',
-      'catalogoAdmin/jerarquia:crearFamilia',
-      'catalogoAdmin/jerarquia:crearTipo',
-    ]
-    const operations = [
-      ...transport.matchAll(/['"](catalogoAdmin\/jerarquia:[A-Za-z]+)['"]/g),
-    ].map(([, operation]) => operation)
-    expect(new Set(operations)).toEqual(new Set(allowedOperations))
-    const mutationRoutes = [
-      ...transport.matchAll(
-        /(['"])(catalogoAdmin\/jerarquia:(?:crearClase|crearFamilia|crearTipo))\1/g,
-      ),
-    ].map(([, , route]) => route)
-    expect(new Set(mutationRoutes)).toEqual(
-      new Set([
-        'catalogoAdmin/jerarquia:crearClase',
-        'catalogoAdmin/jerarquia:crearFamilia',
-        'catalogoAdmin/jerarquia:crearTipo',
-      ]),
-    )
+    expect(transport).not.toMatch(/convex/i)
+    expect(transport).toMatch(/'\/v1\/catalog\/CLASE'/)
+    expect(transport).toMatch(/'\/v1\/catalog\/'\s*\+\s*kind/)
+    expect(transport).toMatch(/'FAMILIA'/)
+    expect(transport).toMatch(/'TIPO'/)
     expect(transport).not.toMatch(
-      /`[^`]*catalogoAdmin\/jerarquia|String\.(?:fromCharCode|fromCodePoint)|decodeURIComponent|(?:client|operation)\s*\[\s*['"`]/,
+      /`[^`]*\/v1\/catalog|String\.(?:fromCharCode|fromCodePoint)|decodeURIComponent/,
     )
-    expect(transport).toContain("'catalogoAdmin/jerarquia:listarClases'")
-    expect(transport).toContain("'catalogoAdmin/jerarquia:listarFamilias'")
-    expect(transport).toContain("'catalogoAdmin/jerarquia:listarTipos'")
-    expect(transport).toContain("'catalogoAdmin/jerarquia:crearClase'")
-    expect(transport).toContain("'catalogoAdmin/jerarquia:crearFamilia'")
-    expect(transport).toContain("'catalogoAdmin/jerarquia:crearTipo'")
     expect(transport).toMatch(
-      /interface CatalogHierarchyApi[\s\S]*createFamily:/,
+      /interface CatalogHierarchyRestApi[\s\S]*createFamily:/,
     )
-    expect(transport).toMatch(/interface CatalogHierarchyApi[\s\S]*createType:/)
+    expect(transport).toMatch(
+      /interface CatalogHierarchyRestApi[\s\S]*createType:/,
+    )
     expect(transport).toMatch(/async createFamily\(/)
     expect(transport).toMatch(/async createType\(/)
     expect(transport).not.toMatch(/\\u[0-9a-fA-F]{4}/)
-    expect(transport).not.toMatch(
-      /['"][^'"]*['"]\s*\+\s*['"]|['"]catalogoAdmin\/jerarquia['"]\s*\+/,
-    )
     expect(transport).not.toMatch(/\[key in|async\s*\[|familyMethod|typeMethod/)
-    expect(transport).not.toMatch(
-      /\b(?:client|queryReferences|mutationReferences)\s*\[/,
-    )
-    expect(transport).not.toMatch(/\[[A-Za-z_$][A-Za-z0-9_$]*\]/)
-    expect(transport.match(/\bclient\.mutation\s*\(/g) ?? []).toHaveLength(3)
-    expect(transport).toMatch(/client\.mutation\(createClassReference/)
-    expect(transport).toMatch(/client\.mutation\(createFamilyReference/)
-    expect(transport).toMatch(/client\.mutation\(createTypeReference/)
-    expect(transport.match(/\bclient\.action\s*\(/g) ?? []).toHaveLength(0)
+    // Excludes chained TS indexed-access types (e.g. Record['values'][string]),
+    // which are compile-time only and not the dynamic runtime access this guards against.
+    expect(transport).not.toMatch(/(?<!\])\[[A-Za-z_$][A-Za-z0-9_$]*\]/)
     expect(transport).not.toMatch(/\blifecycle\b/i)
-    expect(transport).not.toMatch(
-      /\b(?:update|activate|deactivate|activar|desactivar|actualizar)\b/i,
-    )
     expect(transport).not.toMatch(/\bRecurso\b/)
     expect(transport).not.toMatch(
-      /\bfetch\b|localStorage|sessionStorage|catalogoRecursos|storybook\/catalog-hierarchy|\bfixtures?\b|design(?:-recovered)?\.op\b/i,
+      /localStorage|sessionStorage|catalogoRecursos|storybook\/catalog-hierarchy|\bfixtures?\b|design(?:-recovered)?\.op\b/i,
+    )
+    expect(transport).toMatch(
+      /export function createCatalogHierarchyRestApi\([\s\S]*fetch/,
     )
     expect(source).not.toMatch(/Materiales|Canalizaciones|Tubería/)
+    const creationApi = readFileSync(
+      join(root, 'catalogAttributeCreation.api.ts'),
+      'utf8',
+    )
+    expect(creationApi).toMatch(/resolveHierarchyReferences/)
+    expect(creationApi).toMatch(/createCharacteristic/)
+    expect(creationApi).toMatch(/createApplicability/)
+    expect(creationApi).toMatch(/createPresentation/)
+    const creationPosts = [
+      ...creationApi.matchAll(
+        /fetch\(\s*'\/v1\/catalog\/(CARACTERISTICA|APLICABILIDAD|PRESENTACION)'\s*,\s*{\s*method:\s*'POST'/g,
+      ),
+    ].map(([, kind]) => kind)
+    expect(creationPosts).toEqual([
+      'CARACTERISTICA',
+      'APLICABILIDAD',
+      'PRESENTACION',
+    ])
+    expect(creationApi).toMatch(/method: 'POST'/)
+    expect(creationApi).not.toMatch(/\b(?:PUT|DELETE|Convex|retry|fallback)\b/)
   })
 
   it('keeps the populated approved composition outside runtime', () => {
@@ -119,7 +118,7 @@ describe('catalog hierarchy boundaries', () => {
     )
   })
 
-  it('keeps runtime free of speculative infrastructure and duplicate listeners', () => {
+  it('keeps runtime free of speculative infrastructure, DELETE, and duplicate listeners', () => {
     const transport = readFileSync(
       join(root, 'catalogHierarchy.api.ts'),
       'utf8',
@@ -137,9 +136,7 @@ describe('catalog hierarchy boundaries', () => {
     expect(transport).not.toMatch(
       /\buseQuery\b|\bQueryClient\b|global.?store|\bBandeja\b|\bRecurso\b|\b(update|activate|deactivate)\s*\(|addEventListener|onkeydown|Ctrl\+N/i,
     )
-    expect(transport).toMatch(
-      /catalogoAdmin\/jerarquia:crearClase|client\.mutation\s*\(/,
-    )
+    expect(transport).toMatch(/async createClass\(/)
     const screen = readFileSync(
       join(root, 'CatalogHierarchyScreen.tsx'),
       'utf8',
@@ -147,15 +144,19 @@ describe('catalog hierarchy boundaries', () => {
     expect(screen).not.toMatch(
       /HierarchyBrowser|HierarchyReadPanel|KeyboardControllerProvider|createContext|addEventListener|onKeyDown|event\.code|(?:selected|active)Index|roving/i,
     )
-    expect(source).not.toMatch(/\b(?:Recurso|update|activate|deactivate)\b/i)
-    expect(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).toMatch(
-      /"convex": "1\.45\.0"/,
-    )
+    expect(sourceWithoutOptionsAdmin).not.toMatch(/method:\s*['"]DELETE['"]/)
+    expect(
+      optionsAdminSource.match(/method:\s*['"]DELETE['"]/g) ?? [],
+    ).toHaveLength(1)
+    expect(
+      readFileSync(join(process.cwd(), 'package.json'), 'utf8'),
+    ).not.toMatch(/"convex":/)
   })
 
   it('keeps only approved destinations and read-only visual authority', () => {
-    expect(shell.match(/<Link/g)).toHaveLength(3)
-    expect(shell).not.toMatch(/to="\/(compras|atributos|presentaci[oó]n)/i)
+    expect(shell.match(/<Link/g)).toHaveLength(5)
+    expect(shell).toMatch(/to="\/compras"/)
+    expect(shell).not.toMatch(/to="\/(atributos|presentaci[oó]n)/i)
     expect(routes).not.toMatch(/atributos|presentaci[oó]n/i)
     expect(
       readFileSync(
@@ -163,5 +164,46 @@ describe('catalog hierarchy boundaries', () => {
         'utf8',
       ),
     ).toContain('05A Configuración · Taller del catálogo')
+  })
+
+  it('mounts only the Core-effective read-only attributes path', () => {
+    const screen = readFileSync(
+      join(root, 'CatalogHierarchyScreen.tsx'),
+      'utf8',
+    )
+    const panel = readFileSync(
+      join(root, 'CatalogTypeEffectiveAttributes.tsx'),
+      'utf8',
+    )
+    expect(screen).toMatch(
+      /createCatalogTypeEffectiveAttributesApi|useCatalogTypeEffectiveAttributes|CatalogTypeEffectiveAttributes/,
+    )
+    expect(screen).not.toMatch(
+      /catalogTypeAttributes|AsignarAtributoSurface|EditarAtributoSurface|GestionarOpcionesSurface|registerAction/,
+    )
+    expect(panel).not.toMatch(/\b(?:fetch|evaluate|PRESENTACION)\b/)
+  })
+
+  it('keeps guided attribute creation in the local screen-to-panel seam', () => {
+    const screen = readFileSync(
+      join(root, 'CatalogHierarchyScreen.tsx'),
+      'utf8',
+    )
+    const panel = readFileSync(
+      join(root, 'CatalogTypeEffectiveAttributes.tsx'),
+      'utf8',
+    )
+    const creationApi = readFileSync(
+      join(root, 'catalogAttributeCreation.api.ts'),
+      'utf8',
+    )
+
+    expect(screen).toMatch(
+      /createCatalogAttributeCreationApi|useCatalogAttributeCreation|hasRestActor/,
+    )
+    expect(screen).not.toMatch(/\b(?:fetch|evaluate|setAttributes)\b/)
+    expect(panel).toMatch(/CrearAtributoSurface/)
+    expect(panel).not.toMatch(/\b(?:fetch|evaluate|PRESENTACION)\b/)
+    expect(creationApi).toMatch(/withRestActor/)
   })
 })

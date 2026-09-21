@@ -1,10 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { CreationCommandBar } from '../../src/features/resources-master/CreationCommandBar'
+import type { CreationRailStage } from '../../src/features/resources-master/CreationStageRail'
 
-const renderCommandBar = (
-  stage: 'context' | 'contract-pending' | 'attributes' | 'review-pending',
-) => {
+const renderCommandBar = (stage: CreationRailStage) => {
   const onPress = vi.fn()
   render(
     <CreationCommandBar stage={stage}>
@@ -18,10 +17,13 @@ const renderCommandBar = (
 
 describe('CreationCommandBar', () => {
   it.each([
-    ['context', 'Esc Cerrar'],
-    ['contract-pending', 'Esc / ← Volver'],
-    ['attributes', 'Esc / ← Volver · Enter Confirmar'],
-    ['review-pending', 'Esc / ← Volver'],
+    ['class', '↑/↓ mover · Enter seleccionar · Esc cerrar'],
+    ['family', '↑/↓ mover · Enter seleccionar · Esc volver'],
+    ['type', '↑/↓ mover · Enter seleccionar · Esc volver'],
+    ['unit', '↑/↓ mover · Enter seleccionar · Esc volver'],
+    ['attributes', '↑/↓ mover · Enter seleccionar · Esc volver'],
+    ['review-pending', 'Enter crear recurso · Esc volver'],
+    ['contract-pending', 'Esc volver'],
   ] as const)('shows compact %s command copy', (stage, copy) => {
     renderCommandBar(stage)
 

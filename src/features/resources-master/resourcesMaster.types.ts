@@ -1,3 +1,5 @@
+import type { CatalogValue } from '../../shared/catalog/catalogRest.contract'
+
 export type ResourceId = unknown
 export type ResourceLifecycle = 'ALL' | 'ACTIVE' | 'INACTIVE'
 
@@ -60,6 +62,109 @@ export interface ResourceListPage<T> {
   page: T[]
   isDone: boolean
   continueCursor: string
+}
+
+export interface ResourceScopeCodes {
+  classCode: string
+  familyCode: string
+  typeCode: string
+}
+
+export interface ResourceAttribute {
+  code: string
+  value: CatalogValue
+}
+
+export interface Resource {
+  id: string
+  identityV1: string
+  scope: ResourceScopeCodes
+  naturalUnit: string
+  active: boolean
+  revision: string
+  attributes: ResourceAttribute[]
+}
+
+export interface ResourcePage {
+  resources: Resource[]
+  hasPrevious: boolean
+  hasNext: boolean
+}
+
+export interface ResourceRestCreateInput {
+  scope: ResourceScopeCodes
+  naturalUnit: string
+  attributes: ResourceAttribute[]
+}
+
+export interface ResourceRestListInput {
+  scope: ResourceLifecycle
+  text?: string
+  classCode?: string
+  familyCode?: string
+  typeCode?: string
+  limit: number
+  offset: number
+  signal?: AbortSignal
+}
+
+export interface ResourceRestDetailInput {
+  classCode: string
+  identityV1: string
+  signal?: AbortSignal
+}
+
+export interface ResourceHierarchyWindowInput {
+  scope: ResourceLifecycle
+  text?: string
+  limit: number
+  offset: number
+  signal?: AbortSignal
+}
+
+export interface ResourceContextClassRestItem {
+  id: string
+  code: string
+  name: string
+  active: boolean
+  revision: string
+}
+
+export interface ResourceContextUnitRestItem {
+  id: string
+  code: string
+  name: string
+  active: boolean
+  revision: string
+  symbol: string
+  dimension: string
+}
+
+export interface ResourceContextFamilyRestItem
+  extends ResourceContextClassRestItem {
+  classCode: string
+}
+
+export interface ResourceContextTypeRestItem
+  extends ResourceContextFamilyRestItem {
+  familyCode: string
+}
+
+export interface ResourceContextFamilyRestInput
+  extends ResourceHierarchyWindowInput {
+  classCode: string
+}
+
+export interface ResourceContextTypeRestInput
+  extends ResourceHierarchyWindowInput {
+  classCode: string
+  familyCode: string
+}
+
+export interface ResourceHierarchyWindowPage<T> {
+  items: T[]
+  hasPrevious: boolean
+  hasNext: boolean
 }
 
 export interface ResourceListFilters {

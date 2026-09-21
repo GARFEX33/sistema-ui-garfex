@@ -1,22 +1,11 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
-import type { ResourcesMasterApi } from './resourcesMaster.api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ResourcesMasterRestReadApi } from './resourcesMaster.api'
 import type {
-  ResourceContextClassItem,
-  ResourceContextFamilyItem,
-  ResourceContextTypeItem,
+  ResourceContextClassRestItem,
+  ResourceContextFamilyRestItem,
+  ResourceContextTypeRestItem,
   ResourceId,
 } from './resourcesMaster.types'
-import {
-  createParentGatedListController,
-  type ParentGatedListController,
-  type ParentGatedListState,
-} from '../../shared/hierarchy/parentGatedListController'
 import {
   createHierarchySelection,
   selectHierarchyChild,
@@ -25,7 +14,14 @@ import {
 
 const PAGE_SIZE = 20
 
-type ResourcesHierarchyOperation = 'classes' | 'families' | 'types'
+// Slice E1: Clase/Familia/Tipo selectors moved to a command-palette style
+// (search + bounded internal scroll over the full loaded list, no
+// Anterior/Siguiente), so this hook now fetches every page up front instead
+// of exposing manual pagination. Catalog-admin hierarchy lists in this ERP
+// are not expected to be huge; 200 is a generous bound (10 chained REST
+// calls at PAGE_SIZE=20) that protects against an unbounded fetch loop if a
+// class/familia/tipo tree ever grows unexpectedly large.
+export const HIERARCHY_FETCH_CAP = 200
 
 type ResourcesHierarchySelection = {
   classId?: ResourceId
@@ -33,102 +29,161 @@ type ResourcesHierarchySelection = {
   typeId?: ResourceId
 }
 
-type ResourcesHierarchyItem =
-  | ResourceContextClassItem
-  | ResourceContextFamilyItem
-  | ResourceContextTypeItem
+type RestHierarchyItem =
+  | ResourceContextClassRestItem
+  | ResourceContextFamilyRestItem
+  | ResourceContextTypeRestItem
 
-type ResourcesHierarchyController<T extends ResourcesHierarchyItem> =
-  ParentGatedListController<T, ResourcesHierarchyOperation>
-
-type ResourcesHierarchyState<T extends ResourcesHierarchyItem> =
-  ParentGatedListState<T, ResourcesHierarchyOperation>
-
-function useHierarchySnapshot<T extends ResourcesHierarchyItem>(
-  controller: ResourcesHierarchyController<T>,
-) {
-  const snapshotRef = useRef<ResourcesHierarchyState<T>>(controller.getState())
-  const subscribe = (listener: () => void) =>
-    controller.subscribe(() => {
-      snapshotRef.current = controller.getState()
-      listener()
-    })
-
-  return useSyncExternalStore(
-    subscribe,
-    () => snapshotRef.current,
-    () => snapshotRef.current,
-  )
+type RestWindowState<T extends RestHierarchyItem> = {
+  status: 'waiting-for-parent' | 'loading' | 'ready' | 'empty' | 'error'
+  items: T[]
+  offset: number
+  hasPrevious: boolean
+  hasNext: boolean
+  error?: unknown
 }
 
-function createResourcesHierarchyControllers(api: ResourcesMasterApi) {
-  const classes = createParentGatedListController<
-    ResourceContextClassItem,
-    ResourcesHierarchyOperation,
-    string | null
-  >({
-    operation: 'classes',
-    requiresParent: (operation) => operation !== 'classes',
-    adapter: {
-      load: ({ cursor }) =>
-        api.listContextClasses({ cursor, pageSize: PAGE_SIZE }),
-    },
-  })
-  const families = createParentGatedListController<
-    ResourceContextFamilyItem,
-    ResourcesHierarchyOperation,
-    string | null
-  >({
-    operation: 'families',
-    requiresParent: (operation) => operation !== 'classes',
-    adapter: {
-      load: ({ parentId, cursor }) =>
-        api.listContextFamilies({
-          claseRecursoId: parentId,
-          cursor,
-          pageSize: PAGE_SIZE,
-        }),
-    },
-  })
-  const types = createParentGatedListController<
-    ResourceContextTypeItem,
-    ResourcesHierarchyOperation,
-    string | null
-  >({
-    operation: 'types',
-    requiresParent: (operation) => operation !== 'classes',
-    adapter: {
-      load: ({ parentId, cursor }) =>
-        api.listContextTypes({
-          familiaRecursoId: parentId,
-          cursor,
-          pageSize: PAGE_SIZE,
-        }),
-    },
-  })
+const emptyWindow = <T extends RestHierarchyItem>(
+  status: RestWindowState<T>['status'] = 'waiting-for-parent',
+): RestWindowState<T> => ({
+  status,
+  items: [],
+  offset: 0,
+  hasPrevious: false,
+  hasNext: false,
+})
 
-  return { classes, families, types }
+// Chains REST pages internally (offset 0, PAGE_SIZE, 2*PAGE_SIZE, ...) until
+// either the server reports no further page or HIERARCHY_FETCH_CAP is hit.
+// `hasNext` on the returned result is true only in the capped-with-more-left
+// case, so callers can tell "complete list" apart from "truncated at the
+// safety cap" without exposing per-page offsets.
+async function fetchAllHierarchyPages<T>(
+  fetchPage: (
+    offset: number,
+  ) => Promise<{ items: T[]; hasPrevious: boolean; hasNext: boolean }>,
+): Promise<{ items: T[]; hasNext: boolean }> {
+  let items: T[] = []
+  let offset = 0
+  let hasNext = true
+  while (hasNext) {
+    const page = await fetchPage(offset)
+    items = items.concat(page.items)
+    hasNext = page.hasNext
+    if (page.items.length === 0) break
+    if (items.length >= HIERARCHY_FETCH_CAP) return { items, hasNext }
+    offset += PAGE_SIZE
+  }
+  return { items, hasNext: false }
 }
 
-export function useResourcesHierarchy(api: ResourcesMasterApi) {
-  const [{ classes, families, types }] = useState(() =>
-    createResourcesHierarchyControllers(api),
-  )
+export function useResourcesHierarchy(api: ResourcesMasterRestReadApi) {
   const [selection, setSelection] = useState<ResourcesHierarchySelection>(() =>
     createHierarchySelection<ResourcesHierarchySelection>(),
   )
   const selectionRef = useRef(selection)
   selectionRef.current = selection
-  const classesState = useHierarchySnapshot(classes)
-  const familiesState = useHierarchySnapshot(families)
-  const typesState = useHierarchySnapshot(types)
+  const [classes, setClasses] = useState<
+    RestWindowState<ResourceContextClassRestItem>
+  >(() => emptyWindow('loading'))
+  const [families, setFamilies] = useState<
+    RestWindowState<ResourceContextFamilyRestItem>
+  >(() => emptyWindow())
+  const [types, setTypes] = useState<
+    RestWindowState<ResourceContextTypeRestItem>
+  >(() => emptyWindow())
+  const classesGeneration = useRef(0)
+  const familiesGeneration = useRef(0)
+  const typesGeneration = useRef(0)
+
+  const loadClasses = useCallback(async () => {
+    const generation = ++classesGeneration.current
+    setClasses((current) => ({ ...current, status: 'loading', offset: 0 }))
+    try {
+      const { items, hasNext } = await fetchAllHierarchyPages((offset) =>
+        api.listHierarchyClasses({ scope: 'ACTIVE', limit: PAGE_SIZE, offset }),
+      )
+      if (generation !== classesGeneration.current) return
+      setClasses({
+        items,
+        offset: 0,
+        hasPrevious: false,
+        hasNext,
+        status: items.length === 0 ? 'empty' : 'ready',
+      })
+    } catch (error) {
+      if (generation === classesGeneration.current)
+        setClasses((current) => ({ ...current, status: 'error', error }))
+    }
+  }, [api])
+
+  const loadFamilies = useCallback(
+    async (classCode: string) => {
+      const generation = ++familiesGeneration.current
+      setFamilies((current) => ({ ...current, status: 'loading', offset: 0 }))
+      try {
+        const { items, hasNext } = await fetchAllHierarchyPages((offset) =>
+          api.listHierarchyFamilies({
+            classCode,
+            scope: 'ACTIVE',
+            limit: PAGE_SIZE,
+            offset,
+          }),
+        )
+        if (generation !== familiesGeneration.current) return
+        setFamilies({
+          items,
+          offset: 0,
+          hasPrevious: false,
+          hasNext,
+          status: items.length === 0 ? 'empty' : 'ready',
+        })
+      } catch (error) {
+        if (generation === familiesGeneration.current)
+          setFamilies((current) => ({ ...current, status: 'error', error }))
+      }
+    },
+    [api],
+  )
+
+  const loadTypes = useCallback(
+    async (classCode: string, familyCode: string) => {
+      const generation = ++typesGeneration.current
+      setTypes((current) => ({ ...current, status: 'loading', offset: 0 }))
+      try {
+        const { items, hasNext } = await fetchAllHierarchyPages((offset) =>
+          api.listHierarchyTypes({
+            classCode,
+            familyCode,
+            scope: 'ACTIVE',
+            limit: PAGE_SIZE,
+            offset,
+          }),
+        )
+        if (generation !== typesGeneration.current) return
+        setTypes({
+          items,
+          offset: 0,
+          hasPrevious: false,
+          hasNext,
+          status: items.length === 0 ? 'empty' : 'ready',
+        })
+      } catch (error) {
+        if (generation === typesGeneration.current)
+          setTypes((current) => ({ ...current, status: 'error', error }))
+      }
+    },
+    [api],
+  )
 
   useEffect(() => {
-    void classes.start()
-  }, [classes])
+    void loadClasses()
+  }, [loadClasses])
 
   const selectClass = useCallback(
     (classId: ResourceId) => {
+      const selected = classes.items.find((item) => item.id === classId)
+      if (!selected) return
       const next = selectHierarchyRoot(
         selectionRef.current,
         { key: 'classId', value: classId },
@@ -136,16 +191,21 @@ export function useResourcesHierarchy(api: ResourcesMasterApi) {
       )
       selectionRef.current = next
       setSelection(next)
-      families.setContext({ operation: 'families', parentId: classId })
-      types.setContext({ operation: 'types' })
-      void families.start()
+      ++familiesGeneration.current
+      ++typesGeneration.current
+      setFamilies(emptyWindow('loading'))
+      setTypes(emptyWindow())
+      void loadFamilies(selected.code)
     },
-    [families, types],
+    [classes.items, loadFamilies],
   )
 
   const selectFamily = useCallback(
     (familyId: ResourceId) => {
       const classId = selectionRef.current.classId
+      const selectedClass = classes.items.find((item) => item.id === classId)
+      const selectedFamily = families.items.find((item) => item.id === familyId)
+      if (!selectedClass || !selectedFamily) return
       const next = selectHierarchyChild(
         selectionRef.current,
         { key: 'familyId', value: familyId },
@@ -155,10 +215,11 @@ export function useResourcesHierarchy(api: ResourcesMasterApi) {
       if (next === selectionRef.current) return
       selectionRef.current = next
       setSelection(next)
-      types.setContext({ operation: 'types', parentId: familyId })
-      void types.start()
+      ++typesGeneration.current
+      setTypes(emptyWindow('loading'))
+      void loadTypes(selectedClass.code, selectedFamily.code)
     },
-    [types],
+    [classes.items, families.items, loadTypes],
   )
 
   const selectType = useCallback((typeId: ResourceId) => {
@@ -174,19 +235,50 @@ export function useResourcesHierarchy(api: ResourcesMasterApi) {
     setSelection(next)
   }, [])
 
+  const retryClasses = () => void loadClasses()
+  const retryFamilies = () => {
+    const selected = classes.items.find((item) => item.id === selection.classId)
+    if (selected) void loadFamilies(selected.code)
+  }
+  const retryTypes = () => {
+    const selectedClass = classes.items.find(
+      (item) => item.id === selection.classId,
+    )
+    const selectedFamily = families.items.find(
+      (item) => item.id === selection.familyId,
+    )
+    if (selectedClass && selectedFamily)
+      void loadTypes(selectedClass.code, selectedFamily.code)
+  }
+
+  // Slice E1: each level now loads its complete window up front (see
+  // fetchAllHierarchyPages above), so manual pagination is no longer
+  // meaningful for a bounded, search-and-scroll consumer. Slice E2 confirmed
+  // (via rg) that `previousClasses/Families/Types` had no remaining
+  // consumer once ResourcesMasterScreen.tsx moved off HierarchyNavigator, so
+  // they were removed. `continueClasses/Families/Types` stay as documented
+  // no-ops because CrearRecursoSurface.tsx's resource-creation wizard still
+  // wires them as StagedSearchSelector's `onLoadMore` in its own (unbounded)
+  // mode — harmless in the ordinary case since a fully-loaded window is
+  // already exhausted, and only a no-op (rather than a real fetch) in the
+  // rare case a class/familia/tipo list exceeds HIERARCHY_FETCH_CAP.
+  const continueClasses = () => {}
+  const continueFamilies = () => {}
+  const continueTypes = () => {}
+
   return {
     selection,
-    classes: classesState,
-    families: familiesState,
-    types: typesState,
+    classes,
+    families,
+    types,
     selectClass,
     selectFamily,
     selectType,
-    retryClasses: () => classes.retry(),
-    retryFamilies: () => families.retry(),
-    retryTypes: () => types.retry(),
-    continueClasses: () => classes.continue(),
-    continueFamilies: () => families.continue(),
-    continueTypes: () => types.continue(),
+    retryClasses,
+    retryFamilies,
+    retryTypes,
+    continueClasses,
+    continueFamilies,
+    continueTypes,
   }
 }

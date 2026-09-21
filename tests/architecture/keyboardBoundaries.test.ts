@@ -11,6 +11,7 @@ const keyboardFiles = [
   'src/app/shell/CommandEntry.tsx',
   'src/app/shell/KeyboardHelpDialog.tsx',
   'src/features/catalog-hierarchy/NuevaClaseSurface.tsx',
+  'src/features/catalog-hierarchy/CrearAtributoSurface.tsx',
   'src/features/resources-master/StagedSearchSelector.tsx',
 ]
 const read = (file: string) => readFileSync(join(root, file), 'utf8')
@@ -77,27 +78,40 @@ describe('Keyboard First architecture boundaries', () => {
     const runtime = runtimeFiles
       .map((file) => readFileSync(join(root, 'src', file), 'utf8'))
       .join('\n')
-    const approvedConvexTransportAdapters = new Set([
-      'features/catalog-hierarchy/catalogHierarchy.api.ts',
-      'features/catalog-hierarchy/catalogTypeAttributes.api.ts',
-      'features/resources-master/resourcesMaster.api.ts',
-    ])
-    const runtimeWithoutApprovedConvexTransportAdapters = runtimeFiles
-      .filter((file) => !approvedConvexTransportAdapters.has(file))
-      .map((file) => readFileSync(join(root, 'src', file), 'utf8'))
-      .join('\n')
-    expect(runtime).not.toMatch(
-      /(?:localStorage|sessionStorage|\bfetch\s*\(|storybook|runtimeFixture|fixture)/i,
-    )
-    expect(runtimeWithoutApprovedConvexTransportAdapters).not.toMatch(
-      /\bconvex\b/i,
-    )
+        const approvedRestTransportAdapters = new Set([
+          'features/catalog-hierarchy/catalogHierarchy.api.ts',
+          'features/catalog-hierarchy/catalogTypeAttributesRead.api.ts',
+              'features/catalog-hierarchy/catalogTypeEffectiveAttributes.api.ts',
+          'features/catalog-hierarchy/catalogOptionsAdmin.api.ts',
+              'features/catalog-hierarchy/catalogAttributeCreation.api.ts',
+          'features/catalog-hierarchy/catalogPresentationAdmin.api.ts',
+          'features/resources-master/resourcesMaster.api.ts',
+          'features/resources-master/resourceAttributeEvaluation.api.ts',
+          'features/proveedores/proveedores.api.ts',
+          'features/compras/compras.api.ts',
+        ])
+        const runtimeWithoutApprovedRestTransportAdapters = runtimeFiles
+          .filter((file) => !approvedRestTransportAdapters.has(file))
+          .map((file) => readFileSync(join(root, 'src', file), 'utf8'))
+          .join('\n')
+        expect(runtimeWithoutApprovedRestTransportAdapters).not.toMatch(
+          /\bfetch\s*\(/,
+        )
+        expect(runtime).not.toMatch(
+          /(?:localStorage|sessionStorage|storybook|runtimeFixture|fixture)/i,
+        )
+    expect(runtime).not.toMatch(/\bconvex\b/i)
     expect(runtime).not.toMatch(/(?:catalog\.new-recurso|new-recurso|Nueva\s+Recurso)/i)
     const keyboardContext = read('src/shared/keyboard/keyboardControllerContext.ts')
         expect(keyboardContext).toMatch(
           /ContextualActionId\s*=\s*[\s\S]*'catalog\.new-class'[\s\S]*'catalog\.new-family'[\s\S]*'catalog\.new-type'[\s\S]*'catalog\.edit-attribute'[\s\S]*'catalog\.manage-options'/,
         )
         expect(keyboardContext).not.toMatch(/ContextualActionId\s*=\s*string/)
+        expect(
+          read('src/features/catalog-hierarchy/CatalogHierarchyScreen.tsx'),
+        ).not.toMatch(
+          /registerAction|catalog\.(?:edit-attribute|manage-options)/,
+        )
         expect(runtime).not.toMatch(/(?:createStore|configureStore|zustand|redux)/i)
   })
 })

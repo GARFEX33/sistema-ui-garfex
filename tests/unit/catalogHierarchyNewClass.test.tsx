@@ -1,28 +1,23 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   CatalogCreateSurface,
   NuevaClaseSurface,
 } from '../../src/features/catalog-hierarchy/NuevaClaseSurface'
 import type {
-  CatalogClassItem,
-  CatalogCreated,
-  CatalogFamilyItem,
+  CatalogClassRestItem,
+  CatalogFamilyRestCreateOutput,
 } from '../../src/features/catalog-hierarchy/catalogHierarchy.types'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
-const created = (): CatalogCreated<CatalogClassItem> => ({
-  disposition: 'CREATED',
-  item: {
-    activo: false,
-    clave: 'CL-01',
-    effective: false,
-    effectiveReasons: ['INACTIVE'],
-    id: 'class-1',
-    nombre: 'Clase 1',
-    revision: 1,
-  },
+const created = (): CatalogClassRestItem => ({
+  activo: false,
+  clave: 'CL-01',
+  id: 'class-1',
+  nombre: 'Clase 1',
+  revision: '1',
 })
 const fakeCreate = () => vi.fn().mockResolvedValue(created())
 const openDialog = async (
@@ -54,16 +49,36 @@ const fillAndSubmit = async (
   await user.type(screen.getByRole('textbox', { name: 'Nombre' }), name)
   await user.click(screen.getByRole('button', { name: action }))
 }
-const expectParent = (label: string, id: string) => {
+const fillClassFields = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.type(screen.getByRole('textbox', { name: 'Plural' }), 'Clases')
+  await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'clase')
+}
+const expectParent = (label: string, code: string) => {
   expect(screen.getByText(label)).toBeVisible()
   expect(screen.getByTestId('creation-parent')).toHaveAttribute(
-    'data-parent-id',
-    id,
+    'data-parent-code',
+    code,
   )
 }
 
 // prettier-ignore
 describe('Nueva Clase creation flow', () => {
+  it('requires explicit plural and slug instead of the unsupported description', async () => {
+    const { user, createClass } = await openDialog()
+    await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'MAT')
+    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Material')
+    expect(screen.queryByRole('textbox', { name: 'Descripción' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Crear Clase' })).toBeDisabled()
+    await user.type(screen.getByRole('textbox', { name: 'Plural' }), 'Materiales')
+    await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'material')
+    await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
+    expect(createClass).toHaveBeenCalledWith({
+      code: 'MAT',
+      name: 'Material',
+      plural: 'Materiales',
+      slug: 'material',
+    })
+  })
       it('shows the contextual N shortcut as semantic kbd content', () => {
         render(<NuevaClaseSurface createClass={fakeCreate()} />)
         const trigger = screen.getByRole('button', { name: 'Nueva Clase' })
@@ -98,22 +113,31 @@ describe('Nueva Clase creation flow', () => {
     const submit = screen.getByRole('button', { name: 'Crear Clase' })
     expect(key).toHaveFocus(); expect(submit).toBeDisabled()
     await user.type(key, ' '); expect(submit).toBeDisabled()
-    await user.type(name, 'N'); expect(submit).toBeEnabled()
+    await user.type(name, 'N'); expect(submit).toBeDisabled()
+    await user.type(screen.getByRole('textbox', { name: 'Plural' }), 'Ns')
+    await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'n')
+    expect(submit).toBeEnabled()
   })
 
   it('captures an immutable exact payload and blocks duplicate submit while pending', async () => {
-    let resolve!: (value: CatalogCreated<CatalogClassItem>) => void
-    const pending = new Promise<CatalogCreated<CatalogClassItem>>((res) => { resolve = res })
+    let resolve!: (value: CatalogClassRestItem) => void
+    const pending = new Promise<CatalogClassRestItem>((res) => { resolve = res })
     const createClass = vi.fn().mockReturnValue(pending)
     const { user, trigger } = await openDialog(createClass)
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), ' K ')
     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), ' Nombre ')
-    await user.type(screen.getByRole('textbox', { name: 'Descripción' }), ' opcional ')
+    await user.type(screen.getByRole('textbox', { name: 'Plural' }), ' Plurales ')
+    await user.type(screen.getByRole('textbox', { name: 'Slug' }), ' plural ')
     const submit = screen.getByRole('button', { name: 'Crear Clase' })
     await user.click(submit); await user.click(submit)
     expect(createClass).toHaveBeenCalledTimes(1)
     const payload = createClass.mock.calls[0][0]
-    expect(payload).toEqual({ clave: ' K ', nombre: ' Nombre ', descripcion: ' opcional ' })
+    expect(payload).toEqual({
+      code: ' K ',
+      name: ' Nombre ',
+      plural: ' Plurales ',
+      slug: ' plural ',
+    })
     expect(Object.isFrozen(payload)).toBe(true)
     resolve(created())
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -121,13 +145,117 @@ describe('Nueva Clase creation flow', () => {
     expect(trigger).toHaveFocus()
   })
 
-  it('waits for the first-page refetch before closing and shows the exact success toast', async () => {
+  it('survives StrictMode effect replay and completes the creation', async () => {
+     const user = userEvent.setup()
+     const createClass = fakeCreate()
+     render(
+       <StrictMode>
+         <NuevaClaseSurface createClass={createClass} />
+       </StrictMode>,
+     )
+     await user.click(screen.getByRole('button', { name: 'Nueva Clase' }))
+     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
+     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Clase')
+     await fillClassFields(user)
+     await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
+     await waitFor(() =>
+       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+     )
+     expect(createClass).toHaveBeenCalledTimes(1)
+   })
+
+   it('consumes Escape and ignores Cancel while the create request is pending', async () => {
+     let resolve!: (value: CatalogClassRestItem) => void
+     const createClass = vi.fn(
+       () => new Promise<CatalogClassRestItem>((release) => (resolve = release)),
+     )
+     const { user } = await openDialog(createClass)
+     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
+     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Clase')
+     await fillClassFields(user)
+     await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
+     const cancel = screen.getByRole('button', { name: 'Cancelar' })
+     expect(cancel).toBeDisabled()
+     await user.keyboard('{Escape}')
+     await user.click(cancel)
+     expect(screen.getByRole('dialog', { name: 'Nueva Clase' })).toBeVisible()
+     resolve(created())
+     await waitFor(() =>
+       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+     )
+   })
+
+   it('ignores a completion when the hierarchy context changes A-B-A', async () => {
+     let resolve!: (value: CatalogFamilyRestCreateOutput) => void
+     const createFamily = vi.fn(
+       () =>
+         new Promise<CatalogFamilyRestCreateOutput>(
+           (release) => (resolve = release),
+         ),
+     )
+     const onCreated = vi.fn().mockResolvedValue(true)
+     const view = render(
+       <CatalogCreateSurface
+         level="family"
+         parent={{ classCode: 'A', classLabel: 'Clase A' }}
+         createFamily={createFamily}
+         onCreated={onCreated}
+       />,
+     )
+     const user = userEvent.setup()
+     await user.click(screen.getByRole('button', { name: 'Nueva Familia' }))
+     await fillAndSubmit(user, 'Crear Familia', 'FA', 'Familia')
+     view.rerender(
+       <CatalogCreateSurface
+         level="family"
+         parent={{ classCode: 'B', classLabel: 'Clase B' }}
+         createFamily={createFamily}
+         onCreated={onCreated}
+       />,
+     )
+     view.rerender(
+       <CatalogCreateSurface
+         level="family"
+         parent={{ classCode: 'A', classLabel: 'Clase A' }}
+         createFamily={createFamily}
+         onCreated={onCreated}
+       />,
+     )
+     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
+     resolve({} as CatalogFamilyRestCreateOutput)
+     await act(async () => {
+       await Promise.resolve()
+     })
+     expect(onCreated).not.toHaveBeenCalled()
+     expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
+     await waitFor(() =>
+       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled(),
+     )
+     await user.keyboard('{Escape}')
+     expect(screen.queryByRole('dialog', { name: 'Nueva Familia' })).not.toBeInTheDocument()
+   })
+
+   it('disables creation and explains when no REST actor is available', async () => {
+     const user = userEvent.setup()
+     render(<NuevaClaseSurface actorAvailable={false} createClass={fakeCreate()} />)
+     await user.click(screen.getByRole('button', { name: 'Nueva Clase' }))
+     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
+     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Clase')
+     await fillClassFields(user)
+     expect(screen.getByRole('button', { name: 'Crear Clase' })).toBeDisabled()
+     expect(screen.getByRole('alert')).toHaveTextContent(
+       'No se puede crear la Clase sin configurar el actor local.',
+     )
+   })
+
+   it('waits for the first-page refetch before closing and shows the exact success toast', async () => {
     let releaseRefetch!: () => void
     const refetch = new Promise<void>((resolve) => { releaseRefetch = resolve })
     const onCreated = vi.fn(() => refetch)
     const { user, trigger } = await openDialog(fakeCreate(), onCreated)
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), ' Nueva ')
+    await fillClassFields(user)
     await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
     await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1))
     expect(screen.getByRole('dialog', { name: 'Nueva Clase' })).toBeVisible()
@@ -151,6 +279,12 @@ describe('Nueva Clase creation flow', () => {
       })
       fireEvent.change(screen.getByRole('textbox', { name: 'Nombre' }), {
         target: { value: 'Nueva' },
+      })
+      fireEvent.change(screen.getByRole('textbox', { name: 'Plural' }), {
+        target: { value: 'Nuevas' },
+      })
+      fireEvent.change(screen.getByRole('textbox', { name: 'Slug' }), {
+        target: { value: 'nueva' },
       })
       fireEvent.submit(screen.getByRole('dialog').querySelector('form')!)
       await act(async () => {
@@ -185,6 +319,12 @@ describe('Nueva Clase creation flow', () => {
         })
         fireEvent.change(screen.getByRole('textbox', { name: 'Nombre' }), {
           target: { value: name },
+        })
+        fireEvent.change(screen.getByRole('textbox', { name: 'Plural' }), {
+          target: { value: 'Clases' },
+        })
+        fireEvent.change(screen.getByRole('textbox', { name: 'Slug' }), {
+          target: { value: 'clase' },
         })
         fireEvent.submit(screen.getByRole('dialog').querySelector('form')!)
         await act(async () => {
@@ -223,8 +363,9 @@ describe('Nueva Clase creation flow', () => {
     const { user } = await openDialog(createClass)
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Nombre')
+    await fillClassFields(user)
     await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Ya existe una Clase con la Clave “CL”.'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('No se pudo crear la Clase.'))
     expect(screen.getByRole('alert')).not.toHaveTextContent('must not be exposed')
     expect(screen.getByRole('textbox', { name: 'Clave' })).toHaveValue('CL')
     expect(screen.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Nombre')
@@ -238,6 +379,7 @@ describe('Nueva Clase creation flow', () => {
     const { user } = await openDialog(createClass)
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Nombre')
+    await fillClassFields(user)
     await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('No se pudo crear la Clase.'))
     expect(screen.getByRole('alert')).not.toHaveTextContent('/token')
@@ -248,6 +390,7 @@ describe('Nueva Clase creation flow', () => {
     const { user } = await openDialog(createClass)
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Nombre')
+    await fillClassFields(user)
     expect(screen.getByRole('alert')).toHaveTextContent('')
     await user.click(screen.getByRole('button', { name: 'Crear Clase' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('No se pudo crear la Clase.'))
@@ -259,28 +402,22 @@ describe('Nueva Clase creation flow', () => {
     const { user } = await openDialog()
     const key = screen.getByRole('textbox', { name: 'Clave' })
     const name = screen.getByRole('textbox', { name: 'Nombre' })
-    const description = screen.getByRole('textbox', { name: 'Descripción' })
+    const plural = screen.getByRole('textbox', { name: 'Plural' })
+    const slug = screen.getByRole('textbox', { name: 'Slug' })
     const cancel = screen.getByRole('button', { name: 'Cancelar' })
     const submit = screen.getByRole('button', { name: 'Crear Clase' })
     await user.type(key, 'K'); await user.type(name, 'N')
+    await user.type(plural, 'Ks'); await user.type(slug, 'k')
     key.focus()
     await user.keyboard('{ArrowDown}'); expect(name).toHaveFocus()
-    await user.keyboard('{ArrowDown}'); expect(description).toHaveFocus()
-    description.focus(); description.value = 'texto'; description.setSelectionRange(2, 2)
-    await user.keyboard('{ArrowUp}'); expect(description).toHaveFocus()
-    description.setSelectionRange(0, 0)
-    await user.keyboard('{ArrowUp}'); expect(name).toHaveFocus()
-    await user.keyboard('{ArrowUp}'); expect(key).toHaveFocus()
-    description.focus(); description.value = ''; description.setSelectionRange(0, 0)
+    await user.keyboard('{ArrowDown}'); expect(plural).toHaveFocus()
+    await user.keyboard('{ArrowDown}'); expect(slug).toHaveFocus()
     await user.keyboard('{ArrowDown}'); expect(cancel).toHaveFocus()
     await user.keyboard('{ArrowRight}'); expect(submit).toHaveFocus()
     await user.keyboard('{ArrowLeft}'); expect(cancel).toHaveFocus()
-    await user.keyboard('{ArrowUp}'); expect(description).toHaveFocus()
-    const selected = screen.getByRole('textbox', { name: 'Descripción' })
-    selected.focus(); selected.value = 'texto'; selected.setSelectionRange(1, 4)
-    await user.keyboard('{ArrowDown}'); expect(selected).toHaveFocus()
-    fireEvent.keyDown(selected, { key: 'ArrowDown', isComposing: true })
-    expect(selected).toHaveFocus()
+    await user.keyboard('{ArrowUp}'); expect(slug).toHaveFocus()
+    fireEvent.keyDown(slug, { key: 'ArrowDown', isComposing: true })
+    expect(slug).toHaveFocus()
     fireEvent.keyDown(key, { key: 'n', ctrlKey: true })
     fireEvent.keyDown(key, { key: 'k', ctrlKey: true })
     expect(screen.getByRole('dialog', { name: 'Nueva Clase' })).toBeVisible()
@@ -310,39 +447,83 @@ describe('Nueva Clase creation flow', () => {
   })
 
   it('supports a Family creation surface with an immutable visible Class parent', async () => {
-    let release!: (value: CatalogCreated<CatalogFamilyItem>) => void
-    const pending = new Promise<CatalogCreated<CatalogFamilyItem>>((resolve) => (release = resolve))
+    let release!: (value: CatalogFamilyRestCreateOutput) => void
+    const pending = new Promise<CatalogFamilyRestCreateOutput>((resolve) => (release = resolve))
     const createFamily = vi.fn().mockReturnValue(pending)
-    const onCreated = vi.fn().mockResolvedValue(undefined)
+    const onCreated = vi.fn().mockResolvedValue(true)
     const user = await openDependent({
-      level: 'family', parent: { id: 'class-1', label: 'Clase padre' },
+      level: 'family',
+      parent: { classCode: 'CLS', classLabel: 'Clase padre' },
       createFamily, onCreated,
     })
     expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
-    expectParent('Clase padre', 'class-1')
+    expectParent('Clase padre', 'CLS')
     expect(screen.queryByRole('textbox', { name: 'Clase' })).not.toBeInTheDocument()
     await fillAndSubmit(user, 'Crear Familia', ' FA ', ' Familia ')
     await user.click(screen.getByRole('button', { name: 'Crear Familia' }))
     expect(createFamily).toHaveBeenCalledTimes(1)
-    expect(createFamily).toHaveBeenCalledWith({ claseRecursoId: 'class-1', clave: ' FA ', nombre: ' Familia ' })
+    expect(createFamily).toHaveBeenCalledWith({
+          class: { kind: 'CLASE', code: 'CLS' },
+          code: ' FA ',
+          name: ' Familia ',
+        })
     expect(Object.isFrozen(createFamily.mock.calls[0][0])).toBe(true)
     expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
-    release({ disposition: 'CREATED', item: { id: 'family-1', nombre: 'Familia creada' } } as CatalogCreated<CatalogFamilyItem>)
+    release({} as CatalogFamilyRestCreateOutput)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(onCreated).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('status')).toHaveTextContent('Familia “ Familia ” creada.')
   })
 
-  it('supports a Type creation surface with an immutable visible Family parent and neutral failure', async () => {
+  it('fails closed when the captured parent code changes before submit', async () => {
+        const createFamily = vi.fn()
+        const view = render(
+          <CatalogCreateSurface
+            level="family"
+            parent={{ classCode: 'CLS', classLabel: 'Clase padre' }}
+            createFamily={createFamily}
+          />,
+        )
+        const user = userEvent.setup()
+        await user.click(screen.getByRole('button', { name: 'Nueva Familia' }))
+        view.rerender(
+          <CatalogCreateSurface
+            level="family"
+            parent={{ classCode: 'OTHER', classLabel: 'Otra clase' }}
+            createFamily={createFamily}
+          />,
+        )
+        await fillAndSubmit(user, 'Crear Familia', 'FA', 'Familia')
+        expect(createFamily).not.toHaveBeenCalled()
+        expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
+        expect(screen.getByRole('alert')).toHaveTextContent(
+          'No se pudo crear la Familia.',
+        )
+      })
+
+      it('supports a Type creation surface with an immutable visible Family parent and neutral failure', async () => {
     const createType = vi.fn().mockRejectedValue(new Error('backend secret'))
     const user = await openDependent({
-      level: 'type', parent: { id: 'family-1', label: 'Familia padre' }, createType,
+      level: 'type',
+      parent: {
+        classCode: 'CLS',
+        classLabel: 'Clase padre',
+        familyCode: 'FAM',
+        familyLabel: 'Familia padre',
+      },
+      createType,
     })
     expect(screen.getByRole('dialog', { name: 'Nuevo Tipo' })).toBeVisible()
-    expectParent('Familia padre', 'family-1')
+    expectParent('Clase padre', 'CLS')
+        expect(screen.getByText('Familia padre')).toBeVisible()
     await fillAndSubmit(user, 'Crear Tipo', 'TY', 'Tipo')
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('No se pudo crear el Tipo.'))
-    expect(createType).toHaveBeenCalledWith({ familiaRecursoId: 'family-1', clave: 'TY', nombre: 'Tipo' })
+    expect(createType).toHaveBeenCalledWith({
+          class: { kind: 'CLASE', code: 'CLS' },
+          family: { kind: 'FAMILIA', code: 'FAM' },
+          code: 'TY',
+          name: 'Tipo',
+        })
     expect(Object.isFrozen(createType.mock.calls[0][0])).toBe(true)
     expect(screen.getByRole('dialog', { name: 'Nuevo Tipo' })).toBeVisible()
     expect(screen.getByRole('textbox', { name: 'Clave' })).toHaveValue('TY')

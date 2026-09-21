@@ -23,7 +23,24 @@
   --color-accent: var(--color-accent);
   --color-on-accent: var(--color-on-accent);
   --color-focus: var(--color-focus);
+  --color-success: var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-warning: var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
   --font-sans: var(--font-sans);
+}
+
+/* Visually hides a scrollable region's native scrollbar while keeping it
+   fully scrollable (mouse wheel, touch, and keyboard). Standard, non-vendor
+   pattern: `scrollbar-width: none` (Firefox) + hiding the WebKit/Blink
+   scrollbar pseudo-element. Generic on purpose so any feature needing a
+   discreet internal scroll region (not just resources-master's
+   StagedSearchSelector) can reuse it instead of re-inventing it. */
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
 
 :root {

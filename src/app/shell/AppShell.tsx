@@ -81,11 +81,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         return
       }
       if (event.currentTarget.dataset.spatialId === 'sidebar.recursos') {
-        const firstClass = boundaryRoot.querySelector<HTMLElement>(
-          '[data-spatial-level="class"][data-spatial-id]',
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-spatial-id="resources.class"]',
+          ),
         )
-        focusRow(firstClass)
-        firstClass?.click()
+        return
+      }
+      if (event.currentTarget.dataset.spatialId === 'sidebar.proveedores') {
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-spatial-id="proveedores.search"]',
+          ),
+        )
         return
       }
       focusSpatialTarget({
@@ -112,16 +120,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       const target = event.target
       const boundaryRoot = workspaceMainRef.current
       if (!(target instanceof HTMLElement) || !boundaryRoot) return
+      // StagedSearchSelector columns have no per-item "currently selected"
+      // element to jump back to (search results are dynamically filtered,
+      // not a static button grid) — land on the deepest column's search
+      // input instead, which is always present and lets the user type/
+      // arrow/Enter locally from there.
       const focusDeepestResourcesHierarchy = () => {
-        for (const level of ['type', 'family', 'class']) {
-          const selected = boundaryRoot.querySelector<HTMLElement>(
-            `[data-spatial-level="${level}"][aria-pressed="true"]`,
-          )
-          if (selected) {
-            focusRow(selected)
-            return
-          }
-        }
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            '[data-spatial-id="resources.type"]',
+          ),
+        )
       }
       if (target.dataset.spatialId === 'resources.search') {
         if (event.key === 'ArrowDown') {
@@ -136,6 +145,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         if (event.key === 'ArrowLeft' || event.key === 'Escape') {
           event.preventDefault()
           focusDeepestResourcesHierarchy()
+        }
+        return
+      }
+      // Proveedores has no column hierarchy above its search input (unlike
+      // Recursos maestros' Clase/Familia/Tipo columns) — ArrowLeft/Escape
+      // return focus directly to the sidebar link that opened it.
+      if (target.dataset.spatialId === 'proveedores.search') {
+        if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+          event.preventDefault()
+          focusRow(
+            document.querySelector<HTMLElement>(
+              '[data-spatial-id="sidebar.proveedores"]',
+            ),
+          )
         }
         return
       }
@@ -213,69 +236,49 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
         return
       }
-      const resourcesHierarchyRow = target.closest<HTMLElement>(
-        '[data-spatial-level]',
+      // Resources master's Clase/Familia/Tipo columns (StagedSearchSelector)
+      // each expose one spatial-nav landing target: their search input.
+      // ArrowRight/Left hop between the three inputs in sequence and on to
+      // sidebar.recursos / resources.search at the ends — mirroring the
+      // directionality the old HierarchyNavigator button-grid used, but
+      // landing on the input itself (focus only, no click/select) since a
+      // dynamically-filtered list has no fixed "first item" to land on.
+      // ArrowUp/Down are left untouched here so StagedSearchSelector's own
+      // in-list arrow handling keeps working.
+      const resourcesColumnOrder = [
+        'resources.class',
+        'resources.family',
+        'resources.type',
+      ]
+      const resourcesColumnIndex = resourcesColumnOrder.indexOf(
+        target.dataset.spatialId ?? '',
       )
-      if (resourcesHierarchyRow) {
+      if (resourcesColumnIndex !== -1) {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
         event.preventDefault()
-        const level = resourcesHierarchyRow.dataset.spatialLevel!
-        const move = (candidate: HTMLElement | null) => {
-          focusRow(candidate)
-          candidate?.click()
-        }
-        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-          const rows = [
-            ...boundaryRoot.querySelectorAll<HTMLElement>(
-              `[data-spatial-level="${level}"]`,
-            ),
-          ]
-          const index = rows.indexOf(resourcesHierarchyRow)
-          move(
-            rows[
-              Math.max(
-                0,
-                Math.min(
-                  rows.length - 1,
-                  index + (event.key === 'ArrowDown' ? 1 : -1),
-                ),
-              )
-            ] ?? null,
-          )
-          return
-        }
         if (event.key === 'ArrowRight') {
-          if (level === 'type') {
-            focusRow(
-              boundaryRoot.querySelector<HTMLElement>(
-                '[data-spatial-id="resources.search"]',
-              ),
-            )
-            return
-          }
-          const child = level === 'class' ? 'family' : 'type'
-          move(
-            boundaryRoot.querySelector<HTMLElement>(
-              `[data-spatial-level="${child}"][data-spatial-id]`,
-            ),
-          )
-          return
-        }
-        if (event.key === 'ArrowLeft') {
-          if (level === 'class') {
-            focusRow(
-              document.querySelector<HTMLElement>(
-                '[data-spatial-id="sidebar.recursos"]',
-              ),
-            )
-            return
-          }
-          const parent = level === 'type' ? 'family' : 'class'
+          const nextId =
+            resourcesColumnOrder[resourcesColumnIndex + 1] ?? 'resources.search'
           focusRow(
             boundaryRoot.querySelector<HTMLElement>(
-              `[data-spatial-level="${parent}"][aria-pressed="true"]`,
+              `[data-spatial-id="${nextId}"]`,
             ),
           )
+          return
         }
+        if (resourcesColumnIndex === 0) {
+          focusRow(
+            document.querySelector<HTMLElement>(
+              '[data-spatial-id="sidebar.recursos"]',
+            ),
+          )
+          return
+        }
+        focusRow(
+          boundaryRoot.querySelector<HTMLElement>(
+            `[data-spatial-id="${resourcesColumnOrder[resourcesColumnIndex - 1]}"]`,
+          ),
+        )
         return
       }
       const row = target.closest<HTMLElement>('[data-catalog-level]')
@@ -328,7 +331,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             index + (event.key === 'ArrowDown' ? 1 : -1),
           ),
         )
-        move(rows[next] ?? null)
+        if (level === 'attributes') {
+          focusRow(rows[next] ?? null)
+        } else {
+          move(rows[next] ?? null)
+        }
         return
       }
       if (event.key === 'ArrowRight') {
@@ -386,7 +393,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeCommand = useCallback(() => setCommandOpen(false), [])
   const openHelp = useCallback(
     (
-      _surface: 'bandeja' | 'catalog' | 'recursos',
+      _surface: 'bandeja' | 'catalog' | 'recursos' | 'proveedores' | 'compras',
       opener: HTMLElement | null,
     ) => {
       helpOpenerRef.current = opener?.isConnected ? opener : null
@@ -400,7 +407,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? 'catalog'
       : pathname === '/recursos'
         ? 'recursos'
-        : 'bandeja'
+        : pathname === '/proveedores'
+          ? 'proveedores'
+          : pathname === '/compras'
+            ? 'compras'
+            : 'bandeja'
 
   useEffect(() => {
     if (commandOpen) {
@@ -467,7 +478,30 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               Recursos maestros
             </Link>
-            <span className="navigation-static">Compras</span>
+            <Link
+              ref={(link) => {
+                sidebarLinks.current[2] = link
+              }}
+              to="/proveedores"
+              data-spatial-id="sidebar.proveedores"
+              onKeyDown={(event) => handleSidebarKeyDown(event, 2)}
+              activeProps={{ className: 'navigation-link is-active' }}
+              className="navigation-link"
+            >
+              Proveedores
+            </Link>
+            <Link
+              ref={(link) => {
+                sidebarLinks.current[3] = link
+              }}
+              to="/compras"
+              data-spatial-id="sidebar.compras"
+              onKeyDown={(event) => handleSidebarKeyDown(event, 3)}
+              activeProps={{ className: 'navigation-link is-active' }}
+              className="navigation-link"
+            >
+              Compras
+            </Link>
             <span className="navigation-static is-current">Configuración</span>
             <p className="navigation-section-label model-navigation-label">
               CONFIGURACIÓN DEL MODELO
@@ -479,11 +513,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="navigation-static">Presentación…</span>
             <Link
               ref={(link) => {
-                sidebarLinks.current[2] = link
+                sidebarLinks.current[4] = link
               }}
               to="/catalogo"
               data-spatial-id="sidebar.catalogo"
-              onKeyDown={(event) => handleSidebarKeyDown(event, 2)}
+              onKeyDown={(event) => handleSidebarKeyDown(event, 4)}
               activeProps={{ className: 'navigation-link is-active' }}
               className="navigation-link navigation-catalog-link"
             >
@@ -499,7 +533,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ? 'Configuración / Catálogo'
                 : pathname === '/recursos'
                   ? 'Recursos maestros'
-                  : 'Entrada operativa / Bandeja'}
+                  : pathname === '/proveedores'
+                    ? 'Proveedores'
+                    : pathname === '/compras'
+                      ? 'Compras'
+                      : 'Entrada operativa / Bandeja'}
             </span>
             <div className="topbar-actions">
               <CommandEntry

@@ -1,68 +1,59 @@
 import { useEffect, useRef } from 'react'
 import { Button } from '../../shared/ui/Button'
-import type {
-  ResourceCreationEvaluation,
-  ResourceCreationResult,
-} from './resourcesMaster.types'
+import { formatCatalogValueText } from './resourceAttributeDisplay'
+import { projectResourceAttributes } from './resourceCreation.attributesFormProjection'
+import { buildResourceCreatedMessage } from './resourceCreationMessages'
+import { buildResourcePresentationName } from './resourcePresentation'
+import type { EffectiveAttribute } from '../../shared/catalog/effectiveAttributes.contract'
+import type { ResourceRestCreateInput } from './resourcesMaster.types'
+import type { UseResourceCreationSubmit } from './useResourceCreationSubmit'
+
+const summaryRowClass = 'grid grid-cols-[7rem_1fr] items-baseline gap-2'
+
+export interface ResourceCreationReviewScope {
+  classCode: string
+  className: string
+  familyCode: string
+  familyName: string
+  typeCode: string
+  typeName: string
+}
+
+export interface ResourceCreationReviewUnit {
+  code: string
+  name: string
+  symbol: string
+}
 
 export interface ResourceCreationReviewProps {
-  evaluation: ResourceCreationEvaluation | null
-  onCreate: () => void
-  disabled?: boolean
-  isCreating?: boolean
-  result?: ResourceCreationResult
+  scope: ResourceCreationReviewScope
+  unit: ResourceCreationReviewUnit
+  attributes: readonly EffectiveAttribute[]
+  values: Record<string, unknown>
+  submit: UseResourceCreationSubmit
 }
 
-const statusCopy = {
-  INCOMPLETE: 'La evaluación todavía está incompleta.',
-  INVALID: 'La evaluación detectó inconsistencias.',
-  VALID: 'La evaluación está lista para crear el recurso.',
-} as const
+const genericErrorMessage = 'No se pudo crear el recurso.'
 
-const hasAuthorityText = (value: string | null) =>
-  typeof value === 'string' && value.trim().length > 0
-
-const resultOutcome = (result: ResourceCreationResult) => {
-  switch (result.disposition) {
-    case 'CREATED':
-      return {
-        heading: 'Recurso creado',
-        message: `El recurso ${result.item.nombre} fue creado.`,
-      }
-    case 'CATALOG_CHANGED':
-      return {
-        heading: 'Catálogo actualizado',
-        message: 'El catálogo cambió antes de crear el recurso.',
-      }
-    case 'INCOMPLETE':
-      return {
-        heading: 'Creación incompleta',
-        message: 'La creación requiere correcciones antes de continuar.',
-      }
-    case 'INVALID':
-      return {
-        heading: 'Creación inválida',
-        message: 'La creación requiere correcciones antes de continuar.',
-      }
-  }
-}
+const errorMessage = (error: unknown): string =>
+  error instanceof Error && error.message.trim().length > 0
+    ? error.message
+    : genericErrorMessage
 
 export function ResourceCreationReview({
-  evaluation,
-  onCreate,
-  disabled = false,
-  isCreating = false,
-  result,
+  scope,
+  unit,
+  attributes,
+  values,
+  submit,
 }: ResourceCreationReviewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
     headingRef.current?.focus()
-  }, [result])
+  }, [submit.status])
 
-  if (result) {
-    const outcome = resultOutcome(result)
-
+  if (submit.status === 'success' && submit.result) {
     return (
       <section aria-labelledby="resource-creation-review-heading">
         <h2
@@ -71,16 +62,16 @@ export function ResourceCreationReview({
           ref={headingRef}
           tabIndex={-1}
         >
-          {outcome.heading}
+          Recurso creado
         </h2>
         <p className="mt-2 text-text-secondary" role="status">
-          {outcome.message}
+          {buildResourceCreatedMessage(scope.typeName)}
         </p>
       </section>
     )
   }
 
-  if (!evaluation) {
+  if (submit.status === 'error') {
     return (
       <section aria-labelledby="resource-creation-review-heading">
         <h2
@@ -89,24 +80,70 @@ export function ResourceCreationReview({
           ref={headingRef}
           tabIndex={-1}
         >
-          Revisión de creación
+          No se pudo crear el recurso
         </h2>
-        <p className="mt-2 text-text-secondary" role="status">
-          La evaluación de creación no está disponible.
+        <p className="mt-2 text-text-secondary" role="alert">
+          {errorMessage(submit.error)}
         </p>
+        <div className="mt-4">
+          <Button onPress={submit.reset} type="button" variant="outline">
+            Volver a intentar
+          </Button>
+        </div>
       </section>
     )
   }
 
-  const canCreate =
-    evaluation.status === 'VALID' &&
-    evaluation.valid &&
-    hasAuthorityText(evaluation.catalogFingerprint) &&
-    hasAuthorityText(evaluation.nombre) &&
-    hasAuthorityText(evaluation.identificadorTecnico)
+  const projected = projectResourceAttributes(attributes, values)
+  const canCreate = projected !== null && submit.status !== 'submitting'
+  const presentationName =
+    projected !== null
+      ? buildResourcePresentationName(attributes, {
+          id: '',
+          identityV1: '',
+          scope: {
+            classCode: scope.classCode,
+            familyCode: scope.familyCode,
+            typeCode: scope.typeCode,
+          },
+          naturalUnit: unit.code,
+          active: true,
+          revision: '',
+          attributes: projected,
+        })
+      : null
+
+  const handleCreate = () => {
+    if (projected === null) return
+    const input: ResourceRestCreateInput = {
+      scope: {
+        classCode: scope.classCode,
+        familyCode: scope.familyCode,
+        typeCode: scope.typeCode,
+      },
+      naturalUnit: unit.code,
+      attributes: projected,
+    }
+    void submit.submit(input)
+  }
 
   return (
-    <section aria-labelledby="resource-creation-review-heading">
+    <section
+      aria-labelledby="resource-creation-review-heading"
+      className="grid gap-4"
+      onKeyDown={(event) => {
+        if (
+          event.defaultPrevented ||
+          event.nativeEvent.isComposing ||
+          event.key !== 'Enter' ||
+          event.target instanceof HTMLButtonElement ||
+          !canCreate
+        )
+          return
+        event.preventDefault()
+        handleCreate()
+      }}
+    >
       <h2
         className="m-0 text-lg"
         id="resource-creation-review-heading"
@@ -115,58 +152,68 @@ export function ResourceCreationReview({
       >
         Revisión de creación
       </h2>
-      <p className="mt-2 text-text-secondary" role="status">
-        {statusCopy[evaluation.status]}
-      </p>
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div>
-          <dt className="text-sm font-semibold text-text-secondary">
-            Nombre generado
-          </dt>
-          <dd className="m-0 text-primary">{evaluation.nombre}</dd>
+      <dl className="m-0 grid gap-0.5 font-mono text-sm">
+        <div className={summaryRowClass}>
+          <dt className="text-text-secondary">Clase</dt>
+          <dd className="m-0 text-text-primary">{scope.className}</dd>
         </div>
-        <div>
-          <dt className="text-sm font-semibold text-text-secondary">
-            Identificador técnico
-          </dt>
-          <dd className="m-0 text-primary">
-            {evaluation.identificadorTecnico}
-          </dd>
+        <div className={summaryRowClass}>
+          <dt className="text-text-secondary">Familia</dt>
+          <dd className="m-0 text-text-primary">{scope.familyName}</dd>
         </div>
-        <div>
-          <dt className="text-sm font-semibold text-text-secondary">
-            Asignaciones
-          </dt>
-          <dd className="m-0 text-primary">
-            {evaluation.asignaciones.length} asignaciones resueltas
-          </dd>
+        <div className={summaryRowClass}>
+          <dt className="text-text-secondary">Tipo</dt>
+          <dd className="m-0 text-text-primary">{scope.typeName}</dd>
+        </div>
+        <div className={summaryRowClass}>
+          <dt className="text-text-secondary">Unidad</dt>
+          <dd className="m-0 text-text-primary">{`${unit.name} (${unit.symbol})`}</dd>
         </div>
       </dl>
-      {evaluation.issues.length > 0 && (
-        <section
-          aria-label="Incidencias de la evaluación"
-          className="mt-4"
-          role="alert"
-        >
-          <p className="m-0 font-semibold text-primary">Incidencias</p>
-          <ul className="mb-0 mt-2 list-disc pl-5 text-text-secondary">
-            {evaluation.issues.map((issue, index) => (
-              <li key={`${issue.code}-${index}`}>{issue.message}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {canCreate && (
-        <div className="mt-4">
-          <Button
-            isDisabled={disabled || isCreating}
-            onPress={onCreate}
-            type="button"
-          >
-            {isCreating ? 'Creando…' : 'Crear recurso'}
-          </Button>
+      {projected !== null && projected.length > 0 && (
+        <div className="grid gap-1">
+          <h3 className="m-0 text-sm font-bold text-text-primary">Atributos</h3>
+          <dl className="m-0 grid gap-0.5 font-mono text-sm">
+            {projected.map((attribute) => {
+              const definition = attributes.find(
+                (candidate) => candidate.characteristic.code === attribute.code,
+              )
+              return (
+                <div key={attribute.code} className={summaryRowClass}>
+                  <dt className="text-text-secondary">
+                    {definition?.characteristic.name ?? attribute.code}
+                  </dt>
+                  <dd className="m-0 text-text-primary">
+                    {formatCatalogValueText(attribute.value)}
+                  </dd>
+                </div>
+              )
+            })}
+          </dl>
         </div>
       )}
+      {presentationName && (
+        <div className="grid gap-1">
+          <h3 className="m-0 text-sm font-bold text-text-primary">
+            Nombre final
+          </h3>
+          <p className="m-0 font-mono text-sm text-text-primary">
+            {presentationName}
+          </p>
+        </div>
+      )}
+      <div>
+        {/* Secondary, mouse/accessibility affordance: Enter (wired above)
+            is the primary, keyboard-first way to create the resource. */}
+        <Button
+          isDisabled={!canCreate}
+          onPress={handleCreate}
+          type="button"
+          variant="outline"
+        >
+          {submit.status === 'submitting' ? 'Creando…' : 'Crear recurso'}
+        </Button>
+      </div>
     </section>
   )
 }

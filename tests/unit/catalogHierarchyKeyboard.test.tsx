@@ -1,10 +1,18 @@
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useEffect, useRef } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 import { useKeyboardController } from '../../src/shared/keyboard/keyboardControllerContext'
 import { arbitrateKeyboardEvent } from '../../src/shared/keyboard/keyboardArbitration'
 import { focusSpatialTarget } from '../../src/shared/keyboard/spatialNavigation'
+import { CatalogTypeEffectiveAttributes } from '../../src/features/catalog-hierarchy/CatalogTypeEffectiveAttributes'
+import {
+  CatalogOptionsAdmin,
+  type CatalogOptionsAdminProps,
+} from '../../src/features/catalog-hierarchy/CatalogOptionsAdmin'
+import type { CatalogOptionAdminRecord } from '../../src/features/catalog-hierarchy/catalogOptionsAdmin.types'
+import type { EffectiveAttribute } from '../../src/features/catalog-hierarchy/catalogTypeEffectiveAttributes.types'
 
 function Action({
   id = 'catalog.new-class',
@@ -46,7 +54,158 @@ function renderKeyboard(run = vi.fn(), available = true) {
   )
 }
 
+const optionRecords: readonly CatalogOptionAdminRecord[] = [
+  {
+    kind: 'OPCION',
+    id: 'option-1',
+    revision: '0',
+    active: true,
+    optionSet: { kind: 'CONJUNTO_OPCIONES', id: 'set-1', code: 'COLORS' },
+    characteristic: {
+      kind: 'CARACTERISTICA',
+      id: 'characteristic-1',
+      code: 'COLOR',
+    },
+    code: 'RED',
+    label: 'Rojo',
+    rules: [],
+  },
+]
+
+const optionProps = (): CatalogOptionsAdminProps => ({
+  optionSetCode: 'COLORS',
+  characteristicCode: 'COLOR',
+  status: 'ready',
+  records: optionRecords,
+  error: null,
+  offset: 0,
+  limit: 20,
+  hasPrevious: false,
+  hasNext: false,
+  actorAvailable: true,
+  commandStatus: 'idle',
+  commandError: null,
+  references: {
+    optionSet: optionRecords[0].optionSet,
+    characteristic: optionRecords[0].characteristic,
+  },
+  referenceStatus: 'ready',
+  referenceError: null,
+  retryReferences: vi.fn(),
+  retry: vi.fn(),
+  previous: vi.fn(),
+  next: vi.fn(),
+  create: vi.fn().mockResolvedValue(true),
+  update: vi.fn().mockResolvedValue(true),
+  deactivate: vi.fn().mockResolvedValue(true),
+  reactivate: vi.fn().mockResolvedValue(true),
+})
+
+const effectiveAttribute: EffectiveAttribute = {
+  characteristic: {
+    code: 'COLOR',
+    name: 'Color',
+    valueType: 'CONTROLLED_OPTION',
+  },
+  effectiveMode: 'OPTIONAL',
+  identityParticipates: false,
+  notApplicable: false,
+  position: 1,
+  hasPosition: true,
+  optionSetCode: 'COLORS',
+  options: [],
+  source: { level: 'TYPE', code: 'TYPE' },
+  rules: [],
+}
+
 describe('Catalogo Keyboard First integration', () => {
+  it('keeps manual detail-tab navigation local to the dialog', async () => {
+    const view = render(
+      <KeyboardControllerProvider
+        activeSurface="catalog"
+        onCommandPalette={vi.fn()}
+        onHelp={vi.fn()}
+      >
+        <button data-spatial-id="outside-row">Outside row</button>
+        <CatalogTypeEffectiveAttributes
+          status="ready"
+          attributes={[effectiveAttribute]}
+          retry={vi.fn()}
+          fallbackFocus={() =>
+            document.querySelector('[data-spatial-id="outside-row"]')
+          }
+        />
+      </KeyboardControllerProvider>,
+    )
+    const row = document.querySelector(
+      '[data-spatial-id="catalog.row.attributes.effective.0"]',
+    ) as HTMLButtonElement
+    const user = userEvent.setup()
+    await user.click(row)
+    const detail = document.querySelector('[role="tab"]') as HTMLButtonElement
+    const options = document.querySelectorAll(
+      '[role="tab"]',
+    )[1] as HTMLButtonElement
+    detail.focus()
+    const arrow = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    })
+    detail.dispatchEvent(arrow)
+    expect(arrow.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(options)
+    expect(detail).toHaveAttribute('aria-selected', 'true')
+    fireEvent.keyDown(options, { key: 'Enter' })
+    expect(options).toHaveAttribute('aria-selected', 'true')
+    expect(
+      document.querySelector('[role="dialog"] [role="tabpanel"]'),
+    ).toHaveTextContent('COLORS')
+    view.unmount()
+  })
+
+  it('owns option-list shortcuts without leaking to the global controller', async () => {
+    const globalNew = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <KeyboardControllerProvider
+        activeSurface="catalog"
+        onCommandPalette={vi.fn()}
+        onHelp={vi.fn()}
+      >
+        <Action run={globalNew} />
+        <CatalogOptionsAdmin {...optionProps()} />
+      </KeyboardControllerProvider>,
+    )
+
+    screen.getByRole('button', { name: 'Editar opción Rojo' }).focus()
+    await user.keyboard('n')
+    expect(screen.getByRole('form', { name: 'Crear opción' })).toBeVisible()
+    expect(globalNew).not.toHaveBeenCalled()
+
+    await waitFor(() => expect(screen.getByLabelText('Código')).toHaveFocus())
+    await user.type(screen.getByLabelText('Código'), 'n')
+    expect(screen.getByLabelText('Código')).toHaveValue('n')
+    expect(globalNew).not.toHaveBeenCalled()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Nueva opción' }),
+      ).toHaveFocus(),
+    )
+    await user.click(screen.getByRole('button', { name: 'Acciones para Rojo' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Desactivar' }))
+    expect(
+      screen.getByRole('region', { name: /Confirmar desactivación de opción/ }),
+    ).toBeVisible()
+    await user.keyboard('{Escape}')
+    expect(
+      screen.queryByRole('region', { name: /Confirmar desactivación/ }),
+    ).toBeNull()
+    expect(globalNew).not.toHaveBeenCalled()
+  })
+
   it('uses the real enabled Nueva Clase action for N only', () => {
     const run = vi.fn()
     const view = renderKeyboard(run)

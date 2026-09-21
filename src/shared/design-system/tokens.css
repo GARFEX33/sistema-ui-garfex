@@ -15,6 +15,10 @@
   --color-accent: #f2d031;
   --color-on-accent: #2b2500;
   --color-focus: #8a6800;
+  --color-success: #2f6b4f;
+  --color-success-subtle: #f2f8f4;
+  --color-warning: #8a6800;
+  --color-warning-subtle: #fff8d6;
   /* Nexa y RNS Sanz no están verificadas; se usa fallback Inter, Arial, sans-serif. */
   --font-sans: Inter, Arial, sans-serif;
 }

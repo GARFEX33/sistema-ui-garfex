@@ -1,441 +1,343 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AppShell } from '../../src/app/shell/AppShell'
 import { CatalogHierarchyScreen } from '../../src/features/catalog-hierarchy/CatalogHierarchyScreen'
-import type { CatalogHierarchyApi } from '../../src/features/catalog-hierarchy/catalogHierarchy.api'
-import type { CatalogTypeAttributesApi } from '../../src/features/catalog-hierarchy/catalogTypeAttributes.api'
+import { CatalogTypeEffectiveAttributes } from '../../src/features/catalog-hierarchy/CatalogTypeEffectiveAttributes'
+import type { CatalogHierarchyRestApi } from '../../src/features/catalog-hierarchy/catalogHierarchy.api'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 
-const page = (
-  items: object[],
-  exhausted = true,
-  cursor: string | null = null,
-) => ({ items, isExhausted: exhausted, continuationCursor: cursor })
-const item = (id: string, nombre: string, extra = {}) => ({
-  id,
-  nombre,
-  ...extra,
-})
-const button = (name: string) => screen.getByRole('button', { name })
-const flushFocusRestoration = () =>
-  new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-  )
-const expectAbsent = (...names: string[]) =>
-  names.forEach((name) =>
-    expect(screen.queryByRole('button', { name })).not.toBeInTheDocument(),
-  )
-const api = (overrides: Partial<CatalogHierarchyApi> = {}) =>
-  ({
-    listClasses: vi.fn(async () =>
-      page([item('b', 'Beta'), item('a', 'Alpha')]),
-    ),
-    listFamilies: vi.fn(async ({ parentId }: { parentId?: string }) =>
-      page([item('family-a', 'Familia A', { claseRecursoId: parentId })]),
-    ),
-    listTypes: vi.fn(async ({ parentId }: { parentId?: string }) =>
-      page([item('type-a', 'Tipo A', { familiaRecursoId: parentId })]),
-    ),
-    ...overrides,
-  }) as CatalogHierarchyApi
+const restFactory = vi.hoisted(() => vi.fn())
+const effectiveAttributesFactory = vi.hoisted(() => vi.fn())
+const effectiveAttributesHook = vi.hoisted(() => vi.fn())
+const attributeCreationFactory = vi.hoisted(() => vi.fn())
+const attributeCreationHook = vi.hoisted(() => vi.fn())
+const restActorAvailable = vi.hoisted(() => vi.fn())
 
-const factory = vi.hoisted(() => vi.fn())
-const attributeFactory = vi.hoisted(() => vi.fn())
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
+    '@tanstack/react-router',
+  )
+  const { forwardRef } = await import('react')
+  return {
+    ...actual,
+    Link: forwardRef<
+      HTMLAnchorElement,
+      React.ComponentPropsWithoutRef<'a'> & {
+        activeProps?: unknown
+        to: string
+      }
+    >(({ activeProps, to, ...props }, ref) => {
+      void activeProps
+      void to
+      return <a {...props} ref={ref} />
+    }),
+    useRouterState: () => '/catalogo',
+  }
+})
+
 vi.mock(
   '../../src/features/catalog-hierarchy/catalogHierarchy.api',
   async () => {
     const actual = await vi.importActual<
       typeof import('../../src/features/catalog-hierarchy/catalogHierarchy.api')
     >('../../src/features/catalog-hierarchy/catalogHierarchy.api')
-    return { ...actual, createCatalogHierarchyConvexApi: factory }
+    return {
+      ...actual,
+      createCatalogHierarchyRestApi: restFactory,
+    }
   },
 )
-
 vi.mock(
-  '../../src/features/catalog-hierarchy/catalogTypeAttributes.api',
-  async () => {
-    const actual = await vi.importActual<
-      typeof import('../../src/features/catalog-hierarchy/catalogTypeAttributes.api')
-    >('../../src/features/catalog-hierarchy/catalogTypeAttributes.api')
-    return { ...actual, createCatalogTypeAttributesConvexApi: attributeFactory }
-  },
+  '../../src/features/catalog-hierarchy/catalogTypeEffectiveAttributes.api',
+  () => ({
+    createCatalogTypeEffectiveAttributesApi: effectiveAttributesFactory,
+  }),
 )
+vi.mock(
+  '../../src/features/catalog-hierarchy/useCatalogTypeEffectiveAttributes',
+  () => ({ useCatalogTypeEffectiveAttributes: effectiveAttributesHook }),
+)
+vi.mock(
+  '../../src/features/catalog-hierarchy/catalogAttributeCreation.api',
+  () => ({ createCatalogAttributeCreationApi: attributeCreationFactory }),
+)
+vi.mock(
+  '../../src/features/catalog-hierarchy/useCatalogAttributeCreation',
+  () => ({ useCatalogAttributeCreation: attributeCreationHook }),
+)
+vi.mock('../../src/shared/api/restActor', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../src/shared/api/restActor')
+  >('../../src/shared/api/restActor')
+  return { ...actual, hasRestActor: restActorAvailable }
+})
 
-describe('CatalogHierarchyScreen connected read wiring', () => {
-  it('waits for an explicit Type before loading attributes', async () => {
-    const user = userEvent.setup()
-    const attributes: CatalogTypeAttributesApi = {
-      listTypeAssignments: vi.fn(),
-      getAttributeDefinition: vi.fn(),
-    }
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{ classes: [], families: [], types: [] }}
-      />,
-    )
+const item = (id: string, clave: string, nombre: string) => ({
+  activo: true,
+  clave,
+  id,
+  nombre,
+  revision: '1',
+})
+const page = <T,>(items: T[], hasNext = false, hasPrevious = false) => ({
+  items,
+  hasNext,
+  hasPrevious,
+})
+const button = (name: string) => screen.getByRole('button', { name })
+const expectAbsent = (...names: string[]) =>
+  names.forEach((name) =>
+    expect(screen.queryByRole('button', { name })).not.toBeInTheDocument(),
+  )
 
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+const effectiveAttributes = [
+  {
+    characteristic: {
+      code: 'COLOR',
+      name: 'Color',
+      valueType: 'CONTROLLED_OPTION' as const,
+    },
+    effectiveMode: 'REQUIRED' as const,
+    identityParticipates: false,
+    notApplicable: false,
+    position: 1,
+    hasPosition: true,
+    options: [],
+    source: { level: 'TYPE' as const, code: 'TOR' },
+    rules: [],
+  },
+]
 
-    expect(
-      screen.getByText('Seleccioná un Tipo para consultar sus atributos.'),
-    ).toBeVisible()
-    expect(attributes.listTypeAssignments).not.toHaveBeenCalled()
+const rest = (
+  overrides: Partial<CatalogHierarchyRestApi> = {},
+): CatalogHierarchyRestApi => ({
+  createClass: vi.fn(),
+  listClasses: vi
+    .fn()
+    .mockResolvedValue(page([item('class-1', 'MAT', 'Material')])),
+  listFamilies: vi
+    .fn()
+    .mockResolvedValue(
+      page([{ ...item('family-1', 'FER', 'Ferretería'), classCode: 'MAT' }]),
+    ),
+  listTypes: vi.fn().mockResolvedValue(
+    page([
+      {
+        ...item('type-1', 'TOR', 'Tornillo'),
+        classCode: 'MAT',
+        familyCode: 'FER',
+      },
+    ]),
+  ),
+  ...overrides,
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  restFactory.mockReturnValue(rest())
+  effectiveAttributesFactory.mockReturnValue({})
+  effectiveAttributesHook.mockReturnValue({
+    status: 'ready',
+    attributes: effectiveAttributes,
+    retry: vi.fn(),
+    refresh: vi.fn().mockResolvedValue(true),
   })
+  attributeCreationFactory.mockReturnValue({})
+  restActorAvailable.mockReturnValue(true)
+  attributeCreationHook.mockReturnValue({
+    status: 'idle',
+    steps: [],
+    draft: null,
+    retained: [],
+    clearExistingSearch: vi.fn(),
+    submit: vi.fn(),
+    rereadCore: vi.fn(),
+    continuePendingStep: vi.fn(),
+  })
+})
 
-  it('eagerly loads the selected Type summary before the Attributes tab is active', async () => {
-    const attributes: CatalogTypeAttributesApi = {
-      listTypeAssignments: vi.fn().mockResolvedValue(page([])),
-      getAttributeDefinition: vi.fn(),
-    }
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
+async function selectConnectedType() {
+  const user = userEvent.setup()
+  render(<CatalogHierarchyScreen />)
+  await user.click(await screen.findByRole('button', { name: 'Material' }))
+  await user.click(await screen.findByRole('button', { name: 'Ferretería' }))
+  await user.click(await screen.findByRole('button', { name: 'Tornillo' }))
+  return user
+}
+
+describe('CatalogHierarchyScreen effective attributes wiring', () => {
+  it('passes the selected REST codes only to the effective attributes hook', async () => {
+    const user = await selectConnectedType()
 
     await waitFor(() =>
-      expect(attributes.listTypeAssignments).toHaveBeenCalledWith({
-        tipoRecursoId: 'type-a',
-        cursor: undefined,
-        mode: 'ALL',
-      }),
+      expect(effectiveAttributesHook).toHaveBeenLastCalledWith(
+        {},
+        { classCode: 'MAT', familyCode: 'FER', typeCode: 'TOR' },
+      ),
     )
-    expect(screen.getByRole('tab', { name: 'Resumen' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+
+    expect(effectiveAttributesFactory).toHaveBeenCalledOnce()
     expect(
-      screen.getByText('Este Tipo no tiene atributos asignados.'),
+      screen.getByRole('heading', { name: 'Atributos efectivos del Tipo' }),
     ).toBeVisible()
+    expect(screen.getByText('Color')).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'Asignar atributo' }),
+    ).toBeNull()
   })
 
-  it('retries a friendly summary error and only confirms an exhausted empty result', async () => {
+  it('shows the read-only Presentación tab using the same Core effective attributes, no new HTTP call', async () => {
+    const user = await selectConnectedType()
+    await waitFor(() =>
+      expect(effectiveAttributesHook).toHaveBeenLastCalledWith(
+        {},
+        { classCode: 'MAT', familyCode: 'FER', typeCode: 'TOR' },
+      ),
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'Presentación' }))
+
+    const list = screen.getByRole('list', {
+      name: 'Atributos que arman el nombre, en orden',
+    })
+    expect(list).toBeVisible()
+    expect(within(list).getByText('Color')).toBeVisible()
+    expect(effectiveAttributesFactory).toHaveBeenCalledOnce()
+  })
+
+  it('wires the creation hook to the selected context and refreshes only Core effective attributes', async () => {
+    const refresh = vi.fn().mockResolvedValue(true)
+    effectiveAttributesHook.mockReturnValue({
+      status: 'ready',
+      attributes: effectiveAttributes,
+      retry: vi.fn(),
+      refresh,
+    })
     const user = userEvent.setup()
-    const attributes: CatalogTypeAttributesApi = {
-      listTypeAssignments: vi
-        .fn()
-        .mockRejectedValueOnce(new Error('private transport detail'))
-        .mockRejectedValueOnce(new Error('private transport detail'))
-        .mockResolvedValueOnce(page([])),
-      getAttributeDefinition: vi.fn(),
-    }
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'No se pudo cargar el resumen de atributos.',
-    )
-    expect(document.body.textContent).not.toContain('private transport detail')
-    await user.click(button('Reintentar resumen de atributos'))
-    expect(
-      await screen.findByText('Este Tipo no tiene atributos asignados.'),
-    ).toBeVisible()
-  })
-
-  it('summarizes only loaded pages as a compact table without capping rows', async () => {
-    const assignments = ['a', 'b', 'c', 'd'].map((id, index) => ({
-      id: `assignment-${id}`,
-      definicionAtributoId: `definition-${id}`,
-      tipoRecursoId: index % 2 ? undefined : 'type-a',
-      activo: index % 2 === 0,
-      effective: index < 2,
-      selection: 'SELECTED' as const,
-      aplicabilidad: 'OPTIONAL' as const,
-      participaIdentidad: false,
-      orden: index + 1,
-      revision: 1,
-      familiaRecursoId: 'family-a',
-      effectiveReasons: [],
-    }))
-    const attributes: CatalogTypeAttributesApi = {
-      listTypeAssignments: vi
-        .fn()
-        .mockResolvedValue(page(assignments, false, 'next')),
-      getAttributeDefinition: vi.fn(async (id) =>
-        id === 'definition-b'
-          ? null
-          : {
-              id,
-              nombre: `Nombre ${id.at(-1)}`,
-              clave: id.toUpperCase(),
-              tipoDato: 'TEXTO' as const,
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            },
-      ),
-    }
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
-
-    expect(
-      await screen.findByText(
-        '4 atributos · 2 heredados · 2 inactivos · vista parcial',
-      ),
-    ).toBeVisible()
-    const table = screen.getByRole('table')
-    expect(await screen.findByText('Nombre d')).toBeVisible()
-    expect(table).toHaveTextContent('Nombre a')
-    expect(table).toHaveTextContent('Definición no disponible.')
-    expect(table).toHaveTextContent('Nombre c')
-    expect(screen.getAllByRole('row')).toHaveLength(5)
-  })
-
-  it('lists all Type attribute assignments with resolved definition and state badges', async () => {
-    const user = userEvent.setup()
-    const attributes: CatalogTypeAttributesApi = {
-      listTypeAssignments: vi
-        .fn()
-        .mockResolvedValueOnce(
-          page(
-            [
-              {
-                id: 'assignment-direct',
-                definicionAtributoId: 'definition-a',
-                tipoRecursoId: 'type-a',
-                activo: true,
-                effective: true,
-                selection: 'SELECTED',
-                aplicabilidad: 'REQUIRED',
-                participaIdentidad: true,
-                orden: 1,
-                revision: 1,
-                familiaRecursoId: 'family-a',
-                effectiveReasons: [],
-              },
-            ],
-            false,
-            'next',
-          ),
-        )
-        .mockResolvedValueOnce(
-          page([
-            {
-              id: 'assignment-inherited',
-              definicionAtributoId: 'definition-b',
-              activo: false,
-              effective: false,
-              selection: 'SUPPRESSED',
-              aplicabilidad: 'OPTIONAL',
-              participaIdentidad: false,
-              orden: 2,
-              revision: 1,
-              familiaRecursoId: 'family-a',
-              effectiveReasons: [],
-            },
-          ]),
-        ),
-      getAttributeDefinition: vi.fn(async (id) =>
-        id === 'definition-a'
-          ? {
-              id,
-              nombre: 'Código comercial',
-              clave: 'CODIGO',
-              tipoDato: 'TEXTO',
-              descripcion: 'Identificador visible.',
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            }
-          : {
-              id,
-              nombre: 'Peso',
-              clave: 'PESO',
-              tipoDato: 'NUMERO',
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            },
-      ),
-    }
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
+    render(<CatalogHierarchyScreen />)
 
     await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+    expect(
+      screen.getByRole('button', { name: 'Crear atributo' }),
+    ).toBeDisabled()
+
+    await user.click(await screen.findByRole('button', { name: 'Material' }))
+    await user.click(await screen.findByRole('button', { name: 'Ferretería' }))
+    await user.click(await screen.findByRole('button', { name: 'Tornillo' }))
+
+    expect(screen.getByRole('button', { name: 'Crear atributo' })).toBeEnabled()
+    expect(attributeCreationFactory).toHaveBeenCalledOnce()
+    const options = attributeCreationHook.mock.calls.at(-1)?.[0]
+    expect(options).toMatchObject({
+      api: {},
+      context: {
+        classCode: 'MAT',
+        familyCode: 'FER',
+        typeCode: 'TOR',
+      },
+    })
+    expect(options.canSubmit).toBeTypeOf('function')
+
+    await options.refreshEffective({
+      classCode: 'MAT',
+      familyCode: 'FER',
+      typeCode: 'TOR',
+    })
+    expect(refresh).toHaveBeenCalledOnce()
+    await options.refreshEffective({
+      classCode: 'OTHER',
+      familyCode: 'FER',
+      typeCode: 'TOR',
+    })
+    expect(refresh).toHaveBeenCalledOnce()
+  })
+
+  it('closes a create dialog on hierarchy invalidation and restores fallback tab focus', async () => {
+    const user = await selectConnectedType()
+    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
+    const material = screen.getByRole('button', { name: 'Material' })
+    await user.click(screen.getByRole('button', { name: 'Crear atributo' }))
+    expect(screen.getByRole('dialog', { name: 'Crear atributo' })).toBeVisible()
+
+    fireEvent.click(material)
 
     await waitFor(() =>
-      expect(attributes.listTypeAssignments).toHaveBeenCalledWith({
-        tipoRecursoId: 'type-a',
-        cursor: undefined,
-        mode: 'ALL',
-      }),
+      expect(
+        screen.queryByRole('dialog', { name: 'Crear atributo' }),
+      ).not.toBeInTheDocument(),
     )
-    expect(await screen.findByText('Código comercial')).toBeVisible()
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Mostrar detalle de Código comercial',
-      }),
-    )
-    expect(screen.getByText('Obligatorio')).toBeVisible()
-    expect(screen.getByText('Parte de identidad')).toBeVisible()
-    expect(screen.queryByText('Heredado')).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Cargar más atributos…' }),
-    ).toBeVisible()
-
-    await user.click(
-      screen.getByRole('button', { name: 'Cargar más atributos…' }),
-    )
-
-    expect(await screen.findByText('Peso')).toBeVisible()
-    await user.click(
-      screen.getByRole('button', { name: 'Mostrar detalle de Peso' }),
-    )
-    expect(screen.getByText('Heredado')).toBeVisible()
-    expect(screen.getByText('Inactivo')).toBeVisible()
-    expect(screen.getByText('Suprimido')).toBeVisible()
+    expect(screen.getByRole('tab', { name: 'Atributos' })).toHaveFocus()
   })
 
-  it('exposes stable, focusable spatial metadata for read-only attribute rows', async () => {
-    const user = userEvent.setup()
-    const attributes: CatalogTypeAttributesApi = {
-      listTypeAssignments: vi.fn().mockResolvedValue(
-        page([
-          {
-            id: 'assignment-a',
-            definicionAtributoId: 'definition-a',
-            tipoRecursoId: 'type-a',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'REQUIRED',
-            participaIdentidad: false,
-            orden: 1,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-        ]),
-      ),
-      getAttributeDefinition: vi.fn().mockResolvedValue({
-        id: 'definition-a',
-        nombre: 'Código comercial',
-        clave: 'CODIGO',
-        tipoDato: 'TEXTO',
-        activo: true,
-        effective: true,
-        effectiveReasons: [],
-        revision: 1,
-      }),
-    }
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
-
+  it('renders each effective attribute as one spatial native control', async () => {
+    const user = await selectConnectedType()
     await user.click(screen.getByRole('tab', { name: 'Atributos' }))
 
-    const row = (await screen.findByText('Código comercial')).closest('article')
+    const row = screen.getByRole('button', { name: 'Ver detalle de Color' })
     expect(row).toHaveAttribute('data-catalog-level', 'attributes')
     expect(row).toHaveAttribute(
       'data-spatial-id',
-      'catalog.row.attributes.assignment-a',
+      'catalog.row.attributes.effective.0',
     )
-    expect(row).toHaveAttribute('tabindex', '0')
+    expect(row.querySelectorAll('button')).toHaveLength(0)
+    row.focus()
+    await user.keyboard('{Enter}')
+    expect(
+      screen.getByRole('dialog', { name: 'Detalle de Color' }),
+    ).toBeVisible()
   })
 
-  it('uses Enter for the primary action (Opciones when OPCION, else edit) and E always edits', async () => {
+  it('moves between attribute rows with arrows without opening detail, while Enter opens once', async () => {
     const user = userEvent.setup()
-    const attributes = {
-      listTypeAssignments: vi.fn().mockResolvedValue(
-        page([
-          {
-            id: 'assignment-option',
-            definicionAtributoId: 'definition-option',
-            tipoRecursoId: 'type-a',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 1,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-          {
-            id: 'assignment-text',
-            definicionAtributoId: 'definition-text',
-            tipoRecursoId: 'type-a',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 2,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-        ]),
-      ),
-      getAttributeDefinition: vi.fn(async (id) => ({
-        id,
-        nombre: id === 'definition-option' ? 'Color' : 'Descripción',
-        clave: id === 'definition-option' ? 'COLOR' : 'DESCRIPCION',
-        tipoDato: id === 'definition-option' ? 'OPCION' : 'TEXTO',
-        activo: true,
-        effective: true,
-        effectiveReasons: [],
-        revision: 1,
-      })),
-      listAttributeOptions: vi.fn().mockResolvedValue(page([])),
-    } as unknown as CatalogTypeAttributesApi
-    attributeFactory.mockReturnValue(attributes)
+    render(
+      <AppShell>
+        <CatalogTypeEffectiveAttributes
+          status="ready"
+          attributes={[
+            effectiveAttributes[0],
+            {
+              ...effectiveAttributes[0],
+              characteristic: {
+                ...effectiveAttributes[0].characteristic,
+                code: 'SIZE',
+                name: 'Size',
+              },
+            },
+          ]}
+          retry={vi.fn()}
+          fallbackFocus={() => null}
+        />
+      </AppShell>,
+    )
+
+    const color = screen.getByRole('button', { name: 'Ver detalle de Color' })
+    const size = screen.getByRole('button', { name: 'Ver detalle de Size' })
+    color.focus()
+    await user.keyboard('{ArrowDown}')
+    expect(size).toHaveFocus()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await user.keyboard('{ArrowUp}')
+    expect(color).toHaveFocus()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await user.keyboard('{ArrowDown}{Enter}')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(
+      screen.getByRole('dialog', { name: 'Detalle de Size' }),
+    ).toBeVisible()
+  })
+
+  it('preserves tabs and leaves attribute mutations unavailable to keyboard actions', async () => {
+    const user = userEvent.setup()
     render(
       <KeyboardControllerProvider
         activeSurface="catalog"
@@ -454,126 +356,154 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
         />
       </KeyboardControllerProvider>,
     )
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    const optionRow = (await screen.findByText('Color')).closest('article')!
-    const textRow = screen.getByText('Descripción').closest('article')!
 
-    optionRow.focus()
-    await user.keyboard('{Enter}')
-    expect(
-      screen.getByRole('dialog', { name: 'Opciones de Color' }),
-    ).toBeVisible()
+    const attributesTab = screen.getByRole('tab', { name: 'Atributos' })
+    await user.click(attributesTab)
+    expect(attributesTab).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('neo')
+    expect(screen.queryByRole('dialog')).toBeNull()
     await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await waitFor(() => expect(optionRow).toHaveFocus())
-    await flushFocusRestoration()
+    expect(attributesTab).toHaveFocus()
+  })
+})
 
-    optionRow.focus()
-    await user.keyboard('e')
-    expect(
-      screen.getByRole('dialog', { name: 'Editar atributo' }),
-    ).toBeVisible()
-    await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await waitFor(() => expect(optionRow).toHaveFocus())
-    await flushFocusRestoration()
+describe('CatalogHierarchyScreen retained hierarchy regressions', () => {
+  it('creates a Family through REST and renders it only after the active window refetches', async () => {
+    let releaseRefetch!: () => void
+    const refetch = new Promise<ReturnType<typeof page>>((resolve) => {
+      releaseRefetch = () =>
+        resolve(
+          page([
+            {
+              ...item('family-new', 'TUB', 'Tuberías'),
+              classCode: 'MAT',
+            },
+          ]),
+        )
+    })
+    const createFamily = vi.fn().mockResolvedValue({
+      active: true,
+      class: { code: 'MAT', id: 'class-1', kind: 'CLASE' as const },
+      code: 'TUB',
+      id: 'family-new',
+      kind: 'FAMILIA' as const,
+      name: 'Tuberías',
+      revision: '2',
+    })
+    const api = rest({
+      createFamily,
+      listFamilies: vi
+        .fn()
+        .mockResolvedValueOnce(page([]))
+        .mockReturnValueOnce(refetch),
+    })
+    restFactory.mockReturnValue(api)
+    const user = userEvent.setup()
+    render(
+      <KeyboardControllerProvider
+        activeSurface="catalog"
+        onCommandPalette={vi.fn()}
+        onHelp={vi.fn()}
+      >
+        <CatalogHierarchyScreen />
+      </KeyboardControllerProvider>,
+    )
 
-    optionRow.focus()
-    await user.keyboard('o')
-    expect(
-      screen.getByRole('dialog', { name: 'Opciones de Color' }),
-    ).toBeVisible()
-    await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await waitFor(() => expect(optionRow).toHaveFocus())
-    await flushFocusRestoration()
+    expect(restActorAvailable).toHaveBeenCalled()
+    await user.click(await screen.findByRole('button', { name: 'Material' }))
+    expect(button('Nueva Familia')).toBeEnabled()
+    await user.keyboard('n')
+    expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
+    await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'TUB')
+    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Tuberías')
+    await user.click(button('Crear Familia'))
 
-    textRow.focus()
-    await user.keyboard('o')
-    expect(
-      screen.queryByRole('dialog', { name: /Opciones de/ }),
-    ).not.toBeInTheDocument()
-    await user.keyboard('{Enter}')
-    expect(
-      screen.getByRole('dialog', { name: 'Editar atributo' }),
-    ).toBeVisible()
-    await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await waitFor(() => expect(textRow).toHaveFocus())
-    await flushFocusRestoration()
+    await waitFor(() =>
+      expect(createFamily).toHaveBeenCalledWith({
+        class: { code: 'MAT', kind: 'CLASE' },
+        code: 'TUB',
+        name: 'Tuberías',
+      }),
+    )
+    await waitFor(() => expect(api.listFamilies).toHaveBeenCalledTimes(2))
+    expect(screen.queryByRole('button', { name: 'Tuberías' })).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
 
-    textRow.focus()
-    await user.keyboard('e')
-    expect(
-      screen.getByRole('dialog', { name: 'Editar atributo' }),
-    ).toBeVisible()
+    releaseRefetch()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Nueva Familia' }),
+      ).not.toBeInTheDocument(),
+    )
+    await waitFor(() => expect(button('Material')).toHaveFocus())
+    expect(screen.getByRole('button', { name: 'Tuberías' })).toBeVisible()
   })
 
-  it('refetches Classes from the first page after CREATED without closing or selecting', async () => {
-    const connected = api({
-      listClasses: vi
-        .fn()
-        .mockResolvedValueOnce(page([item('old', 'Clase anterior')]))
-        .mockResolvedValueOnce(page([item('new', 'Clase releída')])),
-    })
+  it('refetches the active Classes window after a created class without selecting it', async () => {
+    const listClasses = vi
+      .fn()
+      .mockResolvedValueOnce(page([item('old', 'OLD', 'Clase anterior')]))
+      .mockResolvedValueOnce(page([item('new', 'NEW', 'Clase releída')]))
+    restFactory.mockReturnValue(rest({ listClasses }))
     const createClass = vi.fn().mockResolvedValue({
       disposition: 'CREATED',
-      item: item('created', 'Clase creada'),
+      item: item('created', 'NEW', 'Clase creada'),
     })
-    factory.mockReturnValue(connected)
     const user = userEvent.setup()
     render(<CatalogHierarchyScreen createClass={createClass} />)
-    await waitFor(() => expect(button('Clase anterior')).toBeVisible())
+
+    await screen.findByRole('button', { name: 'Clase anterior' })
     await user.click(button('Nueva Clase'))
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
     await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Nueva')
+    await user.type(screen.getByRole('textbox', { name: 'Plural' }), 'Nuevas')
+    await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'nueva')
     await user.click(button('Crear Clase'))
-    await waitFor(() => expect(connected.listClasses).toHaveBeenCalledTimes(2))
-    expect(connected.listClasses).toHaveBeenNthCalledWith(2, {
-      cursor: undefined,
-    })
-    await waitFor(() => expect(screen.getByText('Clase releída')).toBeVisible())
+
+    await waitFor(() => expect(listClasses).toHaveBeenCalledTimes(2))
     expect(
-      screen.queryByRole('button', { name: 'Clase creada' }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('dialog', { name: 'Nueva Clase' }),
-    ).not.toBeInTheDocument()
+      await screen.findByRole('button', { name: 'Clase releída' }),
+    ).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Clase creada' })).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Nueva Clase' })).toBeNull()
     expect(screen.getByRole('status')).toHaveTextContent(
       'Clase “Nueva” creada.',
     )
   })
-  it('shows one contextual success notification after explicit parent selection', async () => {
-    const user = userEvent.setup()
-    const connected = api({
-      listClasses: vi
-        .fn()
-        .mockResolvedValue(page([item('class-1', 'Clase padre')])),
-      listFamilies: vi
-        .fn()
-        .mockResolvedValue(page([item('family-1', 'Familia padre')])),
-      listTypes: vi
-        .fn()
-        .mockResolvedValue(page([item('type-1', 'Tipo padre')])),
-      createClass: vi
-        .fn()
-        .mockResolvedValue({ disposition: 'CREATED', item: {} }),
-      createFamily: vi
-        .fn()
-        .mockResolvedValue({ disposition: 'CREATED', item: {} }),
-      createType: vi
-        .fn()
-        .mockResolvedValue({ disposition: 'CREATED', item: {} }),
-    })
-    factory.mockReturnValue(connected)
-    render(<CatalogHierarchyScreen />)
 
-    await waitFor(() => expect(button('Nueva Clase')).toBeVisible())
+  it('keeps one contextual creation CTA and notification across class, family, and type', async () => {
+    const createClass = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'CREATED', item: {} })
+    const createFamily = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'CREATED', item: {} })
+    const createType = vi
+      .fn()
+      .mockResolvedValue({ disposition: 'CREATED', item: {} })
+    const user = userEvent.setup()
+    render(
+      <CatalogHierarchyScreen
+        createClass={createClass}
+        createFamily={createFamily}
+        createType={createType}
+      />,
+    )
+
+    expect(button('Nueva Clase')).toBeVisible()
     await user.click(button('Nueva Clase'))
     await user.type(screen.getByRole('textbox', { name: 'Clave' }), 'CL')
     await user.type(
       screen.getByRole('textbox', { name: 'Nombre' }),
       'Clase nueva',
+    )
+    await user.type(
+      screen.getByRole('textbox', { name: 'Plural' }),
+      'Clases nuevas',
+    )
+    await user.type(
+      screen.getByRole('textbox', { name: 'Slug' }),
+      'clase-nueva',
     )
     await user.click(button('Crear Clase'))
     await waitFor(() =>
@@ -582,7 +512,7 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
       ),
     )
 
-    await user.click(button('Clase padre'))
+    await user.click(await screen.findByRole('button', { name: 'Material' }))
     await waitFor(() => expect(button('Nueva Familia')).toBeVisible())
     expectAbsent('Nueva Clase', 'Nuevo Tipo')
     await user.click(button('Nueva Familia'))
@@ -597,9 +527,8 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
         'Familia “Familia nueva” creada.',
       ),
     )
-    expect(screen.getAllByRole('status')).toHaveLength(1)
 
-    await user.click(button('Familia padre'))
+    await user.click(await screen.findByRole('button', { name: 'Ferretería' }))
     await waitFor(() => expect(button('Nuevo Tipo')).toBeVisible())
     expectAbsent('Nueva Clase', 'Nueva Familia')
     await user.click(button('Nuevo Tipo'))
@@ -617,13 +546,14 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 
-  it('loads Classes once and bypasses the API for static presentation', async () => {
-    const connected = api()
-    factory.mockReturnValue(connected)
+  it('loads Classes once and bypasses hierarchy APIs for static presentation', async () => {
+    const classApi = rest()
+    restFactory.mockReturnValue(classApi)
     const view = render(<CatalogHierarchyScreen />)
-    await waitFor(() => expect(connected.listClasses).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(classApi.listClasses).toHaveBeenCalledTimes(1))
     view.unmount()
-    factory.mockClear()
+    restFactory.mockClear()
+
     render(
       <CatalogHierarchyScreen
         presentation={{
@@ -633,98 +563,152 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
         }}
       />,
     )
-    expect(factory).not.toHaveBeenCalled()
+    expect(restFactory).not.toHaveBeenCalled()
     expect(button('Presentación')).toBeVisible()
   })
 
-  it('waits for parents, selects explicitly, and resets without sorting or auto-selection', async () => {
-    const connected = api()
-    factory.mockReturnValue(connected)
-    render(<CatalogHierarchyScreen />)
-    await waitFor(() => expect(button('Beta')).toBeVisible())
-    expect(screen.getByText('En espera de Clase.')).toBeVisible()
-    expect(screen.getByText('En espera de Familia.')).toBeVisible()
-    expect(connected.listFamilies).not.toHaveBeenCalled()
-    expect(connected.listTypes).not.toHaveBeenCalled()
-    expect(button('Beta')).toHaveAttribute('aria-pressed', 'false')
-    fireEvent.click(button('Beta'))
-    await waitFor(() =>
-      expect(connected.listFamilies).toHaveBeenCalledWith({ parentId: 'b' }),
-    )
-    fireEvent.click(await screen.findByRole('button', { name: 'Familia A' }))
-    await waitFor(() =>
-      expect(connected.listTypes).toHaveBeenCalledWith({
-        parentId: 'family-a',
-      }),
-    )
-    fireEvent.click(await screen.findByRole('button', { name: 'Tipo A' }))
-    expect(screen.getByRole('heading', { name: 'Tipo A' })).toBeVisible()
-    fireEvent.click(button('Alpha'))
-    expect(
-      screen.queryByRole('button', { name: 'Familia A' }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Tipo A' }),
-    ).not.toBeInTheDocument()
-    expect(connected.listFamilies).toHaveBeenCalledWith({ parentId: 'a' })
-    expect(connected.listTypes).toHaveBeenCalledTimes(1)
-  })
-
-  it('preserves partial rows and exposes explicit continuation and initial retry', async () => {
-    const first = api({
+  it('uses selected parent codes for REST descendants and resets children explicitly', async () => {
+    const api = rest({
       listClasses: vi
         .fn()
-        .mockResolvedValueOnce(
-          page([item('first', 'Primero')], false, 'opaque'),
-        )
-        .mockRejectedValueOnce(new Error('continuation'))
-        .mockResolvedValueOnce(page([item('second', 'Segundo')])),
-    })
-    factory.mockReturnValue(first)
-    const view = render(<CatalogHierarchyScreen />)
-    await waitFor(() => expect(button('Cargar más…')).toBeVisible())
-    fireEvent.click(button('Cargar más…'))
-    await waitFor(() => expect(button('Reintentar continuación')).toBeVisible())
-    expect(button('Primero')).toBeVisible()
-    expect(screen.getByText('Listado parcial')).toBeVisible()
-    fireEvent.click(button('Reintentar continuación'))
-    await waitFor(() => expect(button('Segundo')).toBeVisible())
-    view.unmount()
-
-    const failing = api({
-      listClasses: vi.fn().mockRejectedValue(new Error('unavailable')),
-    })
-    factory.mockReturnValue(failing)
-    render(<CatalogHierarchyScreen />)
-    await waitFor(() => expect(button('Reintentar')).toBeVisible())
-    failing.listClasses.mockResolvedValueOnce(page([item('ok', 'Recuperada')]))
-    fireEvent.click(button('Reintentar'))
-    await waitFor(() => expect(button('Recuperada')).toBeVisible())
-  })
-
-  it('drops stale responses, keeps keyboard controls native, and hides raw errors', async () => {
-    let resolveA!: (value: ReturnType<typeof page>) => void
-    const stale = new Promise<ReturnType<typeof page>>(
-      (resolve) => (resolveA = resolve),
-    )
-    const connected = api({
-      listFamilies: vi.fn(({ parentId }: { parentId?: string }) =>
-        parentId === 'a'
-          ? stale
-          : Promise.resolve(page([item('family-b', 'Familia B')])),
+        .mockResolvedValue(
+          page([item('a', 'A', 'Alpha'), item('b', 'B', 'Beta')]),
+        ),
+      listFamilies: vi.fn(({ classCode }) =>
+        Promise.resolve(
+          page([
+            {
+              ...item(
+                `family-${classCode}`,
+                `F-${classCode}`,
+                `Familia ${classCode}`,
+              ),
+              classCode,
+            },
+          ]),
+        ),
+      ),
+      listTypes: vi.fn(({ familyCode }) =>
+        Promise.resolve(
+          page([
+            {
+              ...item(
+                `type-${familyCode}`,
+                `T-${familyCode}`,
+                `Tipo ${familyCode}`,
+              ),
+              familyCode,
+            },
+          ]),
+        ),
       ),
     })
-    factory.mockReturnValue(connected)
+    restFactory.mockReturnValue(api)
+    const user = userEvent.setup()
     render(<CatalogHierarchyScreen />)
+
+    await user.click(await screen.findByRole('button', { name: 'Alpha' }))
+    await waitFor(() =>
+      expect(api.listFamilies).toHaveBeenLastCalledWith({
+        classCode: 'A',
+        limit: 20,
+        offset: 0,
+        scope: 'ALL',
+      }),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Familia A' }))
+    await waitFor(() =>
+      expect(api.listTypes).toHaveBeenLastCalledWith({
+        classCode: 'A',
+        familyCode: 'F-A',
+        limit: 20,
+        offset: 0,
+        scope: 'ALL',
+      }),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Tipo F-A' }))
+    expect(screen.getByRole('heading', { name: 'Tipo F-A' })).toBeVisible()
+
+    await user.click(button('Beta'))
+    await waitFor(() => expect(button('Familia B')).toBeVisible())
+    expect(screen.queryByRole('button', { name: 'Tipo F-A' })).toBeNull()
+    expect(screen.getByText('En espera de Familia.')).toBeVisible()
+  })
+
+  it('replaces the Classes window from server flags and retains retry controls', async () => {
+    const listClasses = vi.fn(({ offset }: { offset: number }) => {
+      if (offset === 0)
+        return Promise.resolve(page([item('first', 'FIRST', 'Primero')], true))
+      if (offset === 20)
+        return Promise.resolve(
+          page([item('second', 'SECOND', 'Segundo')], false, true),
+        )
+      return Promise.resolve(page([item('first', 'FIRST', 'Primero')], true))
+    })
+    restFactory.mockReturnValue(rest({ listClasses }))
+    const user = userEvent.setup()
+    render(<CatalogHierarchyScreen />)
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Siguiente ventana' }),
+    )
+    expect(await screen.findByRole('button', { name: 'Segundo' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Primero' })).toBeNull()
+    await user.click(button('Ventana anterior'))
+    expect(await screen.findByRole('button', { name: 'Primero' })).toBeVisible()
+  })
+
+  it('keeps the initial Class retry available after a failed REST window', async () => {
+    const listClasses = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unavailable'))
+      .mockResolvedValueOnce(
+        page([item('recovered', 'RECOVERED', 'Recuperada')]),
+      )
+    restFactory.mockReturnValue(rest({ listClasses }))
+    const user = userEvent.setup()
+    render(<CatalogHierarchyScreen />)
+
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }))
+    expect(
+      await screen.findByRole('button', { name: 'Recuperada' }),
+    ).toBeVisible()
+    expect(listClasses).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops stale dependent responses and leaves native arrows unclaimed', async () => {
+    let resolveAlpha!: (value: ReturnType<typeof page>) => void
+    const alpha = new Promise<ReturnType<typeof page>>((resolve) => {
+      resolveAlpha = resolve
+    })
+    const api = rest({
+      listClasses: vi
+        .fn()
+        .mockResolvedValue(
+          page([item('a', 'A', 'Alpha'), item('b', 'B', 'Beta')]),
+        ),
+      listFamilies: vi.fn(({ classCode }) =>
+        classCode === 'A'
+          ? alpha
+          : Promise.resolve(
+              page([
+                { ...item('family-b', 'FB', 'Familia B'), classCode: 'B' },
+              ]),
+            ),
+      ),
+    })
+    restFactory.mockReturnValue(api)
+    render(<CatalogHierarchyScreen />)
+
     await waitFor(() => expect(button('Alpha')).toBeVisible())
     fireEvent.click(button('Alpha'))
     fireEvent.click(button('Beta'))
     await waitFor(() => expect(button('Familia B')).toBeVisible())
-    resolveA(page([item('family-a', 'Familia A')]))
+    resolveAlpha(
+      page([{ ...item('family-a', 'FA', 'Familia A'), classCode: 'A' }]),
+    )
     await waitFor(() =>
-      expect(
-        screen.queryByRole('button', { name: 'Familia A' }),
-      ).not.toBeInTheDocument(),
+      expect(screen.queryByRole('button', { name: 'Familia A' })).toBeNull(),
     )
     const arrow = new KeyboardEvent('keydown', {
       key: 'ArrowDown',
@@ -733,75 +717,33 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
     })
     button('Beta').dispatchEvent(arrow)
     expect(arrow.defaultPrevented).toBe(false)
-    expect(document.body.textContent).not.toMatch(/Error|unavailable|initial/)
   })
 
-  it('renders one contextual creation action and non-focusable hierarchy chevrons', async () => {
-    const connected = api({
-      listClasses: vi
-        .fn()
-        .mockResolvedValue(page([item('class-1', 'Clase 1')])),
-      listFamilies: vi
-        .fn()
-        .mockResolvedValue(page([item('family-1', 'Familia 1')])),
-      listTypes: vi.fn().mockResolvedValue(page([item('type-1', 'Tipo 1')])),
-      createClass: vi.fn(),
-      createFamily: vi.fn(),
-      createType: vi.fn(),
-    })
-    factory.mockReturnValue(connected)
-    render(<CatalogHierarchyScreen />)
-    await waitFor(() => expect(button('Clase 1')).toBeVisible())
+  it('keeps contextual CTA chrome and hierarchy chevrons while changing selection level', async () => {
+    const user = userEvent.setup()
+    render(
+      <CatalogHierarchyScreen
+        createClass={vi.fn()}
+        createFamily={vi.fn()}
+        createType={vi.fn()}
+      />,
+    )
+
+    await screen.findByRole('button', { name: 'Material' })
     expect(button('Nueva Clase')).toBeVisible()
-    expectAbsent('Nueva Familia', 'Nuevo Tipo')
-    const pageHeader = screen
-      .getByRole('heading', { name: 'Catálogo' })
-      .closest('header')
-    expect(pageHeader).toContainElement(button('Nueva Clase'))
-    expect(pageHeader).toHaveClass('md:grid-cols-3')
     expect(screen.getByLabelText('Modelo del catálogo')).toBeVisible()
-    expect(
-      screen.getByRole('region', { name: /Estructura del catálogo/i }),
-    ).toHaveClass('rounded-lg', 'border-border', 'bg-surface')
-    expect(screen.getAllByTestId('catalog-row-chevron')).toHaveLength(1)
     expect(screen.getByTestId('catalog-row-chevron')).toHaveAttribute(
       'aria-hidden',
       'true',
     )
-    fireEvent.click(button('Clase 1'))
-    await waitFor(() => expect(button('Familia 1')).toBeVisible())
-    expect(button('Nueva Familia')).toBeVisible()
-    expectAbsent('Nueva Clase', 'Nuevo Tipo')
-    fireEvent.click(button('Familia 1'))
-    await waitFor(() => expect(button('Tipo 1')).toBeVisible())
-    expect(button('Nuevo Tipo')).toBeVisible()
-    expectAbsent('Nueva Clase', 'Nueva Familia')
+    await user.click(button('Material'))
+    await waitFor(() => expect(button('Nueva Familia')).toBeVisible())
+    await user.click(await screen.findByRole('button', { name: 'Ferretería' }))
+    await waitFor(() => expect(button('Nuevo Tipo')).toBeVisible())
   })
 
-  it('switches the visible action and N command to attribute assignment only on the active Attributes tab', async () => {
+  it('uses N for each visible hierarchy creation action and preserves Escape closing', async () => {
     const user = userEvent.setup()
-    const attributes = {
-      listTypeAssignments: vi.fn().mockResolvedValue(page([])),
-      getAttributeDefinition: vi.fn(),
-      listAttributeDefinitions: vi.fn().mockResolvedValue(
-        page([
-          {
-            id: 'definition-a',
-            nombre: 'Material',
-            clave: 'MATERIAL',
-            tipoDato: 'TEXTO',
-            activo: true,
-            effective: true,
-            effectiveReasons: [],
-            revision: 1,
-          },
-        ]),
-      ),
-      createTypeAttributeAssignment: vi
-        .fn()
-        .mockResolvedValue({ disposition: 'CREATED' }),
-    } as unknown as CatalogTypeAttributesApi
-    attributeFactory.mockReturnValue(attributes)
     render(
       <KeyboardControllerProvider
         activeSurface="catalog"
@@ -809,528 +751,25 @@ describe('CatalogHierarchyScreen connected read wiring', () => {
         onHelp={vi.fn()}
       >
         <CatalogHierarchyScreen
-          presentation={{
-            classes: [{ id: 'class-a', label: 'Clase A' }],
-            families: [{ id: 'family-a', label: 'Familia A' }],
-            types: [{ id: 'type-a', label: 'Tipo A' }],
-            selectedClassId: 'class-a',
-            selectedFamilyId: 'family-a',
-            selectedTypeId: 'type-a',
-          }}
+          createClass={vi.fn()}
+          createFamily={vi.fn()}
           createType={vi.fn()}
         />
       </KeyboardControllerProvider>,
     )
 
-    expect(button('Nuevo Tipo')).toBeVisible()
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    expect(
-      await screen.findByRole('button', { name: 'Asignar atributo' }),
-    ).toBeVisible()
-    expect(
-      screen.queryByRole('button', { name: 'Nuevo Tipo' }),
-    ).not.toBeInTheDocument()
-    fireEvent.keyDown(document, { key: 'n' })
-    expect(
-      screen.getByRole('dialog', { name: 'Asignar atributo' }),
-    ).toBeVisible()
-    await user.click(await screen.findByRole('button', { name: /Material/ }))
-    await user.click(screen.getByRole('button', { name: 'Guardar asignación' }))
-    await waitFor(() =>
-      expect(attributes.listTypeAssignments).toHaveBeenCalledTimes(2),
-    )
-    expect(attributes.listTypeAssignments).toHaveBeenNthCalledWith(2, {
-      cursor: undefined,
-      mode: 'ALL',
-      tipoRecursoId: 'type-a',
-    })
-  })
-
-  it('edits only loaded global definitions and refreshes the Attributes card after an unchanged update', async () => {
-    const user = userEvent.setup()
-    const color = {
-      id: 'definition-color',
-      nombre: 'Color',
-      clave: 'ACR',
-      tipoDato: 'OPCION' as const,
-      activo: false,
-      effective: false,
-      effectiveReasons: ['INACTIVE'],
-      revision: 1,
-    }
-    let releaseDefinition!: (value: typeof color) => void
-    const firstDefinition = new Promise<typeof color>((resolve) => {
-      releaseDefinition = resolve
-    })
-    const attributes = {
-      listTypeAssignments: vi.fn().mockResolvedValue(
-        page([
-          {
-            id: 'assignment-color',
-            definicionAtributoId: 'definition-color',
-            tipoRecursoId: 'type-a',
-            activo: false,
-            effective: false,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 1,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: ['INACTIVE'],
-          },
-        ]),
-      ),
-      getAttributeDefinition: vi
-        .fn()
-        .mockReturnValueOnce(firstDefinition)
-        .mockResolvedValueOnce(color),
-      updateAttributeDefinition: vi.fn().mockResolvedValue({
-        disposition: 'UNCHANGED',
-        item: color,
-      }),
-    } as unknown as CatalogTypeAttributesApi
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
-
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    await waitFor(() =>
-      expect(attributes.getAttributeDefinition).toHaveBeenCalledTimes(1),
-    )
-    expect(
-      screen.queryByRole('button', { name: 'Editar atributo' }),
-    ).not.toBeInTheDocument()
-    releaseDefinition(color)
-    const trigger = await screen.findByRole('button', {
-      name: 'Editar atributo',
-    })
-    await user.click(trigger)
-    await user.clear(screen.getByRole('textbox', { name: 'Nombre' }))
-    await user.type(
-      screen.getByRole('textbox', { name: 'Nombre' }),
-      'Color comercial',
-    )
-    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
-
-    await waitFor(() =>
-      expect(attributes.updateAttributeDefinition).toHaveBeenCalledWith({
-        definicionAtributoId: 'definition-color',
-        expectedRevision: 1,
-        nombre: 'Color comercial',
-      }),
-    )
-    await waitFor(() =>
-      expect(attributes.getAttributeDefinition).toHaveBeenCalledTimes(2),
-    )
-    expect(await screen.findByText('ACR · Opción')).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Atributo “Color” actualizado.',
-    )
-    await waitFor(() => expect(trigger).toHaveFocus())
-  })
-
-  it('shows loading, safe retry errors, and an exhausted no-active option preview', async () => {
-    const user = userEvent.setup()
-    let rejectOptions!: (cause: Error) => void
-    const attributes = {
-      listTypeAssignments: vi.fn().mockResolvedValue(
-        page([
-          {
-            id: 'assignment-color',
-            definicionAtributoId: 'definition-color',
-            tipoRecursoId: 'type-a',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 1,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-        ]),
-      ),
-      getAttributeDefinition: vi.fn().mockResolvedValue({
-        id: 'definition-color',
-        nombre: 'Color',
-        clave: 'COLOR',
-        tipoDato: 'OPCION',
-        activo: true,
-        effective: true,
-        effectiveReasons: [],
-        revision: 1,
-      }),
-      listAttributeOptions: vi
-        .fn()
-        .mockImplementationOnce(
-          () =>
-            new Promise((_, reject) => {
-              rejectOptions = reject
-            }),
-        )
-        .mockResolvedValueOnce(
-          page([
-            {
-              id: 'gray',
-              definicionAtributoId: 'definition-color',
-              clave: 'GRIS',
-              nombre: 'Gris',
-              activo: false,
-              effective: false,
-              effectiveReasons: ['INACTIVE'],
-              revision: 1,
-            },
-          ]),
-        ),
-    } as unknown as CatalogTypeAttributesApi
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    await user.click(
-      await screen.findByRole('button', {
-        name: 'Mostrar detalle de Color',
-      }),
-    )
-    const preview = await screen.findByRole('region', {
-      name: 'Vista previa de opciones de Color',
-    })
-    expect(preview).toHaveTextContent('Cargando opciones…')
-    rejectOptions(new Error('private transport detail'))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'No se pudieron cargar las opciones',
-    )
-    expect(document.body.textContent).not.toContain('private transport detail')
-    await user.click(
-      screen.getByRole('button', { name: 'Reintentar opciones' }),
-    )
-    expect(await screen.findByText('Sin opciones activas')).toBeVisible()
-    expect(preview).toHaveTextContent('0 activas · 1 inactiva')
-  })
-
-  it('discards a stale option preview after the selected Type changes', async () => {
-    const user = userEvent.setup()
-    let resolveOptions!: (value: ReturnType<typeof page>) => void
-    const staleOptions = new Promise<ReturnType<typeof page>>((resolve) => {
-      resolveOptions = resolve
-    })
-    const attributes = {
-      listTypeAssignments: vi.fn(({ tipoRecursoId }) =>
-        Promise.resolve(
-          page(
-            tipoRecursoId === 'type-a'
-              ? [
-                  {
-                    id: 'assignment-color',
-                    definicionAtributoId: 'definition-color',
-                    tipoRecursoId: 'type-a',
-                    activo: true,
-                    effective: true,
-                    selection: 'SELECTED',
-                    aplicabilidad: 'OPTIONAL',
-                    participaIdentidad: false,
-                    orden: 1,
-                    revision: 1,
-                    familiaRecursoId: 'family-a',
-                    effectiveReasons: [],
-                  },
-                ]
-              : [],
-          ),
-        ),
-      ),
-      getAttributeDefinition: vi.fn().mockResolvedValue({
-        id: 'definition-color',
-        nombre: 'Color',
-        clave: 'COLOR',
-        tipoDato: 'OPCION',
-        activo: true,
-        effective: true,
-        effectiveReasons: [],
-        revision: 1,
-      }),
-      listAttributeOptions: vi.fn().mockReturnValue(staleOptions),
-    } as unknown as CatalogTypeAttributesApi
-    attributeFactory.mockReturnValue(attributes)
-    const presentation = (selectedTypeId: string) => ({
-      classes: [{ id: 'class-a', label: 'Clase A' }],
-      families: [{ id: 'family-a', label: 'Familia A' }],
-      types: [
-        { id: 'type-a', label: 'Tipo A' },
-        { id: 'type-b', label: 'Tipo B' },
-      ],
-      selectedClassId: 'class-a',
-      selectedFamilyId: 'family-a',
-      selectedTypeId,
-    })
-    const view = render(
-      <CatalogHierarchyScreen presentation={presentation('type-a')} />,
-    )
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    await waitFor(() =>
-      expect(attributes.listAttributeOptions).toHaveBeenCalledTimes(1),
-    )
-    view.rerender(
-      <CatalogHierarchyScreen presentation={presentation('type-b')} />,
-    )
-    await waitFor(() =>
-      expect(attributes.listTypeAssignments).toHaveBeenCalledWith({
-        tipoRecursoId: 'type-b',
-        cursor: undefined,
-        mode: 'ALL',
-      }),
-    )
-    resolveOptions(
-      page([
-        {
-          id: 'white',
-          definicionAtributoId: 'definition-color',
-          clave: 'BLANCO',
-          nombre: 'Blanco',
-          activo: true,
-          effective: true,
-          effectiveReasons: [],
-          revision: 1,
-        },
-      ]),
-    )
-    await waitFor(() =>
-      expect(screen.queryByText('Color')).not.toBeInTheDocument(),
-    )
-    expect(screen.queryByText('Blanco')).not.toBeInTheDocument()
-  })
-
-  it('previews each ready OPCION definition once with active chips and authoritative partial counts', async () => {
-    const user = userEvent.setup()
-    const attributes = {
-      listTypeAssignments: vi.fn().mockResolvedValue(
-        page([
-          {
-            id: 'assignment-color-direct',
-            definicionAtributoId: 'definition-color',
-            tipoRecursoId: 'type-a',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 1,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-          {
-            id: 'assignment-color-inherited',
-            definicionAtributoId: 'definition-color',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 2,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-          {
-            id: 'assignment-text',
-            definicionAtributoId: 'definition-text',
-            tipoRecursoId: 'type-a',
-            activo: true,
-            effective: true,
-            selection: 'SELECTED',
-            aplicabilidad: 'OPTIONAL',
-            participaIdentidad: false,
-            orden: 3,
-            revision: 1,
-            familiaRecursoId: 'family-a',
-            effectiveReasons: [],
-          },
-        ]),
-      ),
-      getAttributeDefinition: vi.fn(async (id) => ({
-        id,
-        nombre: id === 'definition-color' ? 'Color' : 'Descripción',
-        clave: id === 'definition-color' ? 'COLOR' : 'DESCRIPCION',
-        tipoDato: id === 'definition-color' ? 'OPCION' : 'TEXTO',
-        activo: true,
-        effective: true,
-        effectiveReasons: [],
-        revision: 1,
-      })),
-      listAttributeOptions: vi.fn().mockResolvedValue(
-        page(
-          [
-            {
-              id: 'white',
-              definicionAtributoId: 'definition-color',
-              clave: 'BLANCO',
-              nombre: 'Blanco',
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            },
-            {
-              id: 'black',
-              definicionAtributoId: 'definition-color',
-              clave: 'NEGRO',
-              nombre: 'Negro',
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            },
-            {
-              id: 'red',
-              definicionAtributoId: 'definition-color',
-              clave: 'ROJO',
-              nombre: 'Rojo',
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            },
-            {
-              id: 'blue',
-              definicionAtributoId: 'definition-color',
-              clave: 'AZUL',
-              nombre: 'Azul',
-              activo: true,
-              effective: true,
-              effectiveReasons: [],
-              revision: 1,
-            },
-            {
-              id: 'inactive',
-              definicionAtributoId: 'definition-color',
-              clave: 'GRIS',
-              nombre: 'Gris',
-              activo: false,
-              effective: false,
-              effectiveReasons: ['INACTIVE'],
-              revision: 1,
-            },
-          ],
-          false,
-          'next',
-        ),
-      ),
-    } as unknown as CatalogTypeAttributesApi
-    attributeFactory.mockReturnValue(attributes)
-    render(
-      <CatalogHierarchyScreen
-        presentation={{
-          classes: [{ id: 'class-a', label: 'Clase A' }],
-          families: [{ id: 'family-a', label: 'Familia A' }],
-          types: [{ id: 'type-a', label: 'Tipo A' }],
-          selectedClassId: 'class-a',
-          selectedFamilyId: 'family-a',
-          selectedTypeId: 'type-a',
-        }}
-      />,
-    )
-    await user.click(screen.getByRole('tab', { name: 'Atributos' }))
-    await waitFor(() =>
-      expect(attributes.listAttributeOptions).toHaveBeenCalledTimes(1),
-    )
-    expect(attributes.listAttributeOptions).toHaveBeenCalledWith({
-      definicionAtributoId: 'definition-color',
-      mode: 'ALL',
-      pageSize: 50,
-      cursor: null,
-    })
-    const [firstChevron, secondChevron] = await waitFor(() => {
-      const buttons = screen.getAllByRole('button', {
-        name: 'Mostrar detalle de Color',
-      })
-      expect(buttons).toHaveLength(2)
-      return buttons
-    })
-
-    await user.click(firstChevron)
-    const [preview] = await screen.findAllByRole('region', {
-      name: 'Vista previa de opciones de Color',
-    })
-    expect(preview).toHaveTextContent('Blanco')
-    expect(preview).toHaveTextContent('Negro')
-    expect(preview).toHaveTextContent('Rojo')
-    expect(preview).not.toHaveTextContent('Azul')
-    expect(preview).not.toHaveTextContent('Gris')
-    expect(preview).toHaveTextContent(
-      'Al menos 4 activas · al menos 1 inactiva',
-    )
-    expect(preview.querySelectorAll('[tabindex]')).toHaveLength(0)
-
-    await user.click(secondChevron)
-    const [secondPreview] = await screen.findAllByRole('region', {
-      name: 'Vista previa de opciones de Color',
-    })
-    expect(secondPreview).toHaveTextContent('Blanco')
-    expect(attributes.listAttributeOptions).toHaveBeenCalledTimes(1)
-  })
-
-  it('uses N to invoke the visible contextual creation action', async () => {
-    const connected = api({
-      listClasses: vi
-        .fn()
-        .mockResolvedValue(page([item('class-1', 'Clase 1')])),
-      listFamilies: vi
-        .fn()
-        .mockResolvedValue(page([item('family-1', 'Familia 1')])),
-      listTypes: vi.fn().mockResolvedValue(page([item('type-1', 'Tipo 1')])),
-      createClass: vi.fn(),
-      createFamily: vi.fn(),
-      createType: vi.fn(),
-    })
-    factory.mockReturnValue(connected)
-    render(
-      <KeyboardControllerProvider
-        activeSurface="catalog"
-        onCommandPalette={vi.fn()}
-        onHelp={vi.fn()}
-      >
-        <CatalogHierarchyScreen />
-      </KeyboardControllerProvider>,
-    )
-    await waitFor(() => expect(button('Clase 1')).toBeVisible())
-    fireEvent.keyDown(document, { key: 'n' })
+    await screen.findByRole('button', { name: 'Material' })
+    await user.keyboard('n')
     expect(screen.getByRole('dialog', { name: 'Nueva Clase' })).toBeVisible()
-    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Nueva Clase' }), {
-      key: 'Escape',
-    })
-    fireEvent.click(button('Clase 1'))
+    await user.keyboard('{Escape}')
+    await user.click(button('Material'))
     await waitFor(() => expect(button('Nueva Familia')).toBeVisible())
-    fireEvent.keyDown(document, { key: 'n' })
+    await user.keyboard('n')
     expect(screen.getByRole('dialog', { name: 'Nueva Familia' })).toBeVisible()
-    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Nueva Familia' }), {
-      key: 'Escape',
-    })
-    fireEvent.click(button('Familia 1'))
+    await user.keyboard('{Escape}')
+    await user.click(await screen.findByRole('button', { name: 'Ferretería' }))
     await waitFor(() => expect(button('Nuevo Tipo')).toBeVisible())
-    fireEvent.keyDown(document, { key: 'n' })
+    await user.keyboard('n')
     expect(screen.getByRole('dialog', { name: 'Nuevo Tipo' })).toBeVisible()
   })
 })

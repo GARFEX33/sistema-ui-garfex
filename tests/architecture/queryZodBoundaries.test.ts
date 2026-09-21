@@ -12,7 +12,8 @@ const sourceFiles = readdirSync(join(root, 'src'), { recursive: true })
   .sort()
 const read = (file: string) => readFileSync(join(root, file), 'utf8')
 const providerPath = 'src/app/providers/AppProviders.tsx'
-const hookPath = 'src/features/resources-master/useResourcesMasterListQuery.ts'
+const restWindowHookPath =
+  'src/features/resources-master/useResourcesMasterRestWindow.ts'
 const evaluationHookPath =
   'src/features/resources-master/useResourceCreationEvaluation.ts'
 const attributeDefinitionHookPath =
@@ -22,18 +23,27 @@ const allowedValuesHookPath =
 const createHookPath =
   'src/features/resources-master/useResourceCreationCreate.ts'
 const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
+const proveedoresApiPath = 'src/features/proveedores/proveedores.api.ts'
+const proveedoresRestWindowHookPath =
+  'src/features/proveedores/useProveedoresRestWindow.ts'
+const supplierPurchasesRestWindowHookPath =
+  'src/features/compras/useSupplierPurchasesRestWindow.ts'
+const supplierProductsRestWindowHookPath =
+  'src/features/compras/useSupplierProductsRestWindow.ts'
+const comprasApiPath = 'src/features/compras/compras.api.ts'
+const compraDetalleStagePath = 'src/features/compras/CompraDetalleStage.tsx'
+const catalogContractPath = 'src/shared/catalog/catalogRest.contract.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
-  [hookPath, ['useInfiniteQuery', 'useQueryClient']],
+  [restWindowHookPath, ['useQuery']],
+  [proveedoresRestWindowHookPath, ['useQuery']],
+  [supplierPurchasesRestWindowHookPath, ['useQuery']],
+  [supplierProductsRestWindowHookPath, ['useQuery']],
+  [compraDetalleStagePath, ['useQuery']],
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
   [allowedValuesHookPath, ['useInfiniteQuery']],
   [createHookPath, ['useMutation', 'useQueryClient']],
-])
-const convexFiles = new Set([
-  apiPath,
-  'src/features/catalog-hierarchy/catalogHierarchy.api.ts',
-  'src/features/catalog-hierarchy/catalogTypeAttributes.api.ts',
 ])
 const forbiddenHookMembers = new Set([
   'clear',
@@ -58,8 +68,11 @@ const protectedPackage = (module: string) =>
   ['zod', 'convex'].some((name) => isPackage(module, name))
 const isApprovedFile = (file: string, module: string) =>
   (isQueryModule(module) && queryBindings.has(file)) ||
-  (isPackage(module, 'zod') && file === apiPath) ||
-  (isPackage(module, 'convex') && convexFiles.has(file))
+  (isPackage(module, 'zod') &&
+    (file === apiPath ||
+      file === proveedoresApiPath ||
+      file === comprasApiPath ||
+      file === catalogContractPath))
 const property = (node: ts.Node) => {
   if (ts.isPropertyAccessExpression(node)) return node.name.text
   if (ts.isElementAccessExpression(node)) return text(node.argumentExpression)
@@ -362,7 +375,7 @@ describe('Query, Zod, and Convex architecture boundaries', () => {
 
   it('enforces the approved Query bindings and hook cache-action boundary', () => {
     const hook = analyze(
-      hookPath,
+      allowedValuesHookPath,
       `import { useInfiniteQuery, useMutation } from '@tanstack/react-query'
        const cache = { invalidateQueries() {}, refetchQueries() {} }
        cache.invalidateQueries(); cache.refetchQueries()`,
@@ -371,7 +384,7 @@ describe('Query, Zod, and Convex architecture boundaries', () => {
     expect(hook.issues).toEqual([
       'Forbidden Query cache/action member in hook: invalidateQueries',
       'Forbidden Query cache/action member in hook: refetchQueries',
-      'Query bindings must be exactly: useInfiniteQuery, useQueryClient',
+      'Query bindings must be exactly: useInfiniteQuery',
     ])
   })
 
