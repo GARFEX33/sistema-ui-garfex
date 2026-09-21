@@ -3,14 +3,25 @@ import { RestActorConfigurationError } from '../../shared/api/restActor'
 import { restoreFocusNextFrame } from '../../shared/keyboard/focusRestoration'
 import { Button } from '../../shared/ui/Button'
 import { Dialog, DialogActions, DialogHeading } from '../../shared/ui/Dialog'
-import type { SupplierProduct } from './compras.types'
+import type { SupplierProductMappingProjection } from './compras.types'
 
-type UnlinkSupplierProduct = (input: { id: string }) => Promise<SupplierProduct>
+const retirementReason = 'Desvinculación manual de producto de proveedor'
+
+type RetireSupplierProductMapping = (input: {
+  id: string
+  expectedCurrentResourceId: string
+  expectedRevision: string
+  reason: string
+}) => Promise<SupplierProductMappingProjection>
 
 export interface DesvincularPartidaSurfaceProps {
   supplierProductId: string
-  unlinkSupplierProduct: UnlinkSupplierProduct
-  onUnlinked: (updatedSupplierProduct: SupplierProduct) => void | Promise<void>
+  currentResourceId: string
+  mappingRevision: string
+  retireSupplierProductMapping: RetireSupplierProductMapping
+  onUnlinked: (
+    updatedSupplierProduct: SupplierProductMappingProjection,
+  ) => void | Promise<void>
 }
 
 const errorMessage = (error: unknown) => {
@@ -28,12 +39,14 @@ const errorMessage = (error: unknown) => {
 
 export function DesvincularPartidaSurface({
   supplierProductId,
-  unlinkSupplierProduct,
+  currentResourceId,
+  mappingRevision,
+  retireSupplierProductMapping,
   onUnlinked,
 }: DesvincularPartidaSurfaceProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [confirmedSupplierProduct, setConfirmedSupplierProduct] =
-    useState<SupplierProduct | null>(null)
+    useState<SupplierProductMappingProjection | null>(null)
   const [rereadPending, setRereadPending] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +91,12 @@ export function DesvincularPartidaSurface({
     try {
       const updated =
         confirmedSupplierProduct ??
-        (await unlinkSupplierProduct({ id: supplierProductId }))
+        (await retireSupplierProductMapping({
+          id: supplierProductId,
+          expectedCurrentResourceId: currentResourceId,
+          expectedRevision: mappingRevision,
+          reason: retirementReason,
+        }))
       if (!mountedRef.current) return
       setConfirmedSupplierProduct(updated)
       try {

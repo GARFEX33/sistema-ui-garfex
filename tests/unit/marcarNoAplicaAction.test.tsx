@@ -23,11 +23,16 @@ const markedLine = (supplierProductId: string | null): PurchaseLine => ({
   taxWithheld: '0.000000',
   taxObject: '02',
   supplierProductId,
-  linkStatus: 'NO_APLICA',
+  resolutionRevision: '1',
+  resolutionOverride: 'NO_APLICA',
+  effectiveStatus: 'NO_APLICA',
+  effectiveCause: 'OVERRIDE',
 })
 
 const renderAction = (
-  setPurchaseLineLinkStatus = vi.fn().mockResolvedValue(markedLine(null)),
+  setPurchaseLineResolutionOverride = vi
+    .fn()
+    .mockResolvedValue(markedLine(null)),
   onMarked = vi.fn(),
   supplierProductId?: string | null,
   strict = false,
@@ -36,13 +41,14 @@ const renderAction = (
     <MarcarNoAplicaAction
       purchaseLineId="purchase-line-7"
       {...(supplierProductId !== undefined ? { supplierProductId } : {})}
-      setPurchaseLineLinkStatus={setPurchaseLineLinkStatus}
+      resolutionRevision="resolution-revision-1"
+      setPurchaseLineResolutionOverride={setPurchaseLineResolutionOverride}
       onMarked={onMarked}
     />
   )
   return {
     ...render(strict ? <StrictMode>{view}</StrictMode> : view),
-    setPurchaseLineLinkStatus,
+    setPurchaseLineResolutionOverride,
     onMarked,
   }
 }
@@ -61,15 +67,15 @@ describe('MarcarNoAplicaAction', () => {
   it.each([undefined, 'supplier-product-7', null])(
     'requires explicit confirmation and sends only the purchase line id with supplier context %s',
     async (supplierProductId) => {
-      const { setPurchaseLineLinkStatus } = renderAction(
+      const { setPurchaseLineResolutionOverride } = renderAction(
         vi.fn().mockResolvedValue(markedLine(supplierProductId ?? null)),
         vi.fn(),
         supplierProductId,
       )
       const user = await openAction()
-      expect(setPurchaseLineLinkStatus).not.toHaveBeenCalled()
+      expect(setPurchaseLineResolutionOverride).not.toHaveBeenCalled()
       await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-      expect(setPurchaseLineLinkStatus).not.toHaveBeenCalled()
+      expect(setPurchaseLineResolutionOverride).not.toHaveBeenCalled()
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     },
   )
@@ -82,7 +88,7 @@ describe('MarcarNoAplicaAction', () => {
         resolveCallback = resolve
       })
       const onMarked = vi.fn(() => callbackDone)
-      const { setPurchaseLineLinkStatus } = renderAction(
+      const { setPurchaseLineResolutionOverride } = renderAction(
         vi.fn().mockResolvedValue(markedLine(supplierProductId)),
         onMarked,
         supplierProductId,
@@ -94,9 +100,11 @@ describe('MarcarNoAplicaAction', () => {
         }),
       )
       await waitFor(() =>
-        expect(setPurchaseLineLinkStatus).toHaveBeenCalledWith({
+        expect(setPurchaseLineResolutionOverride).toHaveBeenCalledWith({
           id: 'purchase-line-7',
-          status: 'NO_APLICA',
+          override: 'NO_APLICA',
+          expectedRevision: 'resolution-revision-1',
+          reason: 'Marcado manual de partida como no aplicable',
         }),
       )
       await waitFor(() =>
@@ -114,12 +122,18 @@ describe('MarcarNoAplicaAction', () => {
     'retains confirmed NO_APLICA for reread retry without repeating the mutation (%s)',
     async (supplierProductId) => {
       const confirmed = markedLine(supplierProductId)
-      const setPurchaseLineLinkStatus = vi.fn().mockResolvedValue(confirmed)
+      const setPurchaseLineResolutionOverride = vi
+        .fn()
+        .mockResolvedValue(confirmed)
       const onMarked = vi
         .fn()
         .mockRejectedValueOnce(new Error('detail reread failed'))
         .mockResolvedValueOnce(undefined)
-      renderAction(setPurchaseLineLinkStatus, onMarked, supplierProductId)
+      renderAction(
+        setPurchaseLineResolutionOverride,
+        onMarked,
+        supplierProductId,
+      )
       const user = await openAction()
 
       await user.click(
@@ -130,7 +144,7 @@ describe('MarcarNoAplicaAction', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'NO_APLICA confirmado, pero el detalle no se actualizó. Reintenta la lectura.',
       )
-      expect(setPurchaseLineLinkStatus).toHaveBeenCalledTimes(1)
+      expect(setPurchaseLineResolutionOverride).toHaveBeenCalledTimes(1)
       expect(onMarked).toHaveBeenCalledWith(confirmed)
       expect(screen.getByRole('dialog')).toBeInTheDocument()
       expect(
@@ -142,7 +156,7 @@ describe('MarcarNoAplicaAction', () => {
       )
       await waitFor(() => expect(onMarked).toHaveBeenCalledTimes(2))
       expect(onMarked).toHaveBeenLastCalledWith(confirmed)
-      expect(setPurchaseLineLinkStatus).toHaveBeenCalledTimes(1)
+      expect(setPurchaseLineResolutionOverride).toHaveBeenCalledTimes(1)
       await waitFor(() =>
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
       )
@@ -165,7 +179,7 @@ describe('MarcarNoAplicaAction', () => {
     const pending = new Promise<PurchaseLine>((complete) => {
       resolve = complete
     })
-    const { setPurchaseLineLinkStatus } = renderAction(
+    const { setPurchaseLineResolutionOverride } = renderAction(
       vi.fn().mockReturnValue(pending),
     )
     const user = await openAction()
@@ -175,7 +189,7 @@ describe('MarcarNoAplicaAction', () => {
     await user.click(confirm)
     await user.click(confirm)
     await user.keyboard('{Escape}')
-    expect(setPurchaseLineLinkStatus).toHaveBeenCalledTimes(1)
+    expect(setPurchaseLineResolutionOverride).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(confirm).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
@@ -202,11 +216,11 @@ describe('MarcarNoAplicaAction', () => {
       'No se pudo marcar la partida como no aplicable. Revisa el error y reintenta.',
     ],
   ])('keeps %s errors open and retryable', async (_, error, message) => {
-    const setPurchaseLineLinkStatus = vi
+    const setPurchaseLineResolutionOverride = vi
       .fn()
       .mockRejectedValueOnce(error)
       .mockResolvedValue(markedLine(null))
-    renderAction(setPurchaseLineLinkStatus)
+    renderAction(setPurchaseLineResolutionOverride)
     const user = await openAction()
     await user.click(
       screen.getByRole('button', {
@@ -221,12 +235,12 @@ describe('MarcarNoAplicaAction', () => {
       }),
     )
     await waitFor(() =>
-      expect(setPurchaseLineLinkStatus).toHaveBeenCalledTimes(2),
+      expect(setPurchaseLineResolutionOverride).toHaveBeenCalledTimes(2),
     )
   })
 
   it('does not change its trigger optimistically and restores focus after cancel', async () => {
-    const { setPurchaseLineLinkStatus } = renderAction()
+    const { setPurchaseLineResolutionOverride } = renderAction()
     const trigger = screen.getByRole('button', {
       name: 'Marcar como no aplicable',
     })
@@ -236,7 +250,7 @@ describe('MarcarNoAplicaAction', () => {
     expect(screen.queryByText('No aplica')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
     await waitFor(() => expect(document.activeElement).toBe(trigger))
-    expect(setPurchaseLineLinkStatus).not.toHaveBeenCalled()
+    expect(setPurchaseLineResolutionOverride).not.toHaveBeenCalled()
   })
 
   it('ignores late completion after StrictMode unmount', async () => {

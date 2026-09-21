@@ -1,10 +1,13 @@
-import type { LinkStatus } from './compras.types'
+import type { EffectiveLinkStatus } from './compras.types'
 
 export interface PartidaEstadoBadgeProps {
-  status: LinkStatus
+  status: EffectiveLinkStatus
 }
 
-const presentation: Record<LinkStatus, { label: string; className: string }> = {
+const presentation: Record<
+  EffectiveLinkStatus,
+  { label: string; className: string }
+> = {
   PENDIENTE: {
     label: 'Pendiente',
     className: 'bg-warning-subtle text-warning border-warning',
@@ -12,6 +15,10 @@ const presentation: Record<LinkStatus, { label: string; className: string }> = {
   VINCULADO: {
     label: 'Vinculado',
     className: 'bg-success-subtle text-success border-success',
+  },
+  SUSPENDIDO: {
+    label: 'Suspendido',
+    className: 'bg-warning-subtle text-warning border-warning',
   },
   NO_APLICA: {
     label: 'No aplica',

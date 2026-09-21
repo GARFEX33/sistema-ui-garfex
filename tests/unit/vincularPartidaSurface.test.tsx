@@ -16,40 +16,63 @@ import type {
   Resource,
   ResourcePage,
 } from '../../src/features/resources-master/resourcesMaster.types'
-import type { SupplierProduct } from '../../src/features/compras/compras.types'
+import type { SupplierProductMappingProjection } from '../../src/features/compras/compras.types'
 import { VincularPartidaSurface } from '../../src/features/compras/VincularPartidaSurface'
 
-const resource = (id: string, identityV1 = `IDENTITY-${id}`): Resource => ({
+const resource = (
+  id: string,
+  identityV1 = `IDENTITY-${id}`,
+  attributes: Resource['attributes'] = [],
+): Resource => ({
   id,
   identityV1,
   scope: { classCode: 'C', familyCode: 'F', typeCode: 'T' },
   naturalUnit: 'pieza',
   active: true,
   revision: '1',
-  attributes: [],
+  attributes,
 })
 const page = (
   resources: Resource[],
   hasPrevious = false,
   hasNext = false,
 ): ResourcePage => ({ resources, hasPrevious, hasNext })
-const product = (resourceId: string | null = null): SupplierProduct => ({
+const product = (
+  resourceId: string | null = null,
+): SupplierProductMappingProjection => ({
   id: 'supplier-product-7',
   supplierId: 'supplier-3',
   supplierSku: 'SKU-7',
   description: 'Producto existente',
   resourceId,
+  mappingRevision: 'mapping-revision-2',
+  resourceActive: resourceId !== null,
+  mappingState: resourceId === null ? 'SUSPENDED' : 'CONFIRMED',
+  mappingCause: resourceId === null ? 'UNRESOLVED' : 'NONE',
   notes: '',
   createdAt: '2026-01-01',
   updatedAt: '2026-01-01',
 })
-const readApi = (listResources = vi.fn()) =>
-  ({ listResources }) as unknown as ResourcesMasterRestReadApi
+const readApi = (
+  listResources = vi.fn(),
+  getTypeEffectiveAttributes = vi.fn().mockResolvedValue({
+    typeCode: 'T',
+    attributes: [],
+  }),
+) =>
+  ({
+    listResources,
+    getTypeEffectiveAttributes,
+  }) as unknown as ResourcesMasterRestReadApi
 const renderSurface = (
   listResources = vi.fn().mockResolvedValue(page([resource('r1')])),
-  linkSupplierProduct = vi.fn().mockResolvedValue(product('r1')),
+  confirmSupplierProductMapping = vi.fn().mockResolvedValue(product('r1')),
   onLinked = vi.fn(),
   strict = false,
+  getTypeEffectiveAttributes = vi.fn().mockResolvedValue({
+    typeCode: 'T',
+    attributes: [],
+  }),
 ) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity } },
@@ -58,8 +81,9 @@ const renderSurface = (
     <VincularPartidaSurface
       supplierProductId="supplier-product-7"
       supplierContext="Proveedor ACME"
-      resourcesApi={readApi(listResources)}
-      linkSupplierProduct={linkSupplierProduct}
+      mappingRevision="mapping-revision-1"
+      resourcesApi={readApi(listResources, getTypeEffectiveAttributes)}
+      confirmSupplierProductMapping={confirmSupplierProductMapping}
       onLinked={onLinked}
     />
   )
@@ -70,7 +94,7 @@ const renderSurface = (
       </QueryClientProvider>,
     ),
     listResources,
-    linkSupplierProduct,
+    confirmSupplierProductMapping,
     onLinked,
   }
 }
@@ -105,16 +129,138 @@ describe('VincularPartidaSurface', () => {
     )
   })
 
-  it('prepares an explicit resource choice without matching or creating', async () => {
-    const linkSupplierProduct = vi.fn().mockResolvedValue(product('r1'))
-    const { onLinked } = renderSurface(
-      vi.fn().mockResolvedValue(page([resource('r1', 'RES-CABLE')])),
-      linkSupplierProduct,
+  it('uses canonical presentation names for every resource and keeps useful metadata accessible', async () => {
+    const resources = [
+      resource('r1', 'WIRE-RAW-1', [
+        { code: 'COLOR', value: { kind: 'TEXT', value: 'Rojo' } },
+      ]),
+      resource('r2', 'WIRE-RAW-2', [
+        { code: 'COLOR', value: { kind: 'TEXT', value: 'Azul' } },
+      ]),
+    ]
+    const getTypeEffectiveAttributes = vi.fn().mockResolvedValue({
+      typeCode: 'T',
+      attributes: [
+        {
+          characteristic: {
+            code: 'COLOR',
+            name: 'Color',
+            valueType: 'CONTROLLED_TEXT',
+          },
+          effectiveMode: 'OPTIONAL',
+          identityParticipates: false,
+          notApplicable: false,
+          position: 0,
+          hasPosition: true,
+          options: [],
+          source: { level: 'TYPE', code: 'T' },
+          rules: [],
+        },
+      ],
+    })
+    renderSurface(
+      vi.fn().mockResolvedValue(page(resources)),
+      vi.fn().mockResolvedValue(product('r1')),
+      vi.fn(),
+      false,
+      getTypeEffectiveAttributes,
+    )
+
+    await openSurface()
+
+    expect(
+      await screen.findByRole('option', {
+        name: 'T Rojo Unidad: pieza · ID: r1',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'T Azul Unidad: pieza · ID: r2' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('WIRE-RAW-1')).not.toBeInTheDocument()
+    expect(screen.queryByText('WIRE-RAW-2')).not.toBeInTheDocument()
+  })
+
+  it('keeps stable metadata while a presentation name is loading', async () => {
+    let resolvePresentation!: (value: {
+      typeCode: string
+      attributes: []
+    }) => void
+    const getTypeEffectiveAttributes = vi.fn(
+      () =>
+        new Promise<{ typeCode: string; attributes: [] }>((resolve) => {
+          resolvePresentation = resolve
+        }),
+    )
+    renderSurface(
+      vi.fn().mockResolvedValue(page([resource('r1', 'WIRE-RAW')])),
+      vi.fn().mockResolvedValue(product('r1')),
+      vi.fn(),
+      false,
+      getTypeEffectiveAttributes,
     )
     const user = await openSurface()
-    expect(await screen.findByText('RES-CABLE (ID: r1)')).toBeInTheDocument()
-    await user.click(screen.getByText('RES-CABLE (ID: r1)'))
-    expect(linkSupplierProduct).not.toHaveBeenCalled()
+
+    expect(
+      await screen.findByRole('option', {
+        name: 'Cargando nombre… Unidad: pieza · ID: r1',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('WIRE-RAW')).not.toBeInTheDocument()
+
+    resolvePresentation({ typeCode: 'T', attributes: [] })
+    await waitFor(() =>
+      expect(
+        screen.getByRole('option', {
+          name: 'T Unidad: pieza · ID: r1',
+        }),
+      ).toBeInTheDocument(),
+    )
+    await user.click(
+      screen.getByRole('option', { name: 'T Unidad: pieza · ID: r1' }),
+    )
+  })
+
+  it('uses stable metadata when a presentation name request is rejected', async () => {
+    const getTypeEffectiveAttributes = vi
+      .fn()
+      .mockRejectedValue(new Error('presentation unavailable'))
+    renderSurface(
+      vi.fn().mockResolvedValue(page([resource('r1', 'WIRE-RAW')])),
+      vi.fn().mockResolvedValue(product('r1')),
+      vi.fn(),
+      false,
+      getTypeEffectiveAttributes,
+    )
+    await openSurface()
+
+    expect(
+      await screen.findByRole('option', {
+        name: 'Nombre no disponible Unidad: pieza · ID: r1',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('WIRE-RAW')).not.toBeInTheDocument()
+  })
+
+  it('prepares an explicit resource choice without matching or creating', async () => {
+    const confirmSupplierProductMapping = vi
+      .fn()
+      .mockResolvedValue(product('r1'))
+    const { onLinked } = renderSurface(
+      vi.fn().mockResolvedValue(page([resource('r1', 'RES-CABLE')])),
+      confirmSupplierProductMapping,
+    )
+    const user = await openSurface()
+    expect(
+      await screen.findByRole('option', {
+        name: 'T Unidad: pieza · ID: r1',
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('option', {
+        name: 'T Unidad: pieza · ID: r1',
+      }),
+    )
+    expect(confirmSupplierProductMapping).not.toHaveBeenCalled()
     expect(
       screen.getByRole('button', { name: 'Confirmar vínculo' }),
     ).toBeEnabled()
@@ -122,10 +268,14 @@ describe('VincularPartidaSurface', () => {
       screen.queryByRole('button', { name: /crear/i }),
     ).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
-    await waitFor(() => expect(linkSupplierProduct).toHaveBeenCalledOnce())
-    expect(linkSupplierProduct).toHaveBeenCalledWith({
+    await waitFor(() =>
+      expect(confirmSupplierProductMapping).toHaveBeenCalledOnce(),
+    )
+    expect(confirmSupplierProductMapping).toHaveBeenCalledWith({
       id: 'supplier-product-7',
       resourceId: 'r1',
+      expectedRevision: 'mapping-revision-1',
+      reason: 'Vinculación manual de producto de proveedor',
     })
     expect(onLinked).toHaveBeenCalledWith(product('r1'))
   })
@@ -158,7 +308,9 @@ describe('VincularPartidaSurface', () => {
     )
     await retryUser.click(screen.getByRole('button', { name: 'Reintentar' }))
     expect(
-      await screen.findByText('IDENTITY-recovered (ID: recovered)'),
+      await screen.findByRole('option', {
+        name: 'T Unidad: pieza · ID: recovered',
+      }),
     ).toBeInTheDocument()
   })
 
@@ -171,7 +323,9 @@ describe('VincularPartidaSurface', () => {
     renderSurface(listResources)
     const user = await openSurface()
     expect(
-      await screen.findByText('IDENTITY-first (ID: first)'),
+      await screen.findByRole('option', {
+        name: 'T Unidad: pieza · ID: first',
+      }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Página siguiente' }),
@@ -187,10 +341,14 @@ describe('VincularPartidaSurface', () => {
       screen.getByRole('button', { name: 'Reintentar página siguiente' }),
     )
     expect(
-      await screen.findByText('IDENTITY-next (ID: next)'),
+      await screen.findByRole('option', {
+        name: 'T Unidad: pieza · ID: next',
+      }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText('IDENTITY-first (ID: first)'),
+      screen.queryByRole('option', {
+        name: 'T Unidad: pieza · ID: first',
+      }),
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Página anterior' }),
@@ -205,35 +363,37 @@ describe('VincularPartidaSurface', () => {
 
   it('blocks dismiss and duplicate mutation while busy, then reports retryable actor errors', async () => {
     let reject!: (error: Error) => void
-    const pending = new Promise<SupplierProduct>((_, fail) => {
+    const pending = new Promise<SupplierProductMappingProjection>((_, fail) => {
       reject = fail
     })
-    const linkSupplierProduct = vi
+    const confirmSupplierProductMapping = vi
       .fn()
       .mockReturnValueOnce(pending)
       .mockResolvedValue(product('r1'))
     renderSurface(
       vi.fn().mockResolvedValue(page([resource('r1')])),
-      linkSupplierProduct,
+      confirmSupplierProductMapping,
     )
     const user = await openSurface()
-    await user.click(await screen.findByText(/IDENTITY-r1/))
+    await user.click(await screen.findByText(/ID: r1/))
     const confirm = screen.getByRole('button', { name: 'Confirmar vínculo' })
     await user.click(confirm)
     await user.click(confirm)
     await user.keyboard('{Escape}')
-    expect(linkSupplierProduct).toHaveBeenCalledOnce()
+    expect(confirmSupplierProductMapping).toHaveBeenCalledOnce()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(confirm).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
-    expect(screen.queryByText('IDENTITY-r1 (ID: r1)')).not.toBeInTheDocument()
+    expect(screen.queryByText(/ID: r1/)).not.toBeInTheDocument()
     reject(new Error('actor missing'))
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No se pudo vincular',
     )
     expect(confirm).toBeEnabled()
     await user.click(confirm)
-    await waitFor(() => expect(linkSupplierProduct).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(confirmSupplierProductMapping).toHaveBeenCalledTimes(2),
+    )
   })
 
   it.each([
@@ -255,16 +415,16 @@ describe('VincularPartidaSurface', () => {
   ])(
     'keeps the dialog open for a retryable %s error',
     async (_, error, message) => {
-      const linkSupplierProduct = vi
+      const confirmSupplierProductMapping = vi
         .fn()
         .mockRejectedValueOnce(error)
         .mockResolvedValue(product('r1'))
       renderSurface(
         vi.fn().mockResolvedValue(page([resource('r1')])),
-        linkSupplierProduct,
+        confirmSupplierProductMapping,
       )
       const user = await openSurface()
-      await user.click(await screen.findByText(/IDENTITY-r1/))
+      await user.click(await screen.findByText(/ID: r1/))
       await user.click(
         screen.getByRole('button', { name: 'Confirmar vínculo' }),
       )
@@ -273,7 +433,9 @@ describe('VincularPartidaSurface', () => {
       await user.click(
         screen.getByRole('button', { name: 'Confirmar vínculo' }),
       )
-      await waitFor(() => expect(linkSupplierProduct).toHaveBeenCalledTimes(2))
+      await waitFor(() =>
+        expect(confirmSupplierProductMapping).toHaveBeenCalledTimes(2),
+      )
     },
   )
 
@@ -283,20 +445,20 @@ describe('VincularPartidaSurface', () => {
       .fn()
       .mockRejectedValueOnce(new Error('detail reread failed'))
       .mockResolvedValueOnce(undefined)
-    const linkSupplierProduct = vi.fn().mockResolvedValue(confirmed)
+    const confirmSupplierProductMapping = vi.fn().mockResolvedValue(confirmed)
     renderSurface(
       vi.fn().mockResolvedValue(page([resource('r1')])),
-      linkSupplierProduct,
+      confirmSupplierProductMapping,
       onLinked,
     )
     const user = await openSurface()
-    await user.click(await screen.findByText(/IDENTITY-r1/))
+    await user.click(await screen.findByText(/ID: r1/))
     await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Vínculo confirmado, pero el detalle no se actualizó. Reintenta la lectura.',
     )
-    expect(linkSupplierProduct).toHaveBeenCalledOnce()
+    expect(confirmSupplierProductMapping).toHaveBeenCalledOnce()
     expect(onLinked).toHaveBeenCalledTimes(1)
     expect(onLinked.mock.calls[0][0]).toBe(confirmed)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -306,7 +468,7 @@ describe('VincularPartidaSurface', () => {
     )
     await waitFor(() => expect(onLinked).toHaveBeenCalledTimes(2))
     expect(onLinked.mock.calls[1][0]).toBe(confirmed)
-    expect(linkSupplierProduct).toHaveBeenCalledOnce()
+    expect(confirmSupplierProductMapping).toHaveBeenCalledOnce()
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     )
@@ -316,9 +478,11 @@ describe('VincularPartidaSurface', () => {
         name: /Vincular producto.*supplier-product-7/,
       }),
     )
-    await user.click(await screen.findByText('IDENTITY-r1 (ID: r1)'))
+    await user.click(await screen.findByText(/ID: r1/))
     await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
-    await waitFor(() => expect(linkSupplierProduct).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(confirmSupplierProductMapping).toHaveBeenCalledTimes(2),
+    )
     expect(onLinked).toHaveBeenCalledTimes(3)
   })
 
@@ -334,7 +498,7 @@ describe('VincularPartidaSurface', () => {
       onLinked,
     )
     const user = await openSurface()
-    await user.click(await screen.findByText(/IDENTITY-r1/))
+    await user.click(await screen.findByText(/ID: r1/))
     await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
     await waitFor(() => expect(onLinked).toHaveBeenCalled())
     expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -345,22 +509,24 @@ describe('VincularPartidaSurface', () => {
   })
 
   it('restores focus and ignores late completion after StrictMode unmount', async () => {
-    let resolve!: (product: SupplierProduct) => void
-    const pending = new Promise<SupplierProduct>((complete) => {
-      resolve = complete
-    })
+    let resolve!: (product: SupplierProductMappingProjection) => void
+    const pending = new Promise<SupplierProductMappingProjection>(
+      (complete) => {
+        resolve = complete
+      },
+    )
     const onLinked = vi.fn()
-    const linkSupplierProduct = vi.fn().mockReturnValue(pending)
+    const confirmSupplierProductMapping = vi.fn().mockReturnValue(pending)
     const { unmount } = renderSurface(
       vi.fn().mockResolvedValue(page([resource('r1')])),
-      linkSupplierProduct,
+      confirmSupplierProductMapping,
       onLinked,
       true,
     )
     const user = await openSurface()
-    await user.click(await screen.findByText(/IDENTITY-r1/))
+    await user.click(await screen.findByText(/ID: r1/))
     await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
-    expect(linkSupplierProduct).toHaveBeenCalledOnce()
+    expect(confirmSupplierProductMapping).toHaveBeenCalledOnce()
     unmount()
     await act(async () => resolve(product('r1')))
     expect(onLinked).not.toHaveBeenCalled()

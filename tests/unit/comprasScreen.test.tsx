@@ -7,10 +7,17 @@ import { ComprasScreen } from '../../src/features/compras/ComprasScreen'
 import type { ComprasRestApi } from '../../src/features/compras/compras.api'
 import type {
   Purchase,
+  PurchaseLineWorkbenchPage,
+  PurchaseLineWorkbenchRow,
   PurchasePage,
   SupplierProductPage,
 } from '../../src/features/compras/compras.types'
 import type { ProveedoresRestApi } from '../../src/features/proveedores/proveedores.api'
+import type { ResourcesMasterRestReadApi } from '../../src/features/resources-master/resourcesMaster.api'
+import type {
+  Resource,
+  ResourcePage,
+} from '../../src/features/resources-master/resourcesMaster.types'
 import type {
   Supplier,
   SupplierPage,
@@ -45,6 +52,72 @@ const page = (
 const makeApi = (
   listSuppliers: ProveedoresRestApi['listSuppliers'],
 ): ProveedoresRestApi => ({ listSuppliers }) as ProveedoresRestApi
+
+const workbenchRow = (
+  overrides: Partial<PurchaseLineWorkbenchRow> = {},
+): PurchaseLineWorkbenchRow =>
+  ({
+    lineId: 'line-1',
+    purchaseId: purchase.id,
+    lineNumber: 1,
+    issuedAt: '2026-09-19',
+    series: 'A',
+    folio: '100',
+    cfdiUuid: 'uuid-1',
+    supplierId: supplier.id,
+    supplierDisplayName: 'Acme Comercial',
+    description: 'Tornillo',
+    supplierSku: 'SKU-1',
+    commercialSupplierSku: 'COMM-1',
+    satProductCode: '7318',
+    quantity: '1',
+    unitCode: 'H87',
+    unit: 'Pieza',
+    unitPrice: '10',
+    amount: '10',
+    currency: 'MXN',
+    supplierProductId: 'supplier-product-1',
+    mappingRevision: '1',
+    resolutionRevision: '1',
+    resourceId: null,
+    resourceIdentity: null,
+    resourceDisplayName: null,
+    resolutionOverride: 'NONE',
+    effectiveStatus: 'PENDIENTE',
+    effectiveCause: 'UNRESOLVED',
+    ...overrides,
+  }) as PurchaseLineWorkbenchRow
+
+const workbenchPage = (
+  lines: PurchaseLineWorkbenchRow[] = [workbenchRow()],
+): PurchaseLineWorkbenchPage => ({
+  lines,
+  hasPrevious: false,
+  hasNext: false,
+})
+
+const resource = {
+  id: 'resource-1',
+  identityV1: 'RAW-RESOURCE-1',
+  scope: { classCode: 'C', familyCode: 'F', typeCode: 'T' },
+  naturalUnit: 'pieza',
+  active: true,
+  revision: '1',
+  attributes: [],
+} satisfies Resource
+
+const resolverResourcesApi = (): ResourcesMasterRestReadApi =>
+  ({
+    listResources: vi.fn().mockResolvedValue({
+      resources: [resource],
+      hasPrevious: false,
+      hasNext: false,
+    } satisfies ResourcePage),
+    getTypeEffectiveAttributes: vi.fn().mockResolvedValue({
+      typeCode: 'T',
+      attributes: [],
+    }),
+  }) as unknown as ResourcesMasterRestReadApi
 
 const purchase = {
   id: 'purchase-1',
@@ -106,13 +179,20 @@ const renderScreen = (
     } satisfies PurchasePage),
   ),
   strictMode = false,
+  initialPerspective: 'partidas' | 'documentos' = 'documentos',
+  resourcesApi?: ResourcesMasterRestReadApi,
 ) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity } },
   })
   const screen = (
     <QueryClientProvider client={queryClient}>
-      <ComprasScreen proveedoresApi={api} comprasApi={comprasApi} />
+      <ComprasScreen
+        proveedoresApi={api}
+        comprasApi={comprasApi}
+        initialPerspective={initialPerspective}
+        resourcesApi={resourcesApi}
+      />
     </QueryClientProvider>
   )
   return render(strictMode ? <StrictMode>{screen}</StrictMode> : screen)
@@ -142,7 +222,7 @@ describe('ComprasScreen U3B2 integration', () => {
     expect(listSuppliers).toHaveBeenCalledWith({
       text: '',
       scope: 'ACTIVE',
-      limit: 20,
+      limit: 50,
       offset: 0,
       signal: expect.any(AbortSignal),
     })
@@ -606,9 +686,7 @@ describe('ComprasScreen U3B2 integration', () => {
       purchaseId: purchase.id,
       signal: expect.any(AbortSignal),
     })
-    await user.click(
-      screen.getByRole('button', { name: 'Volver al historial' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Volver' }))
     expect(
       screen.getByRole('heading', { name: /Historial de compras/ }),
     ).toBeVisible()
@@ -641,8 +719,8 @@ describe('ComprasScreen U3B2 integration', () => {
       expect(listSuppliers).toHaveBeenLastCalledWith(
         expect.objectContaining({
           scope: 'ACTIVE',
-          limit: 20,
-          offset: 20,
+          limit: 50,
+          offset: 50,
         }),
       ),
     )
@@ -681,9 +759,6 @@ describe('ComprasScreen U3B2 integration', () => {
       hasPrevious: false,
       hasNext: false,
     } satisfies SupplierProductPage)
-    const linkSupplierProduct = vi.fn()
-    const unlinkSupplierProduct = vi.fn()
-    const setPurchaseLineLinkStatus = vi.fn()
     const importPurchase = vi.fn()
     renderScreen(
       makeApi(vi.fn().mockResolvedValue(page([supplier]))),
@@ -695,9 +770,6 @@ describe('ComprasScreen U3B2 integration', () => {
         } satisfies PurchasePage),
         {
           listSupplierProducts,
-          linkSupplierProduct,
-          unlinkSupplierProduct,
-          setPurchaseLineLinkStatus,
           importPurchase,
         },
       ),
@@ -733,9 +805,6 @@ describe('ComprasScreen U3B2 integration', () => {
         name: 'Detalle del Producto de Proveedor seleccionado',
       }),
     ).toHaveTextContent('ID del Producto de Proveedor: product-1')
-    expect(linkSupplierProduct).not.toHaveBeenCalled()
-    expect(unlinkSupplierProduct).not.toHaveBeenCalled()
-    expect(setPurchaseLineLinkStatus).not.toHaveBeenCalled()
     expect(importPurchase).not.toHaveBeenCalled()
   })
 
@@ -819,19 +888,75 @@ describe('ComprasScreen U3B2 integration', () => {
     })
   })
 
-  it('keeps the blocked pending surface visible across supplier, history, and detail stages', async () => {
+  it('keeps the legacy Documentos flow free of the removed blocked pending surface', () => {
+    renderScreen(makeApi(vi.fn().mockResolvedValue(page([supplier]))))
+
+    expect(
+      screen.queryByRole('heading', {
+        name: 'Partidas pendientes entre compras',
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Seleccionar proveedor' }),
+    ).toBeVisible()
+  })
+
+  it('uses Partidas as the production default and sends bounded, blank-free criteria', async () => {
     const user = userEvent.setup()
-    const listSuppliers = vi.fn().mockResolvedValue(page([supplier]))
-    const listSupplierPurchases = vi.fn().mockResolvedValue({
-      purchases: [purchase],
-      hasPrevious: false,
-      hasNext: false,
-    } satisfies PurchasePage)
+    const listSupplierLineWorkbench = vi.fn().mockResolvedValue(workbenchPage())
+    renderScreen(
+      makeApi(vi.fn().mockResolvedValue(page([supplier]))),
+      makePurchasesApi(
+        vi.fn().mockResolvedValue({
+          purchases: [],
+          hasPrevious: false,
+          hasNext: false,
+        } satisfies PurchasePage),
+        { listPurchaseLineWorkbench: listSupplierLineWorkbench },
+      ),
+      false,
+      'partidas',
+    )
+
+    expect(screen.getByRole('button', { name: 'Partidas' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Partidas de compras' }),
+    ).toBeVisible()
+    await waitFor(() => expect(listSupplierLineWorkbench).toHaveBeenCalled())
+    expect(listSupplierLineWorkbench).toHaveBeenLastCalledWith({
+      limit: 20,
+      offset: 0,
+      signal: expect.any(AbortSignal),
+    })
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Descripción' }), {
+      target: { value: '  arandela  ' },
+    })
+    await waitFor(() =>
+      expect(listSupplierLineWorkbench).toHaveBeenLastCalledWith({
+        description: 'arandela',
+        limit: 20,
+        offset: 0,
+        signal: expect.any(AbortSignal),
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Documentos' }))
+    expect(screen.getByRole('button', { name: 'Documentos' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('switches perspectives and returns to Partidas after inspecting a document', async () => {
+    const user = userEvent.setup()
     const getPurchase = vi.fn().mockResolvedValue({
       ...purchase,
       branchId: null,
       exchangeRate: null,
-      subtotal: '1',
+      subtotal: '10',
       discount: '0',
       taxTransferred: '0',
       taxWithheld: '0',
@@ -844,50 +969,180 @@ describe('ComprasScreen U3B2 integration', () => {
     })
     const listPurchaseLines = vi.fn().mockResolvedValue([])
     renderScreen(
-      makeApi(listSuppliers),
-      makePurchasesApi(listSupplierPurchases, {
-        getPurchase,
-        listPurchaseLines,
-      }),
+      makeApi(vi.fn().mockResolvedValue(page([supplier]))),
+      makePurchasesApi(
+        vi.fn().mockResolvedValue({
+          purchases: [],
+          hasPrevious: false,
+          hasNext: false,
+        } satisfies PurchasePage),
+        {
+          listPurchaseLineWorkbench: vi.fn().mockResolvedValue(workbenchPage()),
+          getPurchase,
+          listPurchaseLines,
+        },
+      ),
+      false,
+      'partidas',
     )
 
-    expect(
-      screen.getByRole('heading', {
-        name: 'Partidas pendientes entre compras',
-        level: 2,
-      }),
-    ).toBeVisible()
-    expect(listSupplierPurchases).not.toHaveBeenCalled()
-
     await user.click(
-      await screen.findByRole('option', { name: /Acme Comercial/ }),
-    )
-    expect(
-      screen.getByRole('heading', { name: /Historial de compras/ }),
-    ).toBeVisible()
-    expect(
-      screen.getByRole('heading', {
-        name: 'Partidas pendientes entre compras',
-        level: 2,
+      await screen.findByRole('button', {
+        name: 'Inspeccionar documento A-100',
       }),
-    ).toBeVisible()
-    expect(listSupplierPurchases).toHaveBeenCalledOnce()
-    expect(getPurchase).not.toHaveBeenCalled()
-    expect(listPurchaseLines).not.toHaveBeenCalled()
-
-    await user.click(
-      await screen.findByRole('button', { name: 'Seleccionar compra A-100' }),
     )
     expect(
       await screen.findByRole('heading', { name: 'Detalle de compra' }),
     ).toBeVisible()
+    expect(getPurchase).toHaveBeenCalledWith({
+      id: purchase.id,
+      signal: expect.any(AbortSignal),
+    })
+    await user.click(screen.getByRole('button', { name: 'Volver' }))
     expect(
-      screen.getByRole('heading', {
-        name: 'Partidas pendientes entre compras',
-        level: 2,
-      }),
+      screen.getByRole('heading', { name: 'Partidas de compras' }),
     ).toBeVisible()
-    expect(getPurchase).toHaveBeenCalledOnce()
-    expect(listPurchaseLines).toHaveBeenCalledOnce()
+  })
+
+  it('refreshes the Partidas workbench after import without a current Documentos supplier', async () => {
+    const user = userEvent.setup()
+    const listPurchaseLineWorkbench = vi.fn().mockResolvedValue(workbenchPage())
+    const importPurchase = vi.fn().mockResolvedValue({
+      ...purchase,
+      alreadyExisted: false,
+    })
+    renderScreen(
+      makeApi(vi.fn().mockResolvedValue(page([supplier]))),
+      makePurchasesApi(
+        vi.fn().mockResolvedValue({
+          purchases: [],
+          hasPrevious: false,
+          hasNext: false,
+        } satisfies PurchasePage),
+        { importPurchase, listPurchaseLineWorkbench },
+      ),
+      false,
+      'partidas',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Importar compra' }))
+    fireEvent.change(screen.getByTestId('purchase-file'), {
+      target: {
+        files: [
+          new File(['<cfdi />'], 'compra.xml', { type: 'application/xml' }),
+        ],
+      },
+    })
+    await waitFor(() => expect(importPurchase).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(listPurchaseLineWorkbench.mock.calls.length).toBeGreaterThan(1),
+    )
+    expect(await screen.findByText(/Partidas actualizadas/)).toBeVisible()
+  })
+
+  it('rereads after resolver success and focuses the next eligible Vincular row', async () => {
+    const user = userEvent.setup()
+    const first = workbenchRow()
+    const second = workbenchRow({ lineId: 'line-2', lineNumber: 2 })
+    const reread = workbenchPage([
+      { ...first, effectiveStatus: 'VINCULADO', resourceId: 'resource-1' },
+      second,
+    ])
+    const listPurchaseLineWorkbench = vi
+      .fn()
+      .mockResolvedValueOnce(workbenchPage([first, second]))
+      .mockResolvedValueOnce(reread)
+    const resolvePurchaseLine = vi.fn().mockResolvedValue({} as never)
+    renderScreen(
+      makeApi(vi.fn().mockResolvedValue(page([supplier]))),
+      makePurchasesApi(
+        vi.fn().mockResolvedValue({
+          purchases: [],
+          hasPrevious: false,
+          hasNext: false,
+        } satisfies PurchasePage),
+        { listPurchaseLineWorkbench, resolvePurchaseLine },
+      ),
+      false,
+      'partidas',
+      resolverResourcesApi(),
+    )
+
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Vincular' }))[0],
+    )
+    await user.click(
+      await screen.findByRole('option', { name: /ID: resource-1/ }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Confirmar resolución' }),
+    )
+    await waitFor(() => expect(resolvePurchaseLine).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(listPurchaseLineWorkbench).toHaveBeenCalledTimes(2),
+    )
+    await waitFor(() =>
+      expect(document.activeElement).toHaveAttribute(
+        'data-partidas-resolve-id',
+        'line-2',
+      ),
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(
+      await screen.findByText('Partida vinculada correctamente.'),
+    ).toBeVisible()
+  })
+
+  it('rereads on an uncertain resolver response without resubmitting', async () => {
+    const user = userEvent.setup()
+    const error = Object.assign(new Error('conflict'), { status: 409 })
+    const resolvePurchaseLine = vi.fn().mockRejectedValue(error)
+    const listPurchaseLineWorkbench = vi
+      .fn()
+      .mockResolvedValue(
+        workbenchPage([workbenchRow({ supplierProductId: null })]),
+      )
+    renderScreen(
+      makeApi(vi.fn().mockResolvedValue(page([supplier]))),
+      makePurchasesApi(
+        vi.fn().mockResolvedValue({
+          purchases: [],
+          hasPrevious: false,
+          hasNext: false,
+        } satisfies PurchasePage),
+        { listPurchaseLineWorkbench, resolvePurchaseLine },
+      ),
+      false,
+      'partidas',
+      resolverResourcesApi(),
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Vincular' }))
+    await user.type(
+      await screen.findByRole('textbox', {
+        name: 'SKU comercial del proveedor',
+      }),
+      'COMM-1',
+    )
+    await user.click(
+      await screen.findByRole('option', { name: /ID: resource-1/ }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Confirmar resolución' }),
+    )
+    await waitFor(() => expect(resolvePurchaseLine).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(listPurchaseLineWorkbench).toHaveBeenCalledTimes(2),
+    )
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).not.toHaveTextContent(/Volvé a leer/)
+    expect(
+      screen.getByRole('textbox', { name: 'SKU comercial del proveedor' }),
+    ).toHaveValue('')
+    expect(
+      screen.getByRole('button', { name: 'Confirmar resolución' }),
+    ).toBeDisabled()
+    expect(resolvePurchaseLine).toHaveBeenCalledTimes(1)
   })
 })

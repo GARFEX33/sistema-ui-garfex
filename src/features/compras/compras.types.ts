@@ -1,5 +1,3 @@
-export type LinkStatus = 'PENDIENTE' | 'VINCULADO' | 'NO_APLICA' | 'CONFLICTO'
-
 export interface PurchaseImportInput {
   file: Blob
   branchId?: string
@@ -50,7 +48,72 @@ export interface PurchaseLine {
   taxWithheld: string
   taxObject: string
   supplierProductId: string | null
-  linkStatus: LinkStatus
+  resolutionRevision: string
+  resolutionOverride: ResolutionOverride
+  effectiveStatus: EffectiveLinkStatus
+  effectiveCause: string
+}
+
+/** Compatibility alias for callers that still name the canonical shape V2. */
+export type PurchaseLineV2 = PurchaseLine
+
+export type EffectiveLinkStatus =
+  | 'PENDIENTE'
+  | 'VINCULADO'
+  | 'SUSPENDIDO'
+  | 'NO_APLICA'
+  | 'CONFLICTO'
+
+export type ResolutionOverride = 'NONE' | 'NO_APLICA' | 'CONFLICTO'
+
+export interface PurchaseLineWorkbenchRow {
+  lineId: string
+  purchaseId: string
+  lineNumber: number
+  issuedAt: string
+  series: string
+  folio: string
+  cfdiUuid: string
+  supplierId: string
+  supplierDisplayName: string
+  description: string
+  supplierSku: string
+  commercialSupplierSku: string | null
+  satProductCode: string
+  quantity: string
+  unitCode: string
+  unit: string
+  unitPrice: string
+  amount: string
+  currency: string
+  supplierProductId: string | null
+  mappingRevision: string | null
+  resolutionRevision: string
+  resourceId: string | null
+  resourceIdentity: string | null
+  resourceDisplayName: string | null
+  resolutionOverride: ResolutionOverride
+  effectiveStatus: EffectiveLinkStatus
+  effectiveCause: string
+}
+
+export interface PurchaseLineWorkbenchPage {
+  lines: PurchaseLineWorkbenchRow[]
+  hasPrevious: boolean
+  hasNext: boolean
+}
+
+export interface PurchaseLineWorkbenchFilterInput {
+  supplierId?: string
+  status?: EffectiveLinkStatus
+  dateFrom?: string
+  dateTo?: string
+  invoice?: string
+  supplierSku?: string
+  description?: string
+  limit: number
+  offset: number
+  signal?: AbortSignal
 }
 
 export interface SupplierProduct {
@@ -59,25 +122,113 @@ export interface SupplierProduct {
   supplierSku: string
   description: string
   resourceId: string | null
+  mappingRevision?: string
+  resourceActive?: boolean | null
+  mappingState?: MappingState
+  mappingCause?: MappingCause
   notes: string
   createdAt: string
   updatedAt: string
 }
 
-export interface LinkSupplierProductInput {
+export type MappingState =
+  | 'UNRESOLVED'
+  | 'CONFIRMED'
+  | 'SUSPENDED'
+  | 'IDENTITY_CONFLICT'
+
+export type MappingCause =
+  | 'NONE'
+  | 'UNRESOLVED'
+  | 'RESOURCE_INACTIVE'
+  | 'IDENTITY_CONFLICT'
+
+/** Transitional enriched SupplierProduct projection returned by mapping mutations. */
+export interface SupplierProductMappingProjection extends SupplierProduct {
+  mappingRevision: string
+  resourceActive: boolean | null
+  mappingState: MappingState
+  mappingCause: MappingCause
+}
+
+export type MappingDisposition = 'CREATED' | 'REUSED' | 'ALREADY_MAPPED'
+
+export interface CommercialIdentity {
+  supplierProductId: string
+  supplierId: string
+  commercialSupplierSku: string
+  disposition: MappingDisposition
+  mappingRevision: string
+  resourceId: string | null
+}
+
+export interface ResolvePurchaseLineResponse {
+  line: PurchaseLineV2
+  supplierProduct: SupplierProductMappingProjection
+  commercialIdentity: CommercialIdentity
+}
+
+export interface ResolvePurchaseLineInput {
   id: string
+  reason: string
   resourceId: string
+  expectedSupplierProductId: string | null
+  expectedMappingRevision: string | null
+  expectedResolutionRevision: string
+  commercialSupplierSku: string
   signal?: AbortSignal
 }
 
-export interface UnlinkSupplierProductInput {
+export interface SetPurchaseLineResolutionOverrideInput {
   id: string
+  reason: string
+  override: ResolutionOverride
+  expectedRevision: string
   signal?: AbortSignal
 }
 
-export interface PurchaseLineLinkStatusInput {
+export type PurchaseLineResolutionOverrideInput =
+  SetPurchaseLineResolutionOverrideInput
+
+export interface ConfirmSupplierProductMappingInput {
   id: string
-  status: LinkStatus
+  reason: string
+  resourceId: string
+  expectedRevision: string
+  signal?: AbortSignal
+}
+
+export interface CorrectSupplierProductMappingInput {
+  id: string
+  reason: string
+  expectedCurrentResourceId: string
+  resourceId: string
+  expectedRevision: string
+  signal?: AbortSignal
+}
+
+export interface RetireSupplierProductMappingInput {
+  id: string
+  reason: string
+  expectedCurrentResourceId: string
+  expectedRevision: string
+  signal?: AbortSignal
+}
+
+export interface ReportSupplierProductMappingConflictInput {
+  id: string
+  reason: string
+  expectedCurrentResourceId: string
+  expectedRevision: string
+  signal?: AbortSignal
+}
+
+export interface ResolveSupplierProductMappingConflictInput {
+  id: string
+  reason: string
+  expectedCurrentResourceId: string
+  resourceId: string
+  expectedRevision: string
   signal?: AbortSignal
 }
 

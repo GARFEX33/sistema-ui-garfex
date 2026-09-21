@@ -33,6 +33,7 @@ import { useResourceCreationAttributesEvaluation } from './useResourceCreationAt
 import { useResourceCreationSubmit } from './useResourceCreationSubmit'
 import type { ResourcesMasterRestReadApi } from './resourcesMaster.api'
 import type {
+  Resource,
   ResourceContextClassRestItem,
   ResourceContextFamilyRestItem,
   ResourceContextTypeRestItem,
@@ -42,7 +43,7 @@ import type { EffectiveAttributesRequest } from '../../shared/catalog/effectiveA
 
 export interface CrearRecursoSurfaceProps {
   api: ResourcesMasterRestReadApi
-  onSuccess?: (message: string) => void
+  onSuccess?: (message: string, resource?: Resource) => void
 }
 
 const isEditableTarget = (target: EventTarget | null) =>
@@ -87,7 +88,7 @@ function ResourceCreationWizardDialog({
 }: {
   api: ResourcesMasterRestReadApi
   close: () => void
-  onSuccess?: (message: string) => void
+  onSuccess?: (message: string, resource?: Resource) => void
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const successHandledRef = useRef(false)
@@ -225,9 +226,10 @@ function ResourceCreationWizardDialog({
   useEffect(() => {
     if (submit.status !== 'success' || successHandledRef.current) return
     successHandledRef.current = true
-    if (scope) onSuccess?.(buildResourceCreatedMessage(scope.typeName))
+    if (scope)
+      onSuccess?.(buildResourceCreatedMessage(scope.typeName), submit.result)
     close()
-  }, [submit.status, scope, onSuccess, close])
+  }, [submit.status, submit.result, scope, onSuccess, close])
 
   const currentRailStage: CreationRailStage =
     state.stage === 'review' ? 'review-pending' : state.stage
