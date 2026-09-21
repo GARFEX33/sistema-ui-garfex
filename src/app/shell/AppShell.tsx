@@ -258,8 +258,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         event.preventDefault()
         if (event.key === 'ArrowRight') {
           const nextId =
-            resourcesColumnOrder[resourcesColumnIndex + 1] ??
-            'resources.search'
+            resourcesColumnOrder[resourcesColumnIndex + 1] ?? 'resources.search'
           focusRow(
             boundaryRoot.querySelector<HTMLElement>(
               `[data-spatial-id="${nextId}"]`,
@@ -394,7 +393,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeCommand = useCallback(() => setCommandOpen(false), [])
   const openHelp = useCallback(
     (
-      _surface: 'bandeja' | 'catalog' | 'recursos' | 'proveedores',
+      _surface: 'bandeja' | 'catalog' | 'recursos' | 'proveedores' | 'compras',
       opener: HTMLElement | null,
     ) => {
       helpOpenerRef.current = opener?.isConnected ? opener : null
@@ -410,7 +409,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         ? 'recursos'
         : pathname === '/proveedores'
           ? 'proveedores'
-          : 'bandeja'
+          : pathname === '/compras'
+            ? 'compras'
+            : 'bandeja'
 
   useEffect(() => {
     if (commandOpen) {
@@ -489,7 +490,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               Proveedores
             </Link>
-            <span className="navigation-static">Compras</span>
+            <Link
+              ref={(link) => {
+                sidebarLinks.current[3] = link
+              }}
+              to="/compras"
+              data-spatial-id="sidebar.compras"
+              onKeyDown={(event) => handleSidebarKeyDown(event, 3)}
+              activeProps={{ className: 'navigation-link is-active' }}
+              className="navigation-link"
+            >
+              Compras
+            </Link>
             <span className="navigation-static is-current">Configuración</span>
             <p className="navigation-section-label model-navigation-label">
               CONFIGURACIÓN DEL MODELO
@@ -501,11 +513,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="navigation-static">Presentación…</span>
             <Link
               ref={(link) => {
-                sidebarLinks.current[3] = link
+                sidebarLinks.current[4] = link
               }}
               to="/catalogo"
               data-spatial-id="sidebar.catalogo"
-              onKeyDown={(event) => handleSidebarKeyDown(event, 3)}
+              onKeyDown={(event) => handleSidebarKeyDown(event, 4)}
               activeProps={{ className: 'navigation-link is-active' }}
               className="navigation-link navigation-catalog-link"
             >
@@ -523,7 +535,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ? 'Recursos maestros'
                   : pathname === '/proveedores'
                     ? 'Proveedores'
-                    : 'Entrada operativa / Bandeja'}
+                    : pathname === '/compras'
+                      ? 'Compras'
+                      : 'Entrada operativa / Bandeja'}
             </span>
             <div className="topbar-actions">
               <CommandEntry

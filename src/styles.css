@@ -25,6 +25,8 @@
   --color-focus: var(--color-focus);
   --color-success: var(--color-success);
   --color-success-subtle: var(--color-success-subtle);
+  --color-warning: var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
   --font-sans: var(--font-sans);
 }
 

@@ -26,11 +26,20 @@ const apiPath = 'src/features/resources-master/resourcesMaster.api.ts'
 const proveedoresApiPath = 'src/features/proveedores/proveedores.api.ts'
 const proveedoresRestWindowHookPath =
   'src/features/proveedores/useProveedoresRestWindow.ts'
+const supplierPurchasesRestWindowHookPath =
+  'src/features/compras/useSupplierPurchasesRestWindow.ts'
+const supplierProductsRestWindowHookPath =
+  'src/features/compras/useSupplierProductsRestWindow.ts'
+const comprasApiPath = 'src/features/compras/compras.api.ts'
+const compraDetalleStagePath = 'src/features/compras/CompraDetalleStage.tsx'
 const catalogContractPath = 'src/shared/catalog/catalogRest.contract.ts'
 const queryBindings = new Map([
   [providerPath, ['QueryClient', 'QueryClientProvider']],
   [restWindowHookPath, ['useQuery']],
   [proveedoresRestWindowHookPath, ['useQuery']],
+  [supplierPurchasesRestWindowHookPath, ['useQuery']],
+  [supplierProductsRestWindowHookPath, ['useQuery']],
+  [compraDetalleStagePath, ['useQuery']],
   [evaluationHookPath, ['useQuery']],
   [attributeDefinitionHookPath, ['useQuery']],
   [allowedValuesHookPath, ['useInfiniteQuery']],
@@ -62,6 +71,7 @@ const isApprovedFile = (file: string, module: string) =>
   (isPackage(module, 'zod') &&
     (file === apiPath ||
       file === proveedoresApiPath ||
+      file === comprasApiPath ||
       file === catalogContractPath))
 const property = (node: ts.Node) => {
   if (ts.isPropertyAccessExpression(node)) return node.name.text

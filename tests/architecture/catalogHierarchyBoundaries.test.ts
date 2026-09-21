@@ -154,8 +154,9 @@ describe('catalog hierarchy boundaries', () => {
   })
 
   it('keeps only approved destinations and read-only visual authority', () => {
-    expect(shell.match(/<Link/g)).toHaveLength(4)
-    expect(shell).not.toMatch(/to="\/(compras|atributos|presentaci[oó]n)/i)
+    expect(shell.match(/<Link/g)).toHaveLength(5)
+    expect(shell).toMatch(/to="\/compras"/)
+    expect(shell).not.toMatch(/to="\/(atributos|presentaci[oó]n)/i)
     expect(routes).not.toMatch(/atributos|presentaci[oó]n/i)
     expect(
       readFileSync(

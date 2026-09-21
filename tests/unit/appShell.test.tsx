@@ -1,13 +1,27 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryHistory } from '@tanstack/react-router'
 import { describe, expect, it, vi } from 'vitest'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ComponentProps } from 'react'
 import { AppProviders } from '../../src/app/providers/AppProviders'
 import { createAppRouter } from '../../src/app/router'
 import { KeyboardControllerProvider } from '../../src/shared/keyboard/KeyboardController'
 import { useKeyboardController } from '../../src/shared/keyboard/keyboardControllerContext'
 import type { ResourcesMasterRestReadApi } from '../../src/features/resources-master/resourcesMaster.api'
+
+const activeSurfaceSpy = vi.hoisted(() => vi.fn())
+vi.mock('../../src/shared/keyboard/KeyboardController', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../src/shared/keyboard/KeyboardController')
+  >('../../src/shared/keyboard/KeyboardController')
+  const ObservedProvider = (
+    props: ComponentProps<typeof actual.KeyboardControllerProvider>,
+  ) => {
+    activeSurfaceSpy(props.activeSurface)
+    return <actual.KeyboardControllerProvider {...props} />
+  }
+  return { ...actual, KeyboardControllerProvider: ObservedProvider }
+})
 
 const resourcesMasterApiFactory = vi.hoisted(() => vi.fn())
 vi.mock('../../src/features/resources-master/resourcesMaster.api', async () => {
@@ -160,7 +174,7 @@ describe('runtime shell and operations inbox entry', () => {
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
-    expect(screen.getAllByRole('link')).toHaveLength(4)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(storageSpy).not.toHaveBeenCalled()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
@@ -180,7 +194,7 @@ describe('runtime shell and operations inbox entry', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getAllByRole('link')).toHaveLength(4)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
     expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
     expect(screen.getByText('CONFIGURACIÓN DEL MODELO')).toBeVisible()
     expect(screen.getByText('Configuración / Catálogo')).toBeVisible()
@@ -200,7 +214,7 @@ describe('runtime shell and operations inbox entry', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getAllByRole('link')).toHaveLength(4)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
     expect(screen.getByText('ESPACIOS DE TRABAJO')).toBeVisible()
     expect(screen.getByText('Proveedores', { selector: 'span' })).toBeVisible()
     expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument()
@@ -208,23 +222,44 @@ describe('runtime shell and operations inbox entry', () => {
 })
 
 describe('sidebar keyboard navigation', () => {
-  it('keeps only the four real links in the immediate group and handles local navigation', async () => {
+  it('keeps the five real links in the immediate group and handles local navigation', async () => {
     renderAt('/bandeja')
     const inbox = await screen.findByRole('link', { name: 'Bandeja' })
     const resources = screen.getByRole('link', { name: 'Recursos maestros' })
     const proveedores = screen.getByRole('link', { name: 'Proveedores' })
+    const compras = screen.getByRole('link', { name: 'Compras' })
     const catalog = screen.getByRole('link', { name: 'Catálogo' })
-    expect(screen.getAllByRole('link')).toHaveLength(4)
+    expect(screen.getAllByRole('link')).toHaveLength(5)
+    expect(
+      within(screen.getByRole('navigation', { name: 'Navegación principal' }))
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual([
+      'Bandeja',
+      'Recursos maestros',
+      'Proveedores',
+      'Compras',
+      'Catálogo',
+    ])
+    expect(
+      screen.getByText('Configuración', { selector: 'span' }),
+    ).toBeVisible()
+    expect(screen.getByText('Configuración')).not.toHaveAttribute('href')
+    expect(screen.getByText('Familias')).not.toHaveAttribute('href')
     inbox.focus()
     fireEvent.keyDown(inbox, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(resources)
     fireEvent.keyDown(resources, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(proveedores)
     fireEvent.keyDown(proveedores, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(compras)
+    fireEvent.keyDown(compras, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(catalog)
     fireEvent.keyDown(catalog, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(compras)
+    fireEvent.keyDown(compras, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(proveedores)
     fireEvent.keyDown(proveedores, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(resources)
@@ -234,6 +269,7 @@ describe('sidebar keyboard navigation', () => {
     expect(document.activeElement).toBe(inbox)
     fireEvent.keyDown(inbox, { key: 'End' })
     expect(document.activeElement).toBe(catalog)
+    expect(compras).toHaveAttribute('data-spatial-id', 'sidebar.compras')
     expect(screen.getByText('Familias')).not.toHaveAttribute('data-spatial-id')
   })
 
@@ -293,6 +329,22 @@ describe('sidebar triangulation', () => {
     expect(
       await screen.findByRole('heading', { name: 'Bandeja' }),
     ).toBeVisible()
+  })
+
+  it('activates Compras through native Enter and exposes its active surface and route label', async () => {
+    activeSurfaceSpy.mockClear()
+    renderAt('/bandeja')
+    const compras = await screen.findByRole('link', { name: 'Compras' })
+    expect(compras).toHaveAttribute('href', '/compras')
+    expect(compras).toHaveAttribute('data-spatial-id', 'sidebar.compras')
+    compras.focus()
+    await userEvent.setup().keyboard('{Enter}')
+    expect(
+      await screen.findByRole('heading', { name: 'Compras' }),
+    ).toBeVisible()
+    expect(screen.getByText('Compras', { selector: 'span' })).toBeVisible()
+    expect(compras).toHaveAttribute('aria-current', 'page')
+    expect(activeSurfaceSpy).toHaveBeenLastCalledWith('compras')
   })
 
   it('anchors ArrowLeft at the current route before scoring sidebar geometry', async () => {
