@@ -87,29 +87,35 @@ const creationApi = (
   ...overrides,
 })
 
+const renderAdmin = (
+  options: Parameters<typeof useCatalogPresentationAdmin>[0],
+) =>
+  renderHook(() =>
+    useCatalogPresentationAdmin({
+      ...options,
+      canSubmit: options.canSubmit ?? (() => true),
+    }),
+  )
+
 describe('useCatalogPresentationAdmin', () => {
   it('stays waiting-context with no Tipo selected', () => {
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi(),
-        creationApi: creationApi(),
-        context: {},
-        attributes: [],
-      }),
-    )
+    const { result } = renderAdmin({
+      presentationApi: presentationApi(),
+      creationApi: creationApi(),
+      context: {},
+      attributes: [],
+    })
 
     expect(result.current.status).toBe('waiting-context')
   })
 
   it('loads and derives participating/not-participating rows', async () => {
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi(),
-        creationApi: creationApi(),
-        context,
-        attributes,
-      }),
-    )
+    const { result } = renderAdmin({
+      presentationApi: presentationApi(),
+      creationApi: creationApi(),
+      context,
+      attributes,
+    })
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.rows?.participating).toEqual([
@@ -171,14 +177,12 @@ describe('useCatalogPresentationAdmin', () => {
         hasPrevious: false,
         hasNext: false,
       })
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({ listPresentations }),
-        creationApi: creationApi({ createPresentation }),
-        context,
-        attributes,
-      }),
-    )
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({ listPresentations }),
+      creationApi: creationApi({ createPresentation }),
+      context,
+      attributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     const calibre = result.current.rows!.notParticipating[0]!
@@ -244,17 +248,15 @@ describe('useCatalogPresentationAdmin', () => {
       hasPrevious: false,
       hasNext: false,
     }))
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({
-          listPresentations,
-          updatePresentation,
-        }),
-        creationApi: creationApi(),
-        context,
-        attributes: threeAttributes,
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({
+        listPresentations,
+        updatePresentation,
       }),
-    )
+      creationApi: creationApi(),
+      context,
+      attributes: threeAttributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     const insulation = result.current.rows!.notParticipating[0]!
@@ -288,17 +290,15 @@ describe('useCatalogPresentationAdmin', () => {
       hasPrevious: false,
       hasNext: false,
     }))
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({
-          listPresentations,
-          updatePresentation,
-        }),
-        creationApi: creationApi(),
-        context,
-        attributes,
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({
+        listPresentations,
+        updatePresentation,
       }),
-    )
+      creationApi: creationApi(),
+      context,
+      attributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     const calibre = result.current.rows!.notParticipating[0]!
@@ -319,14 +319,12 @@ describe('useCatalogPresentationAdmin', () => {
 
   it('turning off a participating attribute updates it with active:false, then refetches', async () => {
     const updatePresentation = vi.fn(async () => ({}))
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({ updatePresentation }),
-        creationApi: creationApi(),
-        context,
-        attributes,
-      }),
-    )
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({ updatePresentation }),
+      creationApi: creationApi(),
+      context,
+      attributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     const color = result.current.rows!.participating[0]!
@@ -366,17 +364,15 @@ describe('useCatalogPresentationAdmin', () => {
       hasPrevious: false,
       hasNext: false,
     }))
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({
-          listPresentations,
-          updatePresentation,
-        }),
-        creationApi: creationApi(),
-        context,
-        attributes,
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({
+        listPresentations,
+        updatePresentation,
       }),
-    )
+      creationApi: creationApi(),
+      context,
+      attributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     await result.current.moveDown('color')
@@ -453,17 +449,15 @@ describe('useCatalogPresentationAdmin', () => {
       hasPrevious: false,
       hasNext: false,
     }))
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({
-          listPresentations,
-          updatePresentation,
-        }),
-        creationApi: creationApi(),
-        context,
-        attributes: threeAttributes,
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({
+        listPresentations,
+        updatePresentation,
       }),
-    )
+      creationApi: creationApi(),
+      context,
+      attributes: threeAttributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     await result.current.moveUp('insulation')
@@ -536,17 +530,15 @@ describe('useCatalogPresentationAdmin', () => {
       hasPrevious: false,
       hasNext: false,
     }))
-    const { result } = renderHook(() =>
-      useCatalogPresentationAdmin({
-        presentationApi: presentationApi({
-          listPresentations,
-          updatePresentation,
-        }),
-        creationApi: creationApi(),
-        context,
-        attributes: fourAttributes,
+    const { result } = renderAdmin({
+      presentationApi: presentationApi({
+        listPresentations,
+        updatePresentation,
       }),
-    )
+      creationApi: creationApi(),
+      context,
+      attributes: fourAttributes,
+    })
     await waitFor(() => expect(result.current.status).toBe('ready'))
 
     const conductorMaterial = result.current.rows!.notParticipating[0]!
