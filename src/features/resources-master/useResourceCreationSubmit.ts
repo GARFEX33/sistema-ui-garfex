@@ -14,8 +14,7 @@ export interface ResourceCreationSubmitState {
   error?: unknown
 }
 
-export interface UseResourceCreationSubmit
-  extends ResourceCreationSubmitState {
+export interface UseResourceCreationSubmit extends ResourceCreationSubmitState {
   submit: (input: ResourceRestCreateInput) => Promise<void>
   reset: () => void
 }

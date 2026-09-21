@@ -25,7 +25,13 @@ const buildView = (
   selection: { classId: null, familyId: null, typeId: null, unitId: null },
   classes: level({
     items: [
-      { id: 'class-1', code: 'MAT', name: 'Material', active: true, revision: '1' },
+      {
+        id: 'class-1',
+        code: 'MAT',
+        name: 'Material',
+        active: true,
+        revision: '1',
+      },
     ],
   }),
   families: level({ status: 'waiting-for-parent' }),

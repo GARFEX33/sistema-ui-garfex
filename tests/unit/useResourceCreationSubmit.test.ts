@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useResourceCreationSubmit } from '../../src/features/resources-master/useResourceCreationSubmit'
-import type { Resource, ResourceRestCreateInput } from '../../src/features/resources-master/resourcesMaster.types'
+import type {
+  Resource,
+  ResourceRestCreateInput,
+} from '../../src/features/resources-master/resourcesMaster.types'
 
 const input: ResourceRestCreateInput = {
   scope: { classCode: 'CLASE-1', familyCode: 'FAM-1', typeCode: 'TIPO-1' },

@@ -109,7 +109,8 @@ const restSupplierPage = (value: unknown): SupplierPage => {
   return result.data
 }
 
-const restSupplierPath = (id: string) => '/v1/suppliers/' + encodeURIComponent(id)
+const restSupplierPath = (id: string) =>
+  '/v1/suppliers/' + encodeURIComponent(id)
 const restSupplierFromCfdiPreviewPath = '/v1/suppliers/from-cfdi/preview'
 
 const readRestJson = async (

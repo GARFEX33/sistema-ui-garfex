@@ -6,7 +6,11 @@ async function mockEmptySuppliers(page: import('@playwright/test').Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ suppliers: [], hasPrevious: false, hasNext: false }),
+      body: JSON.stringify({
+        suppliers: [],
+        hasPrevious: false,
+        hasNext: false,
+      }),
     })
   })
 }

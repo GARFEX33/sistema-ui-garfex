@@ -44,7 +44,9 @@ describe('CrearRecursoSurface mount contract', () => {
     await user.click(trigger)
 
     await screen.findByRole('dialog', { name: 'Creador de recursos' })
-    expect(await screen.findByRole('searchbox', { name: 'Clase' })).toHaveFocus()
+    expect(
+      await screen.findByRole('searchbox', { name: 'Clase' }),
+    ).toHaveFocus()
     expect(api.listHierarchyClasses).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))

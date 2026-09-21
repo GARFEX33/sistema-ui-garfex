@@ -6,9 +6,7 @@ import { ImportarProveedorSurface } from '../../src/features/proveedores/Importa
 const file = new File(['<cfdi/>'], 'factura.xml', { type: 'application/xml' })
 
 const selectFile = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(
-    screen.getByRole('button', { name: 'Importar desde XML' }),
-  )
+  await user.click(screen.getByRole('button', { name: 'Importar desde XML' }))
   const input = document.querySelector('input[type="file"]') as HTMLInputElement
   await user.upload(input, file)
 }
@@ -30,7 +28,10 @@ describe('ImportarProveedorSurface', () => {
 
     await selectFile(user)
     expect(screen.getByRole('status')).toHaveTextContent('Leyendo el archivo…')
-    resolvePreview({ draft: { taxIdentifier: '', legalName: '', taxRegime: '' }, existing: null })
+    resolvePreview({
+      draft: { taxIdentifier: '', legalName: '', taxRegime: '' },
+      existing: null,
+    })
   })
 
   it('prefills a create form with the CFDI draft when the RFC is new', async () => {
@@ -62,9 +63,7 @@ describe('ImportarProveedorSurface', () => {
       'Cables del Norte S.A. de C.V.',
     )
 
-    await user.click(
-      screen.getByRole('button', { name: 'Crear proveedor' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Crear proveedor' }))
 
     await waitFor(() =>
       expect(createSupplier).toHaveBeenCalledWith({
@@ -115,7 +114,9 @@ describe('ImportarProveedorSurface', () => {
 
     await selectFile(user)
     expect(
-      await screen.findByText(/Ya existe un proveedor con este identificador fiscal/),
+      await screen.findByText(
+        /Ya existe un proveedor con este identificador fiscal/,
+      ),
     ).toBeVisible()
     expect(screen.getByText('Cables del Norte')).toBeVisible()
 

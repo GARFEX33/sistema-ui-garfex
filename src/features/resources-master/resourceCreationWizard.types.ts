@@ -1,5 +1,8 @@
 import type { SelectorLoadState } from './StagedSearchSelector'
-import type { WizardSelection, WizardStage } from './resourceCreationWizard.model'
+import type {
+  WizardSelection,
+  WizardStage,
+} from './resourceCreationWizard.model'
 import type {
   ResourceContextClassRestItem,
   ResourceContextFamilyRestItem,

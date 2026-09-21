@@ -14,7 +14,10 @@ describe('formatCatalogValueText', () => {
     [{ kind: 'BOOLEAN', value: false }, 'No'],
     [{ kind: 'QUANTITY', value: '2.5', unitCode: 'M' }, '2.5 M'],
     [
-      { kind: 'REFERENCE', reference: { kind: 'UNIDAD', id: '7', code: 'PZA' } },
+      {
+        kind: 'REFERENCE',
+        reference: { kind: 'UNIDAD', id: '7', code: 'PZA' },
+      },
       'PZA',
     ],
     [{ kind: 'STRING_LIST', values: ['a', 'b', 'c'] }, 'a, b, c'],

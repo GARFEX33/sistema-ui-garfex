@@ -105,7 +105,8 @@ export function ImportarProveedorSurface({
   useEffect(() => {
     if (status !== 'closed') {
       wasOpen.current = true
-      if (status === 'ready' && !preview?.existing) tradeNameRef.current?.focus()
+      if (status === 'ready' && !preview?.existing)
+        tradeNameRef.current?.focus()
     } else if (wasOpen.current) {
       restoreFocusNextFrame(triggerRef.current, [])
       wasOpen.current = false
@@ -205,7 +206,12 @@ export function ImportarProveedorSurface({
 
   return (
     <>
-      <Button ref={triggerRef} type="button" variant="outline" onPress={pickFile}>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="outline"
+        onPress={pickFile}
+      >
         Importar desde XML
       </Button>
       <input
@@ -292,9 +298,12 @@ export function ImportarProveedorSurface({
               void submitCreate()
             }}
           >
-            <p className="mb-2 text-sm leading-6 text-text-secondary" role="status">
-              No existe un proveedor con este identificador fiscal. Confirmá
-              los datos para crearlo.
+            <p
+              className="mb-2 text-sm leading-6 text-text-secondary"
+              role="status"
+            >
+              No existe un proveedor con este identificador fiscal. Confirmá los
+              datos para crearlo.
             </p>
             <div className="grid gap-1">
               <Field label="Nombre comercial" htmlFor={tradeNameId}>
@@ -304,7 +313,9 @@ export function ImportarProveedorSurface({
                   className={fieldInputClass}
                   value={draft.tradeName}
                   disabled={isSubmitting}
-                  onChange={(event) => setField('tradeName', event.target.value)}
+                  onChange={(event) =>
+                    setField('tradeName', event.target.value)
+                  }
                 />
               </Field>
               <FieldSeparator />
@@ -314,7 +325,9 @@ export function ImportarProveedorSurface({
                   className={fieldInputClass}
                   value={draft.legalName}
                   disabled={isSubmitting}
-                  onChange={(event) => setField('legalName', event.target.value)}
+                  onChange={(event) =>
+                    setField('legalName', event.target.value)
+                  }
                 />
               </Field>
               <FieldSeparator />

@@ -53,14 +53,21 @@ describe('proveedores REST read boundary', () => {
     await expect(
       api.listSuppliers({ scope: 'ALL', limit: 10, offset: 0 }),
     ).resolves.toEqual(restPage([]))
-    expect(fetch).toHaveBeenCalledWith('/v1/suppliers?scope=ALL&limit=10&offset=0', {
-      signal: undefined,
-    })
+    expect(fetch).toHaveBeenCalledWith(
+      '/v1/suppliers?scope=ALL&limit=10&offset=0',
+      {
+        signal: undefined,
+      },
+    )
   })
 
   it('rejects a malformed SupplierPage', async () => {
     const api = createProveedoresRestApi(async () =>
-      restResponse({ suppliers: [{ id: '1' }], hasPrevious: false, hasNext: false }),
+      restResponse({
+        suppliers: [{ id: '1' }],
+        hasPrevious: false,
+        hasNext: false,
+      }),
     )
 
     await expect(
@@ -118,9 +125,9 @@ describe('proveedores REST create boundary', () => {
     const fetch = vi.fn(async () => restResponse(restSupplier(), 201))
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).createSupplier(
-        createInput,
-      ),
+      createProveedoresRestApi(fetch, {
+        actor: 'proveedores-user',
+      }).createSupplier(createInput),
     ).resolves.toEqual(restSupplier())
     expect(fetch).toHaveBeenCalledWith('/v1/suppliers', {
       method: 'POST',
@@ -133,7 +140,9 @@ describe('proveedores REST create boundary', () => {
     const fetch = vi.fn()
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: '' }).createSupplier(createInput),
+      createProveedoresRestApi(fetch, { actor: '' }).createSupplier(
+        createInput,
+      ),
     ).rejects.toBeInstanceOf(RestActorConfigurationError)
     expect(fetch).not.toHaveBeenCalled()
   })
@@ -144,9 +153,9 @@ describe('proveedores REST create boundary', () => {
         restResponse({ error: 'request rejected' }, status),
       )
       await expect(
-        createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).createSupplier(
-          createInput,
-        ),
+        createProveedoresRestApi(fetch, {
+          actor: 'proveedores-user',
+        }).createSupplier(createInput),
       ).rejects.toThrow('request rejected')
       expect(fetch).toHaveBeenCalledOnce()
     }
@@ -156,9 +165,9 @@ describe('proveedores REST create boundary', () => {
     const fetch = vi.fn(async () => restResponse({}, 409))
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).createSupplier(
-        createInput,
-      ),
+      createProveedoresRestApi(fetch, {
+        actor: 'proveedores-user',
+      }).createSupplier(createInput),
     ).rejects.toThrow('HTTP 409')
   })
 
@@ -168,9 +177,9 @@ describe('proveedores REST create boundary', () => {
     )
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).createSupplier(
-        createInput,
-      ),
+      createProveedoresRestApi(fetch, {
+        actor: 'proveedores-user',
+      }).createSupplier(createInput),
     ).rejects.toThrow('Invalid proveedores response')
   })
 })
@@ -189,9 +198,9 @@ describe('proveedores REST update boundary', () => {
     const fetch = vi.fn(async () => restResponse(restSupplier({ notes: '' })))
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).updateSupplier(
-        updateInput,
-      ),
+      createProveedoresRestApi(fetch, {
+        actor: 'proveedores-user',
+      }).updateSupplier(updateInput),
     ).resolves.toEqual(restSupplier({ notes: '' }))
     const { id, ...body } = updateInput
     expect(fetch).toHaveBeenCalledWith('/v1/suppliers/' + id, {
@@ -199,16 +208,18 @@ describe('proveedores REST update boundary', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ actor: 'proveedores-user', ...body }),
     })
-    expect(JSON.parse((fetch.mock.calls[0]?.[1] as { body: string }).body)).not.toHaveProperty(
-      'expectedRevision',
-    )
+    expect(
+      JSON.parse((fetch.mock.calls[0]?.[1] as { body: string }).body),
+    ).not.toHaveProperty('expectedRevision')
   })
 
   it('fails closed without an actor and issues no fetch call', async () => {
     const fetch = vi.fn()
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: '' }).updateSupplier(updateInput),
+      createProveedoresRestApi(fetch, { actor: '' }).updateSupplier(
+        updateInput,
+      ),
     ).rejects.toBeInstanceOf(RestActorConfigurationError)
     expect(fetch).not.toHaveBeenCalled()
   })
@@ -219,19 +230,21 @@ describe('proveedores REST update boundary', () => {
     )
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).updateSupplier(
-        updateInput,
-      ),
+      createProveedoresRestApi(fetch, {
+        actor: 'proveedores-user',
+      }).updateSupplier(updateInput),
     ).rejects.toThrow('request rejected')
   })
 
   it('rejects a 200 response whose body is not a valid Supplier', async () => {
-    const fetch = vi.fn(async () => restResponse(restSupplier({ active: null })))
+    const fetch = vi.fn(async () =>
+      restResponse(restSupplier({ active: null })),
+    )
 
     await expect(
-      createProveedoresRestApi(fetch, { actor: 'proveedores-user' }).updateSupplier(
-        updateInput,
-      ),
+      createProveedoresRestApi(fetch, {
+        actor: 'proveedores-user',
+      }).updateSupplier(updateInput),
     ).rejects.toThrow('Invalid proveedores response')
   })
 })
@@ -281,9 +294,9 @@ describe('proveedores REST CFDI preview boundary', () => {
     )
     const api = createProveedoresRestApi(fetch)
 
-    await expect(
-      api.previewSupplierFromCfdi({ file }),
-    ).resolves.toMatchObject({ existing: restSupplier() })
+    await expect(api.previewSupplierFromCfdi({ file })).resolves.toMatchObject({
+      existing: restSupplier(),
+    })
   })
 
   it('surfaces the documented ErrorEnvelope message for an invalid CFDI', async () => {

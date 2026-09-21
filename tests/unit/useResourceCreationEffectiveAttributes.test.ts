@@ -88,7 +88,10 @@ describe('useResourceCreationEffectiveAttributes', () => {
 
   it('discards a stale response after the request changes mid-flight', async () => {
     let resolveFirst:
-      | ((value: { typeCode: string; attributes: EffectiveAttribute[] }) => void)
+      | ((value: {
+          typeCode: string
+          attributes: EffectiveAttribute[]
+        }) => void)
       | undefined
     const getTypeEffectiveAttributes = vi
       .fn()

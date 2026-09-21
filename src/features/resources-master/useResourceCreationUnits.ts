@@ -36,7 +36,11 @@ export function useResourceCreationUnits(api: ResourcesMasterRestReadApi) {
       const current = ++generation.current
       setUnits((state) => ({ ...state, status: 'loading', offset }))
       try {
-        const page = await api.listUnits({ scope: 'ACTIVE', limit: PAGE_SIZE, offset })
+        const page = await api.listUnits({
+          scope: 'ACTIVE',
+          limit: PAGE_SIZE,
+          offset,
+        })
         if (current !== generation.current) return
         setUnits({
           ...page,

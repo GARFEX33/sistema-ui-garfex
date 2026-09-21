@@ -34,9 +34,7 @@ const unitsApi = (
 
 describe('useResourceCreationUnits', () => {
   it('loads the UNIDAD window on mount without a parent gate', async () => {
-    const listUnits = vi.fn(async () =>
-      windowPage([unitItem('unit-1', 'M')]),
-    )
+    const listUnits = vi.fn(async () => windowPage([unitItem('unit-1', 'M')]))
     const api = unitsApi(listUnits)
     const { result } = renderHook(() => useResourceCreationUnits(api))
 
